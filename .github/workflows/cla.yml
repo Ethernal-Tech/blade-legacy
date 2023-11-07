@@ -24,6 +24,6 @@ jobs:
           PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
           path-to-signatures: 'cla.json'
-          path-to-document: 'https://github.com/0xPolygon/polygon-edge/blob/develop/CLA.md'
+          path-to-document: 'https://github.com/Ethernal-Tech/blade/blob/develop/CLA.md'
           branch: 'cla-signatures'
           allowlist: dependabot[bot],dependabot-preview[bot]

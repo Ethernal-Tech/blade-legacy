@@ -11,10 +11,10 @@ on:  # yamllint disable-line rule:truthy
 
 jobs:
   go_build:
-    name: Polygon Edge
+    name: Blade
     runs-on: ubuntu-latest
     outputs:
-      build_output_failure: ${{ steps.edge_build_failure.outputs.build_output }}
+      build_output_failure: ${{ steps.blade_build_failure.outputs.build_output }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,24 +24,24 @@ jobs:
         with:
           go-version: 1.20.x
 
-      - name: Build Polygon Edge
-        run: go build -tags netgo -ldflags="-s -w -linkmode external -extldflags "-static" -X \"github.com/0xPolygon/polygon-edge/versioning.Version=${GITHUB_REF_NAME}\" -X \"github.com/0xPolygon/polygon-edge/versioning.Commit=${GITHUB_SHA}\"" && tar -czvf polygon-edge.tar.gz polygon-edge
+      - name: Build Blade
+        run: go build -tags netgo -ldflags="-s -w -linkmode external -extldflags "-static" -X \"github.com/Ethernal-Tech/blade/versioning.Version=${GITHUB_REF_NAME}\" -X \"github.com/Ethernal-Tech/blade/versioning.Commit=${GITHUB_SHA}\"" && tar -czvf blade.tar.gz blade
         env:
           CC: gcc
           CXX: g++
           GOARC: amd64
           GOOS: linux
 
-      - name: Build Polygon Edge Failed
+      - name: Build Blade Failed
         if: failure()
-        id: edge_build_failure
+        id: blade_build_failure
         run: echo "build_output=false" >> $GITHUB_OUTPUT
 
       - name: 'Upload Artifact'
         uses: actions/upload-artifact@v3
         with:
-          name: polygon-edge
-          path: polygon-edge.tar.gz
+          name: blade
+          path: blade.tar.gz
           retention-days: 3
 
   go_build_reproducibility:
@@ -60,11 +60,11 @@ jobs:
       - name: 'Reproduce builds'
         continue-on-error: true
         run: |
-          go build -o ./edge-1 -trimpath -buildvcs=false
-          go build -o ./edge-2 -trimpath -buildvcs=false
+          go build -o ./blade-1 -trimpath -buildvcs=false
+          go build -o ./blade-2 -trimpath -buildvcs=false
 
-          buildsha1=$(shasum -a256 ./edge-1 | awk '{print $1}')
-          buildsha2=$(shasum -a256 ./edge-2 | awk '{print $1}')
+          buildsha1=$(shasum -a256 ./blade-1 | awk '{print $1}')
+          buildsha2=$(shasum -a256 ./blade-2 | awk '{print $1}')
 
           echo "Build 1 SHA: $buildsha1"
           echo "Build 2 SHA: $buildsha2"
