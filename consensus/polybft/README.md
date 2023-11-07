@@ -1,7 +1,7 @@
 
 # Polybft consensus protocol
 
-Polybft is a consensus protocol, which runs [go-ibft](https://github.com/0xPolygon/go-ibft) consensus engine.  
+Polybft is a consensus protocol, which runs [go-ibft](https://github.com/0xPolygon/go-ibft) consensus engine.
 
 It has a native support for running bridge, which enables running cross-chain transactions with Ethereum-compatible blockchains.
 
