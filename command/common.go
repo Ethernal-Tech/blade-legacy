@@ -21,7 +21,7 @@ const (
 )
 
 var (
-	MinValidatorCount = uint64(1)
+	MinValidatorCount = uint64(3)
 	MaxValidatorCount = common.MaxSafeJSInt
 )
 
