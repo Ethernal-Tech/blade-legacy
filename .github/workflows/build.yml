@@ -1,13 +1,13 @@
 ---
 name: Build
-on:  # yamllint disable-line rule:truthy
+on: # yamllint disable-line rule:truthy
   workflow_dispatch:
   workflow_call:
-   # Map the workflow outputs to job outputs
+    # Map the workflow outputs to job outputs
     outputs:
       workflow_output:
         description: "Build output"
-        value: ${{ jobs.go_build.outputs.build_output_failure }} 
+        value: ${{ jobs.go_build.outputs.build_output_failure }}
 
 jobs:
   go_build:
@@ -18,14 +18,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
+
       - name: Setup Go environment
         uses: actions/setup-go@v3
         with:
           go-version: 1.20.x
 
       - name: Build Blade
-        run: go build -tags netgo -ldflags="-s -w -linkmode external -extldflags "-static" -X \"github.com/Ethernal-Tech/blade/versioning.Version=${GITHUB_REF_NAME}\" -X \"github.com/Ethernal-Tech/blade/versioning.Commit=${GITHUB_SHA}\"" && tar -czvf blade.tar.gz blade
+        run: go build -tags netgo -ldflags="-s -w -X \"github.com/Ethernal-Tech/blade/versioning.Version=${GITHUB_REF_NAME}\" -X \"github.com/Ethernal-Tech/blade/versioning.Commit=${GITHUB_SHA}\"" && tar -czvf blade.tar.gz blade
         env:
           CC: gcc
           CXX: g++
@@ -37,7 +37,7 @@ jobs:
         id: blade_build_failure
         run: echo "build_output=false" >> $GITHUB_OUTPUT
 
-      - name: 'Upload Artifact'
+      - name: "Upload Artifact"
         uses: actions/upload-artifact@v3
         with:
           name: blade
@@ -57,7 +57,7 @@ jobs:
         with:
           go-version: 1.20.x
 
-      - name: 'Reproduce builds'
+      - name: Reproduce builds
         continue-on-error: true
         run: |
           go build -o ./blade-1 -trimpath -buildvcs=false
