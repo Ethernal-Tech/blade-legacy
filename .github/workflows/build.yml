@@ -27,8 +27,6 @@ jobs:
       - name: Build Blade
         run: go build -o blade -tags netgo -ldflags="-s -w -X \"github.com/Ethernal-Tech/blade/versioning.Version=${GITHUB_REF_NAME}\" -X \"github.com/Ethernal-Tech/blade/versioning.Commit=${GITHUB_SHA}\"" && tar -czvf blade.tar.gz blade
         env:
-          CC: gcc
-          CXX: g++
           GOARC: amd64
           GOOS: linux
 
