@@ -32,11 +32,8 @@ type TestServerConfig struct {
 	GRPCPort                int             // The GRPC endpoint port
 	LibP2PPort              int             // The Libp2p endpoint port
 	RootDir                 string          // The root directory for test environment
-	IBFTDirPrefix           string          // The prefix of data directory for IBFT
-	IBFTDir                 string          // The name of data directory for IBFT
 	PremineAccts            []*SrvAccount   // Accounts with existing balances (genesis accounts)
 	GenesisValidatorBalance *big.Int        // Genesis the balance for the validators
-	DevStakers              []types.Address // List of initial staking addresses for the staking SC
 	Consensus               ConsensusType   // Consensus MechanismType
 	Bootnodes               []string        // Bootnode Addresses
 	PriceLimit              *uint64         // Minimum gas price limit to enforce for acceptance into the pool
@@ -49,17 +46,9 @@ type TestServerConfig struct {
 	Name                    string          // Name of the server
 	SaveLogs                bool            // Flag specifying if logs are saved
 	LogsDir                 string          // Directory where logs are saved
-	IsPos                   bool            // Specifies the mechanism used for IBFT (PoA / PoS)
 	Signer                  crypto.TxSigner // Signer used for transactions
-	MinValidatorCount       uint64          // Min validator count
-	MaxValidatorCount       uint64          // Max validator count
 	BlockTime               uint64          // Minimum block generation time (in s)
-	PredeployParams         *PredeployParams
 	BurnContracts           map[uint64]types.Address
-}
-
-func (t *TestServerConfig) SetPredeployParams(params *PredeployParams) {
-	t.PredeployParams = params
 }
 
 // DataDir returns path of data directory server uses
@@ -118,29 +107,6 @@ func (t *TestServerConfig) SetDevInterval(interval int) {
 	t.DevInterval = interval
 }
 
-// SetDevStakingAddresses sets the Staking smart contract staker addresses for the dev mode.
-// These addresses should be passed into the `validators` flag in genesis generation.
-// Since invoking the dev consensus will not generate the ibft base folders, this is the only way
-// to signalize to the genesis creation process who the validators are
-func (t *TestServerConfig) SetDevStakingAddresses(stakingAddresses []types.Address) {
-	t.DevStakers = stakingAddresses
-}
-
-// SetIBFTPoS sets the flag indicating the IBFT mechanism
-func (t *TestServerConfig) SetIBFTPoS(value bool) {
-	t.IsPos = value
-}
-
-// SetIBFTDirPrefix callback sets prefix of IBFT directories
-func (t *TestServerConfig) SetIBFTDirPrefix(ibftDirPrefix string) {
-	t.IBFTDirPrefix = ibftDirPrefix
-}
-
-// SetIBFTDir callback sets the name of data directory for IBFT
-func (t *TestServerConfig) SetIBFTDir(ibftDir string) {
-	t.IBFTDir = ibftDir
-}
-
 // SetBootnodes sets bootnodes
 func (t *TestServerConfig) SetBootnodes(bootnodes []string) {
 	t.Bootnodes = bootnodes
@@ -165,16 +131,6 @@ func (t *TestServerConfig) SetShowsLog(f bool) {
 // It controls the rate at which the validator set is updated
 func (t *TestServerConfig) SetEpochSize(epochSize uint64) {
 	t.EpochSize = epochSize
-}
-
-// SetMinValidatorCount sets the min validator count
-func (t *TestServerConfig) SetMinValidatorCount(val uint64) {
-	t.MinValidatorCount = val
-}
-
-// SetMaxValidatorCount sets the max validator count
-func (t *TestServerConfig) SetMaxValidatorCount(val uint64) {
-	t.MaxValidatorCount = val
 }
 
 // SetSaveLogs sets flag for saving logs

@@ -11,7 +11,7 @@ import (
 
 const (
 	DefaultGenesisFileName           = "genesis.json"
-	DefaultChainName                 = "polygon-edge"
+	DefaultChainName                 = "blade"
 	DefaultChainID                   = 100
 	DefaultConsensus                 = server.PolyBFTConsensus
 	DefaultGenesisGasUsed            = 458752  // 0x70000
@@ -19,6 +19,7 @@ const (
 	DefaultGenesisBaseFeeEM          = chain.GenesisBaseFeeEM
 	DefaultGenesisBaseFeeChangeDenom = chain.BaseFeeChangeDenom
 	DefaultEpochSize                 = 10
+	DefaultMinValidatorCount         = uint64(3)
 )
 
 var (

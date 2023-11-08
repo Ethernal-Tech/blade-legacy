@@ -20,11 +20,6 @@ const (
 	MaxValidatorCountFlag = "max-validator-count"
 )
 
-var (
-	MinValidatorCount = uint64(3)
-	MaxValidatorCount = common.MaxSafeJSInt
-)
-
 const (
 	DefaultValidatorRoot   = "./"
 	DefaultValidatorPrefix = "test-chain-"

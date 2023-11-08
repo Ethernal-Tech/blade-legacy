@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -31,7 +30,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
-	"github.com/0xPolygon/polygon-edge/command/genesis/predeploy"
 	"github.com/0xPolygon/polygon-edge/command/server"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -187,37 +185,13 @@ func (t *TestServer) GenerateGenesis() error {
 	// add consensus flags
 	switch t.Config.Consensus {
 	case ConsensusDev:
-		args = append(
-			args,
-			"--consensus", "dev",
-		)
-
-		// Set up any initial staker addresses for the predeployed Staking SC
-		for _, stakerAddress := range t.Config.DevStakers {
-			args = append(args, "--validators", stakerAddress.String())
-		}
+		args = append(args, "--consensus", "dev")
 	case ConsensusDummy:
 		args = append(args, "--consensus", "dummy")
 	}
 
 	for _, bootnode := range t.Config.Bootnodes {
 		args = append(args, "--bootnode", bootnode)
-	}
-
-	// Make sure the correct mechanism is selected
-	if t.Config.IsPos {
-		args = append(args, "--pos")
-
-		if t.Config.MinValidatorCount == 0 {
-			t.Config.MinValidatorCount = command.MinValidatorCount
-		}
-
-		if t.Config.MaxValidatorCount == 0 {
-			t.Config.MaxValidatorCount = command.MaxValidatorCount
-		}
-
-		args = append(args, "--min-validator-count", strconv.FormatUint(t.Config.MinValidatorCount, 10))
-		args = append(args, "--max-validator-count", strconv.FormatUint(t.Config.MaxValidatorCount, 10))
 	}
 
 	// add block gas limit
@@ -242,45 +216,6 @@ func (t *TestServer) GenerateGenesis() error {
 		// london hardfork is enabled by default so there must be a default burn contract
 		args = append(args, "--burn-contract", "0:0x0000000000000000000000000000000000000000")
 	}
-
-	cmd := exec.Command(resolveBinary(), args...) //nolint:gosec
-	cmd.Dir = t.Config.RootDir
-
-	stdout := t.GetStdout()
-	cmd.Stdout = stdout
-	cmd.Stderr = stdout
-
-	return cmd.Run()
-}
-
-func (t *TestServer) GenesisPredeploy() error {
-	if t.Config.PredeployParams == nil {
-		// No need to predeploy anything
-		return nil
-	}
-
-	genesisPredeployCmd := predeploy.GetCommand()
-	args := make([]string, 0)
-
-	commandSlice := strings.Split(fmt.Sprintf("genesis %s", genesisPredeployCmd.Use), " ")
-
-	args = append(args, commandSlice...)
-
-	// Add the path to the genesis file
-	args = append(args, "--chain", filepath.Join(t.Config.RootDir, "genesis.json"))
-
-	// Add predeploy address
-	if t.Config.PredeployParams.PredeployAddress != "" {
-		args = append(args, "--predeploy-address", t.Config.PredeployParams.PredeployAddress)
-	}
-
-	// Add constructor arguments, if any
-	for _, constructorArg := range t.Config.PredeployParams.ConstructorArgs {
-		args = append(args, "--constructor-args", constructorArg)
-	}
-
-	// Add the path to the artifacts file
-	args = append(args, "--artifacts-path", t.Config.PredeployParams.ArtifactsPath)
 
 	cmd := exec.Command(resolveBinary(), args...) //nolint:gosec
 	cmd.Dir = t.Config.RootDir
