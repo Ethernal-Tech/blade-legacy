@@ -138,7 +138,7 @@ func (p *genesisParams) validateFlags() error {
 	}
 
 	if p.isPolyBFTConsensus() {
-		if err := p.validatePolyBFT(); err != nil {
+		if err := p.validatePolyBFTParams(); err != nil {
 			return err
 		}
 	}

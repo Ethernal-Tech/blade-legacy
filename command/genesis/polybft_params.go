@@ -546,7 +546,8 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 	return validators, nil
 }
 
-func (p *genesisParams) validatePolyBFT() error {
+// validatePolyBFTParams validates params for polybft consensus
+func (p *genesisParams) validatePolyBFTParams() error {
 	if err := p.extractNativeTokenMetadata(); err != nil {
 		return err
 	}
