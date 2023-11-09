@@ -175,13 +175,6 @@ func (t *TestServer) GenerateGenesis() error {
 		args = append(args, "--premine", acct.Addr.String()+":0x"+acct.Balance.Text(16))
 	}
 
-	// provide block time flag
-	// (e2e framework expects BlockTime parameter to be provided in seconds)
-	if t.Config.BlockTime != 0 {
-		args = append(args, "--block-time",
-			(time.Duration(t.Config.BlockTime) * time.Second).String())
-	}
-
 	// add consensus flags
 	switch t.Config.Consensus {
 	case ConsensusDev:
@@ -207,15 +200,8 @@ func (t *TestServer) GenerateGenesis() error {
 		args = append(args, "--base-fee-config", *common.EncodeUint64(t.Config.BaseFee))
 	}
 
-	// add burn contracts
-	if len(t.Config.BurnContracts) != 0 {
-		for block, addr := range t.Config.BurnContracts {
-			args = append(args, "--burn-contract", fmt.Sprintf("%d:%s", block, addr))
-		}
-	} else {
-		// london hardfork is enabled by default so there must be a default burn contract
-		args = append(args, "--burn-contract", "0:0x0000000000000000000000000000000000000000")
-	}
+	// london hardfork is enabled by default so there must be a default burn contract
+	args = append(args, "--burn-contract", "0:0x0000000000000000000000000000000000000000")
 
 	cmd := exec.Command(resolveBinary(), args...) //nolint:gosec
 	cmd.Dir = t.Config.RootDir

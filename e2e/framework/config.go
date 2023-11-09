@@ -38,7 +38,6 @@ type TestServerConfig struct {
 	Bootnodes               []string        // Bootnode Addresses
 	PriceLimit              *uint64         // Minimum gas price limit to enforce for acceptance into the pool
 	DevInterval             int             // Dev consensus update interval [s]
-	EpochSize               uint64          // The epoch size in blocks for the IBFT layer
 	BlockGasLimit           uint64          // Block gas limit
 	BlockGasTarget          uint64          // Gas target for new blocks
 	BaseFee                 uint64          // Initial base fee
@@ -47,21 +46,12 @@ type TestServerConfig struct {
 	SaveLogs                bool            // Flag specifying if logs are saved
 	LogsDir                 string          // Directory where logs are saved
 	Signer                  crypto.TxSigner // Signer used for transactions
-	BlockTime               uint64          // Minimum block generation time (in s)
-	BurnContracts           map[uint64]types.Address
+
 }
 
 // DataDir returns path of data directory server uses
 func (t *TestServerConfig) DataDir() string {
 	return t.RootDir
-}
-
-func (t *TestServerConfig) SetSigner(signer crypto.TxSigner) {
-	t.Signer = signer
-}
-
-func (t *TestServerConfig) SetBlockTime(blockTime uint64) {
-	t.BlockTime = blockTime
 }
 
 // CALLBACKS //
@@ -86,15 +76,6 @@ func (t *TestServerConfig) PremineValidatorBalance(balance *big.Int) {
 // SetBlockGasTarget sets the gas target for the test server
 func (t *TestServerConfig) SetBlockGasTarget(target uint64) {
 	t.BlockGasTarget = target
-}
-
-// SetBurnContract sets the given burn contract for the test server
-func (t *TestServerConfig) SetBurnContract(block uint64, address types.Address) {
-	if t.BurnContracts == nil {
-		t.BurnContracts = map[uint64]types.Address{}
-	}
-
-	t.BurnContracts[block] = address
 }
 
 // SetConsensus callback sets consensus
@@ -125,12 +106,6 @@ func (t *TestServerConfig) SetBlockLimit(limit uint64) {
 // SetShowsLog sets flag for logging
 func (t *TestServerConfig) SetShowsLog(f bool) {
 	t.ShowsLog = f
-}
-
-// SetEpochSize sets the epoch size for the consensus layer.
-// It controls the rate at which the validator set is updated
-func (t *TestServerConfig) SetEpochSize(epochSize uint64) {
-	t.EpochSize = epochSize
 }
 
 // SetSaveLogs sets flag for saving logs
