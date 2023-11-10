@@ -18,7 +18,7 @@ require (
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/golang-lru v1.0.2
-	github.com/hashicorp/hcl v1.0.1-vault
+	github.com/hashicorp/hcl v1.0.1-vault-5
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.27.8
@@ -43,7 +43,7 @@ require (
 	google.golang.org/genproto v0.0.0-20230822172742-b8732ec3820d
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
-	gopkg.in/DataDog/dd-trace-go.v1 v1.54.1
+	gopkg.in/DataDog/dd-trace-go.v1 v1.57.0
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.1.0
@@ -56,7 +56,7 @@ require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/DataDog/appsec-internal-go v1.0.0 // indirect
 	github.com/DataDog/datadog-agent/pkg/obfuscate v0.48.0 // indirect
-	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.48.0-devel.0.20230725154044-2549ba9058df // indirect
+	github.com/DataDog/datadog-agent/pkg/remoteconfig/state v0.48.1 // indirect
 	github.com/DataDog/datadog-go/v5 v5.3.0 // indirect
 	github.com/DataDog/go-libddwaf v1.5.0 // indirect
 	github.com/DataDog/go-tuf v1.0.2-0.5.2 // indirect
