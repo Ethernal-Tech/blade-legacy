@@ -8,7 +8,7 @@ import (
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -52,7 +52,7 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&params.amount,
-		sidechainHelper.AmountFlag,
+		validatorHelper.AmountFlag,
 		"",
 		"amount to stake",
 	)
@@ -70,7 +70,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	validatorAccount, err := sidechainHelper.GetAccount(params.accountDir, params.accountConfig)
+	validatorAccount, err := validatorHelper.GetAccount(params.accountDir, params.accountConfig)
 	if err != nil {
 		return err
 	}

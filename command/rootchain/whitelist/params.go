@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
+	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator"
 )
 
 var supernetIDFlag = "supernet-id"
@@ -30,7 +30,7 @@ func (sp *stakeParams) validateFlags() (err error) {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
-	return sidechainHelper.ValidateSecretFlags(sp.accountDir, sp.accountConfig)
+	return validatorHelper.ValidateSecretFlags(sp.accountDir, sp.accountConfig)
 }
 
 type stakeResult struct {

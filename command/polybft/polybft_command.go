@@ -2,13 +2,13 @@ package polybft
 
 import (
 	"github.com/0xPolygon/polygon-edge/command/rootchain/withdraw"
-	"github.com/0xPolygon/polygon-edge/command/sidechain/registration"
 	"github.com/0xPolygon/polygon-edge/command/sidechain/rewards"
-	"github.com/0xPolygon/polygon-edge/command/sidechain/staking"
-	"github.com/0xPolygon/polygon-edge/command/sidechain/unstaking"
 	"github.com/0xPolygon/polygon-edge/command/sidechain/validators"
-	"github.com/0xPolygon/polygon-edge/command/sidechain/whitelist"
 	sidechainWithdraw "github.com/0xPolygon/polygon-edge/command/sidechain/withdraw"
+	"github.com/0xPolygon/polygon-edge/command/validator/registration"
+	staking "github.com/0xPolygon/polygon-edge/command/validator/stake"
+	unstaking "github.com/0xPolygon/polygon-edge/command/validator/unstake"
+	"github.com/0xPolygon/polygon-edge/command/validator/whitelist"
 	"github.com/spf13/cobra"
 )
 
