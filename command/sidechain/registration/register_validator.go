@@ -7,8 +7,8 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/command"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
@@ -51,9 +51,9 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&params.supernetManagerAddress,
-		rootHelper.SupernetManagerFlag,
+		bridgeHelper.SupernetManagerFlag,
 		"",
-		rootHelper.SupernetManagerFlagDesc,
+		bridgeHelper.SupernetManagerFlagDesc,
 	)
 
 	helper.RegisterJSONRPCFlag(cmd)
@@ -160,7 +160,7 @@ func registerValidator(sender txrelayer.TxRelayer, account *wallet.Account,
 	}
 
 	supernetAddr := ethgo.Address(types.StringToAddress(params.supernetManagerAddress))
-	txn := rootHelper.CreateTransaction(ethgo.ZeroAddress, &supernetAddr, input, nil, true)
+	txn := bridgeHelper.CreateTransaction(ethgo.ZeroAddress, &supernetAddr, input, nil, true)
 
 	return sender.SendTransaction(txn, account.Ecdsa)
 }

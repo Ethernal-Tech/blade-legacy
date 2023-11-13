@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -276,7 +276,7 @@ func (t *TestServer) WhitelistValidators(addresses []string, supernetManager typ
 	args := []string{
 		"polybft",
 		"whitelist-validators",
-		"--private-key", rootHelper.TestAccountPrivKey,
+		"--private-key", bridgeHelper.TestAccountPrivKey,
 		"--jsonrpc", t.BridgeJSONRPCAddr(),
 		"--supernet-manager", supernetManager.String(),
 	}

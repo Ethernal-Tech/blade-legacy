@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -61,9 +61,9 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&params.supernetManagerAddress,
-		rootHelper.SupernetManagerFlag,
+		bridgeHelper.SupernetManagerFlag,
 		"",
-		rootHelper.SupernetManagerFlagDesc,
+		bridgeHelper.SupernetManagerFlagDesc,
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
@@ -83,7 +83,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	ecdsaKey, err := rootHelper.GetECDSAKey(params.privateKey, params.accountDir, params.accountConfig)
+	ecdsaKey, err := bridgeHelper.GetECDSAKey(params.privateKey, params.accountDir, params.accountConfig)
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	supernetAddr := ethgo.Address(types.StringToAddress(params.supernetManagerAddress))
-	txn := rootHelper.CreateTransaction(ecdsaKey.Address(), &supernetAddr, encoded, nil, true)
+	txn := bridgeHelper.CreateTransaction(ecdsaKey.Address(), &supernetAddr, encoded, nil, true)
 
 	receipt, err := txRelayer.SendTransaction(txn, ecdsaKey)
 	if err != nil {

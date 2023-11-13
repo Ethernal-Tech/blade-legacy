@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"math/big"
 
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -34,7 +34,7 @@ type premineParams struct {
 
 func (p *premineParams) validateFlags() (err error) {
 	if p.nativeTokenRoot == "" {
-		return rootHelper.ErrMandatoryERC20Token
+		return bridgeHelper.ErrMandatoryERC20Token
 	}
 
 	if err := types.IsValidAddress(p.nativeTokenRoot); err != nil {

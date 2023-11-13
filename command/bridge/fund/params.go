@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"math/big"
 
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	cmdhelper "github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -33,11 +33,11 @@ type fundParams struct {
 
 func (fp *fundParams) validateFlags() error {
 	if len(fp.addresses) == 0 {
-		return rootHelper.ErrNoAddressesProvided
+		return bridgeHelper.ErrNoAddressesProvided
 	}
 
 	if len(fp.amounts) != len(fp.addresses) {
-		return rootHelper.ErrInconsistentLength
+		return bridgeHelper.ErrInconsistentLength
 	}
 
 	for _, addr := range fp.addresses {
@@ -58,7 +58,7 @@ func (fp *fundParams) validateFlags() error {
 
 	if fp.mintStakeToken {
 		if fp.stakeTokenAddr == "" {
-			return rootHelper.ErrMandatoryStakeToken
+			return bridgeHelper.ErrMandatoryStakeToken
 		}
 
 		if err := types.IsValidAddress(fp.stakeTokenAddr); err != nil {
