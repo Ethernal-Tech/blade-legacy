@@ -9,7 +9,6 @@ import (
 	depositERC721 "github.com/0xPolygon/polygon-edge/command/bridge/deposit/erc721"
 	"github.com/0xPolygon/polygon-edge/command/bridge/exit"
 	"github.com/0xPolygon/polygon-edge/command/bridge/fund"
-	"github.com/0xPolygon/polygon-edge/command/bridge/mint"
 	"github.com/0xPolygon/polygon-edge/command/bridge/server"
 	withdrawERC1155 "github.com/0xPolygon/polygon-edge/command/bridge/withdraw/erc1155"
 	withdrawERC20 "github.com/0xPolygon/polygon-edge/command/bridge/withdraw/erc20"
@@ -44,8 +43,6 @@ func registerSubcommands(baseCmd *cobra.Command) {
 		withdrawERC1155.GetCommand(),
 		// bridge exit
 		exit.GetCommand(),
-		// bridge mint erc-20
-		mint.GetCommand(),
 		// bridge deploy
 		deploy.GetCommand(),
 		// bridge server
