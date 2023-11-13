@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator"
 )
 
 type withdrawParams struct {
@@ -20,7 +20,7 @@ func (w *withdrawParams) validateFlags() error {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
-	return sidechainHelper.ValidateSecretFlags(w.accountDir, w.accountConfig)
+	return validatorHelper.ValidateSecretFlags(w.accountDir, w.accountConfig)
 }
 
 type withdrawResult struct {

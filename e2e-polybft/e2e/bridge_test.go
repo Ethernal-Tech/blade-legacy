@@ -17,7 +17,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
-	"github.com/0xPolygon/polygon-edge/command/sidechain"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
@@ -76,7 +76,7 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 	require.NoError(t, err)
 
 	validatorSrv := cluster.Servers[0]
-	senderAccount, err := sidechain.GetAccountFromDir(validatorSrv.DataDir())
+	senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 	require.NoError(t, err)
 
 	childEthEndpoint := validatorSrv.JSONRPC().Eth()
@@ -157,7 +157,7 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 		rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 		require.NoError(t, err)
 
-		senderAccount, err := sidechain.GetAccountFromDir(validatorSrv.DataDir())
+		senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
 
 		t.Logf("Withdraw sender: %s\n", senderAccount.Ecdsa.Address())
@@ -756,7 +756,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	t.Log("Deposits were successfully processed")
 
 	// WITHDRAW ERC1155 TOKENS
-	senderAccount, err := sidechain.GetAccountFromDir(cluster.Servers[0].DataDir())
+	senderAccount, err := validatorHelper.GetAccountFromDir(cluster.Servers[0].DataDir())
 	require.NoError(t, err)
 
 	t.Logf("Withdraw sender: %s\n", senderAccount.Ecdsa.Address())
@@ -1230,7 +1230,7 @@ func TestE2E_Bridge_ChangeVotingPower(t *testing.T) {
 	votingPowerChangeValidators := make([]ethgo.Address, votingPowerChanges)
 
 	for i := 0; i < votingPowerChanges; i++ {
-		validator, err := sidechain.GetAccountFromDir(path.Join(cluster.Config.TmpDir, validatorSecretFiles[i]))
+		validator, err := validatorHelper.GetAccountFromDir(path.Join(cluster.Config.TmpDir, validatorSecretFiles[i]))
 		require.NoError(t, err)
 
 		votingPowerChangeValidators[i] = validator.Ecdsa.Address()
@@ -1250,7 +1250,7 @@ func TestE2E_Bridge_ChangeVotingPower(t *testing.T) {
 	queryValidators := func(handler func(idx int, validatorInfo *polybft.ValidatorInfo)) {
 		for i, validatorAddr := range votingPowerChangeValidators {
 			// query validator info
-			validatorInfo, err := sidechain.GetValidatorInfo(
+			validatorInfo, err := validatorHelper.GetValidatorInfo(
 				validatorAddr,
 				childRelayer)
 			require.NoError(t, err)
@@ -1450,7 +1450,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 		require.NoError(t, err)
 
-		senderAccount, err := sidechain.GetAccountFromDir(validatorSrv.DataDir())
+		senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
 
 		t.Logf("Withdraw sender: %s\n", senderAccount.Ecdsa.Address())
@@ -1565,7 +1565,7 @@ func TestE2E_Bridge_Transfers_WithRootTrackerPollInterval(t *testing.T) {
 	require.NoError(t, err)
 
 	validatorSrv := cluster.Servers[0]
-	senderAccount, err := sidechain.GetAccountFromDir(validatorSrv.DataDir())
+	senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 	require.NoError(t, err)
 
 	childEthEndpoint := validatorSrv.JSONRPC().Eth()
@@ -1683,7 +1683,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		checkBalancesFn(types.Address(nonValidatorKey.Address()), bigZero, command.DefaultPremineBalance)
 
 		for _, server := range cluster.Servers {
-			validatorAccount, err := sidechain.GetAccountFromDir(server.DataDir())
+			validatorAccount, err := validatorHelper.GetAccountFromDir(server.DataDir())
 			require.NoError(t, err)
 
 			checkBalancesFn(validatorAccount.Address(), bigZero, command.DefaultPremineBalance)
@@ -1693,7 +1693,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	// this test case will check first if they can withdraw some of the premined amount of non-mintable token
 	t.Run("Do a withdraw for premined validator address and premined non-validator address", func(t *testing.T) {
 		validatorSrv := cluster.Servers[1]
-		validatorAcc, err := sidechain.GetAccountFromDir(validatorSrv.DataDir())
+		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
 
 		validatorRawKey, err := validatorAcc.Ecdsa.MarshallPrivateKey()
@@ -1790,7 +1790,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 	t.Run("Do a deposit to some validator and non-validator address", func(t *testing.T) {
 		validatorSrv := cluster.Servers[4]
-		validatorAcc, err := sidechain.GetAccountFromDir(validatorSrv.DataDir())
+		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
 
 		require.NoError(t, cluster.Bridge.Deposit(

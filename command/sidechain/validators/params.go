@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator"
 )
 
 type validatorInfoParams struct {
@@ -22,7 +22,7 @@ func (v *validatorInfoParams) validateFlags() error {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
-	return sidechainHelper.ValidateSecretFlags(v.accountDir, v.accountConfig)
+	return validatorHelper.ValidateSecretFlags(v.accountDir, v.accountConfig)
 }
 
 type validatorsInfoResult struct {
