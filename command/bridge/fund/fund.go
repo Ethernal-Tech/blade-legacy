@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/0xPolygon/polygon-edge/command"
-	"github.com/0xPolygon/polygon-edge/command/rootchain/helper"
+	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"

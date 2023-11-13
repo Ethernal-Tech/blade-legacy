@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/command"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -80,7 +80,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	supernetManagerAddr := types.StringToAddress(params.supernetManagerAddress)
 	stakeManagerAddr := types.StringToAddress(params.stakeManagerAddress)
 
-	validatorInfo, err := rootHelper.GetValidatorInfo(validatorAddr,
+	validatorInfo, err := bridgeHelper.GetValidatorInfo(validatorAddr,
 		supernetManagerAddr, stakeManagerAddr, txRelayer)
 	if err != nil {
 		return fmt.Errorf("failed to get validator info for %s: %w", validatorAddr, err)

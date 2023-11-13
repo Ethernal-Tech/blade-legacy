@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -57,14 +57,14 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&params.customSupernetManager,
-		rootHelper.SupernetManagerFlag,
+		bridgeHelper.SupernetManagerFlag,
 		"",
-		rootHelper.SupernetManagerFlagDesc,
+		bridgeHelper.SupernetManagerFlagDesc,
 	)
 
 	cmd.Flags().StringVar(
 		&params.nativeTokenRoot,
-		rootHelper.Erc20TokenFlag,
+		bridgeHelper.Erc20TokenFlag,
 		"",
 		"address of root erc20 native token",
 	)
@@ -98,7 +98,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	ownerKey, err := rootHelper.GetECDSAKey(params.privateKey, params.accountDir, params.accountConfig)
+	ownerKey, err := bridgeHelper.GetECDSAKey(params.privateKey, params.accountDir, params.accountConfig)
 	if err != nil {
 		return err
 	}
@@ -109,7 +109,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	approveTxn, err := rootHelper.CreateApproveERC20Txn(
+	approveTxn, err := bridgeHelper.CreateApproveERC20Txn(
 		params.amountValue,
 		types.StringToAddress(params.customSupernetManager),
 		types.StringToAddress(params.nativeTokenRoot), true)

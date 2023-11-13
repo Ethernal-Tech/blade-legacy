@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/sidechain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -81,7 +81,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	approveTxn, err := rootHelper.CreateApproveERC20Txn(params.amountValue,
+	approveTxn, err := bridgeHelper.CreateApproveERC20Txn(params.amountValue,
 		contracts.StakeManagerContract, contracts.NativeERC20TokenContract, true)
 	if err != nil {
 		return err
@@ -107,7 +107,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	stakeManagerAddr := ethgo.Address(contracts.StakeManagerContract)
 
-	txn := rootHelper.CreateTransaction(validatorAccount.Ecdsa.Address(), &stakeManagerAddr, encoded, nil, true)
+	txn := bridgeHelper.CreateTransaction(validatorAccount.Ecdsa.Address(), &stakeManagerAddr, encoded, nil, true)
 
 	receipt, err = txRelayer.SendTransaction(txn, validatorAccount.Ecdsa)
 	if err != nil {

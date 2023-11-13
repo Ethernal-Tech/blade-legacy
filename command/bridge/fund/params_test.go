@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -55,7 +55,7 @@ func Test_validateFlags(t *testing.T) {
 					amounts: []string{"10", "20"},
 				}
 			},
-			err: rootHelper.ErrMandatoryStakeToken.Error(),
+			err: bridgeHelper.ErrMandatoryStakeToken.Error(),
 		},
 		{
 			// stake token address omitted

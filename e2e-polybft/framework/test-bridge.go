@@ -15,10 +15,10 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	bridgeCommon "github.com/0xPolygon/polygon-edge/command/bridge/common"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
+	"github.com/0xPolygon/polygon-edge/command/bridge/server"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
-	"github.com/0xPolygon/polygon-edge/command/rootchain/server"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
@@ -393,7 +393,7 @@ func (t *TestBridge) whitelistValidators(validatorAddresses []types.Address,
 		"--addresses", strings.Join(addressesAsString, ","),
 		"--jsonrpc", t.JSONRPCAddr(),
 		"--supernet-manager", polybftConfig.Bridge.CustomSupernetManagerAddr.String(),
-		"--private-key", rootHelper.TestAccountPrivKey,
+		"--private-key", bridgeHelper.TestAccountPrivKey,
 	}
 
 	if err := t.cmdRun(args...); err != nil {
@@ -492,7 +492,7 @@ func (t *TestBridge) finalizeGenesis(genesisPath string, polybftConfig polybft.P
 		"polybft",
 		"supernet",
 		"--jsonrpc", t.JSONRPCAddr(),
-		"--private-key", rootHelper.TestAccountPrivKey,
+		"--private-key", bridgeHelper.TestAccountPrivKey,
 		"--genesis", genesisPath,
 		"--supernet-manager", polybftConfig.Bridge.CustomSupernetManagerAddr.String(),
 		"--finalize-genesis-set",

@@ -15,8 +15,8 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
-	rootHelper "github.com/0xPolygon/polygon-edge/command/rootchain/helper"
 	"github.com/0xPolygon/polygon-edge/command/sidechain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -88,12 +88,12 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 		common.ERC20,
 		polybftCfg.Bridge.RootNativeERC20Addr,
 		polybftCfg.Bridge.RootERC20PredicateAddr,
-		rootHelper.TestAccountPrivKey,
+		bridgeHelper.TestAccountPrivKey,
 		senderAccount.Address().String(),
 		tokensToDeposit.String(),
 		"",
 		cluster.Bridge.JSONRPCAddr(),
-		rootHelper.TestAccountPrivKey,
+		bridgeHelper.TestAccountPrivKey,
 		false),
 	)
 
@@ -124,12 +124,12 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 			common.ERC20,
 			polybftCfg.Bridge.RootNativeERC20Addr,
 			polybftCfg.Bridge.RootERC20PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join(receivers[:], ","),
 			strings.Join(amounts[:], ","),
 			"",
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false,
 		))
 
@@ -270,12 +270,12 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 			common.ERC20,
 			polybftCfg.Bridge.RootNativeERC20Addr,
 			polybftCfg.Bridge.RootERC20PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join(receivers[:depositsSubset], ","),
 			strings.Join(amounts[:depositsSubset], ","),
 			"",
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
 
@@ -297,12 +297,12 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 			common.ERC20,
 			polybftCfg.Bridge.RootNativeERC20Addr,
 			polybftCfg.Bridge.RootERC20PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join(receivers[depositsSubset:], ","),
 			strings.Join(amounts[depositsSubset:], ","),
 			"",
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
 
@@ -336,7 +336,7 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 		require.NoError(t, err)
 
 		// Deploy ERC20 contract to the rootchain
-		rootchainDeployer, err := rootHelper.DecodePrivateKey("")
+		rootchainDeployer, err := bridgeHelper.DecodePrivateKey("")
 		require.NoError(t, err)
 
 		txn := &ethgo.Transaction{To: nil, Input: contractsapi.RootERC20.Bytecode}
@@ -364,12 +364,12 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 			common.ERC20,
 			types.Address(rootTokenAddr),
 			polybftCfg.Bridge.RootERC20PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join(receivers[:], ","),
 			strings.Join(amounts[:], ","),
 			"",
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false,
 		))
 
@@ -505,7 +505,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 	require.NoError(t, err)
 
-	rootchainDeployer, err := rootHelper.DecodePrivateKey("")
+	rootchainDeployer, err := bridgeHelper.DecodePrivateKey("")
 	require.NoError(t, err)
 
 	// deploy root ERC 721 token
@@ -523,12 +523,12 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 			common.ERC721,
 			types.Address(rootERC721Addr),
 			polybftCfg.Bridge.RootERC721PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join(receivers[:], ","),
 			"",
 			strings.Join(tokenIDs[:], ","),
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false),
 	)
 
@@ -670,7 +670,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 	require.NoError(t, err)
 
-	rootchainDeployer, err := rootHelper.DecodePrivateKey("")
+	rootchainDeployer, err := bridgeHelper.DecodePrivateKey("")
 	require.NoError(t, err)
 
 	// deploy root ERC 1155 token
@@ -688,12 +688,12 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 			common.ERC1155,
 			types.Address(rootERC1155Addr),
 			polybftCfg.Bridge.RootERC1155PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join(receivers[:], ","),
 			strings.Join(amounts[:], ","),
 			strings.Join(tokenIDs[:], ","),
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false),
 	)
 
@@ -1377,12 +1377,12 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 			common.ERC20,
 			polybftCfg.Bridge.RootNativeERC20Addr,
 			polybftCfg.Bridge.RootERC20PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			adminAddr.String(),
 			adminBalanceOnChild.String(),
 			"",
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false),
 	)
 
@@ -1411,12 +1411,12 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 				common.ERC20,
 				polybftCfg.Bridge.RootNativeERC20Addr,
 				polybftCfg.Bridge.RootERC20PredicateAddr,
-				rootHelper.TestAccountPrivKey,
+				bridgeHelper.TestAccountPrivKey,
 				strings.Join(receivers[:], ","),
 				strings.Join(depositAmounts[:], ","),
 				"",
 				cluster.Bridge.JSONRPCAddr(),
-				rootHelper.TestAccountPrivKey,
+				bridgeHelper.TestAccountPrivKey,
 				false),
 		)
 
@@ -1577,12 +1577,12 @@ func TestE2E_Bridge_Transfers_WithRootTrackerPollInterval(t *testing.T) {
 		common.ERC20,
 		polybftCfg.Bridge.RootNativeERC20Addr,
 		polybftCfg.Bridge.RootERC20PredicateAddr,
-		rootHelper.TestAccountPrivKey,
+		bridgeHelper.TestAccountPrivKey,
 		senderAccount.Address().String(),
 		tokensToDeposit.String(),
 		"",
 		cluster.Bridge.JSONRPCAddr(),
-		rootHelper.TestAccountPrivKey,
+		bridgeHelper.TestAccountPrivKey,
 		false),
 	)
 
@@ -1797,12 +1797,12 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			common.ERC20,
 			polybftCfg.Bridge.RootNativeERC20Addr,
 			polybftCfg.Bridge.RootERC20PredicateAddr,
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			strings.Join([]string{validatorAcc.Address().String(), nonValidatorKey.Address().String()}, ","),
 			strings.Join([]string{tokensToTransfer.String(), tokensToTransfer.String()}, ","),
 			"",
 			cluster.Bridge.JSONRPCAddr(),
-			rootHelper.TestAccountPrivKey,
+			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
 
