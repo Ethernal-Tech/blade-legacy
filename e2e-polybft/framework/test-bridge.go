@@ -388,7 +388,7 @@ func (t *TestBridge) whitelistValidators(validatorAddresses []types.Address,
 	}
 
 	args := []string{
-		"polybft",
+		"validator",
 		"whitelist-validators",
 		"--addresses", strings.Join(addressesAsString, ","),
 		"--jsonrpc", t.JSONRPCAddr(),
@@ -420,7 +420,7 @@ func (t *TestBridge) registerGenesisValidators(polybftConfig polybft.PolyBFTConf
 				return ctx.Err()
 			default:
 				args := []string{
-					"polybft",
+					"validator",
 					"register-validator",
 					"--jsonrpc", t.JSONRPCAddr(),
 					"--supernet-manager", polybftConfig.Bridge.CustomSupernetManagerAddr.String(),
@@ -457,7 +457,7 @@ func (t *TestBridge) initialStakingOfGenesisValidators(polybftConfig polybft.Pol
 				return ctx.Err()
 			default:
 				args := []string{
-					"polybft",
+					"validator",
 					"stake",
 					"--jsonrpc", t.JSONRPCAddr(),
 					"--stake-manager", polybftConfig.Bridge.StakeManagerAddr.String(),
@@ -485,25 +485,6 @@ func (t *TestBridge) getStakeAmount(validatorIndex int) *big.Int {
 	}
 
 	return t.clusterConfig.StakeAmounts[validatorIndex]
-}
-
-func (t *TestBridge) finalizeGenesis(genesisPath string, polybftConfig polybft.PolyBFTConfig) error {
-	args := []string{
-		"polybft",
-		"supernet",
-		"--jsonrpc", t.JSONRPCAddr(),
-		"--private-key", bridgeHelper.TestAccountPrivKey,
-		"--genesis", genesisPath,
-		"--supernet-manager", polybftConfig.Bridge.CustomSupernetManagerAddr.String(),
-		"--finalize-genesis-set",
-		"--enable-staking",
-	}
-
-	if err := t.cmdRun(args...); err != nil {
-		return fmt.Errorf("failed to finalize genesis validators on supernet manager: %w", err)
-	}
-
-	return nil
 }
 
 // FundValidators sends tokens to a rootchain validators
@@ -536,23 +517,6 @@ func (t *TestBridge) FundValidators(tokenAddress types.Address, secretsPaths []s
 
 	if err := t.cmdRun(args...); err != nil {
 		return err
-	}
-
-	return nil
-}
-
-func (t *TestBridge) deployStakeManager(genesisPath string) error {
-	args := []string{
-		"polybft",
-		"stake-manager-deploy",
-		"--jsonrpc", t.JSONRPCAddr(),
-		"--genesis", genesisPath,
-		"--proxy-contracts-admin", t.clusterConfig.GetProxyContractsAdmin(),
-		"--test",
-	}
-
-	if err := t.cmdRun(args...); err != nil {
-		return fmt.Errorf("failed to deploy stake manager contract: %w", err)
 	}
 
 	return nil

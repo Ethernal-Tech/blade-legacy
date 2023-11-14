@@ -7,7 +7,7 @@ import (
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
-	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
@@ -19,7 +19,7 @@ var (
 
 func GetCommand() *cobra.Command {
 	validatorInfoCmd := &cobra.Command{
-		Use:     "validator-info",
+		Use:     "info",
 		Short:   "Gets validator info",
 		PreRunE: runPreRun,
 		RunE:    runCommand,

@@ -1,4 +1,4 @@
-package sidechain
+package helper
 
 import (
 	"errors"

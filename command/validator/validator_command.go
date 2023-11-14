@@ -1,4 +1,4 @@
-package polybft
+package validator
 
 import (
 	"github.com/0xPolygon/polygon-edge/command/validator/registration"
@@ -13,8 +13,8 @@ import (
 
 func GetCommand() *cobra.Command {
 	polybftCmd := &cobra.Command{
-		Use:   "polybft",
-		Short: "Polybft command",
+		Use:   "validator",
+		Short: "Validator command",
 	}
 
 	polybftCmd.AddCommand(

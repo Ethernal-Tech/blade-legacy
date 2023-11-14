@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 )
 
 const (
@@ -32,7 +32,7 @@ func (ep *whitelistParams) validateFlags() error {
 	}
 
 	if ep.privateKey == "" {
-		return sidechainHelper.ValidateSecretFlags(ep.accountDir, ep.accountConfig)
+		return validatorHelper.ValidateSecretFlags(ep.accountDir, ep.accountConfig)
 	}
 
 	// validate jsonrpc address
