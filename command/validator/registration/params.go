@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator"
+	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 )
 
 type registerParams struct {
