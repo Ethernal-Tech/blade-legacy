@@ -9,37 +9,48 @@ import (
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 )
 
+var (
+	addressToFlag = "to"
+)
+
 type withdrawParams struct {
-	accountDir    string
-	accountConfig string
-	jsonRPC       string
+	accountDir       string
+	accountConfig    string
+	jsonRPC          string
+	stakeManagerAddr string
+	addressTo        string
+	amount           string
+
+	amountValue *big.Int
 }
 
-func (w *withdrawParams) validateFlags() error {
-	if _, err := helper.ParseJSONRPCAddress(w.jsonRPC); err != nil {
+func (v *withdrawParams) validateFlags() (err error) {
+	if v.amountValue, err = helper.ParseAmount(v.amount); err != nil {
+		return err
+	}
+
+	if _, err = helper.ParseJSONRPCAddress(v.jsonRPC); err != nil {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
-	return validatorHelper.ValidateSecretFlags(w.accountDir, w.accountConfig)
+	return validatorHelper.ValidateSecretFlags(v.accountDir, v.accountConfig)
 }
 
 type withdrawResult struct {
-	ValidatorAddress string     `json:"validatorAddress"`
-	Amount           *big.Int   `json:"amount"`
-	ExitEventIDs     []*big.Int `json:"exitEventIDs"`
-	BlockNumber      uint64     `json:"blockNumber"`
+	ValidatorAddress string `json:"validatorAddress"`
+	Amount           uint64 `json:"amount"`
+	WithdrawnTo      string `json:"withdrawnTo"`
 }
 
-func (r *withdrawResult) GetOutput() string {
+func (wr withdrawResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString("\n[WITHDRAWAL]\n")
+	buffer.WriteString("\n[WITHDRAWN AMOUNT]\n")
 
-	vals := make([]string, 0, 4)
-	vals = append(vals, fmt.Sprintf("Validator Address|%s", r.ValidatorAddress))
-	vals = append(vals, fmt.Sprintf("Amount Withdrawn|%d", r.Amount))
-	vals = append(vals, fmt.Sprintf("Exit Event IDs|%d", r.ExitEventIDs))
-	vals = append(vals, fmt.Sprintf("Inclusion Block Number|%d", r.BlockNumber))
+	vals := make([]string, 0, 3)
+	vals = append(vals, fmt.Sprintf("Validator Address|%s", wr.ValidatorAddress))
+	vals = append(vals, fmt.Sprintf("Amount Withdrawn|%v", wr.Amount))
+	vals = append(vals, fmt.Sprintf("Withdrawn To|%s", wr.WithdrawnTo))
 
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")

@@ -4,11 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
-
 	"github.com/0xPolygon/polygon-edge/command"
-	"github.com/0xPolygon/polygon-edge/command/bridge/common"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
@@ -17,22 +13,23 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/spf13/cobra"
+	"github.com/umbracle/ethgo"
 )
 
 var params withdrawParams
 
 func GetCommand() *cobra.Command {
-	unstakeCmd := &cobra.Command{
-		Use:     "withdraw",
-		Short:   "Withdraws pending withdrawals on child chain for given validator",
+	withdrawCmd := &cobra.Command{
+		Use:     "withdraw-root",
+		Short:   "Withdraws sender's withdrawable amount to specified address on the root chain",
 		PreRunE: runPreRun,
 		RunE:    runCommand,
 	}
 
-	helper.RegisterJSONRPCFlag(unstakeCmd)
-	setFlags(unstakeCmd)
+	setFlags(withdrawCmd)
 
-	return unstakeCmd
+	return withdrawCmd
 }
 
 func setFlags(cmd *cobra.Command) {
@@ -50,7 +47,29 @@ func setFlags(cmd *cobra.Command) {
 		polybftsecrets.AccountConfigFlagDesc,
 	)
 
+	cmd.Flags().StringVar(
+		&params.addressTo,
+		addressToFlag,
+		"",
+		"address where to withdraw withdrawable amount",
+	)
+
+	cmd.Flags().StringVar(
+		&params.stakeManagerAddr,
+		bridgeHelper.StakeManagerFlag,
+		"",
+		bridgeHelper.StakeManagerFlagDesc,
+	)
+
+	cmd.Flags().StringVar(
+		&params.amount,
+		validatorHelper.AmountFlag,
+		"",
+		"amount to withdraw",
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
+	helper.RegisterJSONRPCFlag(cmd)
 }
 
 func runPreRun(cmd *cobra.Command, _ []string) error {
@@ -87,8 +106,12 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	if receipt.Status != uint64(types.ReceiptSuccess) {
-		return fmt.Errorf("withdraw transaction failed on block: %d", receipt.BlockNumber)
+	if receipt.Status == uint64(types.ReceiptFailed) {
+		return fmt.Errorf("withdraw transaction failed on block %d", receipt.BlockNumber)
+	}
+
+	result := &withdrawResult{
+		ValidatorAddress: validatorAccount.Ecdsa.Address().String(),
 	}
 
 	var (
@@ -96,36 +119,27 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		foundLog        bool
 	)
 
-	// check the logs to check for the result
 	for _, log := range receipt.Logs {
 		doesMatch, err := withdrawalEvent.ParseLog(log)
+		if !doesMatch {
+			continue
+		}
+
 		if err != nil {
 			return err
 		}
 
-		if doesMatch {
-			foundLog = true
+		result.Amount = withdrawalEvent.Amount.Uint64()
+		foundLog = true
 
-			break
-		}
+		break
 	}
 
 	if !foundLog {
-		return fmt.Errorf("could not find an appropriate log in receipt that withdraw happened on ValidatorSet")
+		return fmt.Errorf("could not find an appropriate log in receipt that withdrawal happened")
 	}
 
-	exitEventIDs, err := common.ExtractExitEventIDs(receipt)
-	if err != nil {
-		return fmt.Errorf("withdrawal failed: %w", err)
-	}
-
-	outputter.WriteCommandResult(
-		&withdrawResult{
-			ValidatorAddress: validatorAccount.Ecdsa.Address().String(),
-			Amount:           withdrawalEvent.Amount,
-			ExitEventIDs:     exitEventIDs,
-			BlockNumber:      receipt.BlockNumber,
-		})
+	outputter.WriteCommandResult(result)
 
 	return nil
 }
