@@ -10,7 +10,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/bridge"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/0xPolygon/polygon-edge/command/license"
 	"github.com/0xPolygon/polygon-edge/command/mint"
 	"github.com/0xPolygon/polygon-edge/command/monitor"
 	"github.com/0xPolygon/polygon-edge/command/peers"
@@ -53,7 +52,6 @@ func (rc *RootCommand) registerSubCommands() {
 		backup.GetCommand(),
 		genesis.GetCommand(),
 		server.GetCommand(),
-		license.GetCommand(),
 		polybftsecrets.GetCommand(),
 		bridge.GetCommand(),
 		regenesis.GetCommand(),
