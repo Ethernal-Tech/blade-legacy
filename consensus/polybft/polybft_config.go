@@ -25,15 +25,14 @@ const (
 
 var (
 	DefaultTokenConfig = &TokenConfig{
-		Name:       defaultNativeTokenName,
-		Symbol:     defaultNativeTokenSymbol,
-		Decimals:   defaultNativeTokenDecimals,
-		Owner:      types.ZeroAddress,
-		IsMintable: true,
+		Name:     defaultNativeTokenName,
+		Symbol:   defaultNativeTokenSymbol,
+		Decimals: defaultNativeTokenDecimals,
+		Owner:    types.ZeroAddress,
 	}
 
 	errInvalidTokenParams = errors.New("native token params were not submitted in proper format " +
-		"(<name:symbol:decimals count:mintable flag:[mintable token owner address]>)")
+		"(<name:symbol:decimals count:token owner address>)")
 )
 
 // PolyBFTConfig is the configuration file for the Polybft consensus protocol.
@@ -122,7 +121,6 @@ type BridgeConfig struct {
 	ExitHelperAddr                    types.Address `json:"exitHelperAddress"`
 	RootERC20PredicateAddr            types.Address `json:"erc20PredicateAddress"`
 	ChildMintableERC20PredicateAddr   types.Address `json:"erc20ChildMintablePredicateAddress"`
-	RootNativeERC20Addr               types.Address `json:"nativeERC20Address"`
 	RootERC721PredicateAddr           types.Address `json:"erc721PredicateAddress"`
 	ChildMintableERC721PredicateAddr  types.Address `json:"erc721ChildMintablePredicateAddress"`
 	RootERC1155PredicateAddr          types.Address `json:"erc1155PredicateAddress"`
@@ -156,7 +154,6 @@ type RootchainConfig struct {
 	ExitHelperAddress                    types.Address
 	RootERC20PredicateAddress            types.Address
 	ChildMintableERC20PredicateAddress   types.Address
-	RootNativeERC20Address               types.Address
 	ChildERC20Address                    types.Address
 	RootERC721PredicateAddress           types.Address
 	ChildMintableERC721PredicateAddress  types.Address
@@ -179,7 +176,6 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 		ExitHelperAddr:                    r.ExitHelperAddress,
 		RootERC20PredicateAddr:            r.RootERC20PredicateAddress,
 		ChildMintableERC20PredicateAddr:   r.ChildMintableERC20PredicateAddress,
-		RootNativeERC20Addr:               r.RootNativeERC20Address,
 		RootERC721PredicateAddr:           r.RootERC721PredicateAddress,
 		ChildMintableERC721PredicateAddr:  r.ChildMintableERC721PredicateAddress,
 		RootERC1155PredicateAddr:          r.RootERC1155PredicateAddress,
@@ -196,11 +192,10 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 
 // TokenConfig is the configuration of native token used by edge network
 type TokenConfig struct {
-	Name       string        `json:"name"`
-	Symbol     string        `json:"symbol"`
-	Decimals   uint8         `json:"decimals"`
-	IsMintable bool          `json:"isMintable"`
-	Owner      types.Address `json:"owner"`
+	Name     string        `json:"name"`
+	Symbol   string        `json:"symbol"`
+	Decimals uint8         `json:"decimals"`
+	Owner    types.Address `json:"owner"`
 }
 
 func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
@@ -235,11 +230,10 @@ func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
 	owner := types.StringToAddress(strings.TrimSpace(params[3]))
 
 	return &TokenConfig{
-		Name:       name,
-		Symbol:     symbol,
-		Decimals:   uint8(decimals),
-		IsMintable: true, // native token on blade is always mintable
-		Owner:      owner,
+		Name:     name,
+		Symbol:   symbol,
+		Decimals: uint8(decimals),
+		Owner:    owner,
 	}, nil
 }
 
