@@ -3,7 +3,6 @@ package withdraw
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
@@ -14,21 +13,12 @@ var (
 )
 
 type withdrawParams struct {
-	accountDir       string
-	accountConfig    string
-	jsonRPC          string
-	stakeManagerAddr string
-	addressTo        string
-	amount           string
-
-	amountValue *big.Int
+	accountDir    string
+	accountConfig string
+	jsonRPC       string
 }
 
 func (v *withdrawParams) validateFlags() (err error) {
-	if v.amountValue, err = helper.ParseAmount(v.amount); err != nil {
-		return err
-	}
-
 	if _, err = helper.ParseJSONRPCAddress(v.jsonRPC); err != nil {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}

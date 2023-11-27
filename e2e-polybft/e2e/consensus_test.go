@@ -353,9 +353,6 @@ func TestE2E_Consensus_Validator_Unstake(t *testing.T) {
 	childChainRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(srv.JSONRPCAddr()))
 	require.NoError(t, err)
 
-	rootChainRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
-	require.NoError(t, err)
-
 	validatorAcc, err := validatorHelper.GetAccountFromDir(srv.DataDir())
 	require.NoError(t, err)
 
@@ -388,7 +385,7 @@ func TestE2E_Consensus_Validator_Unstake(t *testing.T) {
 	require.NoError(t, cluster.WaitForBlock(polybftCfg.EpochSize*4, time.Minute))
 
 	// withdraw from child
-	require.NoError(t, srv.WithdrawChildChain())
+	require.NoError(t, srv.Withdraw())
 
 	currentBlock, err := srv.JSONRPC().Eth().GetBlockByNumber(ethgo.Latest, false)
 	require.NoError(t, err)
@@ -397,18 +394,6 @@ func TestE2E_Consensus_Validator_Unstake(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
-
-	currentEpoch := currentExtra.Checkpoint.EpochNumber
-
-	// wait for checkpoint to be submitted
-	require.NoError(t, waitForRootchainEpoch(currentEpoch, time.Minute,
-		rootChainRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
-
-	exitEventID := uint64(1)
-
-	// send exit transaction to exit helper
-	err = cluster.Bridge.SendExitTransaction(polybftCfg.Bridge.ExitHelperAddr, exitEventID, srv.JSONRPCAddr())
-	require.NoError(t, err)
 
 	// check that validator is no longer active (out of validator set)
 	validatorInfo, err = validatorHelper.GetValidatorInfo(validatorAddr, childChainRelayer)
@@ -429,31 +414,6 @@ func TestE2E_Consensus_Validator_Unstake(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("Balance (after withdrawal of rewards)=%s\n", newValidatorBalance)
 	require.True(t, newValidatorBalance.Cmp(balanceBeforeRewardsWithdraw) > 0)
-
-	l1Relayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
-	require.NoError(t, err)
-
-	checkpointManagerAddr := ethgo.Address(polybftCfg.Bridge.CheckpointManagerAddr)
-
-	// query rootchain validator set and make sure that validator which unstaked all the funds isn't present in validator set anymore
-	// (execute it multiple times if needed, because it is unknown in advance how much time it is going to take until checkpoint is submitted)
-	rootchainValidators := []*polybft.ValidatorInfo{}
-	err = cluster.Bridge.WaitUntil(time.Second, 10*time.Second, func() (bool, error) {
-		rootchainValidators, err = getCheckpointManagerValidators(l1Relayer, checkpointManagerAddr)
-		if err != nil {
-			return true, err
-		}
-
-		return len(rootchainValidators) == 4, nil
-	})
-	require.NoError(t, err)
-	require.Equal(t, 4, len(rootchainValidators))
-
-	for _, validator := range rootchainValidators {
-		if validator.Address == validatorAddr {
-			t.Fatalf("not expected to find validator %v in the current validator set", validator.Address)
-		}
-	}
 }
 
 func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {

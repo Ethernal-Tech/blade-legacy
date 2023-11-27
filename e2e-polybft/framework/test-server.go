@@ -287,32 +287,16 @@ func (t *TestServer) WhitelistValidators(addresses []string, supernetManager typ
 	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("bridge"))
 }
 
-// WithdrawChildChain withdraws available balance from child chain
-func (t *TestServer) WithdrawChildChain() error {
+// Withdraw withdraws available balance from child chain
+func (t *TestServer) Withdraw() error {
 	args := []string{
 		"validator",
-		"withdraw-child",
+		"withdraw",
 		"--" + polybftsecrets.AccountDirFlag, t.config.DataDir,
 		"--jsonrpc", t.JSONRPCAddr(),
 	}
 
 	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("withdraw-child"))
-}
-
-// WithdrawRootChain withdraws available balance from root chain
-func (t *TestServer) WithdrawRootChain(recipient string, amount *big.Int,
-	stakeManager ethgo.Address, bridgeJSONRPC string) error {
-	args := []string{
-		"validator",
-		"withdraw-root",
-		"--" + polybftsecrets.AccountDirFlag, t.config.DataDir,
-		"--to", recipient,
-		"--amount", amount.String(),
-		"--stake-manager", stakeManager.String(),
-		"--jsonrpc", bridgeJSONRPC,
-	}
-
-	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("withdraw-root"))
 }
 
 // WithdrawRewards withdraws pending rewards for given validator on RewardPool contract
