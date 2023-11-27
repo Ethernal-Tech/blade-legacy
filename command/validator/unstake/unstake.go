@@ -90,7 +90,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	txn := &ethgo.Transaction{
 		From:  validatorAccount.Ecdsa.Address(),
 		Input: encoded,
-		To:    (*ethgo.Address)(&contracts.EpochManagerContract),
+		To:    (*ethgo.Address)(&contracts.StakeManagerContract),
 	}
 
 	receipt, err := txRelayer.SendTransaction(txn, validatorAccount.Ecdsa)
@@ -103,8 +103,8 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	var (
-		withdrawalRegisteredEvent contractsapi.StakeRemovedEvent
-		foundLog                  bool
+		stakeRemovedEvent contractsapi.StakeRemovedEvent
+		foundLog          bool
 	)
 
 	result := &unstakeResult{
@@ -113,14 +113,14 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	// check the logs to check for the result
 	for _, log := range receipt.Logs {
-		doesMatch, err := withdrawalRegisteredEvent.ParseLog(log)
+		doesMatch, err := stakeRemovedEvent.ParseLog(log)
 		if err != nil {
 			return err
 		}
 
 		if doesMatch {
 			foundLog = true
-			result.Amount = withdrawalRegisteredEvent.Amount.Uint64()
+			result.Amount = stakeRemovedEvent.Amount.Uint64()
 
 			break
 		}
