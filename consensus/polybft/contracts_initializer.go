@@ -106,7 +106,7 @@ func getInitERC20PredicateInput(config *BridgeConfig, childChainMintable bool) (
 			NewStateReceiver:          contracts.StateReceiverContract,
 			NewRootERC20Predicate:     config.RootERC20PredicateAddr,
 			NewChildTokenTemplate:     contracts.ChildERC20Contract,
-			NewNativeTokenRootAddress: config.RootNativeERC20Addr,
+			NewNativeTokenRootAddress: types.ZeroAddress,
 		}
 	}
 
@@ -133,7 +133,7 @@ func getInitERC20PredicateACLInput(config *BridgeConfig, owner types.Address,
 			NewStateReceiver:          contracts.StateReceiverContract,
 			NewRootERC20Predicate:     config.RootERC20PredicateAddr,
 			NewChildTokenTemplate:     contracts.ChildERC20Contract,
-			NewNativeTokenRootAddress: config.RootNativeERC20Addr,
+			NewNativeTokenRootAddress: types.ZeroAddress,
 			NewUseAllowList:           useAllowList,
 			NewUseBlockList:           useBlockList,
 			NewOwner:                  owner,

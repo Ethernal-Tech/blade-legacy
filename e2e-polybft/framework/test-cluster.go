@@ -515,10 +515,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			args = append(args, "--native-token-config", cluster.Config.NativeTokenConfigRaw)
 		}
 
-		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
-		require.NoError(t, err)
-
-		if len(cluster.Config.Premine) != 0 && tokenConfig.IsMintable {
+		if len(cluster.Config.Premine) != 0 {
 			// only add premine flags in genesis if token is mintable
 			for _, premine := range cluster.Config.Premine {
 				args = append(args, "--premine", premine)

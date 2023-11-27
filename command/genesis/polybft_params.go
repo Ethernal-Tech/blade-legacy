@@ -58,8 +58,6 @@ const (
 
 var (
 	errNoGenesisValidators = errors.New("genesis validators aren't provided")
-	errNoPremineAllowed    = errors.New("native token is not mintable, so no premine is allowed " +
-		"except for zero address and reward wallet if native token is used as reward token")
 )
 
 type contractInfo struct {
@@ -79,16 +77,6 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 	walletPremineInfo, err := helper.ParsePremineInfo(p.rewardWallet)
 	if err != nil {
 		return fmt.Errorf("invalid reward wallet configuration provided '%s' : %w", p.rewardWallet, err)
-	}
-
-	if !p.nativeTokenConfig.IsMintable {
-		// validate premine map, no premine is allowed if token is not mintable,
-		// except for the reward wallet (if native token is used as reward token) and zero address
-		for a := range premineBalances {
-			if a != types.ZeroAddress && (p.rewardTokenCode != "" || a != walletPremineInfo.Address) {
-				return errNoPremineAllowed
-			}
-		}
 	}
 
 	var (
@@ -339,20 +327,10 @@ func (p *genesisParams) deployContracts(
 			artifact: contractsapi.RootERC20,
 			address:  contracts.ERC20Contract,
 		},
-	}
-
-	if !params.nativeTokenConfig.IsMintable {
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.NativeERC20,
-				address:  contracts.NativeERC20TokenContractV1,
-			})
-	} else {
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.NativeERC20,
-				address:  contracts.NativeERC20TokenContractV1,
-			})
+		{
+			artifact: contractsapi.NativeERC20,
+			address:  contracts.NativeERC20TokenContractV1,
+		},
 	}
 
 	if len(params.bridgeAllowListAdmin) != 0 || len(params.bridgeBlockListAdmin) != 0 {
@@ -538,10 +516,6 @@ func (p *genesisParams) validatePolyBFTParams() error {
 func (p *genesisParams) validateRewardWalletAndToken() error {
 	if p.rewardWallet == "" {
 		return errRewardWalletNotDefined
-	}
-
-	if !p.nativeTokenConfig.IsMintable && p.rewardTokenCode == "" {
-		return errRewardTokenOnNonMintable
 	}
 
 	premineInfo, err := helper.ParsePremineInfo(p.rewardWallet)
