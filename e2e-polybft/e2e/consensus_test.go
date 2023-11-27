@@ -80,10 +80,10 @@ func TestE2E_Consensus_Basic(t *testing.T) {
 
 	require.NoError(t, cluster.WaitForBlock(26, 1*time.Minute))
 
-	validatorAcc, err := sidechain.GetAccountFromDir(srv.DataDir())
+	validatorAcc, err := validatorHelper.GetAccountFromDir(srv.DataDir())
 	require.NoError(t, err)
 	// check that validator is no longer active (out of validator set)
-	validatorInfo, err := sidechain.GetValidatorInfo(validatorAcc.Ecdsa.Address(), childChainRelayer)
+	validatorInfo, err := validatorHelper.GetValidatorInfo(validatorAcc.Ecdsa.Address(), childChainRelayer)
 	require.NoError(t, err)
 
 	t.Log(validatorInfo.Stake)
