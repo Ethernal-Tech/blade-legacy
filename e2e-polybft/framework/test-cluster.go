@@ -494,6 +494,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			"--premine", "0x0000000000000000000000000000000000000000",
 			"--reward-wallet", testRewardWalletAddr.String(),
 			"--trieroot", cluster.Config.InitialStateRoot.String(),
+			"--blade-admin", addresses[0].String(), // we put first validator as owner by default
 		}
 
 		if cluster.Config.BlockTime != 0 {

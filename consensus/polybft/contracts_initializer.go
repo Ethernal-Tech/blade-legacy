@@ -60,6 +60,7 @@ func initStakeManager(polyBFTConfig PolyBFTConfig, transition *state.Transition)
 		NewBls:            contracts.BLSContract,
 		EpochManager:      contracts.EpochManagerContract,
 		NewDomain:         signer.DomainValidatorSetString,
+		Owner:             polyBFTConfig.BladeAdmin,
 	}
 
 	input, err := initFn.EncodeAbi()

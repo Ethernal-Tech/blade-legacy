@@ -111,6 +111,7 @@ type genesisParams struct {
 	blockTrackerPollInterval time.Duration
 
 	proxyContractsAdmin string
+	bladeAdmin          string
 }
 
 func (p *genesisParams) validateFlags() error {
@@ -151,6 +152,10 @@ func (p *genesisParams) validateFlags() error {
 		}
 
 		if err := p.validateProxyContractsAdmin(); err != nil {
+			return err
+		}
+
+		if err := p.validateBladeAdminFlag(); err != nil {
 			return err
 		}
 

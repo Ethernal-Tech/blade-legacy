@@ -16,7 +16,7 @@ import (
 
 const (
 	ConsensusName              = "polybft"
-	minNativeTokenParamsNumber = 4
+	minNativeTokenParamsNumber = 3
 
 	defaultNativeTokenName     = "Polygon"
 	defaultNativeTokenSymbol   = "MATIC"
@@ -28,11 +28,10 @@ var (
 		Name:     defaultNativeTokenName,
 		Symbol:   defaultNativeTokenSymbol,
 		Decimals: defaultNativeTokenDecimals,
-		Owner:    types.ZeroAddress,
 	}
 
 	errInvalidTokenParams = errors.New("native token params were not submitted in proper format " +
-		"(<name:symbol:decimals count:token owner address>)")
+		"(<name:symbol:decimals count>)")
 )
 
 // PolyBFTConfig is the configuration file for the Polybft consensus protocol.
@@ -77,11 +76,15 @@ type PolyBFTConfig struct {
 
 	// BlockTrackerPollInterval specifies interval
 	// at which block tracker polls for blocks on a rootchain
-	BlockTrackerPollInterval common.Duration `json:"blockTrackerPollInterval,omitempty"`
+	BlockTrackerPollInterval common.Duration `json:"blockTrackerPollInterval"`
 
 	// ProxyContractsAdmin is the address that will have the privilege to change both the proxy
 	// implementation address and the admin
-	ProxyContractsAdmin types.Address `json:"proxyContractsAdmin,omitempty"`
+	ProxyContractsAdmin types.Address `json:"proxyContractsAdmin"`
+
+	// BladeAdminAddress is the address that will be the owner of the NativeERC20 mintable token,
+	// and StakeManager contract which handles validator actions like whitelist
+	BladeAdmin types.Address `json:"bladeAdmin"`
 }
 
 // LoadPolyBFTConfig loads chain config from provided path and unmarshals PolyBFTConfig
@@ -192,10 +195,9 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 
 // TokenConfig is the configuration of native token used by edge network
 type TokenConfig struct {
-	Name     string        `json:"name"`
-	Symbol   string        `json:"symbol"`
-	Decimals uint8         `json:"decimals"`
-	Owner    types.Address `json:"owner"`
+	Name     string `json:"name"`
+	Symbol   string `json:"symbol"`
+	Decimals uint8  `json:"decimals"`
 }
 
 func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
@@ -226,14 +228,10 @@ func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
 		return nil, errInvalidTokenParams
 	}
 
-	// owner address
-	owner := types.StringToAddress(strings.TrimSpace(params[3]))
-
 	return &TokenConfig{
 		Name:     name,
 		Symbol:   symbol,
 		Decimals: uint8(decimals),
-		Owner:    owner,
 	}, nil
 }
 

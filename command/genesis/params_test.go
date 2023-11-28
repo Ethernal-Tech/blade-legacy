@@ -30,32 +30,31 @@ func Test_extractNativeTokenMetadata(t *testing.T) {
 		},
 		{
 			name:      "not enough params provided",
-			rawConfig: "Test:TST:18",
+			rawConfig: "Test:TST",
 			expectErr: true,
 		},
 		{
 			name:      "empty name provided",
-			rawConfig: ":TST:18:0x123456789",
+			rawConfig: ":TST:18",
 			expectErr: true,
 		},
 		{
 			name:      "empty symbol provided",
-			rawConfig: "Test::18:0x123456789",
+			rawConfig: "Test::18",
 			expectErr: true,
 		},
 		{
 			name:      "invalid decimals number provided",
-			rawConfig: "Test:TST:9999999999999999999999999999999999999999999999999999999999:false:0x123456789",
+			rawConfig: "Test:TST:9999999999999999999999999999999999999999999999999999999999:false",
 			expectErr: true,
 		},
 		{
 			name:      "valid config",
-			rawConfig: "MyToken:MTK:9:0x123456789",
+			rawConfig: "MyToken:MTK:9",
 			expectedCfg: &polybft.TokenConfig{
 				Name:     "MyToken",
 				Symbol:   "MTK",
 				Decimals: 9,
-				Owner:    types.StringToAddress("0x123456789"),
 			},
 			expectErr: false,
 		},
