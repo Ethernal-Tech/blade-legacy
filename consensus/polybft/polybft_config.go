@@ -82,8 +82,8 @@ type PolyBFTConfig struct {
 	// implementation address and the admin
 	ProxyContractsAdmin types.Address `json:"proxyContractsAdmin"`
 
-	// BladeAdminAddress is the address that will be the owner of the NativeERC20 mintable token,
-	// and StakeManager contract which handles validator actions like whitelist
+	// BladeAdmin is the address that will be the owner of the NativeERC20 mintable token,
+	// and StakeManager contract which manages validators
 	BladeAdmin types.Address `json:"bladeAdmin"`
 }
 
