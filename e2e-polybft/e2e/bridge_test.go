@@ -472,9 +472,6 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 		stateSyncedLogsCount = 2
 	)
 
-	minter, err := wallet.GenerateKey()
-	require.NoError(t, err)
-
 	receiverKeys := make([]string, transfersCount)
 	receivers := make([]string, transfersCount)
 	receiversAddrs := make([]types.Address, transfersCount)
@@ -497,8 +494,6 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithEpochSize(epochSize),
-		framework.WithNativeTokenConfig(fmt.Sprintf(framework.NativeTokenMintableTestCfg, minter.Address())),
-		framework.WithPremine(types.Address(minter.Address())),
 		framework.WithPremine(receiversAddrs...))
 	defer cluster.Stop()
 
@@ -634,9 +629,6 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		stateSyncedLogsCount = 2
 	)
 
-	minter, err := wallet.GenerateKey()
-	require.NoError(t, err)
-
 	receiverKeys := make([]string, transfersCount)
 	receivers := make([]string, transfersCount)
 	receiversAddrs := make([]types.Address, transfersCount)
@@ -662,8 +654,6 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithNativeTokenConfig(fmt.Sprintf(framework.NativeTokenMintableTestCfg, minter.Address())),
-		framework.WithPremine(types.Address(minter.Address())),
 		framework.WithPremine(receiversAddrs...))
 	defer cluster.Stop()
 
@@ -862,7 +852,6 @@ func TestE2E_Bridge_ChildChainMintableTokensTransfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithNativeTokenConfig(fmt.Sprintf(framework.NativeTokenMintableTestCfg, adminAddr)),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithPremine(append(depositors, adminAddr)...)) //nolint:makezero
 	defer cluster.Stop()
@@ -1214,14 +1203,9 @@ func TestE2E_Bridge_ChangeVotingPower(t *testing.T) {
 		epochSize          = 5
 	)
 
-	minter, err := wallet.GenerateKey()
-	require.NoError(t, err)
-
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithEpochSize(epochSize),
 		framework.WithEpochReward(1000000),
-		framework.WithNativeTokenConfig(fmt.Sprintf(framework.NativeTokenMintableTestCfg, minter.Address())),
-		framework.WithPremine(types.Address(minter.Address())),
 	)
 	defer cluster.Stop()
 

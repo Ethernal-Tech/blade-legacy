@@ -346,7 +346,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 			// initialize NativeERC20 SC
 			params := &contractsapi.InitializeNativeERC20Fn{
 				Predicate_:   contracts.ChildERC20PredicateContract,
-				Owner_:       polyBFTConfig.NativeTokenConfig.Owner,
+				Owner_:       polyBFTConfig.BladeAdmin,
 				RootToken_:   types.ZeroAddress, // in case native mintable token is used, it is always root token
 				Name_:        polyBFTConfig.NativeTokenConfig.Name,
 				Symbol_:      polyBFTConfig.NativeTokenConfig.Symbol,
