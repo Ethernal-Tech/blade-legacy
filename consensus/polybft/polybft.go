@@ -162,8 +162,8 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 			return err
 		}
 
-		// approve reward pool
-		if err = approveRewardPoolAsSpender(polyBFTConfig, transition); err != nil {
+		// approve EpochManager
+		if err = approveEpochManagerAsSpender(polyBFTConfig, transition); err != nil {
 			return err
 		}
 
@@ -172,7 +172,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 			return err
 		}
 
-		// initialize RewardPool SC
+		// initialize EpochManager SC
 		if err = initEpochManager(polyBFTConfig, transition); err != nil {
 			return err
 		}
