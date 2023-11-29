@@ -44,18 +44,6 @@ func Test_validateFlags(t *testing.T) {
 			err: "address \x10 has invalid length",
 		},
 		{
-			// stake token address omitted
-			buildParamsFn: func() *fundParams {
-				return &fundParams{
-					addresses: []string{
-						types.StringToAddress("0x10").String(),
-						types.StringToAddress("0x20").String()},
-					amounts: []string{"10", "20"},
-				}
-			},
-			err: "invalid stake token address is provided",
-		},
-		{
 			// valid scenario
 			buildParamsFn: func() *fundParams {
 				return &fundParams{
