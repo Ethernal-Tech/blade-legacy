@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -274,7 +273,7 @@ func (t *TestServer) WhitelistValidators(addresses []string) error {
 	args := []string{
 		"validator",
 		"whitelist-validators",
-		"--private-key", bridgeHelper.TestAccountPrivKey,
+		"--" + polybftsecrets.AccountDirFlag, t.config.DataDir,
 		"--jsonrpc", t.BridgeJSONRPCAddr(),
 	}
 	for _, addr := range addresses {
