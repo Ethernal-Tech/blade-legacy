@@ -564,16 +564,11 @@ func (p *Polybft) startConsensusProtocol() {
 
 	for {
 		latestHeader := p.blockchain.CurrentHeader()
-		p.logger.Error(fmt.Sprintf("Latest header %+v", latestHeader))
 
 		currentValidators, err := p.GetValidators(latestHeader.Number, nil)
-		p.logger.Error(fmt.Sprintf("Current Validators %+v", currentValidators))
-
 		if err != nil {
 			p.logger.Error("failed to query current validator set", "block number", latestHeader.Number, "error", err)
 		}
-
-		p.logger.Error(fmt.Sprintf("Key is... %+v", p.key))
 
 		isValidator := currentValidators.ContainsNodeID(p.key.String())
 		p.runtime.setIsActiveValidator(isValidator)
@@ -581,7 +576,6 @@ func (p *Polybft) startConsensusProtocol() {
 		p.txPool.SetSealing(isValidator) // update tx pool
 
 		if isValidator {
-			p.logger.Error("neko je validator")
 			// initialize FSM as a stateless ibft backend via runtime as an adapter
 			err = p.runtime.FSM()
 			if err != nil {
