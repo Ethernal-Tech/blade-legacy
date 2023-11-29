@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -196,12 +197,12 @@ func (t *TestServer) Stop() {
 }
 
 // RootchainFund funds given validator account on the rootchain
-func (t *TestServer) RootchainFund(stakeToken types.Address, amount *big.Int) error {
-	return t.RootchainFundFor([]types.Address{t.address}, []*big.Int{amount}, stakeToken)
+func (t *TestServer) RootchainFund(amount *big.Int) error {
+	return t.RootchainFundFor([]types.Address{t.address}, []*big.Int{amount})
 }
 
 // RootchainFundFor funds given account on the rootchain
-func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.Int, stakeToken types.Address) error {
+func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.Int) error {
 	if len(accounts) != len(amounts) {
 		return errors.New("same size for accounts and amounts must be provided to the rootchain funding")
 	}
@@ -210,8 +211,6 @@ func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.I
 		"bridge",
 		"fund",
 		"--json-rpc", t.BridgeJSONRPCAddr(),
-		"--stake-token", stakeToken.String(),
-		"--mint",
 	}
 
 	for i := 0; i < len(accounts); i++ {
@@ -275,8 +274,8 @@ func (t *TestServer) WhitelistValidators(addresses []string) error {
 	args := []string{
 		"validator",
 		"whitelist-validators",
-		"--" + polybftsecrets.AccountDirFlag, t.config.DataDir,
-		"--jsonrpc", t.JSONRPCAddr(),
+		"--private-key", bridgeHelper.TestAccountPrivKey,
+		"--jsonrpc", t.BridgeJSONRPCAddr(),
 	}
 	for _, addr := range addresses {
 		args = append(args, "--addresses", addr)

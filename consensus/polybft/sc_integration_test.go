@@ -332,9 +332,6 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 				WalletAddress: walletAddress,
 				WalletAmount:  new(big.Int).SetUint64(initialBalance),
 			},
-			Bridge: &BridgeConfig{
-				CustomSupernetManagerAddr: types.StringToAddress("0x12312451"),
-			},
 		}
 
 		transition := newTestTransition(t, alloc)
