@@ -3,6 +3,7 @@ package deploy
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -102,11 +103,35 @@ var (
 
 	// initializersMap maps rootchain contract names to initializer function callbacks
 	initializersMap = map[string]func(command.OutputFormatter, txrelayer.TxRelayer,
-		*polybft.RootchainConfig, ethgo.Key) error{
+		[]*validator.GenesisValidator,
+		*polybft.RootchainConfig, ethgo.Key, int64) error{
+		getProxyNameForImpl(checkpointManagerName): func(fmt command.OutputFormatter,
+			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
+			config *polybft.RootchainConfig,
+			key ethgo.Key,
+			chainID int64) error {
+			validatorSet, err := getValidatorSetForCheckpointManager(fmt, genesisValidators)
+			if err != nil {
+				return err
+			}
+
+			inputParams := &contractsapi.InitializeCheckpointManagerFn{
+				NewBls:          config.BLSAddress,
+				NewBn256G2:      config.BN256G2Address,
+				ChainID_:        big.NewInt(chainID),
+				NewValidatorSet: validatorSet,
+			}
+
+			return initContract(fmt, relayer, inputParams, config.CheckpointManagerAddress,
+				checkpointManagerName, key)
+		},
 		getProxyNameForImpl(exitHelperName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
+			key ethgo.Key,
+			chainID int64) error {
 			inputParams := &contractsapi.InitializeExitHelperFn{
 				NewCheckpointManager: config.CheckpointManagerAddress,
 			}
@@ -115,9 +140,10 @@ var (
 		},
 		getProxyNameForImpl(rootERC20PredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
-
+			key ethgo.Key,
+			chainID int64) error {
 			inputParams := &contractsapi.InitializeRootERC20PredicateFn{
 				NewStateSender:         config.StateSenderAddress,
 				NewExitHelper:          config.ExitHelperAddress,
@@ -132,8 +158,10 @@ var (
 		},
 		getProxyNameForImpl(childERC20MintablePredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
+			key ethgo.Key,
+			chainID int64) error {
 			initParams := &contractsapi.InitializeChildMintableERC20PredicateFn{
 				NewStateSender:        config.StateSenderAddress,
 				NewExitHelper:         config.ExitHelperAddress,
@@ -146,8 +174,10 @@ var (
 		},
 		getProxyNameForImpl(rootERC721PredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
+			key ethgo.Key,
+			chainID int64) error {
 			initParams := &contractsapi.InitializeRootERC721PredicateFn{
 				NewStateSender:          config.StateSenderAddress,
 				NewExitHelper:           config.ExitHelperAddress,
@@ -160,8 +190,10 @@ var (
 		},
 		getProxyNameForImpl(childERC721MintablePredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
+			key ethgo.Key,
+			chainID int64) error {
 			initParams := &contractsapi.InitializeChildMintableERC721PredicateFn{
 				NewStateSender:         config.StateSenderAddress,
 				NewExitHelper:          config.ExitHelperAddress,
@@ -174,8 +206,10 @@ var (
 		},
 		getProxyNameForImpl(rootERC1155PredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
+			key ethgo.Key,
+			chainID int64) error {
 			initParams := &contractsapi.InitializeRootERC1155PredicateFn{
 				NewStateSender:           config.StateSenderAddress,
 				NewExitHelper:            config.ExitHelperAddress,
@@ -188,8 +222,10 @@ var (
 		},
 		getProxyNameForImpl(childERC1155MintablePredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key) error {
+			key ethgo.Key,
+			chainID int64) error {
 			initParams := &contractsapi.InitializeChildMintableERC1155PredicateFn{
 				NewStateSender:          config.StateSenderAddress,
 				NewExitHelper:           config.ExitHelperAddress,
@@ -559,7 +595,7 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 			case <-cmdCtx.Done():
 				return cmdCtx.Err()
 			default:
-				return initializer(outputter, txRelayer, rootchainConfig, deployerKey)
+				return initializer(outputter, txRelayer, initialValidators, rootchainConfig, deployerKey, chainID)
 			}
 		})
 	}
@@ -641,4 +677,44 @@ func collectResultsOnError(results map[string]*deployContractResult) deploymentR
 
 func getProxyNameForImpl(input string) string {
 	return input + ProxySufix
+}
+
+// getValidatorSetForCheckpointManager converts given validators to generic map
+// which is used for ABI encoding validator set being sent to the CheckpointManager contract
+func getValidatorSetForCheckpointManager(o command.OutputFormatter,
+	validators []*validator.GenesisValidator) ([]*contractsapi.Validator, error) {
+	accSet := make(validator.AccountSet, len(validators))
+
+	if _, err := o.Write([]byte("[VALIDATORS - CHECKPOINT MANAGER] \n")); err != nil {
+		return nil, err
+	}
+
+	for i, val := range validators {
+		if _, err := o.Write([]byte(fmt.Sprintf("%v\n", val))); err != nil {
+			return nil, err
+		}
+
+		blsKey, err := val.UnmarshalBLSPublicKey()
+		if err != nil {
+			return nil, err
+		}
+
+		accSet[i] = &validator.ValidatorMetadata{
+			Address:     val.Address,
+			BlsKey:      blsKey,
+			VotingPower: new(big.Int).Set(val.Stake),
+		}
+	}
+
+	hash, err := accSet.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := o.Write([]byte(
+		fmt.Sprintf("[VALIDATORS - CHECKPOINT MANAGER] Validators hash: %s\n", hash))); err != nil {
+		return nil, err
+	}
+
+	return accSet.ToAPIBinding(), nil
 }
