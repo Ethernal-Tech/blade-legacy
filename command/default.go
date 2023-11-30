@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	DefaultStake                = ethgo.Ether(1e3)
+	DefaultStake                = ethgo.Ether(1e6)
 	DefaultPremineBalance       = ethgo.Ether(1e6)
 	DefaultGenesisBaseFee       = chain.GenesisBaseFee
 	DefaultGenesisBaseFeeConfig = fmt.Sprintf(

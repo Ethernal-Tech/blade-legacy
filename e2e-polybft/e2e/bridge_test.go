@@ -1121,6 +1121,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 				// premine access list admin account
 				tcc.Premine = append(tcc.Premine, adminAddr.String())
+				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
 			}
 		}),
 	)
