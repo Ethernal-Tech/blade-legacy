@@ -87,12 +87,15 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 	require.NoError(t, err)
 
+	deployerKey, err := bridgeHelper.DecodePrivateKey("")
+	require.NoError(t, err)
+
 	receipt, err := rootchainTxRelayer.SendTransaction(
 		&ethgo.Transaction{
 			To:    nil,
 			Input: contractsapi.RootERC20.Bytecode,
 		},
-		senderAccount.Ecdsa)
+		deployerKey)
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
@@ -100,17 +103,18 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	rootERC20Token := types.Address(receipt.ContractAddress)
 	t.Log("Rootchain token address:", rootERC20Token)
 
-	require.NoError(t, cluster.Bridge.Deposit(
-		common.ERC20,
-		rootERC20Token,
-		polybftCfg.Bridge.RootERC20PredicateAddr,
-		bridgeHelper.TestAccountPrivKey,
-		senderAccount.Address().String(),
-		tokensToDeposit.String(),
-		"",
-		cluster.Bridge.JSONRPCAddr(),
-		bridgeHelper.TestAccountPrivKey,
-		false),
+	require.NoError(t,
+		cluster.Bridge.Deposit(
+			common.ERC20,
+			rootERC20Token,
+			polybftCfg.Bridge.RootERC20PredicateAddr,
+			bridgeHelper.TestAccountPrivKey,
+			senderAccount.Address().String(),
+			tokensToDeposit.String(),
+			"",
+			cluster.Bridge.JSONRPCAddr(),
+			bridgeHelper.TestAccountPrivKey,
+			false),
 	)
 
 	// wait for a couple of sprints
@@ -1088,9 +1092,8 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		depositAmount  = ethgo.Ether(5)
 		withdrawAmount = ethgo.Ether(1)
 		// make epoch size long enough, so that all exit events are processed within the same epoch
-		epochSize            = 30
-		sprintSize           = uint64(5)
-		stateSyncedLogsCount = 1
+		epochSize  = 30
+		sprintSize = uint64(5)
 	)
 
 	receivers := make([]string, transfersCount)
@@ -1115,6 +1118,9 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 				withdrawAmounts[i] = fmt.Sprintf("%d", withdrawAmount)
 
 				t.Logf("Receiver#%d=%s\n", i+1, receivers[i])
+
+				// premine access list admin account
+				tcc.Premine = append(tcc.Premine, adminAddr.String())
 			}
 		}),
 	)
@@ -1127,13 +1133,14 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 	validatorSrv := cluster.Servers[0]
 	childEthEndpoint := validatorSrv.JSONRPC().Eth()
+	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(validatorSrv.JSONRPC()))
+	require.NoError(t, err)
 
-	var stateSyncedResult contractsapi.StateSyncResultEvent
+	senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
+	require.NoError(t, err)
 
 	// fund admin on rootchain
-	require.NoError(t, cluster.Servers[0].RootchainFundFor([]types.Address{adminAddr}, []*big.Int{ethgo.Ether(10)}))
-
-	adminBalanceOnChild := ethgo.Ether(5)
+	require.NoError(t, validatorSrv.RootchainFundFor([]types.Address{adminAddr}, []*big.Int{ethgo.Ether(1)}))
 
 	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 	require.NoError(t, err)
@@ -1150,37 +1157,6 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	require.NotNil(t, receipt)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 	rootERC20Token := types.Address(receipt.ContractAddress)
-
-	// bridge some tokens for admin to child chain
-	require.NoError(
-		t, cluster.Bridge.Deposit(
-			common.ERC20,
-			rootERC20Token,
-			polybftCfg.Bridge.RootERC20PredicateAddr,
-			bridgeHelper.TestAccountPrivKey,
-			adminAddr.String(),
-			adminBalanceOnChild.String(),
-			"",
-			cluster.Bridge.JSONRPCAddr(),
-			bridgeHelper.TestAccountPrivKey,
-			false),
-	)
-
-	// wait for a couple of sprints
-	finalBlockNum := 5 * sprintSize
-	require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
-
-	// the transaction is processed and there should be a success events
-	logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum, childEthEndpoint)
-	require.NoError(t, err)
-
-	// assert that all deposits are executed successfully
-	checkStateSyncResultLogs(t, logs, stateSyncedLogsCount)
-
-	// check admin balance got increased by deposited amount
-	balance, err := childEthEndpoint.GetBalance(ethgo.Address(adminAddr), ethgo.Latest)
-	require.NoError(t, err)
-	require.Equal(t, adminBalanceOnChild, balance)
 
 	t.Run("bridge ERC 20 tokens", func(t *testing.T) {
 		// DEPOSIT ERC20 TOKENS
@@ -1204,34 +1180,28 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		// wait for a couple of sprints
 		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
+		var stateSyncedResult contractsapi.StateSyncResultEvent
+
 		// the transactions are processed and there should be a success events
 		logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum, childEthEndpoint)
 		require.NoError(t, err)
 
-		// because of the admin deposit on child chain at the beginning
-		totalTransfers := transfersCount + 1
-
 		// assert that all deposits are executed successfully
-		checkStateSyncResultLogs(t, logs, totalTransfers)
+		// (token mapping and transferCount of deposits)
+		checkStateSyncResultLogs(t, logs, transfersCount+1)
 
-		// check receivers balances got increased by deposited amount
-		// because we premined validators
-		expectedBalance := new(big.Int).Add(command.DefaultPremineBalance, depositAmount)
+		// get child token address
+		childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
+			polybftCfg.Bridge.RootERC20PredicateAddr, rootERC20Token, rootchainTxRelayer)
 
 		for _, receiver := range receivers {
-			balance, err := childEthEndpoint.GetBalance(ethgo.Address(types.StringToAddress(receiver)), ethgo.Latest)
-			require.NoError(t, err)
-			require.Equal(t, expectedBalance, balance)
+			balance := erc20BalanceOf(t, types.StringToAddress(receiver), childERC20Token, relayer)
+			require.Equal(t, depositAmount, balance)
 		}
 
 		t.Log("Deposits were successfully processed")
 
 		// WITHDRAW ERC20 TOKENS
-		senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
-		require.NoError(t, err)
-
-		t.Logf("Withdraw sender: %s\n", senderAccount.Ecdsa.Address())
-
 		rawKey, err := senderAccount.Ecdsa.MarshallPrivateKey()
 		require.NoError(t, err)
 
@@ -1245,7 +1215,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 			"",
 			validatorSrv.JSONRPCAddr(),
 			contracts.ChildERC20PredicateContract,
-			contracts.NativeERC20TokenContract,
+			childERC20Token,
 			false)
 		require.Error(t, err)
 
@@ -1261,7 +1231,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 			"",
 			validatorSrv.JSONRPCAddr(),
 			contracts.ChildERC20PredicateContract,
-			contracts.NativeERC20TokenContract,
+			childERC20Token,
 			false)
 		require.NoError(t, err)
 
