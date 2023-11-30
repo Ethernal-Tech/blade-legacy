@@ -31,7 +31,7 @@ const (
 	chainConfigFileName = "genesis.json"
 )
 
-func TestE2E_Bridge_Transfers(t *testing.T) {
+func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	const (
 		transfersCount        = 5
 		amount                = 100
@@ -66,7 +66,8 @@ func TestE2E_Bridge_Transfers(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithTestRewardToken(),
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
-		framework.WithEpochSize(epochSize))
+		framework.WithEpochSize(epochSize),
+		framework.WithBridge())
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
@@ -493,7 +494,9 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithEpochSize(epochSize),
-		framework.WithPremine(receiversAddrs...))
+		framework.WithPremine(receiversAddrs...),
+		framework.WithBridge(),
+	)
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
@@ -653,7 +656,8 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithPremine(receiversAddrs...))
+		framework.WithPremine(receiversAddrs...),
+		framework.WithBridge())
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
@@ -810,7 +814,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	}
 }
 
-func TestE2E_Bridge_ChildChainMintableTokensTransfer(t *testing.T) {
+func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	const (
 		transfersCount = uint64(4)
 		amount         = 100
@@ -851,6 +855,7 @@ func TestE2E_Bridge_ChildChainMintableTokensTransfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
+		framework.WithBridge(),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithPremine(append(depositors, adminAddr)...)) //nolint:makezero
 	defer cluster.Stop()
@@ -1148,7 +1153,10 @@ func TestE2E_Bridge_ChildChainMintableTokensTransfer(t *testing.T) {
 
 func TestE2E_CheckpointSubmission(t *testing.T) {
 	// spin up a cluster with epoch size set to 5 blocks
-	cluster := framework.NewTestCluster(t, 5, framework.WithEpochSize(5), framework.WithTestRewardToken())
+	cluster := framework.NewTestCluster(t, 5,
+		framework.WithEpochSize(5),
+		framework.WithTestRewardToken(),
+		framework.WithBridge())
 	defer cluster.Stop()
 
 	// initialize tx relayer used to query CheckpointManager smart contract
@@ -1219,6 +1227,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		framework.WithEpochSize(epochSize),
 		framework.WithTestRewardToken(),
 		framework.WithRootTrackerPollInterval(3*time.Second),
+		framework.WithBridge(),
 		framework.WithBridgeAllowListAdmin(adminAddr),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithSecretsCallback(func(a []types.Address, tcc *framework.TestClusterConfig) {
