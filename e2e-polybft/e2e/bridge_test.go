@@ -1135,10 +1135,21 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 	adminBalanceOnChild := ethgo.Ether(5)
 
-	erc20Txn := cluster.Deploy(t, admin, contractsapi.RootERC20.Bytecode)
-	require.NoError(t, erc20Txn.Wait())
-	require.True(t, erc20Txn.Succeed())
-	rootERC20Token := types.Address(erc20Txn.Receipt().ContractAddress)
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	require.NoError(t, err)
+
+	deployerKey, err := bridgeHelper.DecodePrivateKey("")
+	require.NoError(t, err)
+
+	// deploy root erc20 token
+	receipt, err := rootchainTxRelayer.SendTransaction(
+		&ethgo.Transaction{
+			To: nil, Input: contractsapi.RootERC20.Bytecode,
+		}, deployerKey)
+	require.NoError(t, err)
+	require.NotNil(t, receipt)
+	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
+	rootERC20Token := types.Address(receipt.ContractAddress)
 
 	// bridge some tokens for admin to child chain
 	require.NoError(
@@ -1216,9 +1227,6 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		t.Log("Deposits were successfully processed")
 
 		// WITHDRAW ERC20 TOKENS
-		rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
-		require.NoError(t, err)
-
 		senderAccount, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
 
