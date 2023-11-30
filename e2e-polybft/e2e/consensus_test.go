@@ -496,13 +496,13 @@ func TestE2E_Consensus_CustomRewardToken(t *testing.T) {
 
 	// first validator is the owner of ChildValidator set smart contract
 	owner := cluster.Servers[0]
-	childChainRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(owner.JSONRPCAddr()))
+	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(owner.JSONRPCAddr()))
 	require.NoError(t, err)
 
 	validatorAcc, err := validatorHelper.GetAccountFromDir(owner.DataDir())
 	require.NoError(t, err)
 
-	validatorInfo, err := validatorHelper.GetValidatorInfo(validatorAcc.Ecdsa.Address(), childChainRelayer)
+	validatorInfo, err := validatorHelper.GetValidatorInfo(validatorAcc.Ecdsa.Address(), relayer)
 	t.Logf("[Validator#%v] Witdhrawable rewards=%d\n", validatorInfo.Address, validatorInfo.WithdrawableRewards)
 
 	require.NoError(t, err)
