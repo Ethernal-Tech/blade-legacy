@@ -149,6 +149,7 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 		secondValidatorDataDir = fmt.Sprintf("test-chain-%d", validatorSetSize+2) // directory where the second validator secrets will be stored
 
 		premineBalance = ethgo.Ether(2e6) // 2M native tokens (so that we have enough balance to fund new validator)
+		stakeAmount    = ethgo.Ether(500)
 	)
 
 	// start cluster with 'validatorSize' validators
@@ -158,6 +159,7 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 		framework.WithSecretsCallback(func(addresses []types.Address, config *framework.TestClusterConfig) {
 			for _, a := range addresses {
 				config.Premine = append(config.Premine, fmt.Sprintf("%s:%s", a, premineBalance))
+				config.StakeAmounts = append(config.StakeAmounts, stakeAmount)
 			}
 		}),
 	)
@@ -203,7 +205,7 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	}))
 
 	// set the initial balance of the new validators
-	initialBalance := ethgo.Ether(500)
+	initialBalance := ethgo.Ether(1000)
 
 	// mint tokens to new validators
 	require.NoError(t, owner.MintNativeERC20Token([]string{firstValidatorAddr.String(), secondValidatorAddr.String()},
@@ -233,8 +235,6 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	firstValidator := cluster.Servers[validatorSetSize]
 	secondValidator := cluster.Servers[validatorSetSize+1]
 
-	initialStake := ethgo.Ether(499)
-
 	// register the first validator with stake
 	require.NoError(t, firstValidator.RegisterValidator())
 
@@ -242,20 +242,20 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	require.NoError(t, secondValidator.RegisterValidator())
 
 	// stake manually for the first validator
-	require.NoError(t, firstValidator.Stake(polybftConfig, initialStake))
+	require.NoError(t, firstValidator.Stake(polybftConfig, stakeAmount))
 
 	// stake manually for the second validator
-	require.NoError(t, secondValidator.Stake(polybftConfig, initialStake))
+	require.NoError(t, secondValidator.Stake(polybftConfig, stakeAmount))
 
 	firstValidatorInfo, err := validatorHelper.GetValidatorInfo(firstValidatorAddr, relayer)
 	require.NoError(t, err)
 	require.True(t, firstValidatorInfo.IsActive)
-	require.True(t, firstValidatorInfo.Stake.Cmp(initialStake) == 0)
+	require.True(t, firstValidatorInfo.Stake.Cmp(stakeAmount) == 0)
 
 	secondValidatorInfo, err := validatorHelper.GetValidatorInfo(secondValidatorAddr, relayer)
 	require.NoError(t, err)
 	require.True(t, secondValidatorInfo.IsActive)
-	require.True(t, secondValidatorInfo.Stake.Cmp(initialStake) == 0)
+	require.True(t, secondValidatorInfo.Stake.Cmp(stakeAmount) == 0)
 
 	currentBlock, err := owner.JSONRPC().Eth().GetBlockByNumber(ethgo.Latest, false)
 	require.NoError(t, err)
