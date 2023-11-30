@@ -319,15 +319,6 @@ func (t *TestBridge) deployRootchainContracts(genesisPath string) error {
 
 // fundAddressesOnRoot sends predefined amount of tokens to rootchain addresses
 func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) error {
-	t.t.Log("Is cluster config nil", t.clusterConfig != nil)
-
-	if t.clusterConfig != nil {
-		t.t.Log("Dir", t.clusterConfig.TmpDir)
-		t.t.Log("Validator prefixes", t.clusterConfig.ValidatorPrefix)
-	}
-
-	t.t.Log("Initial validators", polybftConfig.InitialValidatorSet)
-
 	validatorSecrets, err := genesis.GetValidatorKeyFiles(t.clusterConfig.TmpDir, t.clusterConfig.ValidatorPrefix)
 	if err != nil {
 		return fmt.Errorf("could not get validator secrets on initial rootchain funding of genesis validators: %w", err)
