@@ -220,19 +220,17 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		Title:        "DEPOSIT ERC 1155",
 	}
 
-	if dp.ChildChainMintable {
-		exitEventIDs, err := common.ExtractExitEventIDs(receipt)
-		if err != nil {
-			outputter.SetError(fmt.Errorf("failed to extract exit event: %w", err))
+	exitEventIDs, err := common.ExtractExitEventIDs(receipt)
+	if err != nil {
+		outputter.SetError(fmt.Errorf("failed to extract exit event: %w", err))
 
-			return
-		}
-
-		res.ExitEventIDs = exitEventIDs
+		return
 	}
 
+	res.ExitEventIDs = exitEventIDs
+
 	// populate child token address if a token is mapped alongside with deposit
-	childToken, err := common.ExtractChildTokenAddr(receipt, dp.ChildChainMintable)
+	childToken, err := common.ExtractChildTokenAddr(receipt)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to extract child token address: %w", err))
 
@@ -262,7 +260,7 @@ func createDepositTxn(sender ethgo.Address, receivers []ethgo.Address,
 	addr := ethgo.Address(types.StringToAddress(dp.PredicateAddr))
 
 	return helper.CreateTransaction(sender, &addr, input,
-		nil, !dp.ChildChainMintable), nil
+		nil, true), nil
 }
 
 // createMintTxn encodes parameters for mint function on rootchain token contract
@@ -281,7 +279,7 @@ func createMintTxn(sender, receiver types.Address, amounts, tokenIDs []*big.Int)
 	addr := ethgo.Address(types.StringToAddress(dp.TokenAddr))
 
 	return helper.CreateTransaction(ethgo.Address(sender), &addr,
-		input, nil, !dp.ChildChainMintable), nil
+		input, nil, true), nil
 }
 
 // createApproveERC1155PredicateTxn sends approve transaction
@@ -301,5 +299,5 @@ func createApproveERC1155PredicateTxn(rootERC1155Predicate,
 	addr := ethgo.Address(rootERC1155Token)
 
 	return helper.CreateTransaction(ethgo.ZeroAddress, &addr,
-		input, nil, !dp.ChildChainMintable), nil
+		input, nil, true), nil
 }

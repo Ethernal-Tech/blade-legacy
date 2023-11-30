@@ -158,16 +158,14 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		Title:        "WITHDRAW ERC 1155",
 	}
 
-	if !wp.ChildChainMintable {
-		exitEventIDs, err := common.ExtractExitEventIDs(receipt)
-		if err != nil {
-			outputter.SetError(fmt.Errorf("failed to extract exit event: %w", err))
+	exitEventIDs, err := common.ExtractExitEventIDs(receipt)
+	if err != nil {
+		outputter.SetError(fmt.Errorf("failed to extract exit event: %w", err))
 
-			return
-		}
-
-		res.ExitEventIDs = exitEventIDs
+		return
 	}
+
+	res.ExitEventIDs = exitEventIDs
 
 	outputter.SetCommandResult(res)
 }
@@ -189,5 +187,5 @@ func createWithdrawTxn(receivers []ethgo.Address, amounts, TokenIDs []*big.Int) 
 	addr := ethgo.Address(types.StringToAddress(wp.PredicateAddr))
 
 	return helper.CreateTransaction(ethgo.ZeroAddress, &addr, input,
-		nil, wp.ChildChainMintable), nil
+		nil, true), nil
 }

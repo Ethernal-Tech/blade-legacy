@@ -123,7 +123,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 		// mint tokens to depositor, so he is able to send them
 		mintTxn, err := helper.CreateMintTxn(types.Address(depositorAddr),
-			types.StringToAddress(dp.TokenAddr), aggregateAmount, !dp.ChildChainMintable)
+			types.StringToAddress(dp.TokenAddr), aggregateAmount, true)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("mint transaction creation failed: %w", err))
 
@@ -148,7 +148,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	approveTxn, err := helper.CreateApproveERC20Txn(aggregateAmount,
 		types.StringToAddress(dp.PredicateAddr),
 		types.StringToAddress(dp.TokenAddr),
-		!dp.ChildChainMintable,
+		true,
 	)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to create root erc 20 approve transaction: %w", err))
@@ -208,14 +208,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 				var exitEventIDs []*big.Int
 
-				if dp.ChildChainMintable {
-					if exitEventIDs, err = common.ExtractExitEventIDs(receipt); err != nil {
-						return fmt.Errorf("failed to extract exit event: %w", err)
-					}
+				if exitEventIDs, err = common.ExtractExitEventIDs(receipt); err != nil {
+					return fmt.Errorf("failed to extract exit event: %w", err)
 				}
 
 				// populate child token address if a token is mapped alongside with deposit
-				childToken, err := common.ExtractChildTokenAddr(receipt, dp.ChildChainMintable)
+				childToken, err := common.ExtractChildTokenAddr(receipt)
 				if err != nil {
 					return fmt.Errorf("failed to extract child token address: %w", err)
 				}
@@ -282,5 +280,5 @@ func createDepositTxn(sender, receiver types.Address, amount *big.Int) (*ethgo.T
 	addr := ethgo.Address(types.StringToAddress(dp.PredicateAddr))
 
 	return helper.CreateTransaction(ethgo.Address(sender), &addr,
-		input, nil, !dp.ChildChainMintable), nil
+		input, nil, true), nil
 }

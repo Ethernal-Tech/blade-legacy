@@ -47,12 +47,11 @@ var (
 )
 
 type BridgeParams struct {
-	SenderKey          string
-	Receivers          []string
-	TokenAddr          string
-	PredicateAddr      string
-	JSONRPCAddr        string
-	ChildChainMintable bool
+	SenderKey     string
+	Receivers     []string
+	TokenAddr     string
+	PredicateAddr string
+	JSONRPCAddr   string
 }
 
 // RegisterCommonFlags registers common bridge flags to a given command
@@ -76,13 +75,6 @@ func (p *BridgeParams) RegisterCommonFlags(cmd *cobra.Command) {
 		JSONRPCFlag,
 		txrelayer.DefaultRPCAddress,
 		"the JSON RPC endpoint",
-	)
-
-	cmd.Flags().BoolVar(
-		&p.ChildChainMintable,
-		ChildChainMintableFlag,
-		false,
-		"flag indicating whether tokens originate from child chain",
 	)
 }
 
@@ -194,36 +186,23 @@ func ExtractExitEventIDs(receipt *ethgo.Receipt) ([]*big.Int, error) {
 }
 
 // ExtractChildTokenAddr extracts predicted deterministic child token address
-func ExtractChildTokenAddr(receipt *ethgo.Receipt, childChainMintable bool) (*types.Address, error) {
+func ExtractChildTokenAddr(receipt *ethgo.Receipt) (*types.Address, error) {
 	var (
-		l1TokenMapped contractsapi.TokenMappedEvent
 		l2TokenMapped contractsapi.L2MintableTokenMappedEvent
 	)
 
 	for _, log := range receipt.Logs {
-		if childChainMintable {
-			doesMatch, err := l2TokenMapped.ParseLog(log)
-			if err != nil {
-				return nil, err
-			}
-
-			if !doesMatch {
-				continue
-			}
-
-			return &l2TokenMapped.ChildToken, nil
-		} else {
-			doesMatch, err := l1TokenMapped.ParseLog(log)
-			if err != nil {
-				return nil, err
-			}
-
-			if !doesMatch {
-				continue
-			}
-
-			return &l1TokenMapped.ChildToken, nil
+		doesMatch, err := l2TokenMapped.ParseLog(log)
+		if err != nil {
+			return nil, err
 		}
+
+		if !doesMatch {
+			continue
+		}
+
+		return &l2TokenMapped.ChildToken, nil
+
 	}
 
 	return nil, nil
