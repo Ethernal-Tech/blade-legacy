@@ -251,6 +251,15 @@ func ParseAmount(amount string) (*big.Int, error) {
 	return result, nil
 }
 
+func ParseAmountAllowZero(amount string) (*big.Int, error) {
+	result, ok := new(big.Int).SetString(amount, 0)
+	if !ok || result.Cmp(big.NewInt(0)) < 0 {
+		return nil, fmt.Errorf("amount %s should be numerical value greater than zero", amount)
+	}
+
+	return result, nil
+}
+
 func ValidateProxyContractsAdmin(proxyContractsAdmin string) error {
 	if err := types.IsValidAddress(proxyContractsAdmin); err != nil {
 		return fmt.Errorf("proxy contracts admin address is not valid: %w", err)

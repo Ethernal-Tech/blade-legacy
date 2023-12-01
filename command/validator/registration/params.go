@@ -3,6 +3,7 @@ package registration
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
@@ -12,11 +13,18 @@ type registerParams struct {
 	accountDir    string
 	accountConfig string
 	jsonRPC       string
+	amount        string
+
+	amountValue *big.Int
 }
 
-func (rp *registerParams) validateFlags() error {
+func (rp *registerParams) validateFlags() (err error) {
+	if rp.amountValue, err = helper.ParseAmountAllowZero(rp.amount); err != nil {
+		return err
+	}
+
 	// validate jsonrpc address
-	_, err := helper.ParseJSONRPCAddress(rp.jsonRPC)
+	_, err = helper.ParseJSONRPCAddress(rp.jsonRPC)
 	if err != nil {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}

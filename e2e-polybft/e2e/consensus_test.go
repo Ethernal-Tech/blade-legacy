@@ -238,13 +238,10 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	require.NoError(t, firstValidator.RegisterValidator())
 
 	// register the second validator without stake
-	require.NoError(t, secondValidator.RegisterValidator())
+	require.NoError(t, secondValidator.RegisterValidatorWithStake(stakeAmount))
 
 	// stake manually for the first validator
 	require.NoError(t, firstValidator.Stake(polybftConfig, stakeAmount))
-
-	// stake manually for the second validator
-	require.NoError(t, secondValidator.Stake(polybftConfig, stakeAmount))
 
 	firstValidatorInfo, err := validatorHelper.GetValidatorInfo(firstValidatorAddr, relayer)
 	require.NoError(t, err)

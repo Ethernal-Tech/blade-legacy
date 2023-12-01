@@ -267,6 +267,19 @@ func (t *TestServer) RegisterValidator() error {
 	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("validator"))
 }
 
+// RegisterValidator is a wrapper function which registers new validator on a root chain
+func (t *TestServer) RegisterValidatorWithStake(amount *big.Int) error {
+	args := []string{
+		"validator",
+		"register-validator",
+		"--jsonrpc", t.JSONRPCAddr(),
+		"--" + polybftsecrets.AccountDirFlag, t.DataDir(),
+		"--amount", amount.String(),
+	}
+
+	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("validator"))
+}
+
 // WhitelistValidators invokes whitelist-validators helper CLI command,
 // that whitelists validators on the root chain
 func (t *TestServer) WhitelistValidators(addresses []string) error {
