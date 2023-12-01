@@ -75,8 +75,8 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 			for i := 0; i < len(addrs); i++ {
 				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
 				// premine receivers, so that they are able to do withdrawals
-				tcc.Premine = append(tcc.Premine, receivers...)
 			}
+			tcc.Premine = append(tcc.Premine, receivers...)
 		}))
 	defer cluster.Stop()
 
