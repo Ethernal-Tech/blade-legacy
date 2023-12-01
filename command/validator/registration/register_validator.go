@@ -152,6 +152,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 		result.koskSignature = hex.EncodeToString(koskSignatureRaw)
 		result.validatorAddress = validatorRegisteredEvent.Validator.String()
+		result.amount = params.amountValue
 
 		foundLog = true
 

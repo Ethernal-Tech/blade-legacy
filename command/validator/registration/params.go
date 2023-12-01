@@ -35,6 +35,7 @@ func (rp *registerParams) validateFlags() (err error) {
 type registerResult struct {
 	validatorAddress string
 	koskSignature    string
+	amount           *big.Int
 }
 
 func (rr registerResult) GetOutput() string {
@@ -45,6 +46,7 @@ func (rr registerResult) GetOutput() string {
 	vals := make([]string, 0, 2)
 	vals = append(vals, fmt.Sprintf("Validator Address|%s", rr.validatorAddress))
 	vals = append(vals, fmt.Sprintf("KOSK Signature|%s", rr.koskSignature))
+	vals = append(vals, fmt.Sprintf("Amount|%s", rr.amount))
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")
 
