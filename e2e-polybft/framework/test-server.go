@@ -274,7 +274,7 @@ func (t *TestServer) WhitelistValidators(addresses []string) error {
 		"validator",
 		"whitelist-validators",
 		"--" + polybftsecrets.AccountDirFlag, t.config.DataDir,
-		"--jsonrpc", t.BridgeJSONRPCAddr(),
+		"--jsonrpc", t.JSONRPCAddr(),
 	}
 	for _, addr := range addresses {
 		args = append(args, "--addresses", addr)

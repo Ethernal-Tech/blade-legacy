@@ -251,7 +251,7 @@ func (c *consensusRuntime) initCheckpointManager(logger hcf.Logger) error {
 // initStateSyncRelayer initializes state sync relayer
 // if not enabled, then a dummy state sync relayer will be used
 func (c *consensusRuntime) initStateSyncRelayer(logger hcf.Logger) error {
-	if c.config.consensusConfig.IsRelayer {
+	if c.IsBridgeEnabled() && c.config.consensusConfig.IsRelayer {
 		txRelayer, err := getStateSyncTxRelayer(c.config.consensusConfig.RPCEndpoint, logger)
 		if err != nil {
 			return err

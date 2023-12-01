@@ -318,7 +318,7 @@ func (t *TestBridge) deployRootchainContracts(genesisPath string) error {
 }
 
 // fundAddressesOnRoot sends predefined amount of tokens to rootchain addresses
-func (t *TestBridge) fundAddressesOnRoot(tokenConfig *polybft.TokenConfig, polybftConfig polybft.PolyBFTConfig) error {
+func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) error {
 	validatorSecrets, err := genesis.GetValidatorKeyFiles(t.clusterConfig.TmpDir, t.clusterConfig.ValidatorPrefix)
 	if err != nil {
 		return fmt.Errorf("could not get validator secrets on initial rootchain funding of genesis validators: %w", err)
