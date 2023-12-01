@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/secretmanager v1.11.4
 	github.com/0xPolygon/go-ibft v0.4.1-0.20230717081138-628065cf23b6
 	github.com/armon/go-metrics v0.4.1
-	github.com/aws/aws-sdk-go v1.46.1
+	github.com/aws/aws-sdk-go v1.48.10
 	github.com/btcsuite/btcd v0.22.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/go-connections v0.4.0
