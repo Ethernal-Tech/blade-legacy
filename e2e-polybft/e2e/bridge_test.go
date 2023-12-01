@@ -378,6 +378,11 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 		framework.WithEpochSize(epochSize),
 		framework.WithPremine(receiversAddrs...),
 		framework.WithBridge(),
+		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
+			for i := 0; i < len(addrs); i++ {
+				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
+			}
+		}),
 	)
 	defer cluster.Stop()
 
@@ -393,8 +398,11 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	// deploy root ERC 721 token
-	deployTxn := &ethgo.Transaction{To: nil, Input: contractsapi.RootERC721.Bytecode}
-	receipt, err := rootchainTxRelayer.SendTransaction(deployTxn, rootchainDeployer)
+	receipt, err := rootchainTxRelayer.SendTransaction(
+		&ethgo.Transaction{
+			To:    nil,
+			Input: contractsapi.RootERC721.Bytecode,
+		}, rootchainDeployer)
 	require.NoError(t, err)
 
 	rootERC721Addr := receipt.ContractAddress
@@ -539,7 +547,13 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
 		framework.WithPremine(receiversAddrs...),
-		framework.WithBridge())
+		framework.WithBridge(),
+		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
+			for i := 0; i < len(addrs); i++ {
+				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
+			}
+		}),
+	)
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
@@ -554,8 +568,11 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	// deploy root ERC 1155 token
-	deployTxn := &ethgo.Transaction{To: nil, Input: contractsapi.RootERC1155.Bytecode}
-	receipt, err := rootchainTxRelayer.SendTransaction(deployTxn, rootchainDeployer)
+	receipt, err := rootchainTxRelayer.SendTransaction(
+		&ethgo.Transaction{
+			To:    nil,
+			Input: contractsapi.RootERC1155.Bytecode,
+		}, rootchainDeployer)
 	require.NoError(t, err)
 
 	rootERC1155Addr := receipt.ContractAddress
