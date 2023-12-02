@@ -11,7 +11,6 @@ CHAIN_CUSTOM_OPTIONS=$(tr "\n" " " << EOL
 --premine 0x0000000000000000000000000000000000000000
 --premine 0x228466F2C715CbEC05dEAbfAc040ce3619d7CF0B:0xD3C21BCECCEDA1000000
 --premine 0xca48694ebcB2548dF5030372BE4dAad694ef174e:0xD3C21BCECCEDA1000000
---burn-contract 0:0x0000000000000000000000000000000000000000
 EOL
 )
 
@@ -48,71 +47,23 @@ case "$1" in
 
               createGenesisConfig "$2" "$secrets" \
                 --reward-wallet 0xDEADBEEF:1000000 \
-                --native-token-config "Polygon:MATIC:18:true:$(echo "$secrets" | jq -r '.[0] | .address')" \
+                --native-token-config "Polygon:MATIC:18" \
+                --blade-admin $(echo "$secrets" | jq -r '.[0] | .address') \
                 --proxy-contracts-admin ${proxyContractsAdmin}
 
-              echo "Deploying stake manager..."
-              "$POLYGON_EDGE_BIN" polybft stake-manager-deploy \
-                --jsonrpc http://rootchain:8545 \
-                --genesis /data/genesis.json \
-                --proxy-contracts-admin ${proxyContractsAdmin} \
-                --test
-
-              stakeManagerAddr=$(cat /data/genesis.json | jq -r '.params.engine.polybft.bridge.stakeManagerAddr')
-              stakeToken=$(cat /data/genesis.json | jq -r '.params.engine.polybft.bridge.stakeTokenAddr')
-
-              "$POLYGON_EDGE_BIN" rootchain deploy \
-                --stake-manager ${stakeManagerAddr} \
-                --stake-token ${stakeToken} \
+              "$POLYGON_EDGE_BIN" bridge deploy \
                 --json-rpc http://rootchain:8545 \
                 --genesis /data/genesis.json \
                 --proxy-contracts-admin ${proxyContractsAdmin} \
                 --test
 
-              customSupernetManagerAddr=$(cat /data/genesis.json | jq -r '.params.engine.polybft.bridge.customSupernetManagerAddr')
-              supernetID=$(cat /data/genesis.json | jq -r '.params.engine.polybft.supernetID')
               addresses="$(echo "$secrets" | jq -r '.[0] | .address'),$(echo "$secrets" | jq -r '.[1] | .address'),$(echo "$secrets" | jq -r '.[2] | .address'),$(echo "$secrets" | jq -r '.[3] | .address')"
 
               "$POLYGON_EDGE_BIN" rootchain fund \
                 --json-rpc http://rootchain:8545 \
-                --stake-token ${stakeToken} \
-                --mint \
                 --addresses ${addresses} \
                 --amounts 1000000000000000000000000,1000000000000000000000000,1000000000000000000000000,1000000000000000000000000
 
-              "$POLYGON_EDGE_BIN" polybft whitelist-validators \
-                --addresses ${addresses} \
-                --supernet-manager ${customSupernetManagerAddr} \
-                --private-key aa75e9a7d427efc732f8e4f1a5b7646adcc61fd5bae40f80d13c8419c9f43d6d \
-                --jsonrpc http://rootchain:8545
-
-              counter=1
-              while [ $counter -le 4 ]; do
-                echo "Registering validator: ${counter}"
-
-                "$POLYGON_EDGE_BIN" polybft register-validator \
-                  --supernet-manager ${customSupernetManagerAddr} \
-                  --data-dir /data/data-${counter} \
-                  --jsonrpc http://rootchain:8545
-
-                "$POLYGON_EDGE_BIN" polybft stake \
-                  --data-dir /data/data-${counter} \
-                  --amount 1000000000000000000000000 \
-                  --supernet-id ${supernetID} \
-                  --stake-manager ${stakeManagerAddr} \
-                  --stake-token ${stakeToken} \
-                  --jsonrpc http://rootchain:8545
-
-                counter=$((counter + 1))
-              done
-
-              "$POLYGON_EDGE_BIN" polybft supernet \
-                --private-key aa75e9a7d427efc732f8e4f1a5b7646adcc61fd5bae40f80d13c8419c9f43d6d \
-                --supernet-manager ${customSupernetManagerAddr} \
-                --finalize-genesis-set \
-                --enable-staking \
-                --genesis /data/genesis.json \
-                --jsonrpc http://rootchain:8545
               ;;
       esac
       ;;
