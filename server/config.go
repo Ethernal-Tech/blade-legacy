@@ -44,8 +44,12 @@ type Config struct {
 
 	Relayer bool
 
-	NumBlockConfirmations uint64
-	MetricsInterval       time.Duration
+	MetricsInterval time.Duration
+
+	// event tracker
+	TrackerSyncBatchSize          uint64
+	TrackerNumBlockConfirmations  uint64
+	TrackerNumOfBlocksToReconcile uint64
 }
 
 // Telemetry holds the config details for metric services

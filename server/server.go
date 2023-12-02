@@ -563,18 +563,21 @@ func (s *Server) setupConsensus() error {
 
 	consensus, err := engine(
 		&consensus.Params{
-			Context:               context.Background(),
-			Config:                config,
-			TxPool:                s.txpool,
-			Network:               s.network,
-			Blockchain:            s.blockchain,
-			Executor:              s.executor,
-			Grpc:                  s.grpcServer,
-			Logger:                s.logger,
-			SecretsManager:        s.secretsManager,
-			BlockTime:             uint64(blockTime.Seconds()),
-			NumBlockConfirmations: s.config.NumBlockConfirmations,
-			MetricsInterval:       s.config.MetricsInterval,
+			Context:         context.Background(),
+			Config:          config,
+			TxPool:          s.txpool,
+			Network:         s.network,
+			Blockchain:      s.blockchain,
+			Executor:        s.executor,
+			Grpc:            s.grpcServer,
+			Logger:          s.logger,
+			SecretsManager:  s.secretsManager,
+			BlockTime:       uint64(blockTime.Seconds()),
+			MetricsInterval: s.config.MetricsInterval,
+			// event tracker
+			TrackerNumBlockConfirmations:  s.config.TrackerNumBlockConfirmations,
+			TrackerSyncBatchSize:          s.config.TrackerSyncBatchSize,
+			TrackerNumOfBlocksToReconcile: s.config.TrackerNumOfBlocksToReconcile,
 		},
 	)
 

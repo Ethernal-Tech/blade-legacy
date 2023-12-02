@@ -49,6 +49,8 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
+require github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20231202204931-b886edca635a
+
 require (
 	cloud.google.com/go/compute v1.23.0 // indirect
 	cloud.google.com/go/compute/metadata v0.2.3 // indirect

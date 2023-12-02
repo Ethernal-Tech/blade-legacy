@@ -33,13 +33,17 @@ type Config struct {
 	JSONLogFormat            bool       `json:"json_log_format" yaml:"json_log_format"`
 	CorsAllowedOrigins       []string   `json:"cors_allowed_origins" yaml:"cors_allowed_origins"`
 
-	Relayer               bool   `json:"relayer" yaml:"relayer"`
-	NumBlockConfirmations uint64 `json:"num_block_confirmations" yaml:"num_block_confirmations"`
+	Relayer bool `json:"relayer" yaml:"relayer"`
 
 	ConcurrentRequestsDebug uint64 `json:"concurrent_requests_debug" yaml:"concurrent_requests_debug"`
 	WebSocketReadLimit      uint64 `json:"web_socket_read_limit" yaml:"web_socket_read_limit"`
 
 	MetricsInterval time.Duration `json:"metrics_interval" yaml:"metrics_interval"`
+
+	// event tracker
+	TrackerSyncBatchSize          uint64 `json:"tracker_sync_batch_size" yaml:"tracker_sync_batch_size"`
+	TrackerNumBlockConfirmations  uint64 `json:"tracker_num_block_confirmations" yaml:"tracker_num_block_confirmations"`
+	TrackerNumOfBlocksToReconcile uint64 `json:"tracker_num_blocks_reconcile" yaml:"tracker_num_blocks_reconcile"`
 }
 
 // Telemetry holds the config details for metric services.
@@ -78,10 +82,6 @@ const (
 	// requests with fromBlock/toBlock values (e.g. eth_getLogs)
 	DefaultJSONRPCBlockRangeLimit uint64 = 1000
 
-	// DefaultNumBlockConfirmations minimal number of child blocks required for the parent block to be considered final
-	// on ethereum epoch lasts for 32 blocks. more details: https://www.alchemy.com/overviews/ethereum-commitment-levels
-	DefaultNumBlockConfirmations uint64 = 64
-
 	// DefaultConcurrentRequestsDebug specifies max number of allowed concurrent requests for debug endpoints
 	DefaultConcurrentRequestsDebug uint64 = 32
 
@@ -93,6 +93,20 @@ const (
 	// DefaultMetricsInterval specifies the time interval after which Prometheus metrics will be generated.
 	// A value of 0 means the metrics are disabled.
 	DefaultMetricsInterval time.Duration = time.Second * 8
+
+	// event tracker
+
+	// DefaultNumBlockConfirmations minimal number of child blocks required for the parent block
+	// to be considered final on tracked chain
+	DefaultNumBlockConfirmations uint64 = 64
+
+	// DefaultNumOfBlocksToReconcile is the default number of how many blocks
+	// the tracker will sync up from the latest block on tracked chain
+	DefaultNumOfBlocksToReconcile uint64 = 10_000
+
+	// DefaultSyncBatchSize defines a default batch size of blocks that will be gotten from tracked chain,
+	// when tracker is out of sync and needs to sync a number of blocks
+	DefaultSyncBatchSize = DefaultNumBlockConfirmations * 2
 )
 
 // DefaultConfig returns the default server configuration
@@ -129,10 +143,13 @@ func DefaultConfig() *Config {
 		JSONRPCBatchRequestLimit: DefaultJSONRPCBatchRequestLimit,
 		JSONRPCBlockRangeLimit:   DefaultJSONRPCBlockRangeLimit,
 		Relayer:                  false,
-		NumBlockConfirmations:    DefaultNumBlockConfirmations,
 		ConcurrentRequestsDebug:  DefaultConcurrentRequestsDebug,
 		WebSocketReadLimit:       DefaultWebSocketReadLimit,
 		MetricsInterval:          DefaultMetricsInterval,
+		// event tracker
+		TrackerSyncBatchSize:          DefaultSyncBatchSize,
+		TrackerNumBlockConfirmations:  DefaultNumBlockConfirmations,
+		TrackerNumOfBlocksToReconcile: DefaultNumOfBlocksToReconcile,
 	}
 }
 
