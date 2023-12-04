@@ -63,9 +63,8 @@ type genesisParams struct {
 
 	blockGasLimit uint64
 
-	baseFeeConfig        string
-	parsedBaseFeeConfig  *baseFeeInfo
-	isBaseFeeConfigEmpty bool
+	baseFeeConfig       string
+	parsedBaseFeeConfig *baseFeeInfo
 
 	minNumValidators     uint64
 	maxNumValidators     uint64
@@ -225,7 +224,7 @@ func (p *genesisParams) initGenesisConfig() error {
 		Bootnodes: p.bootnodes,
 	}
 
-	if !p.isBaseFeeConfigEmpty {
+	if p.parsedBaseFeeConfig != nil {
 		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
 		chainConfig.Genesis.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
 		chainConfig.Genesis.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
@@ -300,7 +299,6 @@ func (p *genesisParams) validateBlockTrackerPollInterval() error {
 
 func (p *genesisParams) validateGenesisBaseFeeConfig() error {
 	if p.baseFeeConfig == "" {
-		p.isBaseFeeConfigEmpty = true
 
 		return nil
 	}

@@ -151,7 +151,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 
 	var enabledForks *chain.Forks
 
-	if p.isBaseFeeConfigEmpty {
+	if p.parsedBaseFeeConfig == nil {
 		enabledForks = &chain.Forks{
 			chain.Homestead:      chain.NewFork(0),
 			chain.EIP150:         chain.NewFork(0),
