@@ -149,7 +149,11 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		BladeAdmin:               types.StringToAddress(p.bladeAdmin),
 	}
 
-	var enabledForks *chain.Forks
+	enabledForks := chain.AllForksEnabled.Copy()
+	
+	if p.parsedBaseFeeConfig == nil {
+	     enabledForks.RemoveFork(chain.London)
+	}
 
 	if p.parsedBaseFeeConfig == nil {
 		enabledForks = &chain.Forks{
