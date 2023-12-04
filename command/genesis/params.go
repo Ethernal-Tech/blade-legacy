@@ -63,8 +63,9 @@ type genesisParams struct {
 
 	blockGasLimit uint64
 
-	baseFeeConfig       string
-	parsedBaseFeeConfig *baseFeeInfo
+	baseFeeConfig        string
+	parsedBaseFeeConfig  *baseFeeInfo
+	isBaseFeeConfigEmpty bool
 
 	minNumValidators     uint64
 	maxNumValidators     uint64
@@ -208,14 +209,11 @@ func (p *genesisParams) initGenesisConfig() error {
 	chainConfig := &chain.Chain{
 		Name: p.name,
 		Genesis: &chain.Genesis{
-			GasLimit:           p.blockGasLimit,
-			Difficulty:         1,
-			Alloc:              map[types.Address]*chain.GenesisAccount{},
-			ExtraData:          p.extraData,
-			GasUsed:            command.DefaultGenesisGasUsed,
-			BaseFee:            p.parsedBaseFeeConfig.baseFee,
-			BaseFeeEM:          p.parsedBaseFeeConfig.baseFeeEM,
-			BaseFeeChangeDenom: p.parsedBaseFeeConfig.baseFeeChangeDenom,
+			GasLimit:   p.blockGasLimit,
+			Difficulty: 1,
+			Alloc:      map[types.Address]*chain.GenesisAccount{},
+			ExtraData:  p.extraData,
+			GasUsed:    command.DefaultGenesisGasUsed,
 		},
 		Params: &chain.Params{
 			ChainID: int64(p.chainID),
@@ -225,6 +223,12 @@ func (p *genesisParams) initGenesisConfig() error {
 			},
 		},
 		Bootnodes: p.bootnodes,
+	}
+
+	if !p.isBaseFeeConfigEmpty {
+		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
+		chainConfig.Genesis.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
+		chainConfig.Genesis.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
 	}
 
 	chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
@@ -296,7 +300,8 @@ func (p *genesisParams) validateBlockTrackerPollInterval() error {
 
 func (p *genesisParams) validateGenesisBaseFeeConfig() error {
 	if p.baseFeeConfig == "" {
-		return errors.New("invalid input(empty string) for genesis base fee config flag")
+		p.isBaseFeeConfigEmpty = true
+		return nil
 	}
 
 	baseFeeInfo, err := parseBaseFeeConfig(p.baseFeeConfig)

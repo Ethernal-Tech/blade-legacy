@@ -149,7 +149,22 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		BladeAdmin:               types.StringToAddress(p.bladeAdmin),
 	}
 
-	enabledForks := chain.AllForksEnabled
+	var enabledForks *chain.Forks
+
+	if p.isBaseFeeConfigEmpty {
+		enabledForks = &chain.Forks{
+			chain.Homestead:      chain.NewFork(0),
+			chain.EIP150:         chain.NewFork(0),
+			chain.EIP155:         chain.NewFork(0),
+			chain.EIP158:         chain.NewFork(0),
+			chain.Byzantium:      chain.NewFork(0),
+			chain.Constantinople: chain.NewFork(0),
+			chain.Petersburg:     chain.NewFork(0),
+			chain.Istanbul:       chain.NewFork(0),
+		}
+	} else {
+		enabledForks = chain.AllForksEnabled
+	}
 
 	chainConfig := &chain.Chain{
 		Name: p.name,
