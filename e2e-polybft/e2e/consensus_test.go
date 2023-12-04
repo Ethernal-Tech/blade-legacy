@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
-	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"testing"
@@ -27,20 +25,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
-
-func init() {
-	wd, err := os.Getwd()
-	if err != nil {
-		return
-	}
-
-	parent := filepath.Dir(wd)
-	wd = filepath.Join(parent, "../artifacts/polygon-edge")
-	os.Setenv("EDGE_BINARY", wd)
-	os.Setenv("E2E_TESTS", "true")
-	os.Setenv("E2E_LOGS", "true")
-	os.Setenv("E2E_LOG_LEVEL", "debug")
-}
 
 var uint256ABIType = abi.MustNewType("tuple(uint256)")
 
