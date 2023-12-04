@@ -40,7 +40,7 @@ var (
 	dockerContainerID string
 )
 
-// GetCommand returns the rootchain server command
+// GetCommand returns the bridge server command
 func GetCommand() *cobra.Command {
 	rootchainServerCmd := &cobra.Command{
 		Use:     "server",

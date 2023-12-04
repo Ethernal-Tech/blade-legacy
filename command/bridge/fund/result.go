@@ -20,7 +20,7 @@ func (r *result) GetOutput() string {
 	vals = append(vals, fmt.Sprintf("Validator (address)|%s", r.ValidatorAddr))
 	vals = append(vals, fmt.Sprintf("Transaction (hash)|%s", r.TxHash))
 
-	buffer.WriteString("\n[ROOTCHAIN FUND]\n")
+	buffer.WriteString("\n[BRIDGE FUND]\n")
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")
 

@@ -18,7 +18,7 @@ var (
 	params fundParams
 )
 
-// GetCommand returns the rootchain fund command
+// GetCommand returns the bridge fund command
 func GetCommand() *cobra.Command {
 	rootchainFundCmd := &cobra.Command{
 		Use:     "fund",
@@ -131,7 +131,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	if err := g.Wait(); err != nil {
 		outputter.SetError(err)
-		_, _ = outputter.Write([]byte("[ROOTCHAIN FUND] Successfully funded following accounts\n"))
+		_, _ = outputter.Write([]byte("[BRIDGE FUND] Successfully funded following accounts\n"))
 
 		for _, result := range results {
 			if result != nil {
