@@ -33,7 +33,7 @@ func (r containerStopResult) GetOutput() string {
 	vals = append(vals, fmt.Sprintf("Status|%d", r.Status))
 	vals = append(vals, fmt.Sprintf("Error|%s", r.Err))
 
-	buffer.WriteString("\n[ROOTCHAIN SERVER - STOP]\n")
+	buffer.WriteString("\n[BRIDGE SERVER - STOP]\n")
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")
 

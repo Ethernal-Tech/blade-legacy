@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	contractsDeploymentTitle = "[ROOTCHAIN - CONTRACTS DEPLOYMENT]"
+	contractsDeploymentTitle = "[BRIDGE - CONTRACTS DEPLOYMENT]"
 	ProxySufix               = "Proxy"
 
 	stateSenderName                   = "StateSender"
@@ -244,7 +244,7 @@ type deploymentResultInfo struct {
 	CommandResults []command.CommandResult
 }
 
-// GetCommand returns the rootchain deploy command
+// GetCommand returns the bridge deploy command
 func GetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deploy",
@@ -657,7 +657,7 @@ func initContract(cmdOutput command.OutputFormatter, txRelayer txrelayer.TxRelay
 
 func collectResultsOnError(results map[string]*deployContractResult) deploymentResultInfo {
 	commandResults := make([]command.CommandResult, 0, len(results)+1)
-	messageResult := helper.MessageResult{Message: "[ROOTCHAIN - DEPLOY] Successfully deployed the following contracts\n"}
+	messageResult := helper.MessageResult{Message: "[BRIDGE - DEPLOY] Successfully deployed the following contracts\n"}
 
 	for _, result := range results {
 		if result != nil {

@@ -30,7 +30,7 @@ func newDeployContractsResult(name string,
 func (r deployContractResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	buffer.WriteString("\n[ROOTCHAIN - DEPLOY CONTRACT]\n")
+	buffer.WriteString("\n[BRIDGE - DEPLOY CONTRACT]\n")
 
 	vals := make([]string, 0, 4)
 	vals = append(vals, fmt.Sprintf("Name|%s", r.Name))
