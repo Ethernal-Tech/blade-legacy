@@ -1426,7 +1426,7 @@ func TestFSM_VerifyStateTransaction_InvalidSignature(t *testing.T) {
 
 	var txns []*types.Transaction
 
-	signature := createSignature(t, validators.GetPrivateIdentities("A", "B", "C", "D"), hash, signer.DomainStateReceiver)
+	signature := createSignature(t, validators.GetPrivateIdentities("A", "B", "C", "D", "E"), hash, signer.DomainStateReceiver)
 	invalidValidator := validator.NewTestValidator(t, "G", 1)
 	invalidSignature, err := invalidValidator.MustSign([]byte("malicious message"), signer.DomainStateReceiver).Marshal()
 	require.NoError(t, err)
@@ -1464,7 +1464,7 @@ func TestFSM_VerifyStateTransaction_TwoCommitmentMessages(t *testing.T) {
 
 	var txns []*types.Transaction
 
-	signature := createSignature(t, validators.GetPrivateIdentities("A", "B", "C", "D"), hash, signer.DomainStateReceiver)
+	signature := createSignature(t, validators.GetPrivateIdentities("A", "B", "C", "D", "E"), hash, signer.DomainStateReceiver)
 	commitmentMessageSigned.AggSignature = *signature
 
 	inputData, err := commitmentMessageSigned.EncodeAbi()

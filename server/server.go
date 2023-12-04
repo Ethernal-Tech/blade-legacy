@@ -1006,16 +1006,6 @@ func initForkManager(engineName string, config *chain.Chain) error {
 		fm.RegisterFork(name, f.Params)
 	}
 
-	// Register handlers and additional forks here
-	if err := types.RegisterTxHashFork(chain.TxHashWithType); err != nil {
-		return err
-	}
-
-	// Register Handler for London fork fix
-	if err := state.RegisterLondonFixFork(chain.LondonFix); err != nil {
-		return err
-	}
-
 	if factory := forkManagerFactory[ConsensusType(engineName)]; factory != nil {
 		if err := factory(config.Params.Forks); err != nil {
 			return err
