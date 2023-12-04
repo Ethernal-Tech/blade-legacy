@@ -7,7 +7,7 @@ CHAIN_CUSTOM_OPTIONS=$(tr "\n" " " << EOL
 --block-gas-limit 10000000
 --epoch-size 10
 --chain-id 51001
---name polygon-edge-docker
+--name Blade
 --premine 0x0000000000000000000000000000000000000000
 --premine 0x228466F2C715CbEC05dEAbfAc040ce3619d7CF0B:0xD3C21BCECCEDA1000000
 --premine 0xca48694ebcB2548dF5030372BE4dAad694ef174e:0xD3C21BCECCEDA1000000
@@ -85,7 +85,7 @@ case "$1" in
       $relayer_flag
    ;;
    *)
-      echo "Executing polygon-edge..."
+      echo "Executing blade..."
       exec "$BLADE_BIN" "$@"
       ;;
 esac
