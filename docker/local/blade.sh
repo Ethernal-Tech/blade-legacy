@@ -2,7 +2,7 @@
 
 set -e
 
-POLYGON_EDGE_BIN=./polygon-edge
+BLADE_BIN=./blade
 CHAIN_CUSTOM_OPTIONS=$(tr "\n" " " << EOL
 --block-gas-limit 10000000
 --epoch-size 10
@@ -21,7 +21,7 @@ createGenesisConfig() {
   shift 2
   echo "Generating $consensus_type Genesis file..."
 
-  "$POLYGON_EDGE_BIN" genesis $CHAIN_CUSTOM_OPTIONS \
+  "$BLADE_BIN" genesis $CHAIN_CUSTOM_OPTIONS \
     --dir /data/genesis.json \
     --validators-path /data \
     --validators-prefix data- \
@@ -38,7 +38,7 @@ case "$1" in
       case "$2" in
           "polybft")
               echo "Generating PolyBFT secrets..."
-              secrets=$("$POLYGON_EDGE_BIN" secrets init --insecure --num 4 --data-dir /data/data- --json)
+              secrets=$("$BLADE_BIN" secrets init --insecure --num 4 --data-dir /data/data- --json)
               echo "Secrets have been successfully generated"
 
               rm -f /data/genesis.json
@@ -51,7 +51,7 @@ case "$1" in
                 --blade-admin $(echo "$secrets" | jq -r '.[0] | .address') \
                 --proxy-contracts-admin ${proxyContractsAdmin}
 
-              "$POLYGON_EDGE_BIN" bridge deploy \
+              "$BLADE_BIN" bridge deploy \
                 --json-rpc http://rootchain:8545 \
                 --genesis /data/genesis.json \
                 --proxy-contracts-admin ${proxyContractsAdmin} \
@@ -59,7 +59,7 @@ case "$1" in
 
               addresses="$(echo "$secrets" | jq -r '.[0] | .address'),$(echo "$secrets" | jq -r '.[1] | .address'),$(echo "$secrets" | jq -r '.[2] | .address'),$(echo "$secrets" | jq -r '.[3] | .address')"
 
-              "$POLYGON_EDGE_BIN" rootchain fund \
+              "$BLADE_BIN" bridge fund \
                 --json-rpc http://rootchain:8545 \
                 --addresses ${addresses} \
                 --amounts 1000000000000000000000000,1000000000000000000000000,1000000000000000000000000,1000000000000000000000000
@@ -75,7 +75,7 @@ case "$1" in
       relayer_flag="--relayer"
     fi
 
-    "$POLYGON_EDGE_BIN" server \
+    "$BLADE_BIN" server \
       --data-dir /data/data-1 \
       --chain /data/genesis.json \
       --grpc-address 0.0.0.0:9632 \
@@ -86,6 +86,6 @@ case "$1" in
    ;;
    *)
       echo "Executing polygon-edge..."
-      exec "$POLYGON_EDGE_BIN" "$@"
+      exec "$BLADE_BIN" "$@"
       ;;
 esac
