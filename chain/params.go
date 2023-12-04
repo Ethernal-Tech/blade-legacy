@@ -20,6 +20,9 @@ type Params struct {
 	Engine         map[string]interface{} `json:"engine"`
 	BlockGasTarget uint64                 `json:"blockGasTarget"`
 
+	// BaseFeeChangeDenom is the value to bound the amount the base fee can change between blocks
+	BaseFeeChangeDenom uint64 `json:"baseFeeChangeDenom,omitempty"`
+
 	// Access control configuration
 	ContractDeployerAllowList *AddressListConfig `json:"contractDeployerAllowList,omitempty"`
 	ContractDeployerBlockList *AddressListConfig `json:"contractDeployerBlockList,omitempty"`
@@ -87,6 +90,7 @@ const (
 	EIP150         = "EIP150"
 	EIP158         = "EIP158"
 	EIP155         = "EIP155"
+	Governance     = "governance"
 )
 
 // Forks is map which contains all forks and their starting blocks from genesis
@@ -122,6 +126,7 @@ func (f *Forks) At(block uint64) ForksInTime {
 		EIP150:         f.IsActive(EIP150, block),
 		EIP158:         f.IsActive(EIP158, block),
 		EIP155:         f.IsActive(EIP155, block),
+		Governance:     f.IsActive(Governance, block),
 	}
 }
 
@@ -171,7 +176,8 @@ type ForksInTime struct {
 	London,
 	EIP150,
 	EIP158,
-	EIP155 bool
+	EIP155,
+	Governance bool
 }
 
 // AllForksEnabled should contain all supported forks by current edge version
@@ -185,4 +191,5 @@ var AllForksEnabled = &Forks{
 	Petersburg:     NewFork(0),
 	Istanbul:       NewFork(0),
 	London:         NewFork(0),
+	Governance:     NewFork(0),
 }

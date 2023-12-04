@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,6 +20,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -295,6 +297,9 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 		initValidators := make([]*validator.GenesisValidator, accSet.Len())
 		// add contracts to genesis data
 		alloc := map[types.Address]*chain.GenesisAccount{
+			contracts.NetworkParamsContract: {
+				Code: contractsapi.NetworkParams.DeployedBytecode,
+			},
 			contracts.EpochManagerContract: {
 				Code: contractsapi.EpochManager.DeployedBytecode,
 			},
@@ -324,10 +329,17 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 		}
 
 		polyBFTConfig := PolyBFTConfig{
-			InitialValidatorSet: initValidators,
-			EpochSize:           24 * 60 * 60 / 2,
-			SprintSize:          5,
-			EpochReward:         reward,
+			InitialValidatorSet:  initValidators,
+			EpochSize:            24 * 60 * 60 / 2,
+			SprintSize:           5,
+			EpochReward:          reward,
+			BlockTime:            common.Duration{Duration: time.Second},
+			MinValidatorSetSize:  4,
+			MaxValidatorSetSize:  100,
+			CheckpointInterval:   900,
+			WithdrawalWaitPeriod: 1,
+			BlockTimeDrift:       10,
+			BladeAdmin:           accSet.GetAddresses()[0],
 			// use 1st account as governance address
 			Governance: currentValidators.ToValidatorSet().Accounts().GetAddresses()[0],
 			RewardConfig: &RewardsConfig{
@@ -335,9 +347,22 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 				WalletAddress: walletAddress,
 				WalletAmount:  new(big.Int).SetUint64(initialBalance),
 			},
+			GovernanceConfig: &GovernanceConfig{
+				VotingDelay:              big.NewInt(10),
+				VotingPeriod:             big.NewInt(10),
+				ProposalThreshold:        big.NewInt(25),
+				ProposalQuorumPercentage: 67,
+				ChildGovernorAddr:        contracts.ChildGovernorContract,
+				ChildTimelockAddr:        contracts.ChildTimelockContract,
+				NetworkParamsAddr:        contracts.NetworkParamsContract,
+				ForkParamsAddr:           contracts.ForkParamsContract,
+			},
 		}
 
 		transition := newTestTransition(t, alloc)
+
+		// init NetworkParams
+		require.NoError(t, initNetworkParamsContract(2, polyBFTConfig, transition))
 
 		// init StakeManager
 		require.NoError(t, initStakeManager(polyBFTConfig, transition))

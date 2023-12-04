@@ -594,7 +594,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 			},
 		}
 
-		tx.ComputeHash(1)
+		tx.ComputeHash()
 		block.Header.ComputeHash()
 
 		txFromByTxHash := map[types.Hash]types.Address{}
@@ -625,7 +625,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 			},
 		}
 
-		tx.ComputeHash(1)
+		tx.ComputeHash()
 		block.Header.ComputeHash()
 
 		txFromByTxHash := map[types.Hash]types.Address{}
@@ -657,7 +657,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 			},
 		}
 
-		tx.ComputeHash(1)
+		tx.ComputeHash()
 		block.Header.ComputeHash()
 
 		txFromByTxHash := map[types.Hash]types.Address{
@@ -692,7 +692,7 @@ func Test_recoverFromFieldsInBlock(t *testing.T) {
 
 	computeTxHashes := func(txs ...*types.Transaction) {
 		for _, tx := range txs {
-			tx.ComputeHash(1)
+			tx.ComputeHash()
 		}
 	}
 
@@ -777,7 +777,7 @@ func Test_recoverFromFieldsInTransactions(t *testing.T) {
 
 	computeTxHashes := func(txs ...*types.Transaction) {
 		for _, tx := range txs {
-			tx.ComputeHash(1)
+			tx.ComputeHash()
 		}
 	}
 
@@ -896,7 +896,7 @@ func TestBlockchainReadBody(t *testing.T) {
 		V:     big.NewInt(1),
 	}
 
-	tx.ComputeHash(1)
+	tx.ComputeHash()
 
 	block := &types.Block{
 		Header: &types.Header{},
@@ -1394,13 +1394,13 @@ func TestBlockchain_CalculateBaseFee(t *testing.T) {
 			blockchain := &Blockchain{
 				config: &chain.Chain{
 					Params: &chain.Params{
+						BaseFeeChangeDenom: chain.BaseFeeChangeDenom,
 						Forks: &chain.Forks{
 							chain.London: chain.NewFork(5),
 						},
 					},
 					Genesis: &chain.Genesis{
-						BaseFeeEM:          test.elasticityMultiplier,
-						BaseFeeChangeDenom: chain.BaseFeeChangeDenom,
+						BaseFeeEM: test.elasticityMultiplier,
 					},
 				},
 			}
@@ -1474,7 +1474,7 @@ func TestBlockchain_WriteFullBlock(t *testing.T) {
 		Value: big.NewInt(1),
 	}
 
-	tx.ComputeHash(1)
+	tx.ComputeHash()
 	header.ComputeHash()
 	existingHeader.ComputeHash()
 	bc.currentHeader.Store(existingHeader)
