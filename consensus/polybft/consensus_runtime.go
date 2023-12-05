@@ -74,16 +74,19 @@ type guardedDataDTO struct {
 
 // runtimeConfig is a struct that holds configuration data for given consensus runtime
 type runtimeConfig struct {
-	PolyBFTConfig         *PolyBFTConfig
-	DataDir               string
-	Key                   *wallet.Key
-	State                 *State
-	blockchain            blockchainBackend
-	polybftBackend        polybftBackend
-	txPool                txPoolInterface
-	bridgeTopic           topic
-	numBlockConfirmations uint64
-	consensusConfig       *consensus.Config
+	PolyBFTConfig  *PolyBFTConfig
+	DataDir        string
+	Key            *wallet.Key
+	State          *State
+	blockchain     blockchainBackend
+	polybftBackend polybftBackend
+	txPool         txPoolInterface
+	bridgeTopic    topic
+
+	// event tracker
+	eventTracker *consensus.EventTracker
+
+	consensusConfig *consensus.Config
 }
 
 // consensusRuntime is a struct that provides consensus runtime features like epoch, state and event management
@@ -197,15 +200,17 @@ func (c *consensusRuntime) initStateSyncManager(logger hcf.Logger) error {
 			logger.Named("state-sync-manager"),
 			c.config.State,
 			&stateSyncConfig{
-				key:                      c.config.Key,
-				stateSenderAddr:          stateSenderAddr,
-				stateSenderStartBlock:    c.config.PolyBFTConfig.Bridge.EventTrackerStartBlocks[stateSenderAddr],
-				jsonrpcAddr:              c.config.PolyBFTConfig.Bridge.JSONRPCEndpoint,
-				dataDir:                  c.config.DataDir,
-				topic:                    c.config.bridgeTopic,
-				maxCommitmentSize:        maxCommitmentSize,
-				numBlockConfirmations:    c.config.numBlockConfirmations,
-				blockTrackerPollInterval: c.config.PolyBFTConfig.BlockTrackerPollInterval.Duration,
+				key:               c.config.Key,
+				dataDir:           c.config.DataDir,
+				topic:             c.config.bridgeTopic,
+				maxCommitmentSize: maxCommitmentSize,
+				eventTrackerConfig: &eventTrackerConfig{
+					jsonrpcAddr:           c.config.PolyBFTConfig.Bridge.JSONRPCEndpoint,
+					stateSenderAddr:       stateSenderAddr,
+					stateSenderStartBlock: c.config.PolyBFTConfig.Bridge.EventTrackerStartBlocks[stateSenderAddr],
+					trackerPollInterval:   c.config.PolyBFTConfig.BlockTrackerPollInterval.Duration,
+					EventTracker:          *c.config.eventTracker,
+				},
 			},
 			c,
 		)

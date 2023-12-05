@@ -483,6 +483,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 		blockchain:      blockchainMock,
 		bridgeTopic:     &mockTopic{},
 		consensusConfig: &consensus.Config{},
+		eventTracker:    &consensus.EventTracker{},
 	}
 
 	require.NoError(t, config.State.StakeStore.insertFullValidatorSet(validatorSetState{
