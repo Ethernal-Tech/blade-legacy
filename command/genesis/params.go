@@ -299,7 +299,6 @@ func (p *genesisParams) validateBlockTrackerPollInterval() error {
 
 func (p *genesisParams) validateGenesisBaseFeeConfig() error {
 	if p.baseFeeConfig == "" {
-
 		return nil
 	}
 
