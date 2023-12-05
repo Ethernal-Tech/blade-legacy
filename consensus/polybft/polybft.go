@@ -760,6 +760,15 @@ func (p *Polybft) PreCommitState(block *types.Block, _ *state.Transition) error 
 	return nil
 }
 
+// GetLatestChainConfig returns the latest chain configuration
+func (p *Polybft) GetLatestChainConfig() (*chain.Params, error) {
+	if p.runtime != nil {
+		return p.runtime.governanceManager.GetClientConfig(nil)
+	}
+
+	return nil, nil
+}
+
 // GetBridgeProvider is an implementation of Consensus interface
 // Returns an instance of BridgeDataProvider
 func (p *Polybft) GetBridgeProvider() consensus.BridgeDataProvider {
