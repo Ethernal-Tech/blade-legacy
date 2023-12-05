@@ -84,9 +84,7 @@ type runtimeConfig struct {
 	bridgeTopic    topic
 
 	// event tracker
-	trackerSyncBatchSize          uint64
-	trackerNumBlockConfirmations  uint64
-	trackerNumOfBlocksToReconcile uint64
+	eventTracker *consensus.EventTracker
 
 	consensusConfig *consensus.Config
 }
@@ -202,18 +200,17 @@ func (c *consensusRuntime) initStateSyncManager(logger hcf.Logger) error {
 			logger.Named("state-sync-manager"),
 			c.config.State,
 			&stateSyncConfig{
-				key:                   c.config.Key,
-				stateSenderAddr:       stateSenderAddr,
-				stateSenderStartBlock: c.config.PolyBFTConfig.Bridge.EventTrackerStartBlocks[stateSenderAddr],
-				jsonrpcAddr:           c.config.PolyBFTConfig.Bridge.JSONRPCEndpoint,
-				dataDir:               c.config.DataDir,
-				topic:                 c.config.bridgeTopic,
-				maxCommitmentSize:     maxCommitmentSize,
-				// event tracker
-				trackerSyncBatchSize:          c.config.trackerSyncBatchSize,
-				trackerNumBlockConfirmations:  c.config.trackerNumBlockConfirmations,
-				trackerNumOfBlocksToReconcile: c.config.trackerNumOfBlocksToReconcile,
-				trackerPollInterval:           c.config.PolyBFTConfig.BlockTrackerPollInterval.Duration,
+				key:               c.config.Key,
+				dataDir:           c.config.DataDir,
+				topic:             c.config.bridgeTopic,
+				maxCommitmentSize: maxCommitmentSize,
+				eventTrackerConfig: &eventTrackerConfig{
+					jsonrpcAddr:           c.config.PolyBFTConfig.Bridge.JSONRPCEndpoint,
+					stateSenderAddr:       stateSenderAddr,
+					stateSenderStartBlock: c.config.PolyBFTConfig.Bridge.EventTrackerStartBlocks[stateSenderAddr],
+					trackerPollInterval:   c.config.PolyBFTConfig.BlockTrackerPollInterval.Duration,
+					EventTracker:          *c.config.eventTracker,
+				},
 			},
 			c,
 		)

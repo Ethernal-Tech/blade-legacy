@@ -46,10 +46,7 @@ type Config struct {
 
 	MetricsInterval time.Duration
 
-	// event tracker
-	TrackerSyncBatchSize          uint64
-	TrackerNumBlockConfirmations  uint64
-	TrackerNumOfBlocksToReconcile uint64
+	EventTracker *EventTracker
 }
 
 // Telemetry holds the config details for metric services
@@ -65,4 +62,10 @@ type JSONRPC struct {
 	BlockRangeLimit          uint64
 	ConcurrentRequestsDebug  uint64
 	WebSocketReadLimit       uint64
+}
+
+type EventTracker struct {
+	SyncBatchSize          uint64
+	NumBlockConfirmations  uint64
+	NumOfBlocksToReconcile uint64
 }

@@ -244,9 +244,9 @@ func setFlags(cmd *cobra.Command) {
 
 	{ // event tracker
 		cmd.Flags().Uint64Var(
-			&params.rawConfig.TrackerSyncBatchSize,
+			&params.rawConfig.EventTracker.SyncBatchSize,
 			trackerSyncBatchSizeFlag,
-			defaultConfig.TrackerSyncBatchSize,
+			defaultConfig.EventTracker.SyncBatchSize,
 			`defines a batch size of blocks that will be gotten from tracked chain,
 			when tracker is out of sync and needs to sync a number of blocks.
 			(e.g., SyncBatchSize = 10, trackers last processed block is 10, latest block on tracked chain is 100,
@@ -255,16 +255,16 @@ func setFlags(cmd *cobra.Command) {
 		)
 
 		cmd.Flags().Uint64Var(
-			&params.rawConfig.TrackerNumBlockConfirmations,
+			&params.rawConfig.EventTracker.NumBlockConfirmations,
 			trackerNumBlockConfirmationsFlag,
-			defaultConfig.TrackerNumBlockConfirmations,
+			defaultConfig.EventTracker.NumBlockConfirmations,
 			"minimal number of child blocks required for the parent block to be considered final on tracked chain",
 		)
 
 		cmd.Flags().Uint64Var(
-			&params.rawConfig.TrackerNumOfBlocksToReconcile,
+			&params.rawConfig.EventTracker.NumOfBlocksToReconcile,
 			trackerNumOfBlocksToReconcileFlag,
-			defaultConfig.TrackerNumOfBlocksToReconcile,
+			defaultConfig.EventTracker.NumBlockConfirmations,
 			`defines how many blocks we will sync up from the latest block on tracked chain. 
 			If a node that has tracker, was offline for days, months, a year, it will miss a lot of blocks. 
 			In the meantime, we expect the rest of nodes to have collected the desired events and did their 

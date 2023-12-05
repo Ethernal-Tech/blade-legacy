@@ -575,9 +575,11 @@ func (s *Server) setupConsensus() error {
 			BlockTime:       uint64(blockTime.Seconds()),
 			MetricsInterval: s.config.MetricsInterval,
 			// event tracker
-			TrackerNumBlockConfirmations:  s.config.TrackerNumBlockConfirmations,
-			TrackerSyncBatchSize:          s.config.TrackerSyncBatchSize,
-			TrackerNumOfBlocksToReconcile: s.config.TrackerNumOfBlocksToReconcile,
+			EventTracker: &consensus.EventTracker{
+				NumBlockConfirmations:  s.config.EventTracker.NumBlockConfirmations,
+				SyncBatchSize:          s.config.EventTracker.SyncBatchSize,
+				NumOfBlocksToReconcile: s.config.EventTracker.NumOfBlocksToReconcile,
+			},
 		},
 	)
 

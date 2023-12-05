@@ -504,10 +504,7 @@ func (p *Polybft) initRuntime() error {
 		txPool:          p.txPool,
 		bridgeTopic:     p.bridgeTopic,
 		consensusConfig: p.config.Config,
-		// event tracker
-		trackerSyncBatchSize:          p.config.TrackerSyncBatchSize,
-		trackerNumBlockConfirmations:  p.config.TrackerNumBlockConfirmations,
-		trackerNumOfBlocksToReconcile: p.config.TrackerNumOfBlocksToReconcile,
+		eventTracker:    p.config.EventTracker,
 	}
 
 	runtime, err := newConsensusRuntime(p.logger, runtimeConfig)

@@ -87,9 +87,7 @@ type Params struct {
 	MetricsInterval time.Duration
 
 	// event tracker
-	TrackerSyncBatchSize          uint64
-	TrackerNumBlockConfirmations  uint64
-	TrackerNumOfBlocksToReconcile uint64
+	EventTracker *EventTracker
 }
 
 // Factory is the factory function to create a discovery consensus
@@ -102,4 +100,10 @@ type BridgeDataProvider interface {
 
 	// GetStateSyncProof retrieves the StateSync proof
 	GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+}
+
+type EventTracker struct {
+	NumBlockConfirmations  uint64
+	SyncBatchSize          uint64
+	NumOfBlocksToReconcile uint64
 }

@@ -16,6 +16,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/0xPolygon/polygon-edge/bls"
+	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	polybftProto "github.com/0xPolygon/polygon-edge/consensus/polybft/proto"
@@ -73,6 +74,15 @@ func (d *dummyStateSyncManager) ProcessLog(header *types.Header,
 	return nil
 }
 
+type eventTrackerConfig struct {
+	consensus.EventTracker
+
+	jsonrpcAddr           string
+	stateSenderAddr       types.Address
+	stateSenderStartBlock uint64
+	trackerPollInterval   time.Duration
+}
+
 // stateSyncConfig holds the configuration data of state sync manager
 type stateSyncConfig struct {
 	dataDir           string
@@ -80,14 +90,7 @@ type stateSyncConfig struct {
 	key               *wallet.Key
 	maxCommitmentSize uint64
 
-	// event tracker
-	jsonrpcAddr                   string
-	stateSenderAddr               types.Address
-	stateSenderStartBlock         uint64
-	trackerNumBlockConfirmations  uint64
-	trackerSyncBatchSize          uint64
-	trackerNumOfBlocksToReconcile uint64
-	trackerPollInterval           time.Duration
+	eventTrackerConfig *eventTrackerConfig
 }
 
 var _ StateSyncManager = (*stateSyncManager)(nil)
@@ -159,16 +162,16 @@ func (s *stateSyncManager) initTracker() error {
 		&tracker.EventTrackerConfig{
 			EventSubscriber:        s,
 			Logger:                 s.logger,
-			RPCEndpoint:            s.config.jsonrpcAddr,
-			SyncBatchSize:          s.config.trackerSyncBatchSize,
-			NumBlockConfirmations:  s.config.trackerNumBlockConfirmations,
-			NumOfBlocksToReconcile: s.config.trackerNumOfBlocksToReconcile,
-			PollInterval:           s.config.trackerPollInterval,
+			RPCEndpoint:            s.config.eventTrackerConfig.jsonrpcAddr,
+			SyncBatchSize:          s.config.eventTrackerConfig.EventTracker.SyncBatchSize,
+			NumBlockConfirmations:  s.config.eventTrackerConfig.EventTracker.NumBlockConfirmations,
+			NumOfBlocksToReconcile: s.config.eventTrackerConfig.EventTracker.NumOfBlocksToReconcile,
+			PollInterval:           s.config.eventTrackerConfig.trackerPollInterval,
 			LogFilter: map[ethgo.Address][]ethgo.Hash{
-				ethgo.Address(s.config.stateSenderAddr): {stateSyncEvent.Sig()},
+				ethgo.Address(s.config.eventTrackerConfig.stateSenderAddr): {stateSyncEvent.Sig()},
 			},
 		},
-		store, s.config.stateSenderStartBlock,
+		store, s.config.eventTrackerConfig.stateSenderStartBlock,
 	)
 
 	if err != nil {

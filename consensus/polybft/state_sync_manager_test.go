@@ -35,8 +35,10 @@ func newTestStateSyncManager(t *testing.T, key *validator.TestValidator, runtime
 
 	s := newStateSyncManager(hclog.NewNullLogger(), state,
 		&stateSyncConfig{
-			stateSenderAddr:   types.Address{},
-			jsonrpcAddr:       "",
+			eventTrackerConfig: &eventTrackerConfig{
+				stateSenderAddr: types.Address{},
+				jsonrpcAddr:     "",
+			},
 			dataDir:           tmpDir,
 			topic:             topic,
 			key:               key.Key(),

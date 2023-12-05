@@ -58,9 +58,10 @@ const (
 var (
 	params = &serverParams{
 		rawConfig: &config.Config{
-			Telemetry: &config.Telemetry{},
-			Network:   &config.Network{},
-			TxPool:    &config.TxPool{},
+			Telemetry:    &config.Telemetry{},
+			Network:      &config.Network{},
+			TxPool:       &config.TxPool{},
+			EventTracker: &config.EventTracker{},
 		},
 	}
 )
@@ -185,9 +186,10 @@ func (p *serverParams) generateConfig() *server.Config {
 
 		Relayer:         p.relayer,
 		MetricsInterval: p.rawConfig.MetricsInterval,
-		// event tracker
-		TrackerSyncBatchSize:          p.rawConfig.TrackerSyncBatchSize,
-		TrackerNumBlockConfirmations:  p.rawConfig.TrackerNumBlockConfirmations,
-		TrackerNumOfBlocksToReconcile: p.rawConfig.TrackerNumOfBlocksToReconcile,
+		EventTracker: &server.EventTracker{
+			SyncBatchSize:          p.rawConfig.EventTracker.SyncBatchSize,
+			NumBlockConfirmations:  p.rawConfig.EventTracker.NumBlockConfirmations,
+			NumOfBlocksToReconcile: p.rawConfig.EventTracker.NumOfBlocksToReconcile,
+		},
 	}
 }

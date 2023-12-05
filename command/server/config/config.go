@@ -40,10 +40,7 @@ type Config struct {
 
 	MetricsInterval time.Duration `json:"metrics_interval" yaml:"metrics_interval"`
 
-	// event tracker
-	TrackerSyncBatchSize          uint64 `json:"tracker_sync_batch_size" yaml:"tracker_sync_batch_size"`
-	TrackerNumBlockConfirmations  uint64 `json:"tracker_num_block_confirmations" yaml:"tracker_num_block_confirmations"`
-	TrackerNumOfBlocksToReconcile uint64 `json:"tracker_num_blocks_reconcile" yaml:"tracker_num_blocks_reconcile"`
+	EventTracker *EventTracker `json:"event_tracker" yaml:"event_tracker"`
 }
 
 // Telemetry holds the config details for metric services.
@@ -72,6 +69,13 @@ type TxPool struct {
 // Headers defines the HTTP response headers required to enable CORS.
 type Headers struct {
 	AccessControlAllowOrigins []string `json:"access_control_allow_origins" yaml:"access_control_allow_origins"`
+}
+
+// EventTracker defines configuration parameters for EventTracker
+type EventTracker struct {
+	SyncBatchSize          uint64 `json:"sync_batch_size" yaml:"sync_batch_size"`
+	NumBlockConfirmations  uint64 `json:"num_block_confirmations" yaml:"num_block_confirmations"`
+	NumOfBlocksToReconcile uint64 `json:"num_blocks_reconcile" yaml:"num_blocks_reconcile"`
 }
 
 const (
@@ -146,10 +150,11 @@ func DefaultConfig() *Config {
 		ConcurrentRequestsDebug:  DefaultConcurrentRequestsDebug,
 		WebSocketReadLimit:       DefaultWebSocketReadLimit,
 		MetricsInterval:          DefaultMetricsInterval,
-		// event tracker
-		TrackerSyncBatchSize:          DefaultSyncBatchSize,
-		TrackerNumBlockConfirmations:  DefaultNumBlockConfirmations,
-		TrackerNumOfBlocksToReconcile: DefaultNumOfBlocksToReconcile,
+		EventTracker: &EventTracker{
+			SyncBatchSize:          DefaultSyncBatchSize,
+			NumBlockConfirmations:  DefaultNumBlockConfirmations,
+			NumOfBlocksToReconcile: DefaultNumOfBlocksToReconcile,
+		},
 	}
 }
 
