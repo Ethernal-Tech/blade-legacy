@@ -372,10 +372,8 @@ func (s *stakeManager) getBlsKey(address types.Address) (*bls.PublicKey, error) 
 
 	validatorData, ok := rawResult["0"].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("could not collect validator: %s data from StakeManager", address)
+		return nil, fmt.Errorf("could not collect validator's data (%s) from StakeManager", address)
 	}
-
-	s.logger.Info("[Aaaa] Validator data", validatorData)
 
 	blsKey, ok := validatorData["blsKey"].([4]*big.Int)
 	if !ok {
