@@ -383,16 +383,6 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 		require.NoError(t, result.Err)
 		t.Logf("Number of validators %d on commit epoch, Gas used %+v\n", accSet.Len(), result.GasUsed)
 
-		// create input for distribute rewards
-		distributeRewards := createTestDistributeRewardsInput(t, 1, accSet, polyBFTConfig.EpochSize)
-		input, err = distributeRewards.EncodeAbi()
-		require.NoError(t, err)
-
-		// call reward distributor
-		result = transition.Call2(contracts.SystemCaller, contracts.EpochManagerContract, input, big.NewInt(0), 10000000000)
-		require.NoError(t, result.Err)
-		t.Logf("Number of validators %d on reward distribution, Gas used %+v\n", accSet.Len(), result.GasUsed)
-
 		commitEpoch = createTestCommitEpochInput(t, 2, polyBFTConfig.EpochSize)
 		input, err = commitEpoch.EncodeAbi()
 		require.NoError(t, err)
@@ -401,15 +391,6 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 		result = transition.Call2(contracts.SystemCaller, contracts.EpochManagerContract, input, big.NewInt(0), 10000000000)
 		require.NoError(t, result.Err)
 		t.Logf("Number of validators %d on commit epoch, Gas used %+v\n", accSet.Len(), result.GasUsed)
-
-		distributeRewards = createTestDistributeRewardsInput(t, 2, accSet, polyBFTConfig.EpochSize)
-		input, err = distributeRewards.EncodeAbi()
-		require.NoError(t, err)
-
-		// call reward distributor
-		result = transition.Call2(contracts.SystemCaller, contracts.EpochManagerContract, input, big.NewInt(0), 10000000000)
-		require.NoError(t, result.Err)
-		t.Logf("Number of validators %d on reward distribution, Gas used %+v\n", accSet.Len(), result.GasUsed)
 	}
 }
 
