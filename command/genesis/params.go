@@ -203,7 +203,10 @@ func (p *genesisParams) generateGenesis() error {
 }
 
 func (p *genesisParams) initGenesisConfig() error {
-	enabledForks := chain.AllForksEnabled
+	enabledForks := chain.AllForksEnabled.Copy()
+	if p.parsedBaseFeeConfig == nil {
+		enabledForks.RemoveFork(chain.London)
+	}
 
 	chainConfig := &chain.Chain{
 		Name: p.name,

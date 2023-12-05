@@ -275,7 +275,7 @@ func SendTransaction(txRelayer txrelayer.TxRelayer, addr ethgo.Address, input []
 
 // CreateTransaction is a helper function that creates either dynamic fee or legacy transaction based on provided flag
 func CreateTransaction(sender ethgo.Address, receiver *ethgo.Address,
-	input []byte, value *big.Int, isDynamicFee bool) *ethgo.Transaction {
+	input []byte, value *big.Int, isDynamicFeeTx bool) *ethgo.Transaction {
 	txn := &ethgo.Transaction{
 		From:  sender,
 		To:    receiver,
@@ -283,7 +283,7 @@ func CreateTransaction(sender ethgo.Address, receiver *ethgo.Address,
 		Value: value,
 	}
 
-	if isDynamicFee {
+	if isDynamicFeeTx {
 		txn.Type = ethgo.TransactionDynamicFee
 	} else {
 		txn.Type = ethgo.TransactionLegacy

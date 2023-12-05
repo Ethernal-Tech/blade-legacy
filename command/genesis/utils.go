@@ -108,7 +108,7 @@ func parseBaseFeeConfig(baseFeeConfigRaw string) (*baseFeeInfo, error) {
 
 	baseFeeConfig := strings.Split(baseFeeConfigRaw, ":")
 	if len(baseFeeConfig) > 3 {
-		return baseFeeInfo, errors.New("invalid number of arguments for base fee configuration")
+		return baseFeeInfo, errors.New("invalid number of arguments provided for the base fee configuration")
 	}
 
 	if len(baseFeeConfig) >= 1 && baseFeeConfig[0] != "" {
