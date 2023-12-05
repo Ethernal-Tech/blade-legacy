@@ -86,6 +86,7 @@ func TestGovernanceStore_InsertAndGetEvents(t *testing.T) {
 	// insert some more events for current epoch
 	newFeatureEventTwo := &contractsapi.UpdatedFeatureEvent{Feature: types.BytesToHash([]byte("OxSomeFeature3")),
 		Block: big.NewInt(130_000)}
+
 	require.NoError(t, state.GovernanceStore.insertGovernanceEvent(epoch, block+1, sprintSizeEvent, nil))
 	require.NoError(t, state.GovernanceStore.insertGovernanceEvent(epoch, block+1, newFeatureEventTwo, nil))
 
