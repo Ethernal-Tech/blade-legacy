@@ -604,8 +604,6 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 	// Get forks state for the current block
 	forks := p.forks.At(currentBlockNumber)
 
-	fmt.Println("TxPool forks", forks)
-
 	// Check if transaction can deploy smart contract
 	if tx.IsContractCreation() && forks.EIP158 && len(tx.Input) > state.TxPoolMaxInitCodeSize {
 		metrics.IncrCounter([]string{txPoolMetrics, "contract_deploy_too_large_txs"}, 1)
