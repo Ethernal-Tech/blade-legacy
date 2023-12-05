@@ -266,7 +266,7 @@ func setFlags(cmd *cobra.Command) {
 			trackerNumOfBlocksToReconcileFlag,
 			defaultConfig.EventTracker.NumBlockConfirmations,
 			`defines how many blocks we will sync up from the latest block on tracked chain. 
-			If a node that has tracker, was offline for days, months, a year, it will miss a lot of blocks. 
+			If a node that has a tracker, was offline for days, months, a year, it is going to miss a lot of blocks potentially. 
 			In the meantime, we expect the rest of nodes to have collected the desired events and did their 
 			logic with them, continuing consensus and relayer stuff. 
 			In order to not waste too much unnecessary time in syncing all those blocks, with NumOfBlocksToReconcile, 
