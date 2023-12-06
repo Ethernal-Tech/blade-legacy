@@ -234,12 +234,15 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 			FirstBlockInEpoch:   header.Number - epochSize + 1,
 			CurrentClientConfig: config.GenesisConfig,
 		},
-		lastBuiltBlock:    &types.Header{Number: header.Number - 1},
-		stateSyncManager:  &dummyStateSyncManager{},
-		checkpointManager: &dummyCheckpointManager{},
-		stakeManager:      &dummyStakeManager{},
-		eventProvider:     NewEventProvider(blockchainMock),
-		stateSyncRelayer:  &dummyStateSyncRelayer{},
+		lastBuiltBlock: &types.Header{Number: header.Number - 1},
+		bridgeManager: &bridgeManager{
+			stateSyncManager:  &dummyStateSyncManager{},
+			checkpointManager: &dummyCheckpointManager{},
+			stateSyncRelayer:  &dummyStateSyncRelayer{},
+			exitEventRelayer:  &dummyExitRelayer{},
+		},
+		stakeManager:  &dummyStakeManager{},
+		eventProvider: NewEventProvider(blockchainMock),
 		governanceManager: &dummyGovernanceManager{
 			getClientConfigFn: func() (*chain.Params, error) {
 				return config.genesisParams, nil
@@ -366,10 +369,12 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 			FirstBlockInEpoch:   1,
 			CurrentClientConfig: config.GenesisConfig,
 		},
-		lastBuiltBlock:    lastBlock,
-		state:             newTestState(t),
-		stateSyncManager:  &dummyStateSyncManager{},
-		checkpointManager: &dummyCheckpointManager{},
+		lastBuiltBlock: lastBlock,
+		state:          newTestState(t),
+		bridgeManager: &bridgeManager{
+			stateSyncManager:  &dummyStateSyncManager{},
+			checkpointManager: &dummyCheckpointManager{},
+		},
 	}
 	runtime.setIsActiveValidator(true)
 
@@ -436,9 +441,11 @@ func TestConsensusRuntime_FSM_EndOfEpoch_BuildCommitEpoch(t *testing.T) {
 		epoch:              metadata,
 		config:             config,
 		lastBuiltBlock:     &types.Header{Number: 9},
-		stateSyncManager:   &dummyStateSyncManager{},
-		checkpointManager:  &dummyCheckpointManager{},
 		stakeManager:       &dummyStakeManager{},
+		bridgeManager: &bridgeManager{
+			stateSyncManager:  &dummyStateSyncManager{},
+			checkpointManager: &dummyCheckpointManager{},
+		},
 	}
 
 	err := runtime.FSM()

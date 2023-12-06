@@ -336,6 +336,32 @@ func (g *GetCheckpointBlockCheckpointManagerFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(CheckpointManager.Abi.Methods["getCheckpointBlock"], buf, g)
 }
 
+type CheckpointSubmittedEvent struct {
+	Epoch       *big.Int   `abi:"epoch"`
+	BlockNumber *big.Int   `abi:"blockNumber"`
+	EventRoot   types.Hash `abi:"eventRoot"`
+}
+
+func (*CheckpointSubmittedEvent) Sig() ethgo.Hash {
+	return CheckpointManager.Abi.Events["CheckpointSubmitted"].ID()
+}
+
+func (c *CheckpointSubmittedEvent) Encode() ([]byte, error) {
+	return CheckpointManager.Abi.Events["CheckpointSubmitted"].Inputs.Encode(c)
+}
+
+func (c *CheckpointSubmittedEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !CheckpointManager.Abi.Events["CheckpointSubmitted"].Match(log) {
+		return false, nil
+	}
+
+	return true, decodeEvent(CheckpointManager.Abi.Events["CheckpointSubmitted"], log, c)
+}
+
+func (c *CheckpointSubmittedEvent) Decode(input []byte) error {
+	return CheckpointManager.Abi.Events["CheckpointSubmitted"].Inputs.DecodeStruct(input, &c)
+}
+
 type InitializeExitHelperFn struct {
 	NewCheckpointManager types.Address `abi:"newCheckpointManager"`
 }

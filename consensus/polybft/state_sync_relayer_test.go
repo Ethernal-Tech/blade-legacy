@@ -55,7 +55,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	dummyTxRelayer := newDummyStakeTxRelayer(t, nil)
 	state := newTestState(t)
 
-	stateSyncRelayer := NewStateSyncRelayer(
+	stateSyncRelayer := newStateSyncRelayer(
 		dummyTxRelayer,
 		stateSyncAddr,
 		state.StateSyncStore,

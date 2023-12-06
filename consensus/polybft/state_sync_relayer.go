@@ -42,8 +42,8 @@ type StateSyncRelayer interface {
 	Close()
 }
 
-// stateSyncProofRetriever is an interface that exposes function for retrieving state sync proof
-type stateSyncProofRetriever interface {
+// StateSyncProofRetriever is an interface that exposes function for retrieving state sync proof
+type StateSyncProofRetriever interface {
 	GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
 }
 
@@ -88,7 +88,7 @@ type stateSyncRelayerConfig struct {
 type stateSyncRelayerImpl struct {
 	txRelayer      txrelayer.TxRelayer
 	key            ethgo.Key
-	proofRetriever stateSyncProofRetriever
+	proofRetriever StateSyncProofRetriever
 	state          *StateSyncStore
 	logger         hclog.Logger
 	blockchain     blockchainBackend
@@ -99,11 +99,11 @@ type stateSyncRelayerImpl struct {
 	config *stateSyncRelayerConfig
 }
 
-func NewStateSyncRelayer(
+func newStateSyncRelayer(
 	txRelayer txrelayer.TxRelayer,
 	stateReceiverAddr types.Address,
 	state *StateSyncStore,
-	store stateSyncProofRetriever,
+	store StateSyncProofRetriever,
 	blockchain blockchainBackend,
 	key ethgo.Key,
 	config *stateSyncRelayerConfig,
@@ -173,21 +173,21 @@ func (ssr *stateSyncRelayerImpl) processEvents() {
 	currentBlockNumber := ssr.blockchain.CurrentHeader().Number
 
 	// check already processed events
-	for _, evnt := range events {
-		// quit if we are still waiting for some old event confirmation (there is no paralelization right now!)
-		if evnt.SentStatus && evnt.BlockNumber+ssr.config.maxBlocksToWaitForResend > currentBlockNumber {
+	for _, event := range events {
+		// quit if we are still waiting for some old event confirmation (there is no parallelization right now!)
+		if event.SentStatus && event.BlockNumber+ssr.config.maxBlocksToWaitForResend > currentBlockNumber {
 			return
 		}
 
 		// remove event if it is processed too many times
-		if evnt.CountTries+1 > ssr.config.maxAttemptsToSend {
-			removedEventIDs = append(removedEventIDs, evnt.EventID)
+		if event.CountTries+1 > ssr.config.maxAttemptsToSend {
+			removedEventIDs = append(removedEventIDs, event.EventID)
 		} else {
-			evnt.CountTries++
-			evnt.BlockNumber = currentBlockNumber
-			evnt.SentStatus = true
+			event.CountTries++
+			event.BlockNumber = currentBlockNumber
+			event.SentStatus = true
 
-			sendingEvents = append(sendingEvents, evnt)
+			sendingEvents = append(sendingEvents, event)
 			if len(sendingEvents) == int(ssr.config.maxEventsPerBatch) {
 				break
 			}
@@ -331,7 +331,7 @@ func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log
 	}
 }
 
-func getStateSyncTxRelayer(rpcEndpoint string, logger hclog.Logger) (txrelayer.TxRelayer, error) {
+func getBridgeTxRelayer(rpcEndpoint string, logger hclog.Logger) (txrelayer.TxRelayer, error) {
 	if rpcEndpoint == "" || strings.Contains(rpcEndpoint, "0.0.0.0") {
 		_, port, err := net.SplitHostPort(rpcEndpoint)
 		if err == nil {

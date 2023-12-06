@@ -38,7 +38,6 @@ type exitParams struct {
 	exitID            uint64
 	rootJSONRPCAddr   string
 	childJSONRPCAddr  string
-	isTestMode        bool
 }
 
 var (
@@ -89,15 +88,7 @@ func GetCommand() *cobra.Command {
 		"the JSON RPC child chain endpoint",
 	)
 
-	exitCmd.Flags().BoolVar(
-		&ep.isTestMode,
-		helper.TestModeFlag,
-		false,
-		"test indicates whether exit transaction sender is hardcoded test account",
-	)
-
 	_ = exitCmd.MarkFlagRequired(exitHelperFlag)
-	exitCmd.MarkFlagsMutuallyExclusive(helper.TestModeFlag, common.SenderKeyFlag)
 
 	return exitCmd
 }

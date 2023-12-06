@@ -84,7 +84,9 @@ func main() {
 				"initialize",
 				"getCheckpointBlock",
 			},
-			[]string{},
+			[]string{
+				"CheckpointSubmitted",
+			},
 		},
 		{
 			"ExitHelper",
