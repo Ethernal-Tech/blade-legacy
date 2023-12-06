@@ -5,8 +5,9 @@ go 1.20
 require (
 	cloud.google.com/go/secretmanager v1.11.4
 	github.com/0xPolygon/go-ibft v0.4.1-0.20230717081138-628065cf23b6
+	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20231202204931-b886edca635a
 	github.com/armon/go-metrics v0.4.1
-	github.com/aws/aws-sdk-go v1.46.1
+	github.com/aws/aws-sdk-go v1.48.13
 	github.com/btcsuite/btcd v0.22.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/go-connections v0.4.0
@@ -47,7 +48,6 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/yaml.v3 v3.0.1
 	pgregory.net/rapid v1.1.0
-	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20231202204931-b886edca635a
 )
 
 require (
