@@ -253,8 +253,12 @@ func ParseAmount(amount string) (*big.Int, error) {
 
 func ParseAmountAllowZero(amount string) (*big.Int, error) {
 	result, ok := new(big.Int).SetString(amount, 0)
-	if !ok || result.Cmp(big.NewInt(0)) < 0 {
-		return nil, fmt.Errorf("amount %s should be numerical value greater than zero", amount)
+	if !ok {
+		return nil, fmt.Errorf("failed to convert provided value into a number (%s)", amount)
+	}
+	
+	if result.Cmp(big.NewInt(0)) < 0 {
+	        return nil, fmt.Errorf("provided value (%d) is less than zero", result)
 	}
 
 	return result, nil
