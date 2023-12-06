@@ -228,8 +228,8 @@ func (b *bridgeManager) initExitRelayer(
 			wallet.NewEcdsaSigner(runtimeConfig.Key),
 			bridgeBackend,
 			runtimeConfig.blockchain,
-			runtimeConfig.State.CheckpointStore,
-			logger.Named("state_sync_relayer"))
+			runtimeConfig.State.ExitStore,
+			logger.Named("exit_relayer"))
 	} else {
 		b.exitEventRelayer = &dummyExitRelayer{}
 	}

@@ -298,7 +298,7 @@ func (c *checkpointManager) PostBlock(req *PostBlockRequest) error {
 
 // BuildEventRoot returns an exit event root hash for exit tree of given epoch
 func (c *checkpointManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
-	exitEvents, err := c.state.CheckpointStore.getExitEventsByEpoch(epoch)
+	exitEvents, err := c.state.ExitStore.getExitEventsByEpoch(epoch)
 	if err != nil {
 		return types.ZeroHash, err
 	}
@@ -319,7 +319,7 @@ func (c *checkpointManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
 func (c *checkpointManager) GenerateExitProof(exitID uint64) (types.Proof, error) {
 	c.logger.Debug("Generating proof for exit", "exitID", exitID)
 
-	exitEvent, err := c.state.CheckpointStore.getExitEvent(exitID)
+	exitEvent, err := c.state.ExitStore.getExitEvent(exitID)
 	if err != nil {
 		return types.Proof{}, err
 	}
@@ -381,7 +381,7 @@ func (c *checkpointManager) GenerateExitProof(exitID uint64) (types.Proof, error
 		return types.Proof{}, err
 	}
 
-	exitEvents, err := c.state.CheckpointStore.getExitEventsForProof(exitEvent.EpochNumber, checkpointBlock.Uint64())
+	exitEvents, err := c.state.ExitStore.getExitEventsForProof(exitEvent.EpochNumber, checkpointBlock.Uint64())
 	if err != nil {
 		return types.Proof{}, err
 	}
@@ -441,7 +441,7 @@ func (c *checkpointManager) ProcessLog(header *types.Header, log *ethgo.Log, dbT
 		return nil
 	}
 
-	return c.state.CheckpointStore.insertExitEvent(exitEvent, dbTx)
+	return c.state.ExitStore.insertExitEvent(exitEvent, dbTx)
 }
 
 // createExitTree creates an exit event merkle tree from provided exit events

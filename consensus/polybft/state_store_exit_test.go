@@ -25,14 +25,14 @@ func TestState_Insert_And_Get_ExitEvents_PerEpoch(t *testing.T) {
 	insertTestExitEvents(t, state, numOfEpochs, numOfBlocksPerEpoch, numOfEventsPerBlock)
 
 	t.Run("Get events for existing epoch", func(t *testing.T) {
-		events, err := state.CheckpointStore.getExitEventsByEpoch(1)
+		events, err := state.ExitStore.getExitEventsByEpoch(1)
 
 		assert.NoError(t, err)
 		assert.Len(t, events, numOfBlocksPerEpoch*numOfEventsPerBlock)
 	})
 
 	t.Run("Get events for non-existing epoch", func(t *testing.T) {
-		events, err := state.CheckpointStore.getExitEventsByEpoch(12)
+		events, err := state.ExitStore.getExitEventsByEpoch(12)
 
 		assert.NoError(t, err)
 		assert.Len(t, events, 0)
@@ -65,7 +65,7 @@ func TestState_Insert_And_Get_ExitEvents_ForProof(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		events, err := state.CheckpointStore.getExitEventsForProof(c.epoch, c.checkpointBlockNumber)
+		events, err := state.ExitStore.getExitEventsForProof(c.epoch, c.checkpointBlockNumber)
 
 		assert.NoError(t, err)
 		assert.Len(t, events, c.expectedNumberOfEvents)
@@ -78,7 +78,7 @@ func TestState_Insert_And_Get_ExitEvents_ForProof_NoEvents(t *testing.T) {
 	state := newTestState(t)
 	insertTestExitEvents(t, state, 1, 10, 1)
 
-	events, err := state.CheckpointStore.getExitEventsForProof(2, 11)
+	events, err := state.ExitStore.getExitEventsForProof(2, 11)
 
 	assert.NoError(t, err)
 	assert.Nil(t, events)
@@ -96,7 +96,7 @@ func TestState_NoEpochForExitEventInLookup(t *testing.T) {
 	state := newTestState(t)
 	insertTestExitEvents(t, state, 3, 10, 1)
 
-	exitEventFromDB, err := state.CheckpointStore.getExitEvent(exitToTest)
+	exitEventFromDB, err := state.ExitStore.getExitEvent(exitToTest)
 	require.NoError(t, err)
 	require.Equal(t, exitToTest, exitEventFromDB.ID.Uint64())
 	require.Equal(t, epochToMatch, exitEventFromDB.EpochNumber)
@@ -109,7 +109,7 @@ func TestState_NoEpochForExitEventInLookup(t *testing.T) {
 
 	require.NoError(t, err)
 
-	_, err = state.CheckpointStore.getExitEvent(exitToTest)
+	_, err = state.ExitStore.getExitEvent(exitToTest)
 	require.ErrorContains(t, err, "epoch was not found in lookup table")
 }
 
@@ -147,7 +147,7 @@ func TestState_decodeExitEvent(t *testing.T) {
 	require.Equal(t, uint64(epoch), event.EpochNumber)
 	require.Equal(t, uint64(blockNumber), event.BlockNumber)
 
-	require.NoError(t, state.CheckpointStore.insertExitEvent(event, nil))
+	require.NoError(t, state.ExitStore.insertExitEvent(event, nil))
 }
 
 func TestState_decodeExitEvent_NotAnExitEvent(t *testing.T) {
@@ -199,7 +199,7 @@ func insertTestExitEvents(t *testing.T, state *State,
 	}
 
 	for _, ee := range exitEvents {
-		require.NoError(t, state.CheckpointStore.insertExitEvent(ee, nil))
+		require.NoError(t, state.ExitStore.insertExitEvent(ee, nil))
 	}
 
 	return exitEvents

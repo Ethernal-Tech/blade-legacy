@@ -1,6 +1,7 @@
 package polybft
 
 import (
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -28,7 +29,7 @@ var _ ExitRelayer = (*exitRelayer)(nil)
 
 type exitRelayer struct {
 	key            ethgo.Key
-	state          *CheckpointStore
+	exitStore      *ExitStore
 	blockchain     blockchainBackend
 	proofRetriever EventProofRetriever
 	txRelayer      txrelayer.TxRelayer
@@ -43,11 +44,11 @@ func newExitRelayer(
 	key ethgo.Key,
 	proofRetriever EventProofRetriever,
 	blockchain blockchainBackend,
-	state *CheckpointStore,
+	exitStore *ExitStore,
 	logger hclog.Logger) *exitRelayer {
 	return &exitRelayer{
 		key:            key,
-		state:          state,
+		exitStore:      exitStore,
 		logger:         logger,
 		txRelayer:      txRelayer,
 		blockchain:     blockchain,
@@ -61,8 +62,27 @@ func (e *exitRelayer) PostBlock(req *PostBlockRequest) error {
 	return nil
 }
 
-func (e *exitRelayer) AddLog(log *ethgo.Log) error {
-	e.logger.Info("Received CheckpointSubmittedEvent")
+// AddLog saves the received log from event tracker if it matches a checkpoint submitted event ABI
+func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
+	event := &contractsapi.CheckpointSubmittedEvent{}
+
+	doesMatch, err := event.ParseLog(eventLog)
+	if !doesMatch {
+		return nil
+	}
+
+	e.logger.Info(
+		"Add checkpoint submitted event",
+		"block", eventLog.BlockNumber,
+		"hash", eventLog.TransactionHash,
+		"index", eventLog.LogIndex,
+	)
+
+	if err != nil {
+		e.logger.Error("could not decode checkpoint submitted event", "err", err)
+
+		return err
+	}
 
 	return nil
 }

@@ -39,7 +39,7 @@ type State struct {
 	close chan struct{}
 
 	StateSyncStore        *StateSyncStore
-	CheckpointStore       *CheckpointStore
+	ExitStore             *ExitStore
 	EpochStore            *EpochStore
 	ProposerSnapshotStore *ProposerSnapshotStore
 	StakeStore            *StakeStore
@@ -57,7 +57,7 @@ func newState(path string, logger hclog.Logger, closeCh chan struct{}) (*State, 
 		db:                    db,
 		close:                 closeCh,
 		StateSyncStore:        &StateSyncStore{db: db},
-		CheckpointStore:       &CheckpointStore{db: db},
+		ExitStore:             &ExitStore{db: db},
 		EpochStore:            &EpochStore{db: db},
 		ProposerSnapshotStore: &ProposerSnapshotStore{db: db},
 		StakeStore:            &StakeStore{db: db},
@@ -78,7 +78,7 @@ func (s *State) initStorages() error {
 		if err := s.StateSyncStore.initialize(tx); err != nil {
 			return err
 		}
-		if err := s.CheckpointStore.initialize(tx); err != nil {
+		if err := s.ExitStore.initialize(tx); err != nil {
 			return err
 		}
 		if err := s.EpochStore.initialize(tx); err != nil {
@@ -104,7 +104,7 @@ func (s *State) initStorages() error {
 		if lastProcessedBlock == 0 {
 			// we do this for already existing chains, which just updated their Edge binary,
 			// to not get events from scratch, but start from what other stores have
-			lastSaved, err := s.CheckpointStore.getLastSaved(tx)
+			lastSaved, err := s.ExitStore.getLastSaved(tx)
 			if err != nil {
 				return fmt.Errorf("could not initialize last processed block bucket: %w", err)
 			}
