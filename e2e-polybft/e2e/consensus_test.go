@@ -382,6 +382,9 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	minter, err := wallet.GenerateKey()
 	require.NoError(t, err)
 
+	receiver, err := wallet.GenerateKey()
+	require.NoError(t, err)
+
 	// because we are using native token as reward wallet, and it has default premine balance
 	initialTotalSupply := new(big.Int).Set(command.DefaultPremineBalance)
 
@@ -391,6 +394,7 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 			fmt.Sprintf("%s:%s:%d", tokenName, tokenSymbol, decimals)),
 		framework.WithBladeAdmin(minter.Address().String()),
 		framework.WithEpochSize(epochSize),
+		framework.WithBaseFeeConfig(""),
 		framework.WithSecretsCallback(func(addrs []types.Address, config *framework.TestClusterConfig) {
 			config.Premine = append(config.Premine, fmt.Sprintf("%s:%d", minter.Address(), initMinterBalance))
 			initialTotalSupply.Add(initialTotalSupply, initMinterBalance)
@@ -430,45 +434,47 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	require.Equal(t, decimals, decimalsCount)
 
 	// send mint transactions
-	mintFn, exists := contractsapi.NativeERC20.Abi.Methods["mint"]
-	require.True(t, exists)
-
-	mintAmount := ethgo.Gwei(1)
+	mintAmount := ethgo.Ether(1)
 	nativeTokenAddr := ethgo.Address(contracts.NativeERC20TokenContract)
 
 	// make sure minter account can mint tokens
-	for _, addr := range validatorsAddrs {
-		balanceBefore, err := targetJSONRPC.Eth().GetBalance(ethgo.Address(addr), ethgo.Latest)
-		require.NoError(t, err)
-		t.Logf("Pre-mint balance: %v=%d\n", addr, balanceBefore)
+	receiverAddr := types.Address(receiver.Address())
+	balanceBefore, err := targetJSONRPC.Eth().GetBalance(ethgo.Address(receiverAddr), ethgo.Latest)
+	require.NoError(t, err)
+	t.Logf("Pre-mint balance: %v=%d\n", receiverAddr, balanceBefore)
 
-		mintInput, err := mintFn.Encode([]interface{}{addr, mintAmount})
-		require.NoError(t, err)
-
-		receipt, err := relayer.SendTransaction(
-			&ethgo.Transaction{
-				To:    &nativeTokenAddr,
-				Input: mintInput,
-				Type:  ethgo.TransactionDynamicFee,
-			}, minter)
-		require.NoError(t, err)
-		require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
-
-		balanceAfter, err := targetJSONRPC.Eth().GetBalance(ethgo.Address(addr), ethgo.Latest)
-		require.NoError(t, err)
-
-		t.Logf("Post-mint balance: %v=%d\n", addr, balanceAfter)
-		require.True(t, balanceAfter.Cmp(new(big.Int).Add(mintAmount, balanceBefore)) >= 0)
+	mintFn := &contractsapi.MintRootERC20Fn{
+		To:     receiverAddr,
+		Amount: mintAmount,
 	}
+
+	mintInput, err := mintFn.EncodeAbi()
+	require.NoError(t, err)
+
+	receipt, err := relayer.SendTransaction(
+		&ethgo.Transaction{
+			To:    &nativeTokenAddr,
+			Input: mintInput,
+			Type:  ethgo.TransactionDynamicFee,
+		}, minter)
+	require.NoError(t, err)
+	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
+
+	balanceAfter, err := targetJSONRPC.Eth().GetBalance(ethgo.Address(receiverAddr), ethgo.Latest)
+	require.NoError(t, err)
+
+	t.Logf("Post-mint balance: %v=%d\n", receiverAddr, balanceAfter)
+	require.True(t, balanceAfter.Cmp(new(big.Int).Add(mintAmount, balanceBefore)) >= 0)
 
 	// try sending mint transaction from non minter account and make sure it would fail
 	nonMinterAcc, err := validatorHelper.GetAccountFromDir(cluster.Servers[1].DataDir())
 	require.NoError(t, err)
 
-	mintInput, err := mintFn.Encode([]interface{}{validatorsAddrs[0], ethgo.Ether(1)})
+	mintFn = &contractsapi.MintRootERC20Fn{To: validatorsAddrs[0], Amount: mintAmount}
+	mintInput, err = mintFn.EncodeAbi()
 	require.NoError(t, err)
 
-	receipt, err := relayer.SendTransaction(
+	receipt, err = relayer.SendTransaction(
 		&ethgo.Transaction{
 			To:    &nativeTokenAddr,
 			Input: mintInput,
@@ -520,6 +526,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	// sender must have premined some native tokens
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(types.Address(sender.Address())),
+		framework.WithBaseFeeConfig(""),
 		framework.WithSecretsCallback(func(a []types.Address, config *framework.TestClusterConfig) {
 			for range a {
 				config.StakeAmounts = append(config.StakeAmounts, command.DefaultPremineBalance)

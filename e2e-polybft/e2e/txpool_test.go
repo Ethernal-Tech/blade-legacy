@@ -24,7 +24,9 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithPremine(types.Address(sender.Address())))
+		framework.WithPremine(types.Address(sender.Address())),
+		framework.WithBaseFeeConfig(""),
+	)
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
@@ -99,6 +101,7 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 	// first account should have some matics premined
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(types.Address(premine.Address())),
+		framework.WithBaseFeeConfig(""),
 	)
 	defer cluster.Stop()
 
@@ -231,6 +234,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	// First account should have some matics premined
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(types.Address(sender.Address())),
+		framework.WithBaseFeeConfig(""),
 	)
 	defer cluster.Stop()
 

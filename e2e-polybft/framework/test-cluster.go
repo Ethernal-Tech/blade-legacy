@@ -110,6 +110,7 @@ type TestClusterConfig struct {
 	EpochSize            int
 	EpochReward          int
 	NativeTokenConfigRaw string
+	BaseFeeConfig        string
 	SecretsCallback      func([]types.Address, *TestClusterConfig)
 	BladeAdmin           string
 
@@ -253,6 +254,16 @@ func WithValidatorSnapshot(validatorsLen uint64) ClusterOption {
 func WithBridge() ClusterOption {
 	return func(h *TestClusterConfig) {
 		h.HasBridge = true
+	}
+}
+
+func WithBaseFeeConfig(config string) ClusterOption {
+	return func(h *TestClusterConfig) {
+		if config == "" {
+			h.BaseFeeConfig = command.DefaultGenesisBaseFeeConfig
+		} else {
+			h.BaseFeeConfig = config
+		}
 	}
 }
 
@@ -525,7 +536,10 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			args = append(args, "--reward-token-code", cluster.Config.TestRewardToken)
 		}
 
-		// add optional genesis flags
+		if cluster.Config.BaseFeeConfig != "" {
+			args = append(args, "--base-fee-config", cluster.Config.BaseFeeConfig)
+		}
+
 		if cluster.Config.NativeTokenConfigRaw != "" {
 			args = append(args, "--native-token-config", cluster.Config.NativeTokenConfigRaw)
 		}

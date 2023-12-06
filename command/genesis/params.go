@@ -203,19 +203,19 @@ func (p *genesisParams) generateGenesis() error {
 }
 
 func (p *genesisParams) initGenesisConfig() error {
-	enabledForks := chain.AllForksEnabled
+	enabledForks := chain.AllForksEnabled.Copy()
+	if p.parsedBaseFeeConfig == nil {
+		enabledForks.RemoveFork(chain.London)
+	}
 
 	chainConfig := &chain.Chain{
 		Name: p.name,
 		Genesis: &chain.Genesis{
-			GasLimit:           p.blockGasLimit,
-			Difficulty:         1,
-			Alloc:              map[types.Address]*chain.GenesisAccount{},
-			ExtraData:          p.extraData,
-			GasUsed:            command.DefaultGenesisGasUsed,
-			BaseFee:            p.parsedBaseFeeConfig.baseFee,
-			BaseFeeEM:          p.parsedBaseFeeConfig.baseFeeEM,
-			BaseFeeChangeDenom: p.parsedBaseFeeConfig.baseFeeChangeDenom,
+			GasLimit:   p.blockGasLimit,
+			Difficulty: 1,
+			Alloc:      map[types.Address]*chain.GenesisAccount{},
+			ExtraData:  p.extraData,
+			GasUsed:    command.DefaultGenesisGasUsed,
 		},
 		Params: &chain.Params{
 			ChainID: int64(p.chainID),
@@ -225,6 +225,12 @@ func (p *genesisParams) initGenesisConfig() error {
 			},
 		},
 		Bootnodes: p.bootnodes,
+	}
+
+	if p.parsedBaseFeeConfig != nil {
+		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
+		chainConfig.Genesis.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
+		chainConfig.Genesis.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
 	}
 
 	chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
@@ -296,7 +302,7 @@ func (p *genesisParams) validateBlockTrackerPollInterval() error {
 
 func (p *genesisParams) validateGenesisBaseFeeConfig() error {
 	if p.baseFeeConfig == "" {
-		return errors.New("invalid input(empty string) for genesis base fee config flag")
+		return nil
 	}
 
 	baseFeeInfo, err := parseBaseFeeConfig(p.baseFeeConfig)

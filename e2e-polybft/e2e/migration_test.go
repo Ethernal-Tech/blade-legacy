@@ -32,6 +32,7 @@ func TestE2E_Migration(t *testing.T) {
 	srvs := framework.NewTestServers(t, 1, func(config *framework.TestServerConfig) {
 		config.SetConsensus(framework.ConsensusDev)
 		config.Premine(types.Address(userAddr), initialBalance)
+		config.SetBaseFeeConfig("")
 	})
 
 	srv := srvs[0]
@@ -63,13 +64,14 @@ func TestE2E_Migration(t *testing.T) {
 
 	//send transaction to user2
 	sendAmount := ethgo.Gwei(10000)
-	receipt, err := relayer.SendTransaction(&ethgo.Transaction{
-		From:     userAddr,
-		To:       &userAddr2,
-		Gas:      1000000,
-		Value:    sendAmount,
-		GasPrice: ethgo.Gwei(2).Uint64(),
-	}, userKey)
+	receipt, err := relayer.SendTransaction(
+		&ethgo.Transaction{
+			From:     userAddr,
+			To:       &userAddr2,
+			Gas:      1000000,
+			Value:    sendAmount,
+			GasPrice: ethgo.Gwei(2).Uint64(),
+		}, userKey)
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
 

@@ -149,7 +149,11 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		BladeAdmin:               types.StringToAddress(p.bladeAdmin),
 	}
 
-	enabledForks := chain.AllForksEnabled
+	enabledForks := chain.AllForksEnabled.Copy()
+
+	if p.parsedBaseFeeConfig == nil {
+		enabledForks.RemoveFork(chain.London)
+	}
 
 	chainConfig := &chain.Chain{
 		Name: p.name,
@@ -216,15 +220,18 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 
 	// populate genesis parameters
 	chainConfig.Genesis = &chain.Genesis{
-		GasLimit:           p.blockGasLimit,
-		Difficulty:         0,
-		Alloc:              allocs,
-		ExtraData:          genesisExtraData,
-		GasUsed:            command.DefaultGenesisGasUsed,
-		Mixhash:            polybft.PolyBFTMixDigest,
-		BaseFee:            p.parsedBaseFeeConfig.baseFee,
-		BaseFeeEM:          p.parsedBaseFeeConfig.baseFeeEM,
-		BaseFeeChangeDenom: p.parsedBaseFeeConfig.baseFeeChangeDenom,
+		GasLimit:   p.blockGasLimit,
+		Difficulty: 0,
+		Alloc:      allocs,
+		ExtraData:  genesisExtraData,
+		GasUsed:    command.DefaultGenesisGasUsed,
+		Mixhash:    polybft.PolyBFTMixDigest,
+	}
+
+	if p.parsedBaseFeeConfig != nil {
+		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
+		chainConfig.Genesis.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
+		chainConfig.Genesis.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
 	}
 
 	if len(p.contractDeployerAllowListAdmin) != 0 {
