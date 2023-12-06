@@ -96,24 +96,6 @@ func (s *State) initStorages() error {
 			return fmt.Errorf("failed to create bucket=%s: %w", string(edgeEventsLastProcessedBlockBucket), err)
 		}
 
-		lastProcessedBlock, err := s.getLastProcessedEventsBlock(tx)
-		if err != nil {
-			return fmt.Errorf("failed to get last processed block: %w", err)
-		}
-
-		if lastProcessedBlock == 0 {
-			// we do this for already existing chains, which just updated their Edge binary,
-			// to not get events from scratch, but start from what other stores have
-			lastSaved, err := s.ExitStore.getLastSaved(tx)
-			if err != nil {
-				return fmt.Errorf("could not initialize last processed block bucket: %w", err)
-			}
-
-			if lastSaved > 0 {
-				return s.insertLastProcessedEventsBlock(lastSaved, tx)
-			}
-		}
-
 		return s.GovernanceStore.initialize(tx)
 	})
 }

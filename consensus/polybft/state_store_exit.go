@@ -20,9 +20,9 @@ var (
 	exitEventsBucket                  = []byte("exitEvent")
 	exitEventToEpochLookupBucket      = []byte("exitIdToEpochLookup")
 	exitEventLastProcessedBlockBucket = []byte("lastProcessedBlock")
+	checkpointSubmittedEventBucket    = []byte("checkpointSubmitted")
 
-	lastProcessedBlockKey = []byte("lastProcessedBlock")
-	errNoLastSavedEntry   = errors.New("there is no last saved block in last saved bucket")
+	errNoLastSavedEntry = errors.New("there is no last saved block in last saved bucket")
 )
 
 type exitEventNotFoundError struct {
@@ -67,10 +67,6 @@ func (s *ExitStore) initialize(tx *bolt.Tx) error {
 
 	if _, err := tx.CreateBucketIfNotExists(exitEventLastProcessedBlockBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(exitEventLastProcessedBlockBucket), err)
-	}
-
-	if val := tx.Bucket(exitEventLastProcessedBlockBucket).Get(lastProcessedBlockKey); val == nil {
-		return tx.Bucket(exitEventLastProcessedBlockBucket).Put(lastProcessedBlockKey, common.EncodeUint64ToBytes(0))
 	}
 
 	return nil
@@ -180,35 +176,6 @@ func (s *ExitStore) getExitEvents(epoch uint64, filter func(exitEvent *ExitEvent
 	})
 
 	return events, err
-}
-
-// updateLastSaved saves the last block processed for exit events
-func (s *ExitStore) getLastSaved(dbTx *bolt.Tx) (uint64, error) {
-	var (
-		lastSavedBlock uint64
-		err            error
-	)
-
-	getFn := func(tx *bolt.Tx) error {
-		v := tx.Bucket(exitEventLastProcessedBlockBucket).Get(lastProcessedBlockKey)
-		if v == nil {
-			return errNoLastSavedEntry
-		}
-
-		lastSavedBlock = common.EncodeBytesToUint64(v)
-
-		return nil
-	}
-
-	if dbTx == nil {
-		err = s.db.View(func(tx *bolt.Tx) error {
-			return getFn(tx)
-		})
-	} else {
-		err = getFn(dbTx)
-	}
-
-	return lastSavedBlock, err
 }
 
 // decodeExitEvent tries to decode exit event from the provided log
