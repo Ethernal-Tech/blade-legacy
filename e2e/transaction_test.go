@@ -124,6 +124,7 @@ func TestEthTransfer(t *testing.T) {
 		config.SetConsensus(framework.ConsensusDev)
 		for _, acc := range validAccounts {
 			config.Premine(acc.address, acc.balance)
+			config.SetBaseFeeConfig("")
 		}
 	})
 	srv := srvs[0]
