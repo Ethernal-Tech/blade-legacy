@@ -254,11 +254,11 @@ func ParseAmount(amount string) (*big.Int, error) {
 func ParseAmountAllowZero(amount string) (*big.Int, error) {
 	result, ok := new(big.Int).SetString(amount, 0)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert provided value into a number (%s)", amount)
+		return nil, fmt.Errorf("failed to convert provided value (%s) into a number ", amount)
 	}
-	
+
 	if result.Cmp(big.NewInt(0)) < 0 {
-	        return nil, fmt.Errorf("provided value (%d) is less than zero", result)
+		return nil, fmt.Errorf("provided value (%d) is less than zero", result)
 	}
 
 	return result, nil
