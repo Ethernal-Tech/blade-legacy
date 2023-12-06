@@ -43,7 +43,7 @@ func (rr registerResult) GetOutput() string {
 
 	buffer.WriteString("\n[VALIDATOR REGISTRATION]\n")
 
-	vals := make([]string, 0, 2)
+	vals := make([]string, 0, 3)
 	vals = append(vals, fmt.Sprintf("Validator Address|%s", rr.ValidatorAddress))
 	vals = append(vals, fmt.Sprintf("KOSK Signature|%s", rr.KoskSignature))
 	vals = append(vals, fmt.Sprintf("Amount Staked|%s", rr.Amount))

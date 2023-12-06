@@ -73,11 +73,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	secretsManager, err := polybftsecrets.GetSecretsManager(params.accountDir, params.accountConfig, true)
-	if err != nil {
-		return err
-	}
-
 	validatorAccount, err := validatorHelper.GetAccount(params.accountDir, params.accountConfig)
 	if err != nil {
 		return err
@@ -110,19 +105,14 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		}
 	}
 
-	newValidatorAccount, err := wallet.NewAccountFromSecret(secretsManager)
-	if err != nil {
-		return err
-	}
-
 	koskSignature, err := signer.MakeKOSKSignature(
-		newValidatorAccount.Bls, newValidatorAccount.Address(),
+		validatorAccount.Bls, validatorAccount.Address(),
 		rootChainID.Int64(), signer.DomainValidatorSet, contracts.StakeManagerContract)
 	if err != nil {
 		return err
 	}
 
-	receipt, err := registerValidator(txRelayer, newValidatorAccount, koskSignature)
+	receipt, err := registerValidator(txRelayer, validatorAccount, koskSignature)
 	if err != nil {
 		return err
 	}
