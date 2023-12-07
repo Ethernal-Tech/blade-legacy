@@ -13,13 +13,26 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
+	"github.com/hashicorp/go-hclog"
 	hcf "github.com/hashicorp/go-hclog"
 	"github.com/umbracle/ethgo"
+	bolt "go.etcd.io/bbolt"
+)
+
+const (
+	// defaultMaxBlocksToWaitForResend specifies how many blocks should be wait
+	// in order to try again to send transaction
+	defaultMaxBlocksToWaitForResend = uint64(30)
+	// defaultMaxAttemptsToSend specifies how many sending retries for one transaction
+	defaultMaxAttemptsToSend = uint64(15)
+	// defaultMaxEventsPerBatch specifies maximum events per one batchExecute tx
+	defaultMaxEventsPerBatch = uint64(10)
 )
 
 var (
 	stateSyncEventSig           = new(contractsapi.StateSyncedEvent).Sig()
 	checkpointSubmittedEventSig = new(contractsapi.CheckpointSubmittedEvent).Sig()
+	exitProcessedEventSig       = new(contractsapi.ExitProcessedEvent).Sig()
 )
 
 // BridgeBackend is an interface that defines functions required by bridge components
@@ -27,6 +40,25 @@ type BridgeBackend interface {
 	Runtime
 	StateSyncProofRetriever
 	EventProofRetriever
+}
+
+// RelayerEventData keeps information about a relayer event
+type RelayerEventData struct {
+	EventID     uint64 `json:"eventID"`
+	CountTries  uint64 `json:"countTries"`
+	BlockNumber uint64 `json:"blockNumber"` // block when event is sent
+	SentStatus  bool   `json:"sentStatus"`
+}
+
+func (ed RelayerEventData) String() string {
+	return fmt.Sprintf("%d", ed.EventID)
+}
+
+// relayerConfig is a struct that holds the relayer configuration
+type relayerConfig struct {
+	maxBlocksToWaitForResend uint64
+	maxAttemptsToSend        uint64
+	maxEventsPerBatch        uint64
 }
 
 // eventTrackerConfig is a struct that holds the event tracker configuration
@@ -37,8 +69,120 @@ type eventTrackerConfig struct {
 	startBlock            uint64
 	stateSenderAddr       types.Address
 	checkpointManagerAddr types.Address
+	exitHelperAddr        types.Address
 	trackerPollInterval   time.Duration
 }
+
+// RelayerState is an interface that defines functions that a relayer store has to implement
+type RelayerState interface {
+	GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventData, err error)
+	UpdateRelayerEvents(events []*RelayerEventData, removeIDs []uint64, dbTx *bolt.Tx) error
+}
+
+// relayerEventsProcessor is a parent struct of both state sync and exit relayer
+// that holds functions common to both relayers
+type relayerEventsProcessor struct {
+	logger     hclog.Logger
+	state      RelayerState
+	blockchain blockchainBackend
+
+	config *relayerConfig
+	sendTx func([]*RelayerEventData) error
+}
+
+// ProcessEvents processes all relayer events that were either successfully or unsuccessfully executed
+// and executes all the events that can be executed in regards to relayerConfig
+func (r relayerEventsProcessor) processEvents() {
+	r.logger.Debug("processing relayer events on PostBlock")
+	defer r.logger.Debug("processing relayer events on PostBlock finished")
+
+	// we need twice as batch size because events from first batch are possible already sent maxAttemptsToSend times
+	events, err := r.state.GetAllAvailableRelayerEvents(int(r.config.maxEventsPerBatch) * 2)
+	if err != nil {
+		r.logger.Error("retrieving events failed", "err", err)
+
+		return
+	}
+
+	removedEventIDs := []uint64{}
+	sendingEvents := []*RelayerEventData{}
+	currentBlockNumber := r.blockchain.CurrentHeader().Number
+
+	// check already processed events
+	for _, event := range events {
+		// quit if we are still waiting for some old event confirmation (there is no parallelization right now!)
+		if event.SentStatus && event.BlockNumber+r.config.maxBlocksToWaitForResend > currentBlockNumber {
+			return
+		}
+
+		// remove event if it is processed too many times
+		if event.CountTries+1 > r.config.maxAttemptsToSend {
+			removedEventIDs = append(removedEventIDs, event.EventID)
+		} else {
+			event.CountTries++
+			event.BlockNumber = currentBlockNumber
+			event.SentStatus = true
+
+			sendingEvents = append(sendingEvents, event)
+			if len(sendingEvents) == int(r.config.maxEventsPerBatch) {
+				break
+			}
+		}
+	}
+
+	r.logger.Debug("processing relayer events on PostBlock",
+		"sendingEvents", len(sendingEvents),
+		"eventsToRemove", len(removedEventIDs))
+
+	// update state only if needed
+	if len(sendingEvents)+len(removedEventIDs) > 0 {
+		r.logger.Info("sending events", "events", sendingEvents, "removed", removedEventIDs)
+
+		if err := r.state.UpdateRelayerEvents(sendingEvents, removedEventIDs, nil); err != nil {
+			r.logger.Error("updating events failed",
+				"events", sendingEvents, "removed", removedEventIDs, "err", err)
+
+			return
+		}
+	}
+
+	// send tx only if needed
+	if len(sendingEvents) > 0 {
+		if err := r.sendTx(sendingEvents); err != nil {
+			r.logger.Error("failed to send tx", "block", currentBlockNumber, "events", sendingEvents, "err", err)
+		} else {
+			r.logger.Info("tx has been successfully sent", "block", currentBlockNumber, "events", sendingEvents)
+		}
+	}
+}
+
+// BridgeManager is an interface that defines functions that a bridge manager must implement
+type BridgeManager interface {
+	tracker.EventSubscriber
+
+	Close()
+	PostBlock(req *PostBlockRequest) error
+	PostEpoch(req *PostEpochRequest) error
+	CheckpointManager() CheckpointManager
+	StateSyncManager() StateSyncManager
+}
+
+var _ BridgeManager = (*dummyBridgeManager)(nil)
+
+type dummyBridgeManager struct{}
+
+func (d *dummyBridgeManager) Close()                                {}
+func (d *dummyBridgeManager) AddLog(log *ethgo.Log) error           { return nil }
+func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error { return nil }
+func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error { return nil }
+func (d *dummyBridgeManager) CheckpointManager() CheckpointManager {
+	return &dummyCheckpointManager{}
+}
+func (d *dummyBridgeManager) StateSyncManager() StateSyncManager {
+	return &dummyStateSyncManager{}
+}
+
+var _ BridgeManager = (*bridgeManager)(nil)
 
 // bridgeManager is a struct that manages different bridge components
 // such as handling and executing bridge events
@@ -50,8 +194,6 @@ type bridgeManager struct {
 
 	eventTrackerConfig *eventTrackerConfig
 	logger             hcf.Logger
-
-	isBridgeEnabled bool
 }
 
 // newBridgeManager creates a new instance of bridgeManager
@@ -59,14 +201,18 @@ func newBridgeManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	eventProvider *EventProvider,
-	logger hcf.Logger) (*bridgeManager, error) {
+	logger hcf.Logger) (BridgeManager, error) {
+	if !runtimeConfig.GenesisConfig.IsBridgeEnabled() {
+		return &dummyBridgeManager{}, nil
+	}
+
 	stateSenderAddr := runtimeConfig.GenesisConfig.Bridge.StateSenderAddr
 	bridgeManager := &bridgeManager{
-		logger:          logger.Named("bridge-manager"),
-		isBridgeEnabled: runtimeConfig.GenesisConfig.IsBridgeEnabled(),
+		logger: logger.Named("bridge-manager"),
 		eventTrackerConfig: &eventTrackerConfig{
 			EventTracker:          *runtimeConfig.eventTracker,
 			stateSenderAddr:       stateSenderAddr,
+			exitHelperAddr:        runtimeConfig.GenesisConfig.Bridge.ExitHelperAddr,
 			checkpointManagerAddr: runtimeConfig.GenesisConfig.Bridge.CheckpointManagerAddr,
 			jsonrpcAddr:           runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint,
 			startBlock:            runtimeConfig.GenesisConfig.Bridge.EventTrackerStartBlocks[stateSenderAddr],
@@ -90,10 +236,8 @@ func newBridgeManager(
 		return nil, err
 	}
 
-	if bridgeManager.isBridgeEnabled {
-		if err := bridgeManager.initTracker(runtimeConfig); err != nil {
-			return nil, fmt.Errorf("failed to init event tracker. Error: %w", err)
-		}
+	if err := bridgeManager.initTracker(runtimeConfig); err != nil {
+		return nil, fmt.Errorf("failed to init event tracker. Error: %w", err)
 	}
 
 	return bridgeManager, nil
@@ -116,8 +260,17 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 	return nil
 }
 
+// PostEpoch is a function executed on epoch ending / start of new epoch
+func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
+	if err := b.stateSyncManager.PostEpoch(req); err != nil {
+		return fmt.Errorf("failed to execute post epoch in state sync manager. Err: %w", err)
+	}
+
+	return nil
+}
+
 // close stops ongoing go routines in the manager
-func (b *bridgeManager) close() {
+func (b *bridgeManager) Close() {
 	b.stateSyncRelayer.Close()
 }
 
@@ -127,23 +280,19 @@ func (b *bridgeManager) initStateSyncManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	logger hcf.Logger) error {
-	if b.isBridgeEnabled {
-		stateSyncManager := newStateSyncManager(
-			logger.Named("state-sync-manager"),
-			runtimeConfig.State,
-			&stateSyncConfig{
-				key:               runtimeConfig.Key,
-				dataDir:           runtimeConfig.DataDir,
-				topic:             runtimeConfig.bridgeTopic,
-				maxCommitmentSize: maxCommitmentSize,
-			},
-			bridgeBackend,
-		)
+	stateSyncManager := newStateSyncManager(
+		logger.Named("state-sync-manager"),
+		runtimeConfig.State,
+		&stateSyncConfig{
+			key:               runtimeConfig.Key,
+			dataDir:           runtimeConfig.DataDir,
+			topic:             runtimeConfig.bridgeTopic,
+			maxCommitmentSize: maxCommitmentSize,
+		},
+		bridgeBackend,
+	)
 
-		b.stateSyncManager = stateSyncManager
-	} else {
-		b.stateSyncManager = &dummyStateSyncManager{}
-	}
+	b.stateSyncManager = stateSyncManager
 
 	return b.stateSyncManager.Init()
 }
@@ -154,26 +303,21 @@ func (b *bridgeManager) initCheckpointManager(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
 	logger hcf.Logger) error {
-	if b.isBridgeEnabled {
-		// enable checkpoint manager
-		txRelayer, err := txrelayer.NewTxRelayer(
-			txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint),
-			txrelayer.WithWriter(logger.StandardWriter(&hcf.StandardLoggerOptions{})))
-		if err != nil {
-			return err
-		}
-
-		b.checkpointManager = newCheckpointManager(
-			wallet.NewEcdsaSigner(runtimeConfig.Key),
-			runtimeConfig.GenesisConfig.Bridge.CheckpointManagerAddr,
-			txRelayer,
-			runtimeConfig.blockchain,
-			runtimeConfig.polybftBackend,
-			logger.Named("checkpoint_manager"),
-			runtimeConfig.State)
-	} else {
-		b.checkpointManager = &dummyCheckpointManager{}
+	txRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint),
+		txrelayer.WithWriter(logger.StandardWriter(&hcf.StandardLoggerOptions{})))
+	if err != nil {
+		return err
 	}
+
+	b.checkpointManager = newCheckpointManager(
+		wallet.NewEcdsaSigner(runtimeConfig.Key),
+		runtimeConfig.GenesisConfig.Bridge.CheckpointManagerAddr,
+		txRelayer,
+		runtimeConfig.blockchain,
+		runtimeConfig.polybftBackend,
+		logger.Named("checkpoint_manager"),
+		runtimeConfig.State)
 
 	eventProvider.Subscribe(b.checkpointManager)
 
@@ -187,7 +331,7 @@ func (b *bridgeManager) initStateSyncRelayer(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
 	logger hcf.Logger) error {
-	if b.isBridgeEnabled && runtimeConfig.consensusConfig.IsRelayer {
+	if runtimeConfig.consensusConfig.IsRelayer {
 		txRelayer, err := getBridgeTxRelayer(runtimeConfig.consensusConfig.RPCEndpoint, logger)
 		if err != nil {
 			return err
@@ -217,8 +361,8 @@ func (b *bridgeManager) initExitRelayer(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	logger hcf.Logger) error {
-	if b.isBridgeEnabled && runtimeConfig.consensusConfig.IsRelayer {
-		txRelayer, err := getBridgeTxRelayer(runtimeConfig.consensusConfig.RPCEndpoint, logger)
+	if runtimeConfig.consensusConfig.IsRelayer {
+		txRelayer, err := getBridgeTxRelayer(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint, logger)
 		if err != nil {
 			return err
 		}
@@ -229,12 +373,14 @@ func (b *bridgeManager) initExitRelayer(
 			bridgeBackend,
 			runtimeConfig.blockchain,
 			runtimeConfig.State.ExitStore,
+			nil,
+			runtimeConfig.GenesisConfig.Bridge.ExitHelperAddr,
 			logger.Named("exit_relayer"))
 	} else {
 		b.exitEventRelayer = &dummyExitRelayer{}
 	}
 
-	return nil
+	return b.exitEventRelayer.Init()
 }
 
 // initTracker starts a new event tracker (to receive new state sync events)
@@ -257,6 +403,7 @@ func (b *bridgeManager) initTracker(
 			LogFilter: map[ethgo.Address][]ethgo.Hash{
 				ethgo.Address(b.eventTrackerConfig.stateSenderAddr):       {stateSyncEventSig},
 				ethgo.Address(b.eventTrackerConfig.checkpointManagerAddr): {checkpointSubmittedEventSig},
+				ethgo.Address(b.eventTrackerConfig.exitHelperAddr):        {exitProcessedEventSig},
 			},
 		},
 		store, b.eventTrackerConfig.startBlock,
@@ -276,9 +423,21 @@ func (b *bridgeManager) AddLog(eventLog *ethgo.Log) error {
 		return b.stateSyncManager.AddLog(eventLog)
 	case checkpointSubmittedEventSig:
 		return b.exitEventRelayer.AddLog(eventLog)
+	case exitProcessedEventSig:
+		return b.exitEventRelayer.AddLog(eventLog)
 	default:
 		b.logger.Error("Unknown event log receiver from event tracker")
 
 		return nil
 	}
+}
+
+// CheckpointManager returns the checkpoint manager instance
+func (b *bridgeManager) CheckpointManager() CheckpointManager {
+	return b.checkpointManager
+}
+
+// StateSyncManager returns the state sync manager instance
+func (b *bridgeManager) StateSyncManager() StateSyncManager {
+	return b.stateSyncManager
 }

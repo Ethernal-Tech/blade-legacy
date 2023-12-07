@@ -371,10 +371,7 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 		},
 		lastBuiltBlock: lastBlock,
 		state:          newTestState(t),
-		bridgeManager: &bridgeManager{
-			stateSyncManager:  &dummyStateSyncManager{},
-			checkpointManager: &dummyCheckpointManager{},
-		},
+		bridgeManager:  &dummyBridgeManager{},
 	}
 	runtime.setIsActiveValidator(true)
 
@@ -442,10 +439,7 @@ func TestConsensusRuntime_FSM_EndOfEpoch_BuildCommitEpoch(t *testing.T) {
 		config:             config,
 		lastBuiltBlock:     &types.Header{Number: 9},
 		stakeManager:       &dummyStakeManager{},
-		bridgeManager: &bridgeManager{
-			stateSyncManager:  &dummyStateSyncManager{},
-			checkpointManager: &dummyCheckpointManager{},
-		},
+		bridgeManager:      &dummyBridgeManager{},
 	}
 
 	err := runtime.FSM()

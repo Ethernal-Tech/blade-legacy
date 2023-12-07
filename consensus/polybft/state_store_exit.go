@@ -16,11 +16,9 @@ import (
 )
 
 var (
-	// bucket to store exit contract events
-	exitEventsBucket                  = []byte("exitEvent")
-	exitEventToEpochLookupBucket      = []byte("exitIdToEpochLookup")
-	exitEventLastProcessedBlockBucket = []byte("lastProcessedBlock")
-	checkpointSubmittedEventBucket    = []byte("checkpointSubmitted")
+	exitEventsBucket             = []byte("exitEvent")
+	exitEventToEpochLookupBucket = []byte("exitIdToEpochLookup")
+	exitRelayerEventsBucket      = []byte("exitRelayerEvents")
 
 	errNoLastSavedEntry = errors.New("there is no last saved block in last saved bucket")
 )
@@ -49,7 +47,8 @@ Bolt DB schema:
 exit events/
 |--> (id+epoch+blockNumber) -> *ExitEvent (json marshalled)
 |--> (exitEventID) -> epochNumber
-|--> (lastProcessedBlockKey) -> block number
+relayerEvents/
+|--> RelayerEventData.EventID -> *RelayerEventData (json marshalled)
 */
 type ExitStore struct {
 	db *bolt.DB
@@ -65,8 +64,8 @@ func (s *ExitStore) initialize(tx *bolt.Tx) error {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(exitEventToEpochLookupBucket), err)
 	}
 
-	if _, err := tx.CreateBucketIfNotExists(exitEventLastProcessedBlockBucket); err != nil {
-		return fmt.Errorf("failed to create bucket=%s: %w", string(exitEventLastProcessedBlockBucket), err)
+	if _, err := tx.CreateBucketIfNotExists(exitRelayerEventsBucket); err != nil {
+		return fmt.Errorf("failed to create bucket=%s: %w", string(exitRelayerEventsBucket), err)
 	}
 
 	return nil
@@ -80,16 +79,16 @@ func (s *ExitStore) insertExitEvent(exitEvent *ExitEvent, dbTx *bolt.Tx) error {
 			return err
 		}
 
-		epochBytes := common.EncodeUint64ToBytes(exitEvent.EpochNumber)
-		exitIDBytes := common.EncodeUint64ToBytes(exitEvent.ID.Uint64())
+		exitEventKey := generateExitEventKey(exitEvent.ID.Uint64(), exitEvent.EpochNumber, exitEvent.BlockNumber)
 
-		err = tx.Bucket(exitEventsBucket).Put(bytes.Join([][]byte{epochBytes,
-			exitIDBytes, common.EncodeUint64ToBytes(exitEvent.BlockNumber)}, nil), raw)
+		err = tx.Bucket(exitEventsBucket).Put(exitEventKey, raw)
 		if err != nil {
 			return err
 		}
 
-		return tx.Bucket(exitEventToEpochLookupBucket).Put(exitIDBytes, epochBytes)
+		return tx.Bucket(exitEventToEpochLookupBucket).Put(
+			common.EncodeUint64ToBytes(exitEvent.ID.Uint64()),
+			common.EncodeUint64ToBytes(exitEvent.EpochNumber))
 	}
 
 	if dbTx == nil {
@@ -106,31 +105,49 @@ func (s *ExitStore) getExitEvent(exitEventID uint64) (*ExitEvent, error) {
 	var exitEvent *ExitEvent
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		exitEventBucket := tx.Bucket(exitEventsBucket)
-		lookupBucket := tx.Bucket(exitEventToEpochLookupBucket)
-
-		exitIDBytes := common.EncodeUint64ToBytes(exitEventID)
-
-		epochBytes := lookupBucket.Get(exitIDBytes)
-		if epochBytes == nil {
-			return fmt.Errorf("could not find any exit event that has an id: %v. Its epoch was not found in lookup table",
-				exitEventID)
+		e, err := getExitEventSingle(exitEventID, tx)
+		if err != nil {
+			return err
 		}
 
-		key := bytes.Join([][]byte{epochBytes, exitIDBytes}, nil)
-		k, v := exitEventBucket.Cursor().Seek(key)
+		exitEvent = e
 
-		if bytes.HasPrefix(k, key) == false || v == nil {
-			return &exitEventNotFoundError{
-				exitID: exitEventID,
-				epoch:  common.EncodeBytesToUint64(epochBytes),
-			}
-		}
-
-		return json.Unmarshal(v, &exitEvent)
+		return nil
 	})
 
 	return exitEvent, err
+}
+
+// getExitEventSingle returns an exit event from db based on its ID
+func getExitEventSingle(exitEventID uint64, tx *bolt.Tx) (*ExitEvent, error) {
+	var exitEvent *ExitEvent
+
+	exitEventBucket := tx.Bucket(exitEventsBucket)
+	lookupBucket := tx.Bucket(exitEventToEpochLookupBucket)
+
+	exitIDBytes := common.EncodeUint64ToBytes(exitEventID)
+
+	epochBytes := lookupBucket.Get(exitIDBytes)
+	if epochBytes == nil {
+		return nil, fmt.Errorf("could not find any exit event that has an id: %v. Its epoch was not found in lookup table",
+			exitEventID)
+	}
+
+	key := bytes.Join([][]byte{epochBytes, exitIDBytes}, nil)
+	k, v := exitEventBucket.Cursor().Seek(key)
+
+	if bytes.HasPrefix(k, key) == false || v == nil {
+		return nil, &exitEventNotFoundError{
+			exitID: exitEventID,
+			epoch:  common.EncodeBytesToUint64(epochBytes),
+		}
+	}
+
+	if err := json.Unmarshal(v, &exitEvent); err != nil {
+		return nil, err
+	}
+
+	return exitEvent, nil
 }
 
 // getExitEventsByEpoch returns all exit events that happened in the given epoch
@@ -176,6 +193,57 @@ func (s *ExitStore) getExitEvents(epoch uint64, filter func(exitEvent *ExitEvent
 	})
 
 	return events, err
+}
+
+// removeStateSyncEventsAndProofs removes state sync events and their proofs from the buckets in db
+func (s *ExitStore) removeExitEvents(exitEventIDs []uint64, dbTx *bolt.Tx) error {
+	return s.db.Update(func(tx *bolt.Tx) error {
+		eventsBucket := tx.Bucket(exitEventsBucket)
+
+		for _, exitEventID := range exitEventIDs {
+			exitEvent, err := getExitEventSingle(exitEventID, tx)
+			if err != nil {
+				return err
+			}
+
+			key := generateExitEventKey(exitEvent.ID.Uint64(), exitEvent.EpochNumber, exitEvent.BlockNumber)
+
+			if err := eventsBucket.Delete(key); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// getAllAvailableRelayerEvents retrieves all Exit RelayerEventData that should be sent as a transactions
+func (s *ExitStore) GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventData, err error) {
+	if err = s.db.View(func(tx *bolt.Tx) error {
+		result, err = getAvailableRelayerEvents(limit, exitRelayerEventsBucket, tx)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// updateRelayerEvents updates/remove desired exit relayer events
+func (s *ExitStore) UpdateRelayerEvents(
+	events []*RelayerEventData, removeIDs []uint64, dbTx *bolt.Tx) error {
+	return updateRelayerEvents(exitRelayerEventsBucket, events, removeIDs, s.db, dbTx)
+}
+
+func generateExitEventKey(exitEventID, epoch, blockNumber uint64) []byte {
+	return bytes.Join([][]byte{
+		common.EncodeUint64ToBytes(epoch),
+		common.EncodeUint64ToBytes(exitEventID),
+		common.EncodeUint64ToBytes(blockNumber)}, nil)
 }
 
 // decodeExitEvent tries to decode exit event from the provided log

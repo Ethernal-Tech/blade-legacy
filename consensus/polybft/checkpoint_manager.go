@@ -441,6 +441,11 @@ func (c *checkpointManager) ProcessLog(header *types.Header, log *ethgo.Log, dbT
 		return nil
 	}
 
+	c.logger.Debug("An exit event happened",
+		"exitEventID", exitEvent.ID,
+		"epoch", exitEvent.EpochNumber,
+		"blockNumber", exitEvent.BlockNumber)
+
 	return c.state.ExitStore.insertExitEvent(exitEvent, dbTx)
 }
 

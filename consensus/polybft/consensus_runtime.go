@@ -124,7 +124,7 @@ type consensusRuntime struct {
 	eventProvider *EventProvider
 
 	// bridgeManager handles storing, processing and executing bridge events
-	bridgeManager *bridgeManager
+	bridgeManager BridgeManager
 
 	// governanceManager is used for handling governance events gotten from proposals execution
 	// also handles updating client configuration based on governance proposals
@@ -187,7 +187,7 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 
 // close is used to tear down allocated resources
 func (c *consensusRuntime) close() {
-	c.bridgeManager.close()
+	c.bridgeManager.Close()
 }
 
 // initStakeManager initializes stake manager
@@ -374,7 +374,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 
 	// we will do PostBlock on checkpoint manager at the end, because it only
 	// sends a checkpoint in a separate routine. It doesn't do any db operations
-	if err := c.bridgeManager.checkpointManager.PostBlock(postBlock); err != nil {
+	if err := c.bridgeManager.CheckpointManager().PostBlock(postBlock); err != nil {
 		c.logger.Error("failed to post block in checkpoint manager", "err", err)
 	}
 
@@ -417,7 +417,7 @@ func (c *consensusRuntime) FSM() error {
 
 	valSet := validator.NewValidatorSet(epoch.Validators, c.logger)
 
-	exitRootHash, err := c.bridgeManager.checkpointManager.BuildEventRoot(epoch.Number)
+	exitRootHash, err := c.bridgeManager.CheckpointManager().BuildEventRoot(epoch.Number)
 	if err != nil {
 		return fmt.Errorf("could not build exit root hash for fsm: %w", err)
 	}
@@ -440,7 +440,7 @@ func (c *consensusRuntime) FSM() error {
 	}
 
 	if isEndOfSprint {
-		commitment, err := c.bridgeManager.stateSyncManager.Commitment(pendingBlockNumber)
+		commitment, err := c.bridgeManager.StateSyncManager().Commitment(pendingBlockNumber)
 		if err != nil {
 			return err
 		}
@@ -541,7 +541,7 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		Forks:             c.config.Forks,
 	}
 
-	if err := c.bridgeManager.stateSyncManager.PostEpoch(reqObj); err != nil {
+	if err := c.bridgeManager.PostEpoch(reqObj); err != nil {
 		return nil, err
 	}
 
@@ -707,12 +707,12 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 
 // GenerateExitProof generates proof of exit and is a bridge endpoint store function
 func (c *consensusRuntime) GenerateExitProof(exitID uint64) (types.Proof, error) {
-	return c.bridgeManager.checkpointManager.GenerateExitProof(exitID)
+	return c.bridgeManager.CheckpointManager().GenerateExitProof(exitID)
 }
 
 // GetStateSyncProof returns the proof for the state sync
 func (c *consensusRuntime) GetStateSyncProof(stateSyncID uint64) (types.Proof, error) {
-	return c.bridgeManager.stateSyncManager.GetStateSyncProof(stateSyncID)
+	return c.bridgeManager.StateSyncManager().GetStateSyncProof(stateSyncID)
 }
 
 // setIsActiveValidator updates the activeValidatorFlag field

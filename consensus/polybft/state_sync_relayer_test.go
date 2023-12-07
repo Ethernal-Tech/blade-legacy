@@ -62,7 +62,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 		proofMock,
 		blockhainMock,
 		testKey,
-		&stateSyncRelayerConfig{
+		&relayerConfig{
 			maxAttemptsToSend:        6,
 			maxBlocksToWaitForResend: 1,
 			maxEventsPerBatch:        1,
@@ -91,7 +91,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err := state.StateSyncStore.getAllAvailableEvents(0)
+	events, err := state.StateSyncStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -107,7 +107,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.getAllAvailableEvents(0)
+	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 4)
@@ -122,7 +122,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.getAllAvailableEvents(0)
+	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -137,7 +137,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.getAllAvailableEvents(0)
+	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -151,7 +151,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.getAllAvailableEvents(0)
+	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 0)
