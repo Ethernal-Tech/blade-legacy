@@ -234,9 +234,8 @@ func (p *genesisParams) initGenesisConfig() error {
 			GasUsed:    command.DefaultGenesisGasUsed,
 		},
 		Params: &chain.Params{
-			ChainID:            int64(p.chainID),
-			Forks:              enabledForks,
-			BaseFeeChangeDenom: p.parsedBaseFeeConfig.baseFeeChangeDenom,
+			ChainID: int64(p.chainID),
+			Forks:   enabledForks,
 			Engine: map[string]interface{}{
 				p.consensusRaw: map[string]interface{}{},
 			},
