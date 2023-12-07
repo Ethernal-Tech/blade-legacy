@@ -81,7 +81,7 @@ func setFlags(cmd *cobra.Command) {
 		&params.baseFeeConfig,
 		genesisBaseFeeConfigFlag,
 		"",
-		`initial base fee(in wei), base fee elasticity multiplier, and base fee change denominator
+		`initial base fee (in wei), base fee elasticity multiplier, and base fee change denominator
 		(provided in the following format: [<baseFee>][:<baseFeeEM>][:<baseFeeChangeDenom>]). 
 		BaseFeeChangeDenom represents the value to bound the amount the base fee can change between blocks.
 		Default BaseFee is 1 Gwei, BaseFeeEM is 2 and BaseFeeChangeDenom is 8.

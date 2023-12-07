@@ -22,6 +22,7 @@ type Params struct {
 
 	// BaseFeeChangeDenom is the value to bound the amount the base fee can change between blocks
 	BaseFeeChangeDenom uint64 `json:"baseFeeChangeDenom,omitempty"`
+	BaseFeeEM          uint64 `json:"baseFeeEM,omitempty"`
 
 	// Access control configuration
 	ContractDeployerAllowList *AddressListConfig `json:"contractDeployerAllowList,omitempty"`

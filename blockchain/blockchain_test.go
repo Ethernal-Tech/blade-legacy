@@ -1512,10 +1512,10 @@ func TestBlockchain_CalculateBaseFee(t *testing.T) {
 					Params: &chain.Params{
 						Forks:              forks,
 						BaseFeeChangeDenom: chain.BaseFeeChangeDenom,
+						BaseFeeEM:          test.elasticityMultiplier,
 					},
 					Genesis: &chain.Genesis{
-						BaseFee:   10,
-						BaseFeeEM: test.elasticityMultiplier,
+						BaseFee: 10,
 					},
 				},
 			}
@@ -1574,10 +1574,9 @@ func TestBlockchain_WriteFullBlock(t *testing.T) {
 				Forks: &chain.Forks{
 					chain.London: chain.NewFork(5),
 				},
-			},
-			Genesis: &chain.Genesis{
 				BaseFeeEM: 4,
 			},
+			Genesis: &chain.Genesis{},
 		},
 		stream: newEventStream(),
 	}

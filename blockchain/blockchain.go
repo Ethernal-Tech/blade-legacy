@@ -1369,7 +1369,7 @@ func (b *Blockchain) CalculateBaseFee(parent *types.Header) uint64 {
 		return chain.GenesisBaseFee
 	}
 
-	parentGasTarget := parent.GasLimit / b.genesisConfig.Genesis.BaseFeeEM
+	parentGasTarget := parent.GasLimit / b.genesisConfig.Params.BaseFeeEM
 
 	// If the parent gasUsed is the same as the target, the baseFee remains unchanged.
 	if parent.GasUsed == parentGasTarget {

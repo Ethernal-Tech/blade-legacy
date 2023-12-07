@@ -276,7 +276,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 
 	if p.parsedBaseFeeConfig != nil {
 		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
-		chainConfig.Genesis.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
+		chainConfig.Params.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
 		chainConfig.Params.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
 	}
 
