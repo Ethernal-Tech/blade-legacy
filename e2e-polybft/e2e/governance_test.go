@@ -315,7 +315,7 @@ func getProposalState(t *testing.T, proposalID *big.Int, childGovernorAddr types
 	require.NoError(t, err)
 	require.NotEqual(t, "0x", response)
 
-	converted, err := common.ParseUint8orHex(&response)
+	converted, err := common.ParseUint64orHex(&response)
 	require.NoError(t, err)
 
 	return ProposalState(converted)
