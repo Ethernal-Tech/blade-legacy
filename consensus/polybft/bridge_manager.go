@@ -14,7 +14,6 @@ import (
 	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
 	"github.com/hashicorp/go-hclog"
-	hcf "github.com/hashicorp/go-hclog"
 	"github.com/umbracle/ethgo"
 	bolt "go.etcd.io/bbolt"
 )
@@ -193,7 +192,7 @@ type bridgeManager struct {
 	exitEventRelayer  ExitRelayer
 
 	eventTrackerConfig *eventTrackerConfig
-	logger             hcf.Logger
+	logger             hclog.Logger
 }
 
 // newBridgeManager creates a new instance of bridgeManager
@@ -201,7 +200,7 @@ func newBridgeManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	eventProvider *EventProvider,
-	logger hcf.Logger) (BridgeManager, error) {
+	logger hclog.Logger) (BridgeManager, error) {
 	if !runtimeConfig.GenesisConfig.IsBridgeEnabled() {
 		return &dummyBridgeManager{}, nil
 	}
@@ -279,7 +278,7 @@ func (b *bridgeManager) Close() {
 func (b *bridgeManager) initStateSyncManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
-	logger hcf.Logger) error {
+	logger hclog.Logger) error {
 	stateSyncManager := newStateSyncManager(
 		logger.Named("state-sync-manager"),
 		runtimeConfig.State,
@@ -302,10 +301,10 @@ func (b *bridgeManager) initStateSyncManager(
 func (b *bridgeManager) initCheckpointManager(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
-	logger hcf.Logger) error {
+	logger hclog.Logger) error {
 	txRelayer, err := txrelayer.NewTxRelayer(
 		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint),
-		txrelayer.WithWriter(logger.StandardWriter(&hcf.StandardLoggerOptions{})))
+		txrelayer.WithWriter(logger.StandardWriter(&hclog.StandardLoggerOptions{})))
 	if err != nil {
 		return err
 	}
@@ -330,7 +329,7 @@ func (b *bridgeManager) initStateSyncRelayer(
 	bridgeBackend BridgeBackend,
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
-	logger hcf.Logger) error {
+	logger hclog.Logger) error {
 	if runtimeConfig.consensusConfig.IsRelayer {
 		txRelayer, err := getBridgeTxRelayer(runtimeConfig.consensusConfig.RPCEndpoint, logger)
 		if err != nil {
@@ -360,7 +359,7 @@ func (b *bridgeManager) initStateSyncRelayer(
 func (b *bridgeManager) initExitRelayer(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
-	logger hcf.Logger) error {
+	logger hclog.Logger) error {
 	if runtimeConfig.consensusConfig.IsRelayer {
 		txRelayer, err := getBridgeTxRelayer(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint, logger)
 		if err != nil {

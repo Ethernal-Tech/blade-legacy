@@ -161,6 +161,15 @@ func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
 			checkpointSubmittedEvent.Epoch.Uint64(),
 			checkpointSubmittedEvent.BlockNumber.Uint64(),
 		)
+		if err != nil {
+			e.logger.Error("could not get exit events for checkpoint",
+				"err", err,
+				"epoch", checkpointSubmittedEvent.Epoch.Uint64(),
+				"checkpointBlockNumber", checkpointSubmittedEvent.BlockNumber.Uint64(),
+			)
+
+			return err
+		}
 
 		if len(exitEvents) == 0 {
 			e.logger.Debug("There are no exit events that happened in given given checkpoint")

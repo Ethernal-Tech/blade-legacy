@@ -212,9 +212,9 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 
 	// update
 	require.NoError(t, state.ExitStore.UpdateRelayerEvents([]*RelayerEventData{
+		{EventID: 1},
 		{EventID: 2},
-		{EventID: 4},
-		{EventID: 7, SentStatus: true, BlockNumber: 100},
+		{EventID: 3, SentStatus: true, BlockNumber: 10},
 	}, []uint64{}, nil))
 
 	// get available events
@@ -222,18 +222,18 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
-	require.Equal(t, uint64(2), events[0].EventID)
-	require.Equal(t, uint64(4), events[1].EventID)
-	require.Equal(t, uint64(7), events[2].EventID)
+	require.Equal(t, uint64(1), events[0].EventID)
+	require.Equal(t, uint64(2), events[1].EventID)
+	require.Equal(t, uint64(3), events[2].EventID)
 
 	// update again
 	require.NoError(t, state.ExitStore.UpdateRelayerEvents(
 		[]*RelayerEventData{
-			{EventID: 10},
-			{EventID: 12},
-			{EventID: 11},
+			{EventID: 4},
+			{EventID: 5},
+			{EventID: 6},
 		},
-		[]uint64{4, 7},
+		[]uint64{1, 2},
 		nil,
 	))
 
@@ -242,21 +242,21 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Len(t, events, 4)
-	require.Equal(t, uint64(2), events[0].EventID)
-	require.Equal(t, uint64(10), events[1].EventID)
+	require.Equal(t, uint64(3), events[0].EventID)
+	require.Equal(t, uint64(4), events[1].EventID)
 	require.Equal(t, false, events[1].SentStatus)
-	require.Equal(t, uint64(11), events[2].EventID)
-	require.Equal(t, uint64(12), events[3].EventID)
+	require.Equal(t, uint64(5), events[2].EventID)
+	require.Equal(t, uint64(6), events[3].EventID)
 
 	events[1].SentStatus = true
-	require.NoError(t, state.ExitStore.UpdateRelayerEvents(events[1:2], []uint64{2}, nil))
+	require.NoError(t, state.ExitStore.UpdateRelayerEvents(events[1:2], []uint64{3}, nil))
 
 	// get available events with limit
 	events, err = state.ExitStore.GetAllAvailableRelayerEvents(2)
 
 	require.NoError(t, err)
 	require.Len(t, events, 2)
-	require.Equal(t, uint64(10), events[0].EventID)
+	require.Equal(t, uint64(4), events[0].EventID)
 	require.Equal(t, true, events[0].SentStatus)
-	require.Equal(t, uint64(11), events[1].EventID)
+	require.Equal(t, uint64(5), events[1].EventID)
 }
