@@ -92,9 +92,6 @@ type relayerEventsProcessor struct {
 // ProcessEvents processes all relayer events that were either successfully or unsuccessfully executed
 // and executes all the events that can be executed in regards to relayerConfig
 func (r relayerEventsProcessor) processEvents() {
-	r.logger.Debug("processing relayer events on PostBlock")
-	defer r.logger.Debug("processing relayer events on PostBlock finished")
-
 	// we need twice as batch size because events from first batch are possible already sent maxAttemptsToSend times
 	events, err := r.state.GetAllAvailableRelayerEvents(int(r.config.maxEventsPerBatch) * 2)
 	if err != nil {
@@ -128,10 +125,6 @@ func (r relayerEventsProcessor) processEvents() {
 			}
 		}
 	}
-
-	r.logger.Debug("processing relayer events on PostBlock",
-		"sendingEvents", len(sendingEvents),
-		"eventsToRemove", len(removedEventIDs))
 
 	// update state only if needed
 	if len(sendingEvents)+len(removedEventIDs) > 0 {
