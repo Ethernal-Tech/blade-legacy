@@ -82,7 +82,7 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 				Metadata: map[string]interface{}{
 					"ExitEvent":       hex.EncodeToString(encodedEvent),
 					"CheckpointBlock": big.NewInt(10),
-					"LeafIndex":       big.NewInt(0),
+					"LeafIndex":       uint64(0),
 				},
 			}, nil
 		},
