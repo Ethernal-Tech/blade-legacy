@@ -264,6 +264,7 @@ func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
 // close stops ongoing go routines in the manager
 func (b *bridgeManager) Close() {
 	b.stateSyncRelayer.Close()
+	b.exitEventRelayer.Close()
 }
 
 // initStateSyncManager initializes state sync manager

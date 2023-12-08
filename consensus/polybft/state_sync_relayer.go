@@ -137,10 +137,6 @@ func (ssr *stateSyncRelayerImpl) PostBlock(req *PostBlockRequest) error {
 	return nil
 }
 
-func (ssr stateSyncRelayerImpl) ProcessEvents() {
-	ssr.relayerEventsProcessor.processEvents()
-}
-
 func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventData) error {
 	proofs := make([][]types.Hash, len(events))
 	objs := make([]*contractsapi.StateSync, len(events))

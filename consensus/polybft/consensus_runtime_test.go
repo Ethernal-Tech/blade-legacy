@@ -235,14 +235,9 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 			CurrentClientConfig: config.GenesisConfig,
 		},
 		lastBuiltBlock: &types.Header{Number: header.Number - 1},
-		bridgeManager: &bridgeManager{
-			stateSyncManager:  &dummyStateSyncManager{},
-			checkpointManager: &dummyCheckpointManager{},
-			stateSyncRelayer:  &dummyStateSyncRelayer{},
-			exitEventRelayer:  &dummyExitRelayer{},
-		},
-		stakeManager:  &dummyStakeManager{},
-		eventProvider: NewEventProvider(blockchainMock),
+		bridgeManager:  &dummyBridgeManager{},
+		stakeManager:   &dummyStakeManager{},
+		eventProvider:  NewEventProvider(blockchainMock),
 		governanceManager: &dummyGovernanceManager{
 			getClientConfigFn: func() (*chain.Params, error) {
 				return config.genesisParams, nil

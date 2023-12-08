@@ -114,11 +114,6 @@ func (e *exitRelayer) Init() error {
 	return nil
 }
 
-// processEvents processes and executes non-executed exit events
-func (e *exitRelayer) processEvents() {
-	e.relayerEventsProcessor.processEvents()
-}
-
 // Close closes the running go routine
 func (e *exitRelayer) Close() {
 	close(e.closeCh)
