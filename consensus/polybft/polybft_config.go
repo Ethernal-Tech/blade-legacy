@@ -16,7 +16,7 @@ import (
 
 const (
 	ConsensusName              = "polybft"
-	minNativeTokenParamsNumber = 3
+	minNativeTokenParamsNumber = 4
 
 	defaultNativeTokenName     = "Polygon"
 	defaultNativeTokenSymbol   = "MATIC"
@@ -374,4 +374,10 @@ type rewardsConfigRaw struct {
 	TokenAddress  types.Address `json:"rewardTokenAddress"`
 	WalletAddress types.Address `json:"rewardWalletAddress"`
 	WalletAmount  *string       `json:"rewardWalletAmount"`
+}
+
+type BurnContractInfo struct {
+	BlockNumber        uint64
+	Address            types.Address
+	DestinationAddress types.Address
 }

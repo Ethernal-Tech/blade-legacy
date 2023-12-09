@@ -73,6 +73,7 @@ var (
 	errBladeAdminNotProvided    = errors.New("blade admin address must be set")
 	errBladeAdminIsZeroAddress  = errors.New("blade admin address must not be zero address")
 	errBladeAdminIsSystemCaller = errors.New("blade admin address must not be system caller address")
+	errNoPremineAllowed         = errors.New("native token is not mintable, so no premine is allowed except for zero address")
 )
 
 type contractInfo struct {
@@ -101,8 +102,9 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 
 	if p.rewardTokenCode == "" {
 		// native token is used as a reward token, and reward wallet is not a zero address
-		if p.epochReward > 0 {
-			// epoch reward is non zero so premine reward wallet
+		if p.epochReward > 0 && p.nativeTokenConfig.IsMintable {
+			// epoch reward is non zero so premine reward wallet if token is mintable
+			// if token is not mintable (L1 originated), tokens will be bridged to it
 			premineBalances[walletPremineInfo.Address] = walletPremineInfo
 		}
 	} else {
@@ -196,9 +198,9 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		StakeTokenAddr: params.stakeTokenAddr,
 	}
 
+	// Disable london hardfork if burn contract address is not provided
 	enabledForks := chain.AllForksEnabled.Copy()
-
-	if p.parsedBaseFeeConfig == nil {
+	if !p.isBurnContractEnabled() {
 		enabledForks.RemoveFork(chain.London)
 	}
 
@@ -214,11 +216,34 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		Bootnodes: p.bootnodes,
 	}
 
-	chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
-	chainConfig.Params.BurnContract[0] = types.ZeroAddress
+	burnContractAddr := types.ZeroAddress
+
+	if p.isBurnContractEnabled() {
+		// only populate base fee and base fee multiplier values if burn contract(s)
+		// is provided
+		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
+		chainConfig.Params.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
+		chainConfig.Params.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
+		chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
+
+		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
+		if err != nil {
+			return err
+		}
+
+		if !p.nativeTokenConfig.IsMintable {
+			// burn contract can be specified on arbitrary address for non-mintable native tokens
+			burnContractAddr = burnContractInfo.Address
+			chainConfig.Params.BurnContract[burnContractInfo.BlockNumber] = burnContractAddr
+			chainConfig.Params.BurnContractDestinationAddress = burnContractInfo.DestinationAddress
+		} else {
+			// burnt funds are sent to zero address when dealing with mintable native tokens
+			chainConfig.Params.BurnContract[burnContractInfo.BlockNumber] = types.ZeroAddress
+		}
+	}
 
 	// deploy genesis contracts
-	allocs, err := p.deployContracts(rewardTokenByteCode, polyBftConfig, chainConfig)
+	allocs, err := p.deployContracts(rewardTokenByteCode, burnContractAddr)
 	if err != nil {
 		return err
 	}
@@ -338,10 +363,8 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 	return helper.WriteGenesisConfigToDisk(chainConfig, params.genesisPath)
 }
 
-func (p *genesisParams) deployContracts(
-	rewardTokenByteCode []byte,
-	polybftConfig *polybft.PolyBFTConfig,
-	chainConfig *chain.Chain) (map[types.Address]*chain.GenesisAccount, error) {
+func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
+	burnContractAddr types.Address) (map[types.Address]*chain.GenesisAccount, error) {
 	proxyToImplAddrMap := contracts.GetProxyImplementationMapping()
 	proxyAddresses := make([]types.Address, 0, len(proxyToImplAddrMap))
 
@@ -643,6 +666,11 @@ func (p *genesisParams) validateBladeAdminFlag() error {
 	}
 
 	return nil
+}
+
+// isBurnContractEnabled returns true in case burn contract info is provided
+func (p *genesisParams) isBurnContractEnabled() bool {
+	return p.burnContract != ""
 }
 
 // extractNativeTokenMetadata parses provided native token metadata (such as name, symbol and decimals count)

@@ -79,9 +79,16 @@ func setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
+		&params.burnContract,
+		burnContractFlag,
+		"",
+		"the burn contract block and address (format: <block>:<address>[:<burn destination>])",
+	)
+
+	cmd.Flags().StringVar(
 		&params.baseFeeConfig,
 		genesisBaseFeeConfigFlag,
-		"",
+		command.DefaultGenesisBaseFeeConfig,
 		`initial base fee (in wei), base fee elasticity multiplier, and base fee change denominator
 		(provided in the following format: [<baseFee>][:<baseFeeEM>][:<baseFeeChangeDenom>]). 
 		BaseFeeChangeDenom represents the value to bound the amount the base fee can change between blocks.

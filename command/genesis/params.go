@@ -24,6 +24,7 @@ const (
 	epochSizeFlag                = "epoch-size"
 	epochRewardFlag              = "epoch-reward"
 	blockGasLimitFlag            = "block-gas-limit"
+	burnContractFlag             = "burn-contract"
 	genesisBaseFeeConfigFlag     = "base-fee-config"
 	nativeTokenConfigFlag        = "native-token-config"
 	rewardTokenCodeFlag          = "reward-token-code"
@@ -72,6 +73,7 @@ type genesisParams struct {
 
 	blockGasLimit uint64
 
+	burnContract        string
 	baseFeeConfig       string
 	parsedBaseFeeConfig *baseFeeInfo
 
@@ -234,10 +236,7 @@ func (p *genesisParams) generateGenesis() error {
 }
 
 func (p *genesisParams) initGenesisConfig() error {
-	enabledForks := chain.AllForksEnabled.Copy()
-	if p.parsedBaseFeeConfig == nil {
-		enabledForks.RemoveFork(chain.London)
-	}
+	enabledForks := chain.AllForksEnabled
 
 	chainConfig := &chain.Chain{
 		Name: p.name,
@@ -258,14 +257,21 @@ func (p *genesisParams) initGenesisConfig() error {
 		Bootnodes: p.bootnodes,
 	}
 
-	if p.parsedBaseFeeConfig != nil {
+	// burn contract can be set only for non mintable native token
+	if p.isBurnContractEnabled() {
 		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
 		chainConfig.Params.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
 		chainConfig.Params.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
-	}
+		chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
 
-	chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
-	chainConfig.Params.BurnContract[0] = types.ZeroAddress
+		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
+		if err != nil {
+			return err
+		}
+
+		chainConfig.Params.BurnContract[burnContractInfo.BlockNumber] = burnContractInfo.Address
+		chainConfig.Params.BurnContractDestinationAddress = burnContractInfo.DestinationAddress
+	}
 
 	for _, premineInfo := range p.premineInfos {
 		chainConfig.Genesis.Alloc[premineInfo.Address] = &chain.GenesisAccount{
@@ -311,14 +317,20 @@ func (p *genesisParams) parseStakeInfo() error {
 
 // validatePremineInfo validates whether reserve account (0x0 address) is premined
 func (p *genesisParams) validatePremineInfo() error {
+	isZeroAddressPremined := false
 	for _, premineInfo := range p.premineInfos {
 		if premineInfo.Address == types.ZeroAddress {
-			// we have premine of zero address, just return
-			return nil
+			isZeroAddressPremined = true
+		} else if !p.nativeTokenConfig.IsMintable {
+			return errNoPremineAllowed
 		}
 	}
 
-	return errReserveAccMustBePremined
+	if !isZeroAddressPremined {
+		return errReserveAccMustBePremined
+	}
+
+	return nil
 }
 
 // validateBlockTrackerPollInterval validates block tracker block interval
@@ -326,6 +338,30 @@ func (p *genesisParams) validatePremineInfo() error {
 func (p *genesisParams) validateBlockTrackerPollInterval() error {
 	if p.blockTrackerPollInterval == 0 {
 		return helper.ErrBlockTrackerPollInterval
+	}
+
+	return nil
+}
+
+// validateBurnContract validates burn contract. If native token is mintable,
+// burn contract flag must not be set. If native token is non mintable only one burn contract
+// can be set and the specified address will be used to predeploy default EIP1559 burn contract.
+func (p *genesisParams) validateBurnContract() error {
+	if p.isBurnContractEnabled() {
+		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
+		if err != nil {
+			return fmt.Errorf("invalid burn contract info provided: %w", err)
+		}
+
+		if p.nativeTokenConfig.IsMintable {
+			if burnContractInfo.Address != types.ZeroAddress {
+				return errors.New("only zero address is allowed as burn destination for mintable native token")
+			}
+		} else {
+			if burnContractInfo.Address == types.ZeroAddress {
+				return errors.New("it is not allowed to deploy burn contract to 0x0 address")
+			}
+		}
 	}
 
 	return nil
