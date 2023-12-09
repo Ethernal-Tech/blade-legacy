@@ -129,7 +129,8 @@ func (e *exitRelayer) PostBlock(req *PostBlockRequest) error {
 	return nil
 }
 
-// AddLog saves the received log from event tracker if it matches a checkpoint submitted event ABI
+// AddLog handles the received log from event tracker if it matches
+// a checkpoint submitted event ABI, or exit processed event ABI
 func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
 	var (
 		checkpointSubmittedEvent contractsapi.CheckpointSubmittedEvent
@@ -202,7 +203,7 @@ func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
 			return e.state.UpdateRelayerEvents(nil, []uint64{eventID}, nil)
 		}
 
-		e.logger.Debug("exit processed event failed to be handled",
+		e.logger.Debug("exit event was not successfully executed",
 			"eventID", eventID, "reason", string(exitProcessedEvent.ReturnData))
 
 		return nil

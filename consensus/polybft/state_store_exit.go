@@ -195,28 +195,6 @@ func (s *ExitStore) getExitEvents(epoch uint64, filter func(exitEvent *ExitEvent
 	return events, err
 }
 
-// removeStateSyncEventsAndProofs removes state sync events and their proofs from the buckets in db
-func (s *ExitStore) removeExitEvents(exitEventIDs []uint64, dbTx *bolt.Tx) error {
-	return s.db.Update(func(tx *bolt.Tx) error {
-		eventsBucket := tx.Bucket(exitEventsBucket)
-
-		for _, exitEventID := range exitEventIDs {
-			exitEvent, err := getExitEventSingle(exitEventID, tx)
-			if err != nil {
-				return err
-			}
-
-			key := generateExitEventKey(exitEvent.ID.Uint64(), exitEvent.EpochNumber, exitEvent.BlockNumber)
-
-			if err := eventsBucket.Delete(key); err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-}
-
 // getAllAvailableRelayerEvents retrieves all Exit RelayerEventData that should be sent as a transactions
 func (s *ExitStore) GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventData, err error) {
 	if err = s.db.View(func(tx *bolt.Tx) error {
