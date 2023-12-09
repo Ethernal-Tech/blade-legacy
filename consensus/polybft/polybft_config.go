@@ -25,9 +25,10 @@ const (
 
 var (
 	DefaultTokenConfig = &TokenConfig{
-		Name:     defaultNativeTokenName,
-		Symbol:   defaultNativeTokenSymbol,
-		Decimals: defaultNativeTokenDecimals,
+		Name:       defaultNativeTokenName,
+		Symbol:     defaultNativeTokenSymbol,
+		Decimals:   defaultNativeTokenDecimals,
+		IsMintable: true,
 	}
 
 	errInvalidTokenParams = errors.New("native token params were not submitted in proper format " +
@@ -199,9 +200,10 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 
 // TokenConfig is the configuration of native token used by edge network
 type TokenConfig struct {
-	Name     string `json:"name"`
-	Symbol   string `json:"symbol"`
-	Decimals uint8  `json:"decimals"`
+	Name       string `json:"name"`
+	Symbol     string `json:"symbol"`
+	Decimals   uint8  `json:"decimals"`
+	IsMintable bool   `json:"isMintable"`
 }
 
 func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
@@ -232,10 +234,17 @@ func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
 		return nil, errInvalidTokenParams
 	}
 
+	// is mintable native token used
+	isMintable, err := strconv.ParseBool(strings.TrimSpace(params[3]))
+	if err != nil {
+		return nil, errInvalidTokenParams
+	}
+
 	return &TokenConfig{
-		Name:     name,
-		Symbol:   symbol,
-		Decimals: uint8(decimals),
+		Name:       name,
+		Symbol:     symbol,
+		Decimals:   uint8(decimals),
+		IsMintable: isMintable,
 	}, nil
 }
 
