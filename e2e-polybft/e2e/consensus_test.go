@@ -385,7 +385,7 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	cluster := framework.NewTestCluster(t,
 		validatorCount,
 		framework.WithNativeTokenConfig(
-			fmt.Sprintf("%s:%s:%d", tokenName, tokenSymbol, decimals)),
+			fmt.Sprintf("%s:%s:%d:true", tokenName, tokenSymbol, decimals)),
 		framework.WithBladeAdmin(minter.Address().String()),
 		framework.WithEpochSize(epochSize),
 		framework.WithBaseFeeConfig(""),

@@ -417,14 +417,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			address:  contracts.StakeManagerContractV1,
 		},
 		{
-			artifact: contractsapi.RootERC20,
-			address:  contracts.ERC20Contract,
-		},
-		{
-			artifact: contractsapi.NativeERC20Mintable,
-			address:  contracts.NativeERC20TokenContractV1,
-		},
-		{
 			artifact: contractsapi.NetworkParams,
 			address:  contracts.NetworkParamsContractV1,
 		},
@@ -440,6 +432,32 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			artifact: contractsapi.ChildTimelock,
 			address:  contracts.ChildTimelockContractV1,
 		},
+	}
+
+	if !params.nativeTokenConfig.IsMintable {
+		genesisContracts = append(genesisContracts,
+			&contractInfo{
+				artifact: contractsapi.NativeERC20,
+				address:  contracts.NativeERC20TokenContractV1,
+			})
+
+		// burn contract can be set only for non-mintable native token. If burn contract is set,
+		// default EIP1559 contract will be deployed.
+		if p.isBurnContractEnabled() {
+			genesisContracts = append(genesisContracts,
+				&contractInfo{
+					artifact: contractsapi.EIP1559Burn,
+					address:  burnContractAddr,
+				})
+
+			proxyAddresses = append(proxyAddresses, contracts.DefaultBurnContract)
+		}
+	} else {
+		genesisContracts = append(genesisContracts,
+			&contractInfo{
+				artifact: contractsapi.NativeERC20Mintable,
+				address:  contracts.NativeERC20TokenContractV1,
+			})
 	}
 
 	if len(params.bridgeAllowListAdmin) != 0 || len(params.bridgeBlockListAdmin) != 0 {

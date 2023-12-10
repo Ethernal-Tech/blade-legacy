@@ -137,6 +137,7 @@ type BridgeConfig struct {
 	ExitHelperAddr                    types.Address `json:"exitHelperAddress"`
 	RootERC20PredicateAddr            types.Address `json:"erc20PredicateAddress"`
 	ChildMintableERC20PredicateAddr   types.Address `json:"erc20ChildMintablePredicateAddress"`
+	RootNativeERC20Addr               types.Address `json:"nativeERC20Address"`
 	RootERC721PredicateAddr           types.Address `json:"erc721PredicateAddress"`
 	ChildMintableERC721PredicateAddr  types.Address `json:"erc721ChildMintablePredicateAddress"`
 	RootERC1155PredicateAddr          types.Address `json:"erc1155PredicateAddress"`
@@ -167,6 +168,7 @@ type RootchainConfig struct {
 	ExitHelperAddress                    types.Address
 	RootERC20PredicateAddress            types.Address
 	ChildMintableERC20PredicateAddress   types.Address
+	RootNativeERC20Address               types.Address
 	ChildERC20Address                    types.Address
 	RootERC721PredicateAddress           types.Address
 	ChildMintableERC721PredicateAddress  types.Address
@@ -186,6 +188,7 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 		ExitHelperAddr:                    r.ExitHelperAddress,
 		RootERC20PredicateAddr:            r.RootERC20PredicateAddress,
 		ChildMintableERC20PredicateAddr:   r.ChildMintableERC20PredicateAddress,
+		RootNativeERC20Addr:               r.RootNativeERC20Address,
 		RootERC721PredicateAddr:           r.RootERC721PredicateAddress,
 		ChildMintableERC721PredicateAddr:  r.ChildMintableERC721PredicateAddress,
 		RootERC1155PredicateAddr:          r.RootERC1155PredicateAddress,
