@@ -73,7 +73,8 @@ var (
 	errBladeAdminNotProvided    = errors.New("blade admin address must be set")
 	errBladeAdminIsZeroAddress  = errors.New("blade admin address must not be zero address")
 	errBladeAdminIsSystemCaller = errors.New("blade admin address must not be system caller address")
-	errNoPremineAllowed         = errors.New("native token is not mintable, so no premine is allowed except for zero address")
+	errNoPremineAllowed         = errors.New("native token is not mintable" +
+		"so no premine is allowed except for zero address")
 )
 
 type contractInfo struct {

@@ -318,6 +318,7 @@ func (p *genesisParams) parseStakeInfo() error {
 // validatePremineInfo validates whether reserve account (0x0 address) is premined
 func (p *genesisParams) validatePremineInfo() error {
 	isZeroAddressPremined := false
+
 	for _, premineInfo := range p.premineInfos {
 		if premineInfo.Address == types.ZeroAddress {
 			isZeroAddressPremined = true
