@@ -7,6 +7,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 )
 
 type registerParams struct {
@@ -19,8 +20,12 @@ type registerParams struct {
 }
 
 func (rp *registerParams) validateFlags() (err error) {
-	if rp.amountValue, err = helper.ParseAmountAllowZero(rp.amount); err != nil {
+	if rp.amountValue, err = common.ParseUint256orHex(&rp.amount); err != nil {
 		return err
+	}
+
+	if rp.amountValue.Cmp(big.NewInt(0)) < 0 {
+		return fmt.Errorf("provided value (%d) is less than zero", rp.amountValue)
 	}
 
 	// validate jsonrpc address
