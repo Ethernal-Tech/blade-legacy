@@ -578,7 +578,6 @@ func (i *InitializeRootMintableERC20PredicateACLFn) DecodeAbi(buf []byte) error 
 
 type InitializeNativeERC20Fn struct {
 	Predicate_   types.Address `abi:"predicate_"`
-	Owner_       types.Address `abi:"owner_"`
 	RootToken_   types.Address `abi:"rootToken_"`
 	Name_        string        `abi:"name_"`
 	Symbol_      string        `abi:"symbol_"`
@@ -598,21 +597,43 @@ func (i *InitializeNativeERC20Fn) DecodeAbi(buf []byte) error {
 	return decodeMethod(NativeERC20.Abi.Methods["initialize"], buf, i)
 }
 
-type ApproveNativeERC20Fn struct {
+type InitializeNativeERC20MintableFn struct {
+	Predicate_   types.Address `abi:"predicate_"`
+	Owner_       types.Address `abi:"owner_"`
+	RootToken_   types.Address `abi:"rootToken_"`
+	Name_        string        `abi:"name_"`
+	Symbol_      string        `abi:"symbol_"`
+	Decimals_    uint8         `abi:"decimals_"`
+	TokenSupply_ *big.Int      `abi:"tokenSupply_"`
+}
+
+func (i *InitializeNativeERC20MintableFn) Sig() []byte {
+	return NativeERC20Mintable.Abi.Methods["initialize"].ID()
+}
+
+func (i *InitializeNativeERC20MintableFn) EncodeAbi() ([]byte, error) {
+	return NativeERC20Mintable.Abi.Methods["initialize"].Encode(i)
+}
+
+func (i *InitializeNativeERC20MintableFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(NativeERC20Mintable.Abi.Methods["initialize"], buf, i)
+}
+
+type ApproveNativeERC20MintableFn struct {
 	Spender types.Address `abi:"spender"`
 	Amount  *big.Int      `abi:"amount"`
 }
 
-func (a *ApproveNativeERC20Fn) Sig() []byte {
-	return NativeERC20.Abi.Methods["approve"].ID()
+func (a *ApproveNativeERC20MintableFn) Sig() []byte {
+	return NativeERC20Mintable.Abi.Methods["approve"].ID()
 }
 
-func (a *ApproveNativeERC20Fn) EncodeAbi() ([]byte, error) {
-	return NativeERC20.Abi.Methods["approve"].Encode(a)
+func (a *ApproveNativeERC20MintableFn) EncodeAbi() ([]byte, error) {
+	return NativeERC20Mintable.Abi.Methods["approve"].Encode(a)
 }
 
-func (a *ApproveNativeERC20Fn) DecodeAbi(buf []byte) error {
-	return decodeMethod(NativeERC20.Abi.Methods["approve"], buf, a)
+func (a *ApproveNativeERC20MintableFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(NativeERC20Mintable.Abi.Methods["approve"], buf, a)
 }
 
 type InitializeRootERC20PredicateFn struct {

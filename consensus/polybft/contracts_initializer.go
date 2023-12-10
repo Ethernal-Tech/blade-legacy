@@ -38,7 +38,7 @@ func initStakeManager(polyBFTConfig PolyBFTConfig, transition *state.Transition)
 			BlsKey: key.ToBigInt(),
 		}
 
-		approveFn := &contractsapi.ApproveNativeERC20Fn{
+		approveFn := &contractsapi.ApproveNativeERC20MintableFn{
 			Spender: contracts.StakeManagerContract,
 			Amount:  validator.Stake,
 		}

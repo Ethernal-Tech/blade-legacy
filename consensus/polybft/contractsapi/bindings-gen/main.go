@@ -145,6 +145,15 @@ func main() {
 			false,
 			[]string{
 				"initialize",
+			},
+			[]string{},
+		},
+		{
+			"NativeERC20Mintable",
+			gensc.NativeERC20Mintable,
+			false,
+			[]string{
+				"initialize",
 				"approve",
 			},
 			[]string{},

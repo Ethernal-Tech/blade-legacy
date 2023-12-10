@@ -421,7 +421,7 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			address:  contracts.ERC20Contract,
 		},
 		{
-			artifact: contractsapi.NativeERC20,
+			artifact: contractsapi.NativeERC20Mintable,
 			address:  contracts.NativeERC20TokenContractV1,
 		},
 		{
