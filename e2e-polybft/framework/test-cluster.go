@@ -565,8 +565,14 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			args = append(args, "--native-token-config", cluster.Config.NativeTokenConfigRaw)
 		}
 
-		for _, premine := range cluster.Config.Premine {
-			args = append(args, "--premine", premine)
+		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
+		require.NoError(t, err)
+
+		if len(cluster.Config.Premine) != 0 && tokenConfig.IsMintable {
+			// only add premine flags in genesis if token is mintable
+			for _, premine := range cluster.Config.Premine {
+				args = append(args, "--premine", premine)
+			}
 		}
 
 		if len(cluster.Config.StakeAmounts) > 0 {
@@ -576,7 +582,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		}
 
 		validators, err := genesis.ReadValidatorsByPrefix(
-			cluster.Config.TmpDir, cluster.Config.ValidatorPrefix, nil)
+			cluster.Config.TmpDir, cluster.Config.ValidatorPrefix, nil, true)
 		require.NoError(t, err)
 
 		if cluster.Config.BootnodeCount > 0 {
@@ -677,6 +683,20 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 
 		// deploy rootchain contracts
 		err = cluster.Bridge.deployRootchainContracts(genesisPath)
+		require.NoError(t, err)
+
+		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
+		require.NoError(t, err)
+
+		// add premine if token is non-mintable
+		err = cluster.Bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
+		require.NoError(t, err)
+
+		err = cluster.Bridge.premineNativeRootToken(tokenConfig, polybftConfig)
+		require.NoError(t, err)
+
+		// finalize genesis validators on the rootchain
+		err = cluster.Bridge.finalizeGenesis(genesisPath, polybftConfig)
 		require.NoError(t, err)
 	}
 

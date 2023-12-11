@@ -220,7 +220,7 @@ func GetValidatorKeyFiles(rootDir, filePrefix string) ([]string, error) {
 
 // ReadValidatorsByPrefix reads validators secrets on a given root directory and with given folder prefix
 func ReadValidatorsByPrefix(dir, prefix string,
-	stakeInfos map[types.Address]*big.Int) ([]*validator.GenesisValidator, error) {
+	stakeInfos map[types.Address]*big.Int, isNativeTokenMintable bool) ([]*validator.GenesisValidator, error) {
 	validatorKeyFiles, err := GetValidatorKeyFiles(dir, prefix)
 	if err != nil {
 		return nil, err
@@ -236,9 +236,14 @@ func ReadValidatorsByPrefix(dir, prefix string,
 			return nil, err
 		}
 
-		stake, exists := stakeInfos[types.Address(account.Ecdsa.Address())]
-		if !exists {
-			stake = command.DefaultStake
+		stake := big.NewInt(0)
+		if isNativeTokenMintable {
+			s, exists := stakeInfos[types.Address(account.Ecdsa.Address())]
+			if !exists {
+				stake = command.DefaultStake
+			} else {
+				stake = s
+			}
 		}
 
 		validators[i] = &validator.GenesisValidator{

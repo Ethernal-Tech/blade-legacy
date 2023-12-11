@@ -75,6 +75,8 @@ var (
 	errBladeAdminIsSystemCaller = errors.New("blade admin address must not be system caller address")
 	errNoPremineAllowed         = errors.New("native token is not mintable" +
 		"so no premine is allowed except for zero address")
+	errNoStakeAllowed = errors.New("native token is not mintable" +
+		"so staking is done through premine command on root, and can not be defined in genesis")
 )
 
 type contractInfo struct {
@@ -265,13 +267,17 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 			chainConfig.Bootnodes = append(chainConfig.Bootnodes, validator.MultiAddr)
 		}
 
-		// add default premine for a validator if it is not specified in genesis command
-		if _, exists := premineBalances[validator.Address]; !exists {
-			premineBalances[validator.Address] = &helper.PremineInfo{
-				Address: validator.Address,
-				Amount:  command.DefaultPremineBalance,
+		if p.nativeTokenConfig.IsMintable {
+			// if native token is mintable we add default premine for a validator
+			// if it is not specified in genesis command
+			if _, exists := premineBalances[validator.Address]; !exists {
+				premineBalances[validator.Address] = &helper.PremineInfo{
+					Address: validator.Address,
+					Amount:  command.DefaultPremineBalance,
+				}
 			}
 		}
+
 	}
 
 	// premine other accounts
@@ -593,9 +599,14 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 
 			addr := types.StringToAddress(trimmedAddress)
 
-			stake, exists := p.stakeInfos[addr]
-			if !exists {
-				stake = command.DefaultStake
+			stake := big.NewInt(0)
+			if p.nativeTokenConfig.IsMintable {
+				s, exists := p.stakeInfos[addr]
+				if !exists {
+					stake = command.DefaultStake
+				} else {
+					stake = s
+				}
 			}
 
 			validators[i] = &validator.GenesisValidator{
@@ -614,7 +625,8 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 		validatorsPath = path.Dir(p.genesisPath)
 	}
 
-	validators, err := ReadValidatorsByPrefix(validatorsPath, p.validatorsPrefixPath, p.stakeInfos)
+	validators, err := ReadValidatorsByPrefix(validatorsPath, p.validatorsPrefixPath,
+		p.stakeInfos, p.nativeTokenConfig.IsMintable)
 	if err != nil {
 		return nil, err
 	}
@@ -682,6 +694,69 @@ func (p *genesisParams) validateBladeAdminFlag() error {
 
 	if bladeAdminAddr == contracts.SystemCaller {
 		return errBladeAdminIsSystemCaller
+	}
+
+	return nil
+}
+
+// validatePremineInfo validates whether reserve account (0x0 address) is premined
+func (p *genesisParams) validatePremineInfo() error {
+	isZeroAddressPremined := false
+
+	for _, premineInfo := range p.premineInfos {
+		if premineInfo.Address == types.ZeroAddress {
+			isZeroAddressPremined = true
+		} else if !p.nativeTokenConfig.IsMintable {
+			return errNoPremineAllowed
+		}
+	}
+
+	if !isZeroAddressPremined {
+		return errReserveAccMustBePremined
+	}
+
+	return nil
+}
+
+// validateBurnContract validates burn contract. If native token is mintable,
+// burn contract flag must not be set. If native token is non mintable only one burn contract
+// can be set and the specified address will be used to predeploy default EIP1559 burn contract.
+func (p *genesisParams) validateBurnContract() error {
+	if p.isBurnContractEnabled() {
+		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
+		if err != nil {
+			return fmt.Errorf("invalid burn contract info provided: %w", err)
+		}
+
+		if p.nativeTokenConfig.IsMintable {
+			if burnContractInfo.Address != types.ZeroAddress {
+				return errors.New("only zero address is allowed as burn destination for mintable native token")
+			}
+		} else {
+			if burnContractInfo.Address == types.ZeroAddress {
+				return errors.New("it is not allowed to deploy burn contract to 0x0 address")
+			}
+		}
+	}
+
+	return nil
+}
+
+// validateStakeInfo validates and parses stake flag
+func (p *genesisParams) validateStakeInfo() error {
+	if !p.nativeTokenConfig.IsMintable && len(p.stake) > 0 {
+		return errNoStakeAllowed
+	}
+
+	p.stakeInfos = make(map[types.Address]*big.Int, len(p.stake))
+
+	for _, stake := range p.stake {
+		stakeInfo, err := helper.ParsePremineInfo(stake)
+		if err != nil {
+			return fmt.Errorf("invalid stake amount provided: %w", err)
+		}
+
+		p.stakeInfos[stakeInfo.Address] = stakeInfo.Amount
 	}
 
 	return nil

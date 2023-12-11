@@ -119,6 +119,14 @@ var (
 			config *polybft.RootchainConfig,
 			key ethgo.Key,
 			chainID int64) error {
+			if !consensusCfg.NativeTokenConfig.IsMintable {
+				// we can not initialize checkpoint manager at this moment if native token is not mintable
+				// we will do that on finalize command when validators do premine and stake on BladeManager
+				// this is done like this because checkpoint manager needs to have correct
+				// voting powers in order to correctly validate checkpoints
+				return nil
+			}
+
 			validatorSet, err := getValidatorSetForCheckpointManager(fmt, genesisValidators)
 			if err != nil {
 				return err

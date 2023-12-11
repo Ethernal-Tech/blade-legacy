@@ -182,7 +182,11 @@ func (p *genesisParams) validateFlags() error {
 			return err
 		}
 
-		if err := p.parseStakeInfo(); err != nil {
+		if err := p.validateBurnContract(); err != nil {
+			return err
+		}
+
+		if err := p.validateStakeInfo(); err != nil {
 			return err
 		}
 
@@ -300,69 +304,11 @@ func (p *genesisParams) parsePremineInfo() error {
 	return nil
 }
 
-func (p *genesisParams) parseStakeInfo() error {
-	p.stakeInfos = make(map[types.Address]*big.Int, len(p.stake))
-
-	for _, stake := range p.stake {
-		stakeInfo, err := helper.ParsePremineInfo(stake)
-		if err != nil {
-			return fmt.Errorf("invalid stake amount provided: %w", err)
-		}
-
-		p.stakeInfos[stakeInfo.Address] = stakeInfo.Amount
-	}
-
-	return nil
-}
-
-// validatePremineInfo validates whether reserve account (0x0 address) is premined
-func (p *genesisParams) validatePremineInfo() error {
-	isZeroAddressPremined := false
-
-	for _, premineInfo := range p.premineInfos {
-		if premineInfo.Address == types.ZeroAddress {
-			isZeroAddressPremined = true
-		} else if !p.nativeTokenConfig.IsMintable {
-			return errNoPremineAllowed
-		}
-	}
-
-	if !isZeroAddressPremined {
-		return errReserveAccMustBePremined
-	}
-
-	return nil
-}
-
 // validateBlockTrackerPollInterval validates block tracker block interval
 // which can not be 0
 func (p *genesisParams) validateBlockTrackerPollInterval() error {
 	if p.blockTrackerPollInterval == 0 {
 		return helper.ErrBlockTrackerPollInterval
-	}
-
-	return nil
-}
-
-// validateBurnContract validates burn contract. If native token is mintable,
-// burn contract flag must not be set. If native token is non mintable only one burn contract
-// can be set and the specified address will be used to predeploy default EIP1559 burn contract.
-func (p *genesisParams) validateBurnContract() error {
-	if p.isBurnContractEnabled() {
-		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
-		if err != nil {
-			return fmt.Errorf("invalid burn contract info provided: %w", err)
-		}
-
-		if p.nativeTokenConfig.IsMintable {
-			if burnContractInfo.Address != types.ZeroAddress {
-				return errors.New("only zero address is allowed as burn destination for mintable native token")
-			}
-		} else {
-			if burnContractInfo.Address == types.ZeroAddress {
-				return errors.New("it is not allowed to deploy burn contract to 0x0 address")
-			}
-		}
 	}
 
 	return nil
