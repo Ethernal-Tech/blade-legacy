@@ -440,7 +440,7 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 	return t.cmdRun(args...)
 }
 
-// premineNativeRootToken premines token on root for every validator and other addresses in premine flag
+// premineNativeRootToken will premine token on root for every validator and other addresses in premine flag
 func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 	polybftConfig polybft.PolyBFTConfig) error {
 	if tokenConfig.IsMintable {

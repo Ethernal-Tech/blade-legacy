@@ -237,6 +237,7 @@ func ReadValidatorsByPrefix(dir, prefix string,
 		}
 
 		stake := big.NewInt(0)
+
 		if isNativeTokenMintable {
 			s, exists := stakeInfos[types.Address(account.Ecdsa.Address())]
 			if !exists {

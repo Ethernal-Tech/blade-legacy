@@ -256,6 +256,7 @@ func decodeGenesisAccounts(genesisSetRaw string) (map[types.Address]*contractsap
 	}
 
 	genesisAccounts := make(map[types.Address]*contractsapi.GenesisAccount, len(decodedGenesisSetSliceMap))
+
 	for _, rawGenesisAccount := range decodedGenesisSetSliceMap {
 		decodedAccount, err := decodeAccount(rawGenesisAccount)
 		if err != nil {

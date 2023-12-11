@@ -272,7 +272,6 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 				}
 			}
 		}
-
 	}
 
 	// premine other accounts
@@ -597,6 +596,7 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 			addr := types.StringToAddress(trimmedAddress)
 
 			stake := big.NewInt(0)
+
 			if p.nativeTokenConfig.IsMintable {
 				s, exists := p.stakeInfos[addr]
 				if !exists {
