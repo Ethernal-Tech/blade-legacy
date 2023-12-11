@@ -41,20 +41,6 @@ func preRunCommand(cmd *cobra.Command, _ []string) error {
 
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&params.accountDir,
-		polybftsecrets.AccountDirFlag,
-		"",
-		polybftsecrets.AccountDirFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
-		&params.accountConfig,
-		polybftsecrets.AccountConfigFlag,
-		"",
-		polybftsecrets.AccountConfigFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
 		&params.deployerPrivateKey,
 		polybftsecrets.PrivateKeyFlag,
 		"",
@@ -81,10 +67,6 @@ func setFlags(cmd *cobra.Command) {
 		"",
 		"address of the erc20 token to be minted",
 	)
-
-	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
-	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
-	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
@@ -98,7 +80,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	deployerKey, err := bridgeHelper.GetECDSAKey(params.deployerPrivateKey, params.accountDir, params.accountConfig)
+	deployerKey, err := bridgeHelper.DecodePrivateKey(params.deployerPrivateKey)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize deployer private key: %w", err))
 

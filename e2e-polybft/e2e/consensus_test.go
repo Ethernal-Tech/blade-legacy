@@ -520,7 +520,8 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	// sender must have premined some native tokens
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(types.Address(sender.Address())),
-		framework.WithBaseFeeConfig(""),
+		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
+		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 		framework.WithSecretsCallback(func(a []types.Address, config *framework.TestClusterConfig) {
 			for range a {
 				config.StakeAmounts = append(config.StakeAmounts, command.DefaultPremineBalance)

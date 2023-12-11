@@ -82,8 +82,9 @@ func (p *premineParams) validateFlags() (err error) {
 }
 
 type premineResult struct {
-	Address string   `json:"address"`
-	Amount  *big.Int `json:"amount"`
+	Address         string   `json:"address"`
+	NonStakedAmount *big.Int `json:"nonStakedAmount"`
+	StakedAmount    *big.Int `json:"stakedAmount"`
 }
 
 func (p premineResult) GetOutput() string {
@@ -91,9 +92,10 @@ func (p premineResult) GetOutput() string {
 
 	buffer.WriteString("\n[NATIVE ROOT TOKEN PREMINE]\n")
 
-	vals := make([]string, 0, 2)
+	vals := make([]string, 0, 3)
 	vals = append(vals, fmt.Sprintf("Address|%s", p.Address))
-	vals = append(vals, fmt.Sprintf("Amount Premined|%d", p.Amount))
+	vals = append(vals, fmt.Sprintf("Non-Staked Amount Premined|%d", p.NonStakedAmount))
+	vals = append(vals, fmt.Sprintf("Staked Premined|%d", p.StakedAmount))
 
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")

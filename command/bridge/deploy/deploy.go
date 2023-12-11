@@ -558,6 +558,7 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 		{
 			name:     bladeManagerName,
 			artifact: contractsapi.BladeManager,
+			hasProxy: true,
 		},
 	}
 

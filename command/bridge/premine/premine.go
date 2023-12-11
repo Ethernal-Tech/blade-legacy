@@ -2,6 +2,7 @@ package premine
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command"
@@ -118,7 +119,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	approveTxn, err := bridgeHelper.CreateApproveERC20Txn(
-		params.nonStakedValue,
+		new(big.Int).Add(params.nonStakedValue, params.stakedValue),
 		types.StringToAddress(params.bladeManager),
 		types.StringToAddress(params.nativeTokenRoot), true)
 	if err != nil {
@@ -127,7 +128,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	receipt, err := txRelayer.SendTransaction(approveTxn, ownerKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("approve transaction failed to be sent. %w", err)
 	}
 
 	if receipt == nil || receipt.Status == uint64(types.ReceiptFailed) {
@@ -146,10 +147,12 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	bladeManagerAddr := ethgo.Address(types.StringToAddress(params.bladeManager))
 	txn := bridgeHelper.CreateTransaction(ownerKey.Address(), &bladeManagerAddr, premineInput, nil, true)
+	txn.Gas = types.StateTransactionGasLimit * 2
+	txn.Type = ethgo.TransactionLegacy
 
 	receipt, err = txRelayer.SendTransaction(txn, ownerKey)
 	if err != nil {
-		return err
+		return fmt.Errorf("premine transaction failed to be sent. %w", err)
 	}
 
 	if receipt == nil || receipt.Status == uint64(types.ReceiptFailed) {
@@ -157,8 +160,9 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	outputter.WriteCommandResult(&premineResult{
-		Address: ownerKey.Address().String(),
-		Amount:  params.nonStakedValue,
+		Address:         ownerKey.Address().String(),
+		NonStakedAmount: params.nonStakedValue,
+		StakedAmount:    params.stakedValue,
 	})
 
 	return nil

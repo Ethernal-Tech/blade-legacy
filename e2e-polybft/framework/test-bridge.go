@@ -340,8 +340,8 @@ func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) er
 		return fmt.Errorf("failed to fund validators on the rootchain: %w", err)
 	}
 
-	// then fund all other addresses if token is non-mintable
-	// so that they can do premine on SupernetMAnager
+	// then fund all other addresses so that if token is non-mintable
+	// they can do premine on BladeManager
 	if len(t.clusterConfig.Premine) == 0 {
 		return nil
 	}
@@ -427,6 +427,12 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 			return err
 		}
 
+		if premineInfo.Address == types.ZeroAddress {
+			// we can not premine zero address on root
+			// so just continue
+			continue
+		}
+
 		args = append(args, "--addresses", premineInfo.Address.String())
 		args = append(args, "--amounts", premineInfo.Amount.String())
 	}
@@ -449,14 +455,16 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			" token for genesis validators: %w", err)
 	}
 
-	premineCmdArgs := func(secret, key string, amount *big.Int) error {
+	premineCmdArgs := func(secret, key string, nonStakedAmount, stakedAmount *big.Int) error {
 		args := []string{
-			"rootchain",
+			"bridge",
 			"premine",
 			"--jsonrpc", t.JSONRPCAddr(),
-			"--amount", amount.String(),
+			"--non-staked-amount", nonStakedAmount.String(),
+			"--staked-amount", stakedAmount.String(),
 			"--erc20-token", polybftConfig.Bridge.RootNativeERC20Addr.String(),
 			"--root-erc20-predicate", polybftConfig.Bridge.RootERC20PredicateAddr.String(),
+			"--blade-manager", polybftConfig.Bridge.BladeManagerAddr.String(),
 		}
 
 		if secret != "" {
@@ -470,6 +478,10 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 
 	g, ctx := errgroup.WithContext(context.Background())
 
+	validatorStake := new(big.Int).Set(command.DefaultStake)
+	validatorNonStake := new(big.Int).Set(command.DefaultPremineBalance)
+	validatorNonStake = validatorNonStake.Sub(validatorNonStake, validatorStake)
+
 	// premine validators
 	for _, secret := range validatorSecrets {
 		secret := secret
@@ -479,7 +491,7 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
-				if err := premineCmdArgs(secret, "", command.DefaultPremineBalance); err != nil {
+				if err := premineCmdArgs(secret, "", validatorNonStake, validatorStake); err != nil {
 					return fmt.Errorf("failed to do premine of native root token for genesis validator: %w",
 						err)
 				}
@@ -504,7 +516,13 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 						" account: %w. premine raw: %s", err, premineRaw)
 				}
 
-				if err := premineCmdArgs("", premineInfo.Key, premineInfo.Amount); err != nil {
+				// there is no premine on root for zero address, only on L2
+				if premineInfo.Address == types.ZeroAddress {
+					return nil
+				}
+
+				// non-validator addresses only premine non-staked amounts, no stake premine is allowed
+				if err := premineCmdArgs("", premineInfo.Key, premineInfo.Amount, big.NewInt(0)); err != nil {
 					return fmt.Errorf("failed to do premine of native root token for "+
 						"non-validator account: %w. premine raw: %s", err, premineRaw)
 				}
@@ -518,7 +536,13 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 }
 
 // finalizeGenesis finalizes genesis on BladeManager contract on root
-func (t *TestBridge) finalizeGenesis(genesisPath string, polybftConfig polybft.PolyBFTConfig) error {
+func (t *TestBridge) finalizeGenesis(genesisPath string,
+	tokenConfig *polybft.TokenConfig, polybftConfig polybft.PolyBFTConfig) error {
+	if tokenConfig.IsMintable {
+		// we don't need to finalize anything when we have mintable (child originated) token
+		return nil
+	}
+
 	args := []string{
 		"bridge",
 		"finalize-bridge",

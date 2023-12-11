@@ -222,11 +222,6 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 	burnContractAddr := types.ZeroAddress
 
 	if p.isBurnContractEnabled() {
-		// only populate base fee and base fee multiplier values if burn contract(s)
-		// is provided
-		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
-		chainConfig.Params.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
-		chainConfig.Params.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
 		chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
 
 		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
@@ -307,7 +302,9 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		Mixhash:    polybft.PolyBFTMixDigest,
 	}
 
-	if p.parsedBaseFeeConfig != nil {
+	if p.isBurnContractEnabled() {
+		// only populate base fee and base fee multiplier values if burn contract(s)
+		// is provided
 		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
 		chainConfig.Params.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
 		chainConfig.Params.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom

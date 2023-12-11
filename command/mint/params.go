@@ -13,8 +13,6 @@ import (
 type mintParams struct {
 	addresses          []string
 	amounts            []string
-	accountDir         string
-	accountConfig      string
 	tokenAddr          string
 	deployerPrivateKey string
 	jsonRPCAddress     string
