@@ -18,6 +18,7 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestConnLimit_Inbound(t *testing.T) {
@@ -794,6 +795,8 @@ func TestSubscribe(t *testing.T) {
 
 		// cancel before emitting
 		cancel()
+
+		require.Error(t, ctx.Err())
 
 		server.EmitEvent(event)
 
