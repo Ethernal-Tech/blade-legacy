@@ -65,6 +65,7 @@ type relayerConfig struct {
 	maxBlocksToWaitForResend uint64
 	maxAttemptsToSend        uint64
 	maxEventsPerBatch        uint64
+	eventExecutionAddr       types.Address
 }
 
 // eventTrackerConfig is a struct that holds the event tracker configuration
@@ -375,12 +376,16 @@ func (b *bridgeManager) initStateSyncRelayer(
 
 		b.stateSyncRelayer = newStateSyncRelayer(
 			txRelayer,
-			contracts.StateReceiverContract,
 			runtimeConfig.State.StateSyncStore,
 			bridgeBackend,
 			runtimeConfig.blockchain,
 			wallet.NewEcdsaSigner(runtimeConfig.Key),
-			nil,
+			&relayerConfig{
+				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
+				maxAttemptsToSend:        defaultMaxAttemptsToSend,
+				maxEventsPerBatch:        defaultMaxEventsPerBatch,
+				eventExecutionAddr:       contracts.StateReceiverContract,
+			},
 			logger.Named("state_sync_relayer"))
 	} else {
 		b.stateSyncRelayer = &dummyStateSyncRelayer{}
@@ -409,8 +414,12 @@ func (b *bridgeManager) initExitRelayer(
 			bridgeBackend,
 			runtimeConfig.blockchain,
 			runtimeConfig.State.ExitStore,
-			nil,
-			runtimeConfig.GenesisConfig.Bridge.ExitHelperAddr,
+			&relayerConfig{
+				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
+				maxAttemptsToSend:        defaultMaxAttemptsToSend,
+				maxEventsPerBatch:        defaultMaxEventsPerBatch,
+				eventExecutionAddr:       runtimeConfig.GenesisConfig.Bridge.ExitHelperAddr,
+			},
 			logger.Named("exit_relayer"))
 	} else {
 		b.exitEventRelayer = &dummyExitRelayer{}

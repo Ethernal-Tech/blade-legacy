@@ -57,7 +57,6 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	stateSyncRelayer := newStateSyncRelayer(
 		dummyTxRelayer,
-		stateSyncAddr,
 		state.StateSyncStore,
 		proofMock,
 		blockhainMock,
@@ -66,6 +65,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 			maxAttemptsToSend:        6,
 			maxBlocksToWaitForResend: 1,
 			maxEventsPerBatch:        1,
+			eventExecutionAddr:       stateSyncAddr,
 		},
 		hclog.Default(),
 	)

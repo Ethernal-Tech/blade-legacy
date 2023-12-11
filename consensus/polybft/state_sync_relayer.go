@@ -70,7 +70,6 @@ type stateSyncRelayerImpl struct {
 
 func newStateSyncRelayer(
 	txRelayer txrelayer.TxRelayer,
-	stateReceiverAddr types.Address,
 	state *StateSyncStore,
 	store StateSyncProofRetriever,
 	blockchain blockchainBackend,
@@ -78,14 +77,6 @@ func newStateSyncRelayer(
 	config *relayerConfig,
 	logger hclog.Logger,
 ) *stateSyncRelayerImpl {
-	if config == nil {
-		config = &relayerConfig{
-			maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
-			maxAttemptsToSend:        defaultMaxAttemptsToSend,
-			maxEventsPerBatch:        defaultMaxEventsPerBatch,
-		}
-	}
-
 	relayer := &stateSyncRelayerImpl{
 		txRelayer:      txRelayer,
 		key:            key,
@@ -172,7 +163,7 @@ func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 	// send batchExecute state sync
 	_, err = ssr.txRelayer.SendTransaction(&ethgo.Transaction{
 		From:  ssr.key.Address(),
-		To:    (*ethgo.Address)(&contracts.StateReceiverContract),
+		To:    (*ethgo.Address)(&ssr.config.eventExecutionAddr),
 		Gas:   types.StateTransactionGasLimit,
 		Input: input,
 	}, ssr.key)

@@ -98,8 +98,8 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 			maxAttemptsToSend:        6,
 			maxBlocksToWaitForResend: 1,
 			maxEventsPerBatch:        2,
+			eventExecutionAddr:       exitHelperAddr,
 		},
-		exitHelperAddr,
 		hclog.Default(),
 	)
 

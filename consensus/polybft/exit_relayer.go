@@ -51,8 +51,6 @@ type exitRelayer struct {
 
 	notifyCh chan struct{}
 	closeCh  chan struct{}
-
-	exitHelperAddr types.Address
 }
 
 // newExitRelayer creates a new instance of exitRelayer
@@ -63,23 +61,13 @@ func newExitRelayer(
 	blockchain blockchainBackend,
 	exitStore *ExitStore,
 	config *relayerConfig,
-	exitHelperAddr types.Address,
 	logger hclog.Logger) *exitRelayer {
-	if config == nil {
-		config = &relayerConfig{
-			maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
-			maxAttemptsToSend:        defaultMaxAttemptsToSend,
-			maxEventsPerBatch:        defaultMaxEventsPerBatch,
-		}
-	}
-
 	relayer := &exitRelayer{
 		key:            key,
 		logger:         logger,
 		exitStore:      exitStore,
 		txRelayer:      txRelayer,
 		proofRetriever: proofRetriever,
-		exitHelperAddr: exitHelperAddr,
 		closeCh:        make(chan struct{}),
 		notifyCh:       make(chan struct{}, 1),
 		relayerEventsProcessor: &relayerEventsProcessor{
@@ -241,7 +229,7 @@ func (e *exitRelayer) sendTx(events []*RelayerEventMetaData) error {
 	// send batchExecute exit events
 	_, err = e.txRelayer.SendTransaction(&ethgo.Transaction{
 		From:  e.key.Address(),
-		To:    (*ethgo.Address)(&e.exitHelperAddr),
+		To:    (*ethgo.Address)(&e.config.eventExecutionAddr),
 		Input: input,
 	}, e.key)
 
