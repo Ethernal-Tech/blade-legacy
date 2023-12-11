@@ -49,8 +49,6 @@ on:  # yamllint disable-line rule:truthy
     secrets:
       SLACK_PERFORMANCE_WEBHOOK_URL:
         required: true
-      DD_API_KEY:
-        required: true
       LOADTEST_RPC_URL:
         required: true
       LOADTEST_MNEMONIC:
@@ -74,11 +72,6 @@ jobs:
       - id: random-number-generator
         run: echo "random-number=$(echo $RANDOM)" >> $GITHUB_OUTPUT
         shell: bash
-      
-      - uses: datadog/agent-github-action@v1.3
-        with:
-          api_key: ${{ secrets.DD_API_KEY }}
-          container_name: "datadog-agent-${{ steps.random-number-generator.outputs.random-number }}"
       
       - name: Install xk6
         run: |

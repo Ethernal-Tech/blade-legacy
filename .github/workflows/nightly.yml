@@ -2,9 +2,6 @@
 name: Nightly Build
 on:  #yamllint disable-line rule:truthy
   workflow_dispatch:
-  schedule:
-    # * is a special character in YAML so you have to quote this string
-    - cron: '0 0 * * *'
 
 permissions:
   id-token: write
@@ -20,16 +17,14 @@ jobs:
     name: Test
     uses: ./.github/workflows/test.yml
     needs: build
-    secrets:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-  e2e:
+  e2e-polybft:
     name: PolyBFT E2E Tests
     uses: ./.github/workflows/e2e-polybft.yml
     needs: build
 
-  e2eibft:
-    name: IBFT E2E Tests
+  e2e-legacy:
+    name: Legacy E2E Tests
     uses: ./.github/workflows/e2e-legacy.yaml
     needs: build
 
@@ -53,7 +48,6 @@ jobs:
       TF_VAR_OWNER: ${{ secrets.TF_VAR_OWNER }}
       TF_VAR_BASE_INSTANCE_TYPE: ${{ secrets.TF_VAR_BASE_INSTANCE_TYPE }}
       SLACK_PERFORMANCE_WEBHOOK_URL: ${{ secrets.SLACK_PERFORMANCE_WEBHOOK_URL }}
-      DD_API_KEY: ${{ secrets.DD_API_KEY }}
       LOADTEST_MNEMONIC: ${{ secrets.LOADTEST_MNEMONIC }}
       VAULT_PASSWORD_FILE: ${{ secrets.VAULT_PASSWORD_FILE }}
     with:
@@ -68,7 +62,7 @@ jobs:
       - name: Notify Slack
         uses: slackapi/slack-github-action@v1.23.0
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_EDGE_GITHUB_URL }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_BLADE_GITHUB_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
         with:
           payload: |
