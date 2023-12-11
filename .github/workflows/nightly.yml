@@ -30,7 +30,7 @@ jobs:
 
   e2eibft:
     name: IBFT E2E Tests
-    uses: ./.github/workflows/e2e.yaml
+    uses: ./.github/workflows/e2e-legacy.yaml
     needs: build
 
   property:
