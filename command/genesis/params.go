@@ -240,7 +240,10 @@ func (p *genesisParams) generateGenesis() error {
 }
 
 func (p *genesisParams) initGenesisConfig() error {
-	enabledForks := chain.AllForksEnabled
+	enabledForks := chain.AllForksEnabled.Copy()
+	if !p.isBurnContractEnabled() {
+		enabledForks.RemoveFork(chain.London)
+	}
 
 	chainConfig := &chain.Chain{
 		Name: p.name,
