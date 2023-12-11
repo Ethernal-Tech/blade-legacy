@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	sidechainHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/types"
 )
 
 type registerParams struct {
@@ -15,8 +16,10 @@ type registerParams struct {
 	accountConfig string
 	jsonRPC       string
 	amount        string
+	stakeToken    string
 
-	amountValue *big.Int
+	amountValue    *big.Int
+	stakeTokenAddr types.Address
 }
 
 func (rp *registerParams) validateFlags() (err error) {
@@ -27,6 +30,8 @@ func (rp *registerParams) validateFlags() (err error) {
 	if rp.amountValue.Cmp(big.NewInt(0)) < 0 {
 		return fmt.Errorf("provided value (%d) is less than zero", rp.amountValue)
 	}
+
+	params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
 
 	// validate jsonrpc address
 	_, err = helper.ParseJSONRPCAddress(rp.jsonRPC)

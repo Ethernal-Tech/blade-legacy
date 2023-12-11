@@ -7,6 +7,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
+	"github.com/0xPolygon/polygon-edge/types"
 )
 
 var supernetIDFlag = "supernet-id"
@@ -16,8 +17,10 @@ type stakeParams struct {
 	accountConfig string
 	jsonRPC       string
 	amount        string
+	stakeToken    string
 
-	amountValue *big.Int
+	amountValue    *big.Int
+	stakeTokenAddr types.Address
 }
 
 func (sp *stakeParams) validateFlags() (err error) {

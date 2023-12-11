@@ -9,7 +9,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis/predeploy"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
-	"github.com/0xPolygon/polygon-edge/types"
 )
 
 func GetCommand() *cobra.Command {
@@ -245,9 +244,9 @@ func setFlags(cmd *cobra.Command) {
 		)
 
 		cmd.Flags().StringVar(
-			&params.stakeTokenAddr,
+			&params.stakeToken,
 			stakeTokenAddrFlag,
-			types.AddressToString(contracts.NativeERC20TokenContract),
+			contracts.NativeERC20TokenContract.String(),
 			"addres of staking token used in stake manager for staking",
 		)
 	}

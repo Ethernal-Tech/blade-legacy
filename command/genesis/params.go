@@ -130,7 +130,8 @@ type genesisParams struct {
 	proposalThreshold string
 	proposalQuorum    uint64
 
-	stakeTokenAddr string
+	stakeToken     string
+	stakeTokenAddr types.Address
 }
 
 func (p *genesisParams) validateFlags() error {
@@ -189,6 +190,8 @@ func (p *genesisParams) validateFlags() error {
 			return fmt.Errorf("invalid validators path ('%s') provided. Error: %w", p.validatorsPath, err)
 		}
 	}
+
+	params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
 
 	// Validate min and max validators number
 	return command.ValidateMinMaxValidatorsNumber(p.minNumValidators, p.maxNumValidators)
