@@ -43,6 +43,7 @@ const (
 	rootERC1155PredicateName          = "RootERC1155Predicate"
 	childERC1155MintablePredicateName = "ChildERC1155MintablePredicate"
 	erc1155TemplateName               = "ERC1155Template"
+	bladeManagerName                  = "BladeManager"
 )
 
 var (
@@ -57,6 +58,9 @@ var (
 	metadataPopulatorMap = map[string]func(*polybft.RootchainConfig, types.Address){
 		stateSenderName: func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.StateSenderAddress = addr
+		},
+		getProxyNameForImpl(bladeManagerName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
+			rootchainConfig.BladeManagerAddress = addr
 		},
 		getProxyNameForImpl(checkpointManagerName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.CheckpointManagerAddress = addr
@@ -239,6 +243,31 @@ var (
 
 			return initContract(fmt, relayer, initParams,
 				config.ChildMintableERC1155PredicateAddress, childERC1155MintablePredicateName, key)
+		},
+		getProxyNameForImpl(bladeManagerName): func(fmt command.OutputFormatter,
+			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
+			config *polybft.RootchainConfig,
+			key ethgo.Key,
+			chainID int64) error {
+			gvs := make([]*contractsapi.GenesisAccount, len(genesisValidators))
+			for i := 0; i < len(genesisValidators); i++ {
+				gvs[i] = &contractsapi.GenesisAccount{
+					Addr:        genesisValidators[i].Address,
+					IsValidator: true,
+					// this is set on purpose to 0, each account must premine enough tokens to itself if token is non-mintable
+					StakedTokens:    big.NewInt(0),
+					NonStakedTokens: big.NewInt(0),
+				}
+			}
+
+			initParams := &contractsapi.InitializeBladeManagerFn{
+				NewRootERC20Predicate: config.RootERC20PredicateAddress,
+				GenesisValidators:     gvs,
+			}
+
+			return initContract(fmt, relayer, initParams,
+				config.BladeManagerAddress, bladeManagerName, key)
 		},
 	}
 )
@@ -517,6 +546,10 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 		{
 			name:     erc1155TemplateName,
 			artifact: contractsapi.ChildERC1155,
+		},
+		{
+			name:     bladeManagerName,
+			artifact: contractsapi.BladeManager,
 		},
 	}
 

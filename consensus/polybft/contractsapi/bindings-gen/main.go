@@ -393,6 +393,16 @@ func main() {
 			[]string{},
 		},
 		{
+			"BladeManager",
+			gensc.BladeManager,
+			false,
+			[]string{
+				"initialize",
+				"addGenesisBalance",
+			},
+			[]string{},
+		},
+		{
 			"GenesisProxy",
 			gensc.GenesisProxy,
 			false,

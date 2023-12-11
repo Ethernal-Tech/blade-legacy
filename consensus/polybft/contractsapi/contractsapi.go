@@ -1728,6 +1728,57 @@ func (i *InitializeEIP1559BurnFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(EIP1559Burn.Abi.Methods["initialize"], buf, i)
 }
 
+type GenesisAccount struct {
+	Addr            types.Address `abi:"addr"`
+	NonStakedTokens *big.Int      `abi:"nonStakedTokens"`
+	StakedTokens    *big.Int      `abi:"stakedTokens"`
+	IsValidator     bool          `abi:"isValidator"`
+}
+
+var GenesisAccountABIType = abi.MustNewType("tuple(address addr,uint256 nonStakedTokens,uint256 stakedTokens,bool isValidator)")
+
+func (g *GenesisAccount) EncodeAbi() ([]byte, error) {
+	return GenesisAccountABIType.Encode(g)
+}
+
+func (g *GenesisAccount) DecodeAbi(buf []byte) error {
+	return decodeStruct(GenesisAccountABIType, buf, &g)
+}
+
+type InitializeBladeManagerFn struct {
+	NewRootERC20Predicate types.Address     `abi:"newRootERC20Predicate"`
+	GenesisValidators     []*GenesisAccount `abi:"genesisValidators"`
+}
+
+func (i *InitializeBladeManagerFn) Sig() []byte {
+	return BladeManager.Abi.Methods["initialize"].ID()
+}
+
+func (i *InitializeBladeManagerFn) EncodeAbi() ([]byte, error) {
+	return BladeManager.Abi.Methods["initialize"].Encode(i)
+}
+
+func (i *InitializeBladeManagerFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(BladeManager.Abi.Methods["initialize"], buf, i)
+}
+
+type AddGenesisBalanceBladeManagerFn struct {
+	NonStakeAmount *big.Int `abi:"nonStakeAmount"`
+	StakeAmount    *big.Int `abi:"stakeAmount"`
+}
+
+func (a *AddGenesisBalanceBladeManagerFn) Sig() []byte {
+	return BladeManager.Abi.Methods["addGenesisBalance"].ID()
+}
+
+func (a *AddGenesisBalanceBladeManagerFn) EncodeAbi() ([]byte, error) {
+	return BladeManager.Abi.Methods["addGenesisBalance"].Encode(a)
+}
+
+func (a *AddGenesisBalanceBladeManagerFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(BladeManager.Abi.Methods["addGenesisBalance"], buf, a)
+}
+
 type ProtectSetUpProxyGenesisProxyFn struct {
 	Initiator types.Address `abi:"initiator"`
 }

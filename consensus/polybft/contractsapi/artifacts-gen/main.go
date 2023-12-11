@@ -181,6 +181,10 @@ func main() {
 			"EIP1559Burn",
 		},
 		{
+			"bridge/BladeManager.sol",
+			"BladeManager",
+		},
+		{
 			"lib/GenesisProxy.sol",
 			"GenesisProxy",
 		},

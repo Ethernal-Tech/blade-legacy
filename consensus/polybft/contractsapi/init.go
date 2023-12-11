@@ -53,6 +53,7 @@ var (
 	RootERC721                      *artifact.Artifact
 	RootERC1155                     *artifact.Artifact
 	EIP1559Burn                     *artifact.Artifact
+	BladeManager                    *artifact.Artifact
 	GenesisProxy                    *artifact.Artifact
 	TransparentUpgradeableProxy     *artifact.Artifact
 
@@ -275,6 +276,11 @@ func init() {
 	}
 
 	EIP1559Burn, err = artifact.DecodeArtifact([]byte(EIP1559BurnArtifact))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	BladeManager, err = artifact.DecodeArtifact([]byte(BladeManagerArtifact))
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -145,6 +145,7 @@ type BridgeConfig struct {
 	ChildERC20Addr                    types.Address `json:"childERC20Address"`
 	ChildERC721Addr                   types.Address `json:"childERC721Address"`
 	ChildERC1155Addr                  types.Address `json:"childERC1155Address"`
+	BladeManagerAddr                  types.Address `json:"bladeManagerAddress"`
 	// only populated if stake-manager-deploy command is executed, and used for e2e tests
 	BLSAddress     types.Address `json:"blsAddr"`
 	BN256G2Address types.Address `json:"bn256G2Addr"`
@@ -176,6 +177,7 @@ type RootchainConfig struct {
 	RootERC1155PredicateAddress          types.Address
 	ChildMintableERC1155PredicateAddress types.Address
 	ChildERC1155Address                  types.Address
+	BladeManagerAddress                  types.Address
 }
 
 // ToBridgeConfig creates BridgeConfig instance
@@ -198,6 +200,7 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 		ChildERC1155Addr:                  r.ChildERC1155Address,
 		BLSAddress:                        r.BLSAddress,
 		BN256G2Address:                    r.BN256G2Address,
+		BladeManagerAddr:                  r.BladeManagerAddress,
 	}
 }
 
