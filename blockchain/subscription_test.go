@@ -179,6 +179,7 @@ func TestSubscription_NilEventAfterClosingSubscription(t *testing.T) {
 			if evt != nil {
 				receivedEvtCount++
 			}
+
 			if expectedBlockCount <= receivedEvtCount {
 				return
 			}
