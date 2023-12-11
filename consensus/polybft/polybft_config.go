@@ -94,6 +94,8 @@ type PolyBFTConfig struct {
 
 	// GovernanceConfig defines on chain governance configuration
 	GovernanceConfig *GovernanceConfig `json:"governanceConfig"`
+
+	StakeTokenAddr types.Address `json:"stakeTokenAddr"`
 }
 
 // LoadPolyBFTConfig loads chain config from provided path and unmarshals PolyBFTConfig

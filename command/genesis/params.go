@@ -36,6 +36,7 @@ const (
 	votePeriodFlag               = "vote-period"
 	voteProposalThresholdFlag    = "vote-proposal-threshold"
 	proposalQuorumFlag           = "proposal-quorum"
+	stakeTokenAddrFlag           = "stake-token"
 )
 
 var (
@@ -128,6 +129,8 @@ type genesisParams struct {
 	votingPeriod      string
 	proposalThreshold string
 	proposalQuorum    uint64
+
+	stakeTokenAddr string
 }
 
 func (p *genesisParams) validateFlags() error {
