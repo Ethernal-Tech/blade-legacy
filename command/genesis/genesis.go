@@ -247,7 +247,7 @@ func setFlags(cmd *cobra.Command) {
 			&params.stakeToken,
 			stakeTokenAddrFlag,
 			contracts.NativeERC20TokenContract.String(),
-			"addres of staking token used in stake manager for staking",
+			"address of staking token used in stake manager for staking",
 		)
 	}
 
