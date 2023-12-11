@@ -57,7 +57,7 @@ func (d *dummyStateSyncRelayer) ProcessLog(header *types.Header, log *ethgo.Log,
 var _ StateSyncRelayer = (*stateSyncRelayerImpl)(nil)
 
 type stateSyncRelayerImpl struct {
-	relayerEventsProcessor
+	*relayerEventsProcessor
 
 	txRelayer      txrelayer.TxRelayer
 	key            ethgo.Key
@@ -93,17 +93,15 @@ func newStateSyncRelayer(
 		closeCh:        make(chan struct{}),
 		notifyCh:       make(chan struct{}, 1),
 		logger:         logger,
+		relayerEventsProcessor: &relayerEventsProcessor{
+			state:      state,
+			logger:     logger,
+			config:     config,
+			blockchain: blockchain,
+		},
 	}
 
-	relayerEventsProcessor := relayerEventsProcessor{
-		state:      state,
-		logger:     logger,
-		config:     config,
-		blockchain: blockchain,
-		sendTx:     relayer.sendTx,
-	}
-
-	relayer.relayerEventsProcessor = relayerEventsProcessor
+	relayer.relayerEventsProcessor.sendTx = relayer.sendTx
 
 	return relayer
 }
@@ -137,7 +135,7 @@ func (ssr *stateSyncRelayerImpl) PostBlock(req *PostBlockRequest) error {
 	return nil
 }
 
-func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventData) error {
+func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 	proofs := make([][]types.Hash, len(events))
 	objs := make([]*contractsapi.StateSync, len(events))
 
@@ -213,10 +211,10 @@ func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log
 		}
 
 		firstID, lastID := commitEvent.StartID.Uint64(), commitEvent.EndID.Uint64()
-		newEvents := make([]*RelayerEventData, lastID-firstID+1)
+		newEvents := make([]*RelayerEventMetaData, lastID-firstID+1)
 
 		for eventID := firstID; eventID <= lastID; eventID++ {
-			newEvents[eventID-firstID] = &RelayerEventData{EventID: eventID}
+			newEvents[eventID-firstID] = &RelayerEventMetaData{EventID: eventID}
 		}
 
 		ssr.logger.Debug("new commitment event has arrived",

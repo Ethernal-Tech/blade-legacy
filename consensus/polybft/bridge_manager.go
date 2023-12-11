@@ -18,6 +18,13 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
+type proofType int
+
+const (
+	StateSync proofType = iota
+	Exit
+)
+
 const (
 	// defaultMaxBlocksToWaitForResend specifies how many blocks should be wait
 	// in order to try again to send transaction
@@ -38,18 +45,18 @@ var (
 type BridgeBackend interface {
 	Runtime
 	StateSyncProofRetriever
-	EventProofRetriever
+	ExitEventProofRetriever
 }
 
-// RelayerEventData keeps information about a relayer event
-type RelayerEventData struct {
+// RelayerEventMetaData keeps information about a relayer event
+type RelayerEventMetaData struct {
 	EventID     uint64 `json:"eventID"`
 	CountTries  uint64 `json:"countTries"`
 	BlockNumber uint64 `json:"blockNumber"` // block when event is sent
 	SentStatus  bool   `json:"sentStatus"`
 }
 
-func (ed RelayerEventData) String() string {
+func (ed RelayerEventMetaData) String() string {
 	return fmt.Sprintf("%d", ed.EventID)
 }
 
@@ -74,8 +81,8 @@ type eventTrackerConfig struct {
 
 // RelayerState is an interface that defines functions that a relayer store has to implement
 type RelayerState interface {
-	GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventData, err error)
-	UpdateRelayerEvents(events []*RelayerEventData, removeIDs []uint64, dbTx *bolt.Tx) error
+	GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventMetaData, err error)
+	UpdateRelayerEvents(events []*RelayerEventMetaData, removeIDs []uint64, dbTx *bolt.Tx) error
 }
 
 // relayerEventsProcessor is a parent struct of both state sync and exit relayer
@@ -86,12 +93,12 @@ type relayerEventsProcessor struct {
 	blockchain blockchainBackend
 
 	config *relayerConfig
-	sendTx func([]*RelayerEventData) error
+	sendTx func([]*RelayerEventMetaData) error
 }
 
 // ProcessEvents processes all relayer events that were either successfully or unsuccessfully executed
 // and executes all the events that can be executed in regards to relayerConfig
-func (r relayerEventsProcessor) processEvents() {
+func (r *relayerEventsProcessor) processEvents() {
 	// we need twice as batch size because events from first batch are possible already sent maxAttemptsToSend times
 	events, err := r.state.GetAllAvailableRelayerEvents(int(r.config.maxEventsPerBatch) * 2)
 	if err != nil {
@@ -101,7 +108,7 @@ func (r relayerEventsProcessor) processEvents() {
 	}
 
 	removedEventIDs := []uint64{}
-	sendingEvents := []*RelayerEventData{}
+	sendingEvents := []*RelayerEventMetaData{}
 	currentBlockNumber := r.blockchain.CurrentHeader().Number
 
 	// check already processed events
@@ -128,10 +135,10 @@ func (r relayerEventsProcessor) processEvents() {
 
 	// update state only if needed
 	if len(sendingEvents)+len(removedEventIDs) > 0 {
-		r.logger.Info("sending events", "events", sendingEvents, "removed", removedEventIDs)
+		r.logger.Debug("sending relayer events", "events", sendingEvents, "removed", removedEventIDs)
 
 		if err := r.state.UpdateRelayerEvents(sendingEvents, removedEventIDs, nil); err != nil {
-			r.logger.Error("updating events failed",
+			r.logger.Error("updating relayer events failed",
 				"events", sendingEvents, "removed", removedEventIDs, "err", err)
 
 			return
@@ -141,9 +148,9 @@ func (r relayerEventsProcessor) processEvents() {
 	// send tx only if needed
 	if len(sendingEvents) > 0 {
 		if err := r.sendTx(sendingEvents); err != nil {
-			r.logger.Error("failed to send tx", "block", currentBlockNumber, "events", sendingEvents, "err", err)
+			r.logger.Error("failed to send relayer tx", "block", currentBlockNumber, "events", sendingEvents, "err", err)
 		} else {
-			r.logger.Info("tx has been successfully sent", "block", currentBlockNumber, "events", sendingEvents)
+			r.logger.Debug("tx has been successfully sent", "block", currentBlockNumber, "events", sendingEvents)
 		}
 	}
 }
@@ -153,10 +160,12 @@ type BridgeManager interface {
 	tracker.EventSubscriber
 
 	Close()
+	PostBlockAsync(req *PostBlockRequest)
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
-	CheckpointManager() CheckpointManager
-	StateSyncManager() StateSyncManager
+	BuildEventRoot(epoch uint64) (types.Hash, error)
+	GenerateProof(eventID uint64, pType proofType) (types.Proof, error)
+	Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
 }
 
 var _ BridgeManager = (*dummyBridgeManager)(nil)
@@ -164,14 +173,18 @@ var _ BridgeManager = (*dummyBridgeManager)(nil)
 type dummyBridgeManager struct{}
 
 func (d *dummyBridgeManager) Close()                                {}
+func (d *dummyBridgeManager) PostBlockAsync(req *PostBlockRequest)  {}
 func (d *dummyBridgeManager) AddLog(log *ethgo.Log) error           { return nil }
 func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error { return nil }
 func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error { return nil }
-func (d *dummyBridgeManager) CheckpointManager() CheckpointManager {
-	return &dummyCheckpointManager{}
+func (d *dummyBridgeManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
+	return types.ZeroHash, nil
 }
-func (d *dummyBridgeManager) StateSyncManager() StateSyncManager {
-	return &dummyStateSyncManager{}
+func (d *dummyBridgeManager) Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error) {
+	return nil, nil
+}
+func (d *dummyBridgeManager) GenerateProof(eventID uint64, pType proofType) (types.Proof, error) {
+	return types.Proof{}, nil
 }
 
 var _ BridgeManager = (*bridgeManager)(nil)
@@ -259,6 +272,36 @@ func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
 	}
 
 	return nil
+}
+
+// BuildEventRoot builds exit event root for given epoch
+func (b *bridgeManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
+	return b.checkpointManager.BuildEventRoot(epoch)
+}
+
+// Commitment returns the pending signed state sync commitment
+func (b *bridgeManager) Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error) {
+	return b.stateSyncManager.Commitment(pendingBlockNumber)
+}
+
+// GenerateProof generates proof for a specific event type
+func (b *bridgeManager) GenerateProof(eventID uint64, pType proofType) (types.Proof, error) {
+	switch pType {
+	case StateSync:
+		return b.stateSyncManager.GetStateSyncProof(eventID)
+	case Exit:
+		return b.checkpointManager.GenerateExitProof(eventID)
+	default:
+		return types.Proof{}, fmt.Errorf("unknown proof type requested: %v", pType)
+	}
+}
+
+// PostBlockAsync is called on finalization of each block (either from consensus or syncer)
+// but it doesn't require return of any kind, and is done asynchronously
+func (b *bridgeManager) PostBlockAsync(req *PostBlockRequest) {
+	// we will do PostBlock on checkpoint manager at the end, because it only
+	// sends a checkpoint in a separate routine. It doesn't do any db operations
+	b.checkpointManager.PostBlock(req)
 }
 
 // close stops ongoing go routines in the manager

@@ -372,11 +372,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	c.epoch = epoch
 	c.lastBuiltBlock = fullBlock.Block.Header
 
-	// we will do PostBlock on checkpoint manager at the end, because it only
-	// sends a checkpoint in a separate routine. It doesn't do any db operations
-	if err := c.bridgeManager.CheckpointManager().PostBlock(postBlock); err != nil {
-		c.logger.Error("failed to post block in checkpoint manager", "err", err)
-	}
+	c.bridgeManager.PostBlockAsync(postBlock)
 
 	endTime := time.Now().UTC()
 
@@ -417,7 +413,7 @@ func (c *consensusRuntime) FSM() error {
 
 	valSet := validator.NewValidatorSet(epoch.Validators, c.logger)
 
-	exitRootHash, err := c.bridgeManager.CheckpointManager().BuildEventRoot(epoch.Number)
+	exitRootHash, err := c.bridgeManager.BuildEventRoot(epoch.Number)
 	if err != nil {
 		return fmt.Errorf("could not build exit root hash for fsm: %w", err)
 	}
@@ -440,7 +436,7 @@ func (c *consensusRuntime) FSM() error {
 	}
 
 	if isEndOfSprint {
-		commitment, err := c.bridgeManager.StateSyncManager().Commitment(pendingBlockNumber)
+		commitment, err := c.bridgeManager.Commitment(pendingBlockNumber)
 		if err != nil {
 			return err
 		}
@@ -707,12 +703,12 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 
 // GenerateExitProof generates proof of exit and is a bridge endpoint store function
 func (c *consensusRuntime) GenerateExitProof(exitID uint64) (types.Proof, error) {
-	return c.bridgeManager.CheckpointManager().GenerateExitProof(exitID)
+	return c.bridgeManager.GenerateProof(exitID, Exit)
 }
 
 // GetStateSyncProof returns the proof for the state sync
 func (c *consensusRuntime) GetStateSyncProof(stateSyncID uint64) (types.Proof, error) {
-	return c.bridgeManager.StateSyncManager().GetStateSyncProof(stateSyncID)
+	return c.bridgeManager.GenerateProof(stateSyncID, StateSync)
 }
 
 // setIsActiveValidator updates the activeValidatorFlag field

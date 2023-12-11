@@ -211,7 +211,7 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 	state := newTestState(t)
 
 	// update
-	require.NoError(t, state.ExitStore.UpdateRelayerEvents([]*RelayerEventData{
+	require.NoError(t, state.ExitStore.UpdateRelayerEvents([]*RelayerEventMetaData{
 		{EventID: 1},
 		{EventID: 2, SentStatus: true, BlockNumber: 10},
 	}, []uint64{}, nil))
@@ -226,7 +226,7 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 
 	// update again
 	require.NoError(t, state.ExitStore.UpdateRelayerEvents(
-		[]*RelayerEventData{
+		[]*RelayerEventMetaData{
 			{EventID: 3},
 			{EventID: 4},
 		},

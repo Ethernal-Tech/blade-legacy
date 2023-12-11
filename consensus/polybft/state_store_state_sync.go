@@ -377,12 +377,12 @@ func (s *StateSyncStore) getStateSyncProof(stateSyncID uint64) (*StateSyncProof,
 
 // updateRelayerEvents updates/remove desired state sync relayer events
 func (s *StateSyncStore) UpdateRelayerEvents(
-	events []*RelayerEventData, removeIDs []uint64, dbTx *bolt.Tx) error {
+	events []*RelayerEventMetaData, removeIDs []uint64, dbTx *bolt.Tx) error {
 	return updateRelayerEvents(stateSyncRelayerEventsBucket, events, removeIDs, s.db, dbTx)
 }
 
 // getAllAvailableRelayerEvents retrieves all StateSync RelayerEventData that should be sent as a transactions
-func (s *StateSyncStore) GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventData, err error) {
+func (s *StateSyncStore) GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventMetaData, err error) {
 	if err = s.db.View(func(tx *bolt.Tx) error {
 		result, err = getAvailableRelayerEvents(limit, stateSyncRelayerEventsBucket, tx)
 		if err != nil {
@@ -398,11 +398,11 @@ func (s *StateSyncStore) GetAllAvailableRelayerEvents(limit int) (result []*Rela
 }
 
 // getAvailableRelayerEvents retrieves all relayer that should be sent as a transactions
-func getAvailableRelayerEvents(limit int, bucket []byte, tx *bolt.Tx) (result []*RelayerEventData, err error) {
+func getAvailableRelayerEvents(limit int, bucket []byte, tx *bolt.Tx) (result []*RelayerEventMetaData, err error) {
 	cursor := tx.Bucket(bucket).Cursor()
 
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
-		var event *RelayerEventData
+		var event *RelayerEventMetaData
 
 		if err = json.Unmarshal(v, &event); err != nil {
 			return
@@ -421,7 +421,7 @@ func getAvailableRelayerEvents(limit int, bucket []byte, tx *bolt.Tx) (result []
 // updateRelayerEvents updates/remove desired relayer events
 func updateRelayerEvents(
 	bucket []byte,
-	events []*RelayerEventData,
+	events []*RelayerEventMetaData,
 	removeIDs []uint64,
 	db *bolt.DB,
 	openedTx *bolt.Tx) error {

@@ -32,8 +32,8 @@ func (d *dummyExitRelayer) Init() error                           { return nil }
 func (d *dummyExitRelayer) AddLog(eventLog *ethgo.Log) error      { return nil }
 func (d *dummyExitRelayer) PostBlock(req *PostBlockRequest) error { return nil }
 
-// EventProofRetriever is an interface that exposes function for retrieving exit proof
-type EventProofRetriever interface {
+// ExitEventProofRetriever is an interface that exposes function for retrieving exit proof
+type ExitEventProofRetriever interface {
 	GenerateExitProof(exitID uint64) (types.Proof, error)
 }
 
@@ -41,10 +41,10 @@ var _ ExitRelayer = (*exitRelayer)(nil)
 
 // exitRelayer handles checkpoint submitted events and executes exit events
 type exitRelayer struct {
-	relayerEventsProcessor
+	*relayerEventsProcessor
 
 	key            ethgo.Key
-	proofRetriever EventProofRetriever
+	proofRetriever ExitEventProofRetriever
 	txRelayer      txrelayer.TxRelayer
 	logger         hclog.Logger
 	exitStore      *ExitStore
@@ -59,7 +59,7 @@ type exitRelayer struct {
 func newExitRelayer(
 	txRelayer txrelayer.TxRelayer,
 	key ethgo.Key,
-	proofRetriever EventProofRetriever,
+	proofRetriever ExitEventProofRetriever,
 	blockchain blockchainBackend,
 	exitStore *ExitStore,
 	config *relayerConfig,
@@ -82,17 +82,15 @@ func newExitRelayer(
 		exitHelperAddr: exitHelperAddr,
 		closeCh:        make(chan struct{}),
 		notifyCh:       make(chan struct{}, 1),
+		relayerEventsProcessor: &relayerEventsProcessor{
+			config:     config,
+			logger:     logger,
+			state:      exitStore,
+			blockchain: blockchain,
+		},
 	}
 
-	relayerEventsProcessor := relayerEventsProcessor{
-		config:     config,
-		logger:     logger,
-		state:      exitStore,
-		blockchain: blockchain,
-		sendTx:     relayer.sendTx,
-	}
-
-	relayer.relayerEventsProcessor = relayerEventsProcessor
+	relayer.relayerEventsProcessor.sendTx = relayer.sendTx
 
 	return relayer
 }
@@ -173,9 +171,9 @@ func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
 			return nil
 		}
 
-		newEvents := make([]*RelayerEventData, len(exitEvents))
+		newEvents := make([]*RelayerEventMetaData, len(exitEvents))
 		for i, event := range exitEvents {
-			newEvents[i] = &RelayerEventData{EventID: event.ID.Uint64()}
+			newEvents[i] = &RelayerEventMetaData{EventID: event.ID.Uint64()}
 		}
 
 		e.logger.Debug("There are exit events that happened in given given checkpoint", "exitEvents", len(newEvents))
@@ -213,7 +211,7 @@ func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
 }
 
 // sendTx sends unexecuted exit events in a batch to ExitHelper contract
-func (e *exitRelayer) sendTx(events []*RelayerEventData) error {
+func (e *exitRelayer) sendTx(events []*RelayerEventMetaData) error {
 	e.logger.Debug("sending exit events in batch to be executed on ExitHelper", "exitEvents", len(events))
 	defer e.logger.Debug("sending exit events in batch to be executed on ExitHelper finished", "exitEvents", len(events))
 

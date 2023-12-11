@@ -304,7 +304,7 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	state := newTestState(t)
 
 	// update
-	require.NoError(t, state.StateSyncStore.UpdateRelayerEvents([]*RelayerEventData{
+	require.NoError(t, state.StateSyncStore.UpdateRelayerEvents([]*RelayerEventMetaData{
 		{EventID: 2},
 		{EventID: 4},
 		{EventID: 7, SentStatus: true, BlockNumber: 100},
@@ -321,7 +321,7 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 
 	// update again
 	require.NoError(t, state.StateSyncStore.UpdateRelayerEvents(
-		[]*RelayerEventData{
+		[]*RelayerEventMetaData{
 			{EventID: 10},
 			{EventID: 12},
 			{EventID: 11},
