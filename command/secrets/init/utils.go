@@ -22,7 +22,7 @@ const (
 	PrivateKeyFlagDesc    = "hex-encoded private key of the account which executes command"
 	ChainIDFlagDesc       = "ID of child chain"
 	AmountFlagDesc        = "amount to stake"
-	StakeTokenDesc        = "Address of staking token"
+	StakeTokenDesc        = "address of staking token"
 )
 
 // common errors for all polybft commands

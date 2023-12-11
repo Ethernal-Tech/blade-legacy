@@ -36,7 +36,7 @@ const (
 	votePeriodFlag               = "vote-period"
 	voteProposalThresholdFlag    = "vote-proposal-threshold"
 	proposalQuorumFlag           = "proposal-quorum"
-	stakeTokenAddrFlag           = "stake-token"
+	stakeTokenFlag               = "stake-token"
 )
 
 var (
