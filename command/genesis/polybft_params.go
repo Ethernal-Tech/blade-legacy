@@ -31,11 +31,17 @@ const (
 
 	blockTimeDriftFlag = "block-time-drift"
 
-	defaultSprintSize               = uint64(5)
+	defaultSprintSize               = uint64(5) // in blocks
+	defaultEpochReward              = 1         // in blocks
 	defaultBlockTime                = 2 * time.Second
-	defaultEpochReward              = 1
-	defaultBlockTimeDrift           = uint64(10)
+	defaultBlockTimeDrift           = uint64(10) // in seconds
 	defaultBlockTrackerPollInterval = time.Second
+	defaultCheckpointInterval       = uint64(900) // in blocks
+	defaultWithdrawalWaitPeriod     = uint64(1)   // in epochs
+	defaultVotingDelay              = "10"        // in blocks
+	defaultVotingPeriod             = "10000"     // in blocks
+	defaultVoteProposalThreshold    = "1000"      // in blocks
+	defaultProposalQuorumPercentage = uint64(67)  // percentage
 
 	contractDeployerAllowListAdminFlag   = "contract-deployer-allow-list-admin"
 	contractDeployerAllowListEnabledFlag = "contract-deployer-allow-list-enabled"
@@ -49,17 +55,24 @@ const (
 	bridgeAllowListEnabledFlag           = "bridge-allow-list-enabled"
 	bridgeBlockListAdminFlag             = "bridge-block-list-admin"
 	bridgeBlockListEnabledFlag           = "bridge-block-list-enabled"
+	bladeAdminFlag                       = "blade-admin"
 
 	bootnodePortStart = 30301
 
 	ecdsaAddressLength = 40
 	blsKeyLength       = 256
+
+	proposalQuorumMax = uint64(100)
 )
 
 var (
-	errNoGenesisValidators = errors.New("genesis validators aren't provided")
-	errNoPremineAllowed    = errors.New("native token is not mintable, so no premine is allowed " +
-		"except for zero address and reward wallet if native token is used as reward token")
+	errNoGenesisValidators      = errors.New("genesis validators aren't provided")
+	errProxyAdminNotProvided    = errors.New("proxy contracts admin address must be set")
+	errProxyAdminIsZeroAddress  = errors.New("proxy contracts admin address must not be zero address")
+	errProxyAdminIsSystemCaller = errors.New("proxy contracts admin address must not be system caller address")
+	errBladeAdminNotProvided    = errors.New("blade admin address must be set")
+	errBladeAdminIsZeroAddress  = errors.New("blade admin address must not be zero address")
+	errBladeAdminIsSystemCaller = errors.New("blade admin address must not be system caller address")
 )
 
 type contractInfo struct {
@@ -79,16 +92,6 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 	walletPremineInfo, err := helper.ParsePremineInfo(p.rewardWallet)
 	if err != nil {
 		return fmt.Errorf("invalid reward wallet configuration provided '%s' : %w", p.rewardWallet, err)
-	}
-
-	if !p.nativeTokenConfig.IsMintable {
-		// validate premine map, no premine is allowed if token is not mintable,
-		// except for the reward wallet (if native token is used as reward token) and zero address
-		for a := range premineBalances {
-			if a != types.ZeroAddress && (p.rewardTokenCode != "" || a != walletPremineInfo.Address) {
-				return errNoPremineAllowed
-			}
-		}
 	}
 
 	var (
@@ -131,6 +134,31 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		}
 	}
 
+	voteDelay, err := common.ParseUint256orHex(&p.voteDelay)
+	if err != nil {
+		return err
+	}
+
+	votingPeriod, err := common.ParseUint256orHex(&p.votingPeriod)
+	if err != nil {
+		return err
+	}
+
+	if votingPeriod.Cmp(big.NewInt(0)) == 0 {
+		return errInvalidVotingPeriod
+	}
+
+	proposalThreshold, err := common.ParseUint256orHex(&p.proposalThreshold)
+	if err != nil {
+		return err
+	}
+
+	proposalQuorum := p.proposalQuorum
+	if proposalQuorum > proposalQuorumMax {
+		// proposal can be from 0 to 100, so we sanitize the value
+		proposalQuorum = proposalQuorumMax
+	}
+
 	polyBftConfig := &polybft.PolyBFTConfig{
 		InitialValidatorSet: initialValidators,
 		BlockTime:           common.Duration{Duration: p.blockTime},
@@ -138,11 +166,13 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		SprintSize:          p.sprintSize,
 		EpochReward:         p.epochReward,
 		// use 1st account as governance address
-		Governance:          types.ZeroAddress,
-		InitialTrieRoot:     types.StringToHash(p.initialStateRoot),
-		NativeTokenConfig:   p.nativeTokenConfig,
-		MinValidatorSetSize: p.minNumValidators,
-		MaxValidatorSetSize: p.maxNumValidators,
+		Governance:           types.ZeroAddress,
+		InitialTrieRoot:      types.StringToHash(p.initialStateRoot),
+		NativeTokenConfig:    p.nativeTokenConfig,
+		MinValidatorSetSize:  p.minNumValidators,
+		MaxValidatorSetSize:  p.maxNumValidators,
+		CheckpointInterval:   p.checkpointInterval,
+		WithdrawalWaitPeriod: p.withdrawalWaitPeriod,
 		RewardConfig: &polybft.RewardsConfig{
 			TokenAddress:  rewardTokenAddr,
 			WalletAddress: walletPremineInfo.Address,
@@ -151,11 +181,23 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		BlockTimeDrift:           p.blockTimeDrift,
 		BlockTrackerPollInterval: common.Duration{Duration: p.blockTrackerPollInterval},
 		ProxyContractsAdmin:      types.StringToAddress(p.proxyContractsAdmin),
+		BladeAdmin:               types.StringToAddress(p.bladeAdmin),
+		GovernanceConfig: &polybft.GovernanceConfig{
+			VotingDelay:              voteDelay,
+			VotingPeriod:             votingPeriod,
+			ProposalThreshold:        proposalThreshold,
+			ProposalQuorumPercentage: proposalQuorum,
+			// on genesis we deploy governance contracts on predefined addresses
+			ChildGovernorAddr: contracts.ChildGovernorContract,
+			ChildTimelockAddr: contracts.ChildTimelockContract,
+			NetworkParamsAddr: contracts.NetworkParamsContract,
+			ForkParamsAddr:    contracts.ForkParamsContract,
+		},
 	}
 
-	// Disable london hardfork if burn contract address is not provided
-	enabledForks := chain.AllForksEnabled
-	if !p.isBurnContractEnabled() {
+	enabledForks := chain.AllForksEnabled.Copy()
+
+	if p.parsedBaseFeeConfig == nil {
 		enabledForks.RemoveFork(chain.London)
 	}
 
@@ -171,43 +213,13 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		Bootnodes: p.bootnodes,
 	}
 
-	burnContractAddr := types.ZeroAddress
-
-	if p.isBurnContractEnabled() {
-		chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
-
-		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
-		if err != nil {
-			return err
-		}
-
-		if !p.nativeTokenConfig.IsMintable {
-			// burn contract can be specified on arbitrary address for non-mintable native tokens
-			burnContractAddr = burnContractInfo.Address
-			chainConfig.Params.BurnContract[burnContractInfo.BlockNumber] = burnContractAddr
-			chainConfig.Params.BurnContractDestinationAddress = burnContractInfo.DestinationAddress
-		} else {
-			// burnt funds are sent to zero address when dealing with mintable native tokens
-			chainConfig.Params.BurnContract[burnContractInfo.BlockNumber] = types.ZeroAddress
-		}
-	}
+	chainConfig.Params.BurnContract = make(map[uint64]types.Address, 1)
+	chainConfig.Params.BurnContract[0] = types.ZeroAddress
 
 	// deploy genesis contracts
-	allocs, err := p.deployContracts(rewardTokenByteCode, polyBftConfig, chainConfig, burnContractAddr)
+	allocs, err := p.deployContracts(rewardTokenByteCode, polyBftConfig, chainConfig)
 	if err != nil {
 		return err
-	}
-
-	// premine other accounts
-	for _, premine := range premineBalances {
-		// validators have already been premined, so no need to premine them again
-		if _, ok := allocs[premine.Address]; ok {
-			continue
-		}
-
-		allocs[premine.Address] = &chain.GenesisAccount{
-			Balance: premine.Amount,
-		}
 	}
 
 	validatorMetadata := make([]*validator.ValidatorMetadata, len(initialValidators))
@@ -225,6 +237,26 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		if len(p.bootnodes) == 0 {
 			chainConfig.Bootnodes = append(chainConfig.Bootnodes, validator.MultiAddr)
 		}
+
+		// add default premine for a validator if it is not specified in genesis command
+		if _, exists := premineBalances[validator.Address]; !exists {
+			premineBalances[validator.Address] = &helper.PremineInfo{
+				Address: validator.Address,
+				Amount:  command.DefaultPremineBalance,
+			}
+		}
+	}
+
+	// premine other accounts
+	for _, premine := range premineBalances {
+		// validators have already been premined, so no need to premine them again
+		if _, ok := allocs[premine.Address]; ok {
+			continue
+		}
+
+		allocs[premine.Address] = &chain.GenesisAccount{
+			Balance: premine.Amount,
+		}
 	}
 
 	genesisExtraData, err := GenerateExtraDataPolyBft(validatorMetadata)
@@ -240,6 +272,12 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		ExtraData:  genesisExtraData,
 		GasUsed:    command.DefaultGenesisGasUsed,
 		Mixhash:    polybft.PolyBFTMixDigest,
+	}
+
+	if p.parsedBaseFeeConfig != nil {
+		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
+		chainConfig.Params.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
+		chainConfig.Params.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
 	}
 
 	if len(p.contractDeployerAllowListAdmin) != 0 {
@@ -296,22 +334,13 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		}
 	}
 
-	if p.isBurnContractEnabled() {
-		// only populate base fee and base fee multiplier values if burn contract(s)
-		// is provided
-		chainConfig.Genesis.BaseFee = p.parsedBaseFeeConfig.baseFee
-		chainConfig.Genesis.BaseFeeEM = p.parsedBaseFeeConfig.baseFeeEM
-		chainConfig.Genesis.BaseFeeChangeDenom = p.parsedBaseFeeConfig.baseFeeChangeDenom
-	}
-
 	return helper.WriteGenesisConfigToDisk(chainConfig, params.genesisPath)
 }
 
 func (p *genesisParams) deployContracts(
 	rewardTokenByteCode []byte,
 	polybftConfig *polybft.PolyBFTConfig,
-	chainConfig *chain.Chain,
-	burnContractAddr types.Address) (map[types.Address]*chain.GenesisAccount, error) {
+	chainConfig *chain.Chain) (map[types.Address]*chain.GenesisAccount, error) {
 	proxyToImplAddrMap := contracts.GetProxyImplementationMapping()
 	proxyAddresses := make([]types.Address, 0, len(proxyToImplAddrMap))
 
@@ -356,39 +385,37 @@ func (p *genesisParams) deployContracts(
 			address:  contracts.L2StateSenderContractV1,
 		},
 		{
-			artifact: contractsapi.ValidatorSet,
-			address:  contracts.ValidatorSetContractV1,
+			artifact: contractsapi.EpochManager,
+			address:  contracts.EpochManagerContractV1,
 		},
 		{
-			artifact: contractsapi.RewardPool,
-			address:  contracts.RewardPoolContractV1,
+			artifact: contractsapi.StakeManager,
+			address:  contracts.StakeManagerContractV1,
 		},
-	}
-
-	if !params.nativeTokenConfig.IsMintable {
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.NativeERC20,
-				address:  contracts.NativeERC20TokenContractV1,
-			})
-
-		// burn contract can be set only for non-mintable native token. If burn contract is set,
-		// default EIP1559 contract will be deployed.
-		if p.isBurnContractEnabled() {
-			genesisContracts = append(genesisContracts,
-				&contractInfo{
-					artifact: contractsapi.EIP1559Burn,
-					address:  burnContractAddr,
-				})
-
-			proxyAddresses = append(proxyAddresses, contracts.DefaultBurnContract)
-		}
-	} else {
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.NativeERC20Mintable,
-				address:  contracts.NativeERC20TokenContractV1,
-			})
+		{
+			artifact: contractsapi.RootERC20,
+			address:  contracts.ERC20Contract,
+		},
+		{
+			artifact: contractsapi.NativeERC20,
+			address:  contracts.NativeERC20TokenContractV1,
+		},
+		{
+			artifact: contractsapi.NetworkParams,
+			address:  contracts.NetworkParamsContractV1,
+		},
+		{
+			artifact: contractsapi.ForkParams,
+			address:  contracts.ForkParamsContractV1,
+		},
+		{
+			artifact: contractsapi.ChildGovernor,
+			address:  contracts.ChildGovernorContractV1,
+		},
+		{
+			artifact: contractsapi.ChildTimelock,
+			address:  contracts.ChildTimelockContractV1,
+		},
 	}
 
 	if len(params.bridgeAllowListAdmin) != 0 || len(params.bridgeBlockListAdmin) != 0 {
@@ -522,11 +549,17 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 			}
 
 			addr := types.StringToAddress(trimmedAddress)
+
+			stake, exists := p.stakeInfos[addr]
+			if !exists {
+				stake = command.DefaultStake
+			}
+
 			validators[i] = &validator.GenesisValidator{
 				MultiAddr: parts[0],
 				Address:   addr,
 				BlsKey:    trimmedBLSKey,
-				Stake:     big.NewInt(0),
+				Stake:     stake,
 			}
 		}
 
@@ -538,7 +571,7 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 		validatorsPath = path.Dir(p.genesisPath)
 	}
 
-	validators, err := ReadValidatorsByPrefix(validatorsPath, p.validatorsPrefixPath)
+	validators, err := ReadValidatorsByPrefix(validatorsPath, p.validatorsPrefixPath, p.stakeInfos)
 	if err != nil {
 		return nil, err
 	}
@@ -546,42 +579,10 @@ func (p *genesisParams) getValidatorAccounts() ([]*validator.GenesisValidator, e
 	return validators, nil
 }
 
-// validatePolyBFTParams validates params for polybft consensus
-func (p *genesisParams) validatePolyBFTParams() error {
-	if err := p.extractNativeTokenMetadata(); err != nil {
-		return err
-	}
-
-	if err := p.validateBurnContract(); err != nil {
-		return err
-	}
-
-	if err := p.validateRewardWalletAndToken(); err != nil {
-		return err
-	}
-
-	if err := p.validatePremineInfo(); err != nil {
-		return err
-	}
-
-	if p.epochSize < 2 {
-		// Epoch size must be greater than 1, so new transactions have a chance to be added to a block.
-		// Otherwise, every block would be an endblock (meaning it will not have any transactions).
-		// Check is placed here to avoid additional parsing if epochSize < 2
-		return errInvalidEpochSize
-	}
-
-	return p.validateProxyContractsAdmin()
-}
-
 // validateRewardWalletAndToken validates reward wallet flag
 func (p *genesisParams) validateRewardWalletAndToken() error {
 	if p.rewardWallet == "" {
 		return errRewardWalletNotDefined
-	}
-
-	if !p.nativeTokenConfig.IsMintable && p.rewardTokenCode == "" {
-		return errRewardTokenOnNonMintable
 	}
 
 	premineInfo, err := helper.ParsePremineInfo(p.rewardWallet)
@@ -601,64 +602,43 @@ func (p *genesisParams) validateRewardWalletAndToken() error {
 	return nil
 }
 
-// validatePremineInfo validates whether reserve account (0x0 address) is premined
-func (p *genesisParams) validatePremineInfo() error {
-	for _, premineInfo := range p.premineInfos {
-		if premineInfo.Address == types.ZeroAddress {
-			// we have premine of zero address, just return
-			return nil
-		}
-	}
-
-	return errReserveAccMustBePremined
-}
-
-// validateBlockTrackerPollInterval validates block tracker block interval
-// which can not be 0
-func (p *genesisParams) validateBlockTrackerPollInterval() error {
-	if p.blockTrackerPollInterval == 0 {
-		return helper.ErrBlockTrackerPollInterval
-	}
-
-	return nil
-}
-
-// validateBurnContract validates burn contract. If native token is mintable,
-// burn contract flag must not be set. If native token is non mintable only one burn contract
-// can be set and the specified address will be used to predeploy default EIP1559 burn contract.
-func (p *genesisParams) validateBurnContract() error {
-	if p.isBurnContractEnabled() {
-		burnContractInfo, err := parseBurnContractInfo(p.burnContract)
-		if err != nil {
-			return fmt.Errorf("invalid burn contract info provided: %w", err)
-		}
-
-		if p.nativeTokenConfig.IsMintable {
-			if burnContractInfo.Address != types.ZeroAddress {
-				return errors.New("only zero address is allowed as burn destination for mintable native token")
-			}
-		} else {
-			if burnContractInfo.Address == types.ZeroAddress {
-				return errors.New("it is not allowed to deploy burn contract to 0x0 address")
-			}
-		}
-	}
-
-	return nil
-}
-
 func (p *genesisParams) validateProxyContractsAdmin() error {
 	if strings.TrimSpace(p.proxyContractsAdmin) == "" {
-		return errors.New("proxy contracts admin address must be set")
+		return errProxyAdminNotProvided
+	}
+
+	if err := types.IsValidAddress(p.proxyContractsAdmin); err != nil {
+		return fmt.Errorf("proxy contracts admin address is not a valid address: %w", err)
 	}
 
 	proxyContractsAdminAddr := types.StringToAddress(p.proxyContractsAdmin)
 	if proxyContractsAdminAddr == types.ZeroAddress {
-		return errors.New("proxy contracts admin address must not be zero address")
+		return errProxyAdminIsZeroAddress
 	}
 
 	if proxyContractsAdminAddr == contracts.SystemCaller {
-		return errors.New("proxy contracts admin address must not be system caller address")
+		return errProxyAdminIsSystemCaller
+	}
+
+	return nil
+}
+
+func (p *genesisParams) validateBladeAdminFlag() error {
+	if strings.TrimSpace(p.bladeAdmin) == "" {
+		return errBladeAdminNotProvided
+	}
+
+	if err := types.IsValidAddress(p.bladeAdmin); err != nil {
+		return fmt.Errorf("blade admin address is not a valid address: %w", err)
+	}
+
+	bladeAdminAddr := types.StringToAddress(p.proxyContractsAdmin)
+	if bladeAdminAddr == types.ZeroAddress {
+		return errBladeAdminIsZeroAddress
+	}
+
+	if bladeAdminAddr == contracts.SystemCaller {
+		return errBladeAdminIsSystemCaller
 	}
 
 	return nil

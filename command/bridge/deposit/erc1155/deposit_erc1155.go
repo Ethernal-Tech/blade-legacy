@@ -10,7 +10,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
-	"github.com/0xPolygon/polygon-edge/command/rootchain/helper"
+	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	helperCommon "github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -183,9 +183,9 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	receivers := make([]ethgo.Address, len(dp.Receivers))
+	receivers := make([]types.Address, len(dp.Receivers))
 	for i, receiverRaw := range dp.Receivers {
-		receivers[i] = ethgo.Address(types.StringToAddress(receiverRaw))
+		receivers[i] = types.StringToAddress(receiverRaw)
 	}
 
 	// deposit tokens
@@ -245,7 +245,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // createDepositTxn encodes parameters for deposit function on rootchain predicate contract
-func createDepositTxn(sender ethgo.Address, receivers []ethgo.Address,
+func createDepositTxn(sender ethgo.Address, receivers []types.Address,
 	amounts, tokenIDs []*big.Int) (*ethgo.Transaction, error) {
 	depositBatchFn := &contractsapi.DepositBatchRootERC1155PredicateFn{
 		RootToken: types.StringToAddress(dp.TokenAddr),

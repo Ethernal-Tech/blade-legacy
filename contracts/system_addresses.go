@@ -3,10 +3,10 @@ package contracts
 import "github.com/0xPolygon/polygon-edge/types"
 
 var (
-	// ValidatorSetContract is an address of validator set proxy contract deployed to child chain
-	ValidatorSetContract = types.StringToAddress("0x101")
-	// ValidatorSetContractV1 is an address of validator set implementation contract deployed to child chain
-	ValidatorSetContractV1 = types.StringToAddress("0x1011")
+	// EpochManagerContract is an address of validator set proxy contract deployed to child chain
+	EpochManagerContract = types.StringToAddress("0x101")
+	// EpochManagerContractV1 is an address of validator set implementation contract deployed to child chain
+	EpochManagerContractV1 = types.StringToAddress("0x1011")
 	// BLSContract is an address of BLS proxy contract on the child chain
 	BLSContract = types.StringToAddress("0x102")
 	// BLSContractV1 is an address of BLS contract on the child chain
@@ -19,10 +19,6 @@ var (
 	RewardTokenContract = types.StringToAddress("0x104")
 	// RewardTokenContractV1 is an address of reward token on child chain
 	RewardTokenContractV1 = types.StringToAddress("0x1041")
-	// RewardPoolContract is an address of RewardPoolContract proxy contract on the child chain
-	RewardPoolContract = types.StringToAddress("0x105")
-	// RewardPoolContractV1 is an address of RewardPoolContract contract on the child chain
-	RewardPoolContractV1 = types.StringToAddress("0x1051")
 	// DefaultBurnContract is an address of eip1559 default proxy contract
 	DefaultBurnContract = types.StringToAddress("0x106")
 	// StateReceiverContract is an address of bridge proxy contract on the child chain
@@ -39,6 +35,10 @@ var (
 	L2StateSenderContract = types.StringToAddress("0x1002")
 	// L2StateSenderContractV1 is an address of bridge contract to the rootchain
 	L2StateSenderContractV1 = types.StringToAddress("0x10021")
+	// StakeManagerContract is an address of stake manager proxy contract on child chain
+	StakeManagerContract = types.StringToAddress("0x10022")
+	// StakeManagerContract is an address of stake manager contract on child chain
+	StakeManagerContractV1 = types.StringToAddress("0x100221")
 
 	// ChildERC20Contract is an address of bridgable ERC20 token contract on the child chain
 	ChildERC20Contract = types.StringToAddress("0x1003")
@@ -71,6 +71,25 @@ var (
 	// RootMintableERC1155PredicateContractV1 is an address of mintable ERC1155 predicate on the child chain
 	RootMintableERC1155PredicateContractV1 = types.StringToAddress("0x100b1")
 
+	// Governance contracts ===============================================================================
+
+	// ChildGovernorContract is the proxy address of main governance contract
+	ChildGovernorContract = types.StringToAddress("0x100c")
+	// ChildGovernorContract is an address of main governance contract
+	ChildGovernorContractV1 = types.StringToAddress("0x100c1")
+	// ChildTimelockContract is the proxy address of timelock contract used by the governor contract
+	ChildTimelockContract = types.StringToAddress("0x100d")
+	// ChildTimelockContract is an address of timelock contract used by the governor contract
+	ChildTimelockContractV1 = types.StringToAddress("0x100d1")
+	// NetworkParamsContract is the proxy address of NetworkParams contract which holds network config params
+	NetworkParamsContract = types.StringToAddress("0x100e")
+	// NetworkParamsContract is an address of NetworkParams contract which holds network config params
+	NetworkParamsContractV1 = types.StringToAddress("0x100e1")
+	// ForkParamsContract is an address of ForkParams contract which holds data of enabled forks
+	ForkParamsContract = types.StringToAddress("0x100f")
+	// ForkParamsContract is the proxy address of ForkParams contract which holds data of enabled forks
+	ForkParamsContractV1 = types.StringToAddress("0x100f1")
+
 	// SystemCaller is address of account, used for system calls to smart contracts
 	SystemCaller = types.StringToAddress("0xffffFFFfFFffffffffffffffFfFFFfffFFFfFFfE")
 
@@ -92,6 +111,8 @@ var (
 	AllowListBridgeAddr = types.StringToAddress("0x0200000000000000000000000000000000000004")
 	// BlockListBridgeAddr is the address of the bridge block list
 	BlockListBridgeAddr = types.StringToAddress("0x0300000000000000000000000000000000000004")
+
+	ERC20Contract = types.StringToAddress("0x2040")
 )
 
 // GetProxyImplementationMapping retrieves the addresses of proxy contracts that should be deployed unconditionally
@@ -101,8 +122,8 @@ func GetProxyImplementationMapping() map[types.Address]types.Address {
 		BLSContract:                          BLSContractV1,
 		MerkleContract:                       MerkleContractV1,
 		L2StateSenderContract:                L2StateSenderContractV1,
-		ValidatorSetContract:                 ValidatorSetContractV1,
-		RewardPoolContract:                   RewardPoolContractV1,
+		EpochManagerContract:                 EpochManagerContractV1,
+		StakeManagerContract:                 StakeManagerContractV1,
 		NativeERC20TokenContract:             NativeERC20TokenContractV1,
 		ChildERC20PredicateContract:          ChildERC20PredicateContractV1,
 		ChildERC721PredicateContract:         ChildERC721PredicateContractV1,
@@ -110,5 +131,9 @@ func GetProxyImplementationMapping() map[types.Address]types.Address {
 		RootMintableERC20PredicateContract:   RootMintableERC20PredicateContractV1,
 		RootMintableERC721PredicateContract:  RootMintableERC721PredicateContractV1,
 		RootMintableERC1155PredicateContract: RootMintableERC1155PredicateContractV1,
+		NetworkParamsContract:                NetworkParamsContractV1,
+		ForkParamsContract:                   ForkParamsContractV1,
+		ChildTimelockContract:                ChildTimelockContractV1,
+		ChildGovernorContract:                ChildGovernorContractV1,
 	}
 }

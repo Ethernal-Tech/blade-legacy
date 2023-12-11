@@ -19,11 +19,11 @@ const (
 	DefaultGenesisBaseFeeEM          = chain.GenesisBaseFeeEM
 	DefaultGenesisBaseFeeChangeDenom = chain.BaseFeeChangeDenom
 	DefaultEpochSize                 = 10
-	DefaultMinValidatorCount         = uint64(3)
+	DefaultMinValidatorCount         = uint64(4)
 )
 
 var (
-	DefaultStake                = ethgo.Ether(1e6)
+	DefaultStake                = ethgo.Ether(1000)
 	DefaultPremineBalance       = ethgo.Ether(1e6)
 	DefaultGenesisBaseFee       = chain.GenesisBaseFee
 	DefaultGenesisBaseFeeConfig = fmt.Sprintf(
