@@ -7,7 +7,7 @@ require (
 	github.com/0xPolygon/go-ibft v0.4.1-0.20230717081138-628065cf23b6
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20231202204931-b886edca635a
 	github.com/armon/go-metrics v0.4.1
-	github.com/aws/aws-sdk-go v1.46.1
+	github.com/aws/aws-sdk-go v1.48.16
 	github.com/btcsuite/btcd v0.22.1
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/docker/go-connections v0.4.0
