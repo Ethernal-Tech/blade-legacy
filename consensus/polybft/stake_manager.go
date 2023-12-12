@@ -94,9 +94,14 @@ func newStakeManager(
 		blockchain:               blockchain,
 	}
 
-	if err := sm.init(blockchain, dbTx); err != nil {
+	validatorSet, err := sm.getOrInitValidatorSet(dbTx)
+	if err != nil {
 		return nil, err
 	}
+
+	sm.logger.Debug("stake manager validator set initialized",
+		"last saved", validatorSet.BlockNumber,
+		"last updated", validatorSet.UpdatedAtBlockNumber)
 
 	return sm, nil
 }
@@ -123,39 +128,6 @@ func (s *stakeManager) PostBlock(req *PostBlockRequest) error {
 	fullValidatorSet.BlockNumber = blockNumber
 
 	return s.state.StakeStore.insertFullValidatorSet(fullValidatorSet, req.DBTx)
-}
-
-func (s *stakeManager) init(blockchain blockchainBackend, dbTx *bolt.Tx) error {
-	currentHeader := blockchain.CurrentHeader()
-	currentBlockNumber := currentHeader.Number
-
-	validatorSet, err := s.getOrInitValidatorSet(dbTx)
-	if err != nil {
-		return err
-	}
-
-	// early return if current block is already processed
-	if validatorSet.BlockNumber == currentBlockNumber {
-		return nil
-	}
-
-	// retrieve epoch needed for state
-	epochID, err := getEpochID(blockchain, currentHeader)
-	if err != nil {
-		return err
-	}
-
-	s.logger.Debug("Stake manager on post block",
-		"block", currentBlockNumber,
-		"last saved", validatorSet.BlockNumber,
-		"last updated", validatorSet.UpdatedAtBlockNumber)
-
-	// we should save new state even if number of events is zero
-	// because otherwise next time we will process more blocks
-	validatorSet.EpochID = epochID
-	validatorSet.BlockNumber = currentBlockNumber
-
-	return s.state.StakeStore.insertFullValidatorSet(validatorSet, dbTx)
 }
 
 func (s *stakeManager) getOrInitValidatorSet(dbTx *bolt.Tx) (validatorSetState, error) {
