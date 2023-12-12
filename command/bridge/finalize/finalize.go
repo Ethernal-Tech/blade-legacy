@@ -157,7 +157,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	// add to premine allocs what was premined on BladeManager
 	for addr, genesisAcc := range genesisAccounts {
 		chainConfig.Genesis.Alloc[addr] = &chain.GenesisAccount{
-			Balance: new(big.Int).Add(genesisAcc.NonStakedTokens, genesisAcc.StakedTokens),
+			Balance: new(big.Int).Add(genesisAcc.PreminedTokens, genesisAcc.StakedTokens),
 		}
 	}
 
@@ -212,7 +212,7 @@ func decodeGenesisAccounts(genesisSetRaw string) (map[types.Address]*contractsap
 			return nil, errors.New("failed to retrieve genesis account address")
 		}
 
-		nonStakedTokens, ok := rawAccount["nonStakedTokens"].(*big.Int)
+		preminedTokens, ok := rawAccount["preminedTokens"].(*big.Int)
 		if !ok {
 			return nil, errors.New("failed to retrieve genesis account non staked tokens")
 		}
@@ -228,10 +228,10 @@ func decodeGenesisAccounts(genesisSetRaw string) (map[types.Address]*contractsap
 		}
 
 		return &contractsapi.GenesisAccount{
-			Addr:            types.Address(addr),
-			NonStakedTokens: nonStakedTokens,
-			StakedTokens:    stakedTokens,
-			IsValidator:     isValidator,
+			Addr:           types.Address(addr),
+			PreminedTokens: preminedTokens,
+			StakedTokens:   stakedTokens,
+			IsValidator:    isValidator,
 		}, nil
 	}
 

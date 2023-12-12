@@ -264,14 +264,14 @@ var (
 					Addr:        genesisValidators[i].Address,
 					IsValidator: true,
 					// this is set on purpose to 0, each account must premine enough tokens to itself if token is non-mintable
-					StakedTokens:    big.NewInt(0),
-					NonStakedTokens: big.NewInt(0),
+					StakedTokens:   big.NewInt(0),
+					PreminedTokens: big.NewInt(0),
 				}
 			}
 
 			initParams := &contractsapi.InitializeBladeManagerFn{
 				NewRootERC20Predicate: config.RootERC20PredicateAddress,
-				GenesisValidators:     gvs,
+				GenesisAccounts:       gvs,
 			}
 
 			return initContract(fmt, relayer, initParams,
@@ -555,11 +555,16 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 			name:     erc1155TemplateName,
 			artifact: contractsapi.ChildERC1155,
 		},
-		{
+	}
+
+	if !consensusCfg.NativeTokenConfig.IsMintable {
+		// if token is non-mintable we will deploy BladeManager
+		// if not, we don't need it
+		allContracts = append(allContracts, &contractInfo{
 			name:     bladeManagerName,
 			artifact: contractsapi.BladeManager,
 			hasProxy: true,
-		},
+		})
 	}
 
 	allContracts = append(tokenContracts, allContracts...)

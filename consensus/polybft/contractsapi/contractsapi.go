@@ -1729,13 +1729,13 @@ func (i *InitializeEIP1559BurnFn) DecodeAbi(buf []byte) error {
 }
 
 type GenesisAccount struct {
-	Addr            types.Address `abi:"addr"`
-	NonStakedTokens *big.Int      `abi:"nonStakedTokens"`
-	StakedTokens    *big.Int      `abi:"stakedTokens"`
-	IsValidator     bool          `abi:"isValidator"`
+	Addr           types.Address `abi:"addr"`
+	PreminedTokens *big.Int      `abi:"preminedTokens"`
+	StakedTokens   *big.Int      `abi:"stakedTokens"`
+	IsValidator    bool          `abi:"isValidator"`
 }
 
-var GenesisAccountABIType = abi.MustNewType("tuple(address addr,uint256 nonStakedTokens,uint256 stakedTokens,bool isValidator)")
+var GenesisAccountABIType = abi.MustNewType("tuple(address addr,uint256 preminedTokens,uint256 stakedTokens,bool isValidator)")
 
 func (g *GenesisAccount) EncodeAbi() ([]byte, error) {
 	return GenesisAccountABIType.Encode(g)
@@ -1747,7 +1747,7 @@ func (g *GenesisAccount) DecodeAbi(buf []byte) error {
 
 type InitializeBladeManagerFn struct {
 	NewRootERC20Predicate types.Address     `abi:"newRootERC20Predicate"`
-	GenesisValidators     []*GenesisAccount `abi:"genesisValidators"`
+	GenesisAccounts       []*GenesisAccount `abi:"genesisAccounts"`
 }
 
 func (i *InitializeBladeManagerFn) Sig() []byte {
