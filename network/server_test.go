@@ -18,7 +18,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/multiformats/go-multiaddr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestConnLimit_Inbound(t *testing.T) {
@@ -765,7 +764,6 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	t.Run("should call callback", func(t *testing.T) {
-		t.Parallel()
 
 		server := setupServer(t, true)
 
@@ -785,7 +783,6 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("should not call callback after context is closed", func(t *testing.T) {
-		t.Parallel()
 
 		server := setupServer(t, true)
 
@@ -796,8 +793,6 @@ func TestSubscribe(t *testing.T) {
 		// cancel before emitting
 		cancel()
 
-		require.Error(t, ctx.Err())
-
 		server.EmitEvent(event)
 
 		_, received := waitForEvent(t, eventCh, time.Second*5)
@@ -806,7 +801,6 @@ func TestSubscribe(t *testing.T) {
 	})
 
 	t.Run("should not call callback after server closed", func(t *testing.T) {
-		t.Parallel()
 
 		server := setupServer(t, false)
 
