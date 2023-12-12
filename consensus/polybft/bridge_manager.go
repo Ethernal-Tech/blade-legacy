@@ -347,6 +347,7 @@ func (b *bridgeManager) initCheckpointManager(
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
 	log := logger.Named("checkpoint_manager")
+
 	txRelayer, err := txrelayer.NewTxRelayer(
 		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint),
 		txrelayer.WithWriter(log.StandardWriter(&hclog.StandardLoggerOptions{})))
