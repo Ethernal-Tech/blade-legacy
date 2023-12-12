@@ -215,6 +215,15 @@ func (c *TestClusterConfig) GetProxyContractsAdmin() string {
 	return proxyAdminAddr
 }
 
+func (c *TestClusterConfig) getStakeAmount(validatorIndex int) *big.Int {
+	l := len(c.StakeAmounts)
+	if l == 0 || l <= validatorIndex || validatorIndex < 0 {
+		return command.DefaultStake
+	}
+
+	return c.StakeAmounts[validatorIndex]
+}
+
 type TestCluster struct {
 	Config      *TestClusterConfig
 	Servers     []*TestServer
@@ -601,9 +610,9 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 					burnContract.BlockNumber, burnContract.Address, burnContract.DestinationAddress))
 		}
 
-		if len(cluster.Config.StakeAmounts) > 0 {
+		if tokenConfig.IsMintable && len(cluster.Config.StakeAmounts) != 0 {
 			for i, addr := range addresses {
-				args = append(args, "--stake", fmt.Sprintf("%s:%s", addr.String(), cluster.getStakeAmount(i).String()))
+				args = append(args, "--stake", fmt.Sprintf("%s:%s", addr.String(), cluster.Config.getStakeAmount(i).String()))
 			}
 		}
 
@@ -892,15 +901,6 @@ func (c *TestCluster) getOpenPort() int64 {
 	c.initialPort++
 
 	return c.initialPort
-}
-
-func (c *TestCluster) getStakeAmount(validatorIndex int) *big.Int {
-	l := len(c.Config.StakeAmounts)
-	if l == 0 || l <= validatorIndex || validatorIndex < 0 {
-		return command.DefaultStake
-	}
-
-	return c.Config.StakeAmounts[validatorIndex]
 }
 
 // runCommand executes command with given arguments

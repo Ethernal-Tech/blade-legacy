@@ -195,7 +195,7 @@ func (t *TestServer) GenerateGenesis() error {
 	blockGasLimit := strconv.FormatUint(t.Config.BlockGasLimit, 10)
 	args = append(args, "--block-gas-limit", blockGasLimit)
 
-	args = append(args, "----burn-contract", fmt.Sprintf("0:%s:%s",
+	args = append(args, "--burn-contract", fmt.Sprintf("0:%s:%s",
 		t.Config.BurnContractAddr, types.ZeroAddress))
 
 	cmd := exec.Command(resolveBinary(), args...) //nolint:gosec

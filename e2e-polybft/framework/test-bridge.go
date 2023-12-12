@@ -478,12 +478,9 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 
 	g, ctx := errgroup.WithContext(context.Background())
 
-	validatorStake := new(big.Int).Set(command.DefaultStake)
-	validatorNonStake := new(big.Int).Set(command.DefaultPremineBalance)
-	validatorNonStake = validatorNonStake.Sub(validatorNonStake, validatorStake)
-
 	// premine validators
-	for _, secret := range validatorSecrets {
+	for i, secret := range validatorSecrets {
+		i := i
 		secret := secret
 
 		g.Go(func() error {
@@ -491,6 +488,10 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
+				validatorStake := t.clusterConfig.getStakeAmount(i)
+				validatorNonStake := new(big.Int).Set(command.DefaultPremineBalance)
+				validatorNonStake = validatorNonStake.Sub(validatorNonStake, validatorStake)
+
 				if err := premineCmdArgs(secret, "", validatorNonStake, validatorStake); err != nil {
 					return fmt.Errorf("failed to do premine of native root token for genesis validator: %w",
 						err)

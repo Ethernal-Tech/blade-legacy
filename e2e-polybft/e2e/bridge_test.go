@@ -1382,7 +1382,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 		currentEpoch := currentExtra.Checkpoint.EpochNumber
 
-		require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute,
+		require.NoError(t, waitForRootchainEpoch(currentEpoch+1, 3*time.Minute,
 			rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
