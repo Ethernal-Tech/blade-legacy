@@ -33,6 +33,8 @@ func (sp *stakeParams) validateFlags() (err error) {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
+	sp.stakeTokenAddr = types.StringToAddress(params.stakeToken)
+
 	return validatorHelper.ValidateSecretFlags(sp.accountDir, sp.accountConfig)
 }
 
