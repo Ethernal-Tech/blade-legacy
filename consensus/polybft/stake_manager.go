@@ -150,51 +150,6 @@ func (s *stakeManager) init(blockchain blockchainBackend, dbTx *bolt.Tx) error {
 		"last saved", validatorSet.BlockNumber,
 		"last updated", validatorSet.UpdatedAtBlockNumber)
 
-	// we will use eventsGetter to update the fullValidatorSet if
-	// for any reason, we don't have the correct state
-	eventsGetter := &eventsGetter[contractsapi.EventAbi]{
-		receiptsGetter: receiptsGetter{
-			blockchain: blockchain,
-		},
-		isValidLogFn: func(l *types.Log) bool {
-			return l.Address == s.stakeManagerContractAddr
-		},
-		parseEventFn: func(h *types.Header, l *ethgo.Log) (contractsapi.EventAbi, bool, error) {
-			var (
-				stakeAddedEvent   contractsapi.StakeAddedEvent
-				stakeRemovedEvent contractsapi.StakeRemovedEvent
-			)
-
-			switch l.Topics[0] {
-			case stakeAddedEvent.Sig():
-				doesMatch, err := stakeAddedEvent.ParseLog(l)
-				if err != nil {
-					return nil, false, err
-				}
-
-				return &stakeAddedEvent, doesMatch, err
-			case stakeRemovedEvent.Sig():
-				doesMatch, err := stakeRemovedEvent.ParseLog(l)
-				if err != nil {
-					return nil, false, err
-				}
-
-				return &stakeRemovedEvent, doesMatch, err
-			default:
-				return nil, false, nil
-			}
-		},
-	}
-
-	stakeEvents, err := eventsGetter.getEventsFromBlocksRange(validatorSet.BlockNumber+1, currentBlockNumber)
-	if err != nil {
-		return err
-	}
-
-	if err := s.updateWithReceipts(&validatorSet, stakeEvents, currentBlockNumber); err != nil {
-		return err
-	}
-
 	// we should save new state even if number of events is zero
 	// because otherwise next time we will process more blocks
 	validatorSet.EpochID = epochID
