@@ -33,7 +33,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	}
 
 	headers := []*types.Header{
-		{Number: 2}, {Number: 3}, {Number: 4}, {Number: 5}, {Number: 5},
+		{Number: 2}, {Number: 3}, {Number: 4}, {Number: 5},
 	}
 
 	proofMock := &mockStateSyncProofRetriever{
@@ -144,9 +144,9 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	require.True(t, events[0].SentStatus && events[1].SentStatus && events[2].SentStatus)
 
 	// post 5th block
-	require.NoError(t, stateSyncRelayer.ProcessLog(headers[4], convertLog(resultLogs[2]), nil))
-	require.NoError(t, stateSyncRelayer.ProcessLog(headers[4], convertLog(resultLogs[3]), nil))
-	require.NoError(t, stateSyncRelayer.ProcessLog(headers[4], convertLog(resultLogs[4]), nil))
+	require.NoError(t, stateSyncRelayer.ProcessLog(headers[3], convertLog(resultLogs[2]), nil))
+	require.NoError(t, stateSyncRelayer.ProcessLog(headers[3], convertLog(resultLogs[3]), nil))
+	require.NoError(t, stateSyncRelayer.ProcessLog(headers[3], convertLog(resultLogs[4]), nil))
 	require.NoError(t, stateSyncRelayer.PostBlock(&PostBlockRequest{}))
 
 	time.Sleep(time.Second * 2) // wait for some time

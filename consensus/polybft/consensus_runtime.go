@@ -372,8 +372,6 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	c.epoch = epoch
 	c.lastBuiltBlock = fullBlock.Block.Header
 
-	c.bridgeManager.PostBlockAsync(postBlock)
-
 	endTime := time.Now().UTC()
 
 	c.logger.Debug("OnBlockInserted finished", "elapsedTime", endTime.Sub(startTime),
@@ -413,7 +411,7 @@ func (c *consensusRuntime) FSM() error {
 
 	valSet := validator.NewValidatorSet(epoch.Validators, c.logger)
 
-	exitRootHash, err := c.bridgeManager.BuildEventRoot(epoch.Number)
+	exitRootHash, err := c.bridgeManager.BuildExitEventRoot(epoch.Number)
 	if err != nil {
 		return fmt.Errorf("could not build exit root hash for fsm: %w", err)
 	}

@@ -108,8 +108,12 @@ func (r *relayerEventsProcessor) processEvents() {
 		return
 	}
 
-	removedEventIDs := []uint64{}
-	sendingEvents := []*RelayerEventMetaData{}
+	if len(events) == 0 {
+		return
+	}
+
+	removedEventIDs := make([]uint64, 0, len(events))
+	sendingEvents := make([]*RelayerEventMetaData, 0, len(events))
 	currentBlockNumber := r.blockchain.CurrentHeader().Number
 
 	// check already processed events
@@ -136,10 +140,10 @@ func (r *relayerEventsProcessor) processEvents() {
 
 	// update state only if needed
 	if len(sendingEvents)+len(removedEventIDs) > 0 {
-		r.logger.Debug("sending relayer events", "events", sendingEvents, "removed", removedEventIDs)
+		r.logger.Debug("updating relayer events storage", "events", sendingEvents, "removed", removedEventIDs)
 
 		if err := r.state.UpdateRelayerEvents(sendingEvents, removedEventIDs, nil); err != nil {
-			r.logger.Error("updating relayer events failed",
+			r.logger.Error("updating relayer events storage failed",
 				"events", sendingEvents, "removed", removedEventIDs, "err", err)
 
 			return
@@ -151,7 +155,7 @@ func (r *relayerEventsProcessor) processEvents() {
 		if err := r.sendTx(sendingEvents); err != nil {
 			r.logger.Error("failed to send relayer tx", "block", currentBlockNumber, "events", sendingEvents, "err", err)
 		} else {
-			r.logger.Debug("tx has been successfully sent", "block", currentBlockNumber, "events", sendingEvents)
+			r.logger.Debug("relayer tx has been successfully sent", "block", currentBlockNumber, "events", sendingEvents)
 		}
 	}
 }
@@ -164,7 +168,7 @@ type BridgeManager interface {
 	PostBlockAsync(req *PostBlockRequest)
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
-	BuildEventRoot(epoch uint64) (types.Hash, error)
+	BuildExitEventRoot(epoch uint64) (types.Hash, error)
 	GenerateProof(eventID uint64, pType proofType) (types.Proof, error)
 	Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
 }
@@ -178,7 +182,7 @@ func (d *dummyBridgeManager) PostBlockAsync(req *PostBlockRequest)  {}
 func (d *dummyBridgeManager) AddLog(log *ethgo.Log) error           { return nil }
 func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error { return nil }
 func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error { return nil }
-func (d *dummyBridgeManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
+func (d *dummyBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
 func (d *dummyBridgeManager) Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error) {
@@ -263,20 +267,22 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 		return fmt.Errorf("failed to execute post block in exit event relayer. Err: %w", err)
 	}
 
+	b.checkpointManager.PostBlock(req)
+
 	return nil
 }
 
 // PostEpoch is a function executed on epoch ending / start of new epoch
 func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
 	if err := b.stateSyncManager.PostEpoch(req); err != nil {
-		return fmt.Errorf("failed to execute post epoch in state sync manager. Err: %w", err)
+		return fmt.Errorf("failed to execute post epoch in state sync manager. Error: %w", err)
 	}
 
 	return nil
 }
 
-// BuildEventRoot builds exit event root for given epoch
-func (b *bridgeManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
+// BuildExitEventRoot builds exit event root for given epoch
+func (b *bridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return b.checkpointManager.BuildEventRoot(epoch)
 }
 
@@ -340,9 +346,10 @@ func (b *bridgeManager) initCheckpointManager(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
+	log := logger.Named("checkpoint_manager")
 	txRelayer, err := txrelayer.NewTxRelayer(
 		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint),
-		txrelayer.WithWriter(logger.StandardWriter(&hclog.StandardLoggerOptions{})))
+		txrelayer.WithWriter(log.StandardWriter(&hclog.StandardLoggerOptions{})))
 	if err != nil {
 		return err
 	}
@@ -353,7 +360,7 @@ func (b *bridgeManager) initCheckpointManager(
 		txRelayer,
 		runtimeConfig.blockchain,
 		runtimeConfig.polybftBackend,
-		logger.Named("checkpoint_manager"),
+		log,
 		runtimeConfig.State)
 
 	eventProvider.Subscribe(b.checkpointManager)
@@ -428,9 +435,8 @@ func (b *bridgeManager) initExitRelayer(
 	return b.exitEventRelayer.Init()
 }
 
-// initTracker starts a new event tracker (to receive new state sync events)
-func (b *bridgeManager) initTracker(
-	runtimeConfig *runtimeConfig) error {
+// initTracker starts a new event tracker (to receive bridge events)
+func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) error {
 	store, err := store.NewBoltDBEventTrackerStore(path.Join(runtimeConfig.DataDir, "/bridge.db"))
 	if err != nil {
 		return err
@@ -475,14 +481,4 @@ func (b *bridgeManager) AddLog(eventLog *ethgo.Log) error {
 
 		return nil
 	}
-}
-
-// CheckpointManager returns the checkpoint manager instance
-func (b *bridgeManager) CheckpointManager() CheckpointManager {
-	return b.checkpointManager
-}
-
-// StateSyncManager returns the state sync manager instance
-func (b *bridgeManager) StateSyncManager() StateSyncManager {
-	return b.stateSyncManager
 }
