@@ -96,7 +96,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 
 	var (
 		rewardTokenByteCode []byte
-		rewardTokenAddr     = p.stakeTokenAddr
+		rewardTokenAddr     = contracts.NativeERC20TokenContract
 	)
 
 	if p.rewardTokenCode == "" {
@@ -193,7 +193,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 			NetworkParamsAddr: contracts.NetworkParamsContract,
 			ForkParamsAddr:    contracts.ForkParamsContract,
 		},
-		StakeTokenAddr: types.StringToAddress(params.stakeToken),
+		StakeTokenAddr: params.stakeTokenAddr,
 	}
 
 	enabledForks := chain.AllForksEnabled.Copy()
