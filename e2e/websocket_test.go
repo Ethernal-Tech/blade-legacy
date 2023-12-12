@@ -4,8 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"math/big"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/e2e/framework"
@@ -16,20 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/umbracle/ethgo"
 )
-
-func init() {
-	wd, err := os.Getwd()
-	if err != nil {
-		return
-	}
-
-	parent := filepath.Dir(wd)
-	wd = filepath.Join(parent, "../artifacts/polygon-edge")
-	os.Setenv("EDGE_BINARY", wd)
-	os.Setenv("E2E_TESTS", "true")
-	os.Setenv("E2E_LOGS", "true")
-	os.Setenv("E2E_LOG_LEVEL", "debug")
-}
 
 type testWSRequest struct {
 	JSONRPC string   `json:"jsonrpc"`
