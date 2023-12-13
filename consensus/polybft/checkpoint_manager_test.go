@@ -342,7 +342,7 @@ func TestCheckpointManager_BuildEventRoot(t *testing.T) {
 
 		hash, err := checkpointManager.BuildEventRoot(1)
 		require.NoError(t, err)
-		require.Equal(t, tree.Hash(), hash)
+		require.Equal(t, tree.Hash(), merkle.Hash(hash))
 	})
 
 	t.Run("Get exit event root hash - no events", func(t *testing.T) {
@@ -350,7 +350,7 @@ func TestCheckpointManager_BuildEventRoot(t *testing.T) {
 
 		hash, err := checkpointManager.BuildEventRoot(2)
 		require.NoError(t, err)
-		require.Equal(t, types.Hash{}, hash)
+		require.Equal(t, types.Hash{}, types.Hash(hash))
 	})
 }
 

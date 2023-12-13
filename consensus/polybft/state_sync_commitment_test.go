@@ -98,7 +98,7 @@ func TestCommitmentMessage_VerifyProof(t *testing.T) {
 		require.Equal(t, stateSync.Sender, executionStateSync.Obj.Sender)
 		require.Equal(t, stateSync.Receiver, executionStateSync.Obj.Receiver)
 		require.Equal(t, stateSync.Data, executionStateSync.Obj.Data)
-		require.Equal(t, proof, executionStateSync.Proof)
+		require.Equal(t, proof, types.FromTypesToMerkleHash(executionStateSync.Proof))
 
 		err = commitmentSigned.VerifyStateSyncProof(executionStateSync.Proof,
 			(*contractsapi.StateSyncedEvent)(executionStateSync.Obj))
