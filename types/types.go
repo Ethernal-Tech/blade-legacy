@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
+	"github.com/Ethernal-Tech/merkle-tree"
 )
 
 const (
@@ -145,6 +146,26 @@ func StringToBytes(str string) []byte {
 	b, _ := hex.DecodeString(str)
 
 	return b
+}
+
+// FromTypesToMerkleHash fills array of merkle.Hash from array types.Hash
+func FromTypesToMerkleHash(hashes []Hash) []merkle.Hash {
+	var merkleHashes []merkle.Hash
+	for _, hash := range hashes {
+		merkleHashes = append(merkleHashes, merkle.Hash(hash))
+	}
+
+	return merkleHashes
+}
+
+// FromTypesToMerkleHash fills array of types.Hash from array merkle.Hash
+func FromMerkleToTypesHash(merkleHashes []merkle.Hash) []Hash {
+	var hashes []Hash
+	for _, merkleHash := range merkleHashes {
+		hashes = append(hashes, Hash(merkleHash))
+	}
+
+	return hashes
 }
 
 // IsValidAddress checks if provided string is a valid Ethereum address
