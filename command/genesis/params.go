@@ -56,6 +56,7 @@ var (
 	errRewardWalletNotDefined   = errors.New("reward wallet address must be defined")
 	errRewardWalletZero         = errors.New("reward wallet address must not be zero address")
 	errInvalidVotingPeriod      = errors.New("voting period can not be zero")
+	errStakeTokenIsZeroAddress  = errors.New("stake token address must not be zero address")
 )
 
 type genesisParams struct {
@@ -191,7 +192,15 @@ func (p *genesisParams) validateFlags() error {
 		}
 	}
 
+	if err := types.IsValidAddress(params.stakeToken); err != nil {
+		return fmt.Errorf("stake token address is not a valid address: %w", err)
+	}
+
 	params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
+
+	if params.stakeTokenAddr == types.ZeroAddress {
+		return errStakeTokenIsZeroAddress
+	}
 
 	// Validate min and max validators number
 	return command.ValidateMinMaxValidatorsNumber(p.minNumValidators, p.maxNumValidators)

@@ -2,6 +2,7 @@ package staking
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -23,6 +24,8 @@ type stakeParams struct {
 	stakeTokenAddr types.Address
 }
 
+var errStakeTokenIsZeroAddress = errors.New("stake token address must not be zero address")
+
 func (sp *stakeParams) validateFlags() (err error) {
 	if sp.amountValue, err = helper.ParseAmount(sp.amount); err != nil {
 		return err
@@ -33,7 +36,15 @@ func (sp *stakeParams) validateFlags() (err error) {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
-	sp.stakeTokenAddr = types.StringToAddress(params.stakeToken)
+	if err := types.IsValidAddress(sp.stakeToken); err != nil {
+		return fmt.Errorf("stake token address is not a valid address: %w", err)
+	}
+
+	sp.stakeTokenAddr = types.StringToAddress(sp.stakeToken)
+
+	if sp.stakeTokenAddr == types.ZeroAddress {
+		return errStakeTokenIsZeroAddress
+	}
 
 	return validatorHelper.ValidateSecretFlags(sp.accountDir, sp.accountConfig)
 }

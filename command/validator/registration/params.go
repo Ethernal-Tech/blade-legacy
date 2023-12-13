@@ -2,6 +2,7 @@ package registration
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"math/big"
 
@@ -22,6 +23,8 @@ type registerParams struct {
 	stakeTokenAddr types.Address
 }
 
+var errStakeTokenIsZeroAddress = errors.New("stake token address must not be zero address")
+
 func (rp *registerParams) validateFlags() (err error) {
 	if rp.amountValue, err = common.ParseUint256orHex(&rp.amount); err != nil {
 		return err
@@ -31,7 +34,15 @@ func (rp *registerParams) validateFlags() (err error) {
 		return fmt.Errorf("provided value (%d) is less than zero", rp.amountValue)
 	}
 
+	if err := types.IsValidAddress(params.stakeToken); err != nil {
+		return fmt.Errorf("stake token address is not a valid address: %w", err)
+	}
+
 	params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
+
+	if params.stakeTokenAddr == types.ZeroAddress {
+		return errStakeTokenIsZeroAddress
+	}
 
 	// validate jsonrpc address
 	_, err = helper.ParseJSONRPCAddress(rp.jsonRPC)
