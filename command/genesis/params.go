@@ -195,7 +195,6 @@ func (p *genesisParams) validateFlags() error {
 		}
 
 		params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
-
 	}
 
 	// Validate validatorsPath only if validators information were not provided via CLI flag
