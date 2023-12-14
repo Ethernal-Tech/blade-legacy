@@ -350,7 +350,7 @@ func TestCheckpointManager_BuildEventRoot(t *testing.T) {
 
 		hash, err := checkpointManager.BuildEventRoot(2)
 		require.NoError(t, err)
-		require.Equal(t, types.Hash{}, types.Hash(hash))
+		require.Equal(t, types.Hash{}, hash)
 	})
 }
 
