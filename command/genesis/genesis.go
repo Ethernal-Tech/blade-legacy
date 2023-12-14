@@ -199,7 +199,7 @@ func setFlags(cmd *cobra.Command) {
 			nativeTokenConfigFlag,
 			"",
 			"native token configuration, provided in the following format: "+
-				"<name:symbol:decimals count>",
+				"<name:symbol:decimals count:is minted on local chain>",
 		)
 
 		cmd.Flags().StringVar(
@@ -378,7 +378,7 @@ func setFlags(cmd *cobra.Command) {
 	}
 }
 
-func preRunCommand(cmd *cobra.Command, _ []string) error {
+func preRunCommand(_ *cobra.Command, _ []string) error {
 	return params.validateFlags()
 }
 
