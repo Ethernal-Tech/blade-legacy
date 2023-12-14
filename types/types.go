@@ -187,7 +187,7 @@ func IsValidAddress(address string, zeroAddressAllowed bool) error {
 	}
 
 	if addr := StringToAddress(address); addr == ZeroAddress && !zeroAddressAllowed {
-		return fmt.Errorf("address can't be zeroAddress")
+		return errors.New("zero address is not allowed")
 	}
 
 	return nil
