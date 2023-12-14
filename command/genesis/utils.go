@@ -108,7 +108,7 @@ func parseBurnContractInfo(burnContractInfoRaw string) (*polybft.BurnContractInf
 	}
 
 	contractAddress := burnContractParts[1]
-	if err = types.IsValidAddress(contractAddress); err != nil {
+	if err = types.IsValidAddress(contractAddress, true); err != nil {
 		return nil, fmt.Errorf("failed to parse contract address %s: %w", contractAddress, err)
 	}
 
@@ -121,7 +121,7 @@ func parseBurnContractInfo(burnContractInfoRaw string) (*polybft.BurnContractInf
 	}
 
 	destinationAddress := burnContractParts[2]
-	if err = types.IsValidAddress(destinationAddress); err != nil {
+	if err = types.IsValidAddress(destinationAddress, true); err != nil {
 		return nil, fmt.Errorf("failed to parse burn destination address %s: %w", destinationAddress, err)
 	}
 

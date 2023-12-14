@@ -104,7 +104,7 @@ func TestIsValidAddress(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		err := IsValidAddress(c.address)
+		err := IsValidAddress(c.address, true)
 		if c.isValid {
 			require.NoError(t, err)
 		} else {

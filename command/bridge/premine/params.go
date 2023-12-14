@@ -2,7 +2,6 @@ package premine
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -34,28 +33,16 @@ type premineParams struct {
 }
 
 func (p *premineParams) validateFlags() (err error) {
-	if err := types.IsValidAddress(p.nativeTokenRoot); err != nil {
+	if err := types.IsValidAddress(p.nativeTokenRoot, false); err != nil {
 		return fmt.Errorf("invalid erc20 token address is provided: %w", err)
 	}
 
-	if types.StringToAddress(p.nativeTokenRoot) == types.ZeroAddress {
-		return errors.New("native erc20 token address must be non-zero")
-	}
-
-	if err := types.IsValidAddress(p.rootERC20Predicate); err != nil {
+	if err := types.IsValidAddress(p.rootERC20Predicate, false); err != nil {
 		return fmt.Errorf("invalid root erc20 predicate address is provided: %w", err)
 	}
 
-	if types.StringToAddress(p.rootERC20Predicate) == types.ZeroAddress {
-		return errors.New("root erc20 predicate address must be non-zero")
-	}
-
-	if err := types.IsValidAddress(p.bladeManager); err != nil {
+	if err := types.IsValidAddress(p.bladeManager, false); err != nil {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
-	}
-
-	if types.StringToAddress(p.bladeManager) == types.ZeroAddress {
-		return errors.New("blade manager address must be non-zero")
 	}
 
 	if p.nonStakedValue, err = common.ParseUint256orHex(&p.premineAmount); err != nil {

@@ -1,7 +1,6 @@
 package finalize
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
@@ -24,12 +23,8 @@ func (fp *finalizeParams) validateFlags() error {
 		return validatorHelper.ValidateSecretFlags(fp.accountDir, fp.accountConfig)
 	}
 
-	if err := types.IsValidAddress(fp.bladeManager); err != nil {
+	if err := types.IsValidAddress(fp.bladeManager, false); err != nil {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
-	}
-
-	if types.StringToAddress(fp.bladeManager) == types.ZeroAddress {
-		return errors.New("blade manager must be non-zero address")
 	}
 
 	if _, err := os.Stat(fp.genesisPath); err != nil {

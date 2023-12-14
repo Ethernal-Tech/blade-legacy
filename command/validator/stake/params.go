@@ -36,15 +36,11 @@ func (sp *stakeParams) validateFlags() (err error) {
 		return fmt.Errorf("failed to parse json rpc address. Error: %w", err)
 	}
 
-	if err := types.IsValidAddress(sp.stakeToken); err != nil {
+	if err := types.IsValidAddress(sp.stakeToken, false); err != nil {
 		return fmt.Errorf("stake token address is not a valid address: %w", err)
 	}
 
 	sp.stakeTokenAddr = types.StringToAddress(sp.stakeToken)
-
-	if sp.stakeTokenAddr == types.ZeroAddress {
-		return errStakeTokenIsZeroAddress
-	}
 
 	return validatorHelper.ValidateSecretFlags(sp.accountDir, sp.accountConfig)
 }

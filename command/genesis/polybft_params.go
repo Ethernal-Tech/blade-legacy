@@ -659,14 +659,11 @@ func (p *genesisParams) validateProxyContractsAdmin() error {
 		return errProxyAdminNotProvided
 	}
 
-	if err := types.IsValidAddress(p.proxyContractsAdmin); err != nil {
+	if err := types.IsValidAddress(p.proxyContractsAdmin, false); err != nil {
 		return fmt.Errorf("proxy contracts admin address is not a valid address: %w", err)
 	}
 
 	proxyContractsAdminAddr := types.StringToAddress(p.proxyContractsAdmin)
-	if proxyContractsAdminAddr == types.ZeroAddress {
-		return errProxyAdminIsZeroAddress
-	}
 
 	if proxyContractsAdminAddr == contracts.SystemCaller {
 		return errProxyAdminIsSystemCaller
@@ -680,14 +677,11 @@ func (p *genesisParams) validateBladeAdminFlag() error {
 		return errBladeAdminNotProvided
 	}
 
-	if err := types.IsValidAddress(p.bladeAdmin); err != nil {
+	if err := types.IsValidAddress(p.bladeAdmin, false); err != nil {
 		return fmt.Errorf("blade admin address is not a valid address: %w", err)
 	}
 
 	bladeAdminAddr := types.StringToAddress(p.proxyContractsAdmin)
-	if bladeAdminAddr == types.ZeroAddress {
-		return errBladeAdminIsZeroAddress
-	}
 
 	if bladeAdminAddr == contracts.SystemCaller {
 		return errBladeAdminIsSystemCaller

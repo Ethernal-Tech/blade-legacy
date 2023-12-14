@@ -38,7 +38,7 @@ func (fp *fundParams) validateFlags() error {
 	}
 
 	for _, addr := range fp.addresses {
-		if err := types.IsValidAddress(addr); err != nil {
+		if err := types.IsValidAddress(addr, true); err != nil {
 			return err
 		}
 	}
