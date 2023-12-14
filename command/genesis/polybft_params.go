@@ -82,16 +82,6 @@ type contractInfo struct {
 
 // generateChainConfig creates and persists polybft chain configuration to the provided file path
 func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
-	if err := types.IsValidAddress(params.stakeToken); err != nil {
-		return fmt.Errorf("stake token address is not a valid address: %w", err)
-	}
-
-	params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
-
-	if params.stakeTokenAddr == types.ZeroAddress {
-		return errStakeTokenIsZeroAddress
-	}
-
 	// populate premine balance map
 	premineBalances := make(map[types.Address]*helper.PremineInfo, len(p.premine))
 
