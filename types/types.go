@@ -150,7 +150,7 @@ func StringToBytes(str string) []byte {
 
 // FromTypesToMerkleHash fills array of merkle.Hash from array types.Hash
 func FromTypesToMerkleHash(hashes []Hash) []merkle.Hash {
-	var merkleHashes []merkle.Hash //nolint
+	merkleHashes := make([]merkle.Hash, 0, len(hashes))
 	for _, hash := range hashes {
 		merkleHashes = append(merkleHashes, merkle.Hash(hash))
 	}
@@ -158,9 +158,9 @@ func FromTypesToMerkleHash(hashes []Hash) []merkle.Hash {
 	return merkleHashes
 }
 
-// FromTypesToMerkleHash fills array of types.Hash from array merkle.Hash
+// FromMerkleToTypesHash fills array of types.Hash from array merkle.Hash
 func FromMerkleToTypesHash(merkleHashes []merkle.Hash) []Hash {
-	var hashes []Hash //nolint
+	hashes := make([]Hash, 0, len(merkleHashes))
 	for _, merkleHash := range merkleHashes {
 		hashes = append(hashes, Hash(merkleHash))
 	}
