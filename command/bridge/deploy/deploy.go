@@ -165,7 +165,7 @@ var (
 				NewExitHelper:          config.ExitHelperAddress,
 				NewChildERC20Predicate: contracts.ChildERC20PredicateContract,
 				NewChildTokenTemplate:  contracts.ChildERC20Contract,
-				// map root native token address should be non-zero only if native token is non-mintable on a childchain
+				// root native token address should be non-zero only if native token is non-mintable on a childchain
 				NewNativeTokenRoot: config.RootNativeERC20Address,
 			}
 
@@ -319,7 +319,7 @@ func GetCommand() *cobra.Command {
 		&params.rootERC20TokenAddr,
 		erc20AddrFlag,
 		"",
-		"existing root chain root native token address",
+		"existing root native erc20 token address, that originates from a rootchain",
 	)
 
 	cmd.Flags().BoolVar(

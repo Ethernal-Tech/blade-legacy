@@ -67,7 +67,7 @@ func setFlags(cmd *cobra.Command) {
 		[]string{},
 		fmt.Sprintf(
 			"the staked accounts and balances (format: <address>[:<stake>]). "+
-				"Default staked balance if token is not mintable: %d",
+				"Default staked balance if stake is minted on the local chain: %d",
 			command.DefaultStake,
 		),
 	)

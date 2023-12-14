@@ -1,10 +1,10 @@
 package finalize
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
-	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -24,12 +24,12 @@ func (fp *finalizeParams) validateFlags() error {
 		return validatorHelper.ValidateSecretFlags(fp.accountDir, fp.accountConfig)
 	}
 
-	if fp.bladeManager == "" {
-		return bridgeHelper.ErrMandatoryBladeManagerAddr
-	}
-
 	if err := types.IsValidAddress(fp.bladeManager); err != nil {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
+	}
+
+	if types.StringToAddress(fp.bladeManager) == types.ZeroAddress {
+		return errors.New("blade manager must be non-zero address")
 	}
 
 	if _, err := os.Stat(fp.genesisPath); err != nil {

@@ -6,18 +6,15 @@ import (
 	"fmt"
 	"math/big"
 
-	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-var errMandatoryRootPredicateAddr = errors.New("root erc20 predicate address not defined")
-
 const (
-	nonStakedAmountFlag    = "non-staked-amount"
-	stakedAmountFlag       = "staked-amount"
+	premineAmountFlag      = "premine-amount"
+	stakedAmountFlag       = "stake-amount"
 	rootERC20PredicateFlag = "root-erc20-predicate"
 )
 
@@ -30,38 +27,38 @@ type premineParams struct {
 	nativeTokenRoot    string
 	jsonRPC            string
 	stakedAmount       string
-	nonStakedAmount    string
+	premineAmount      string
 
 	nonStakedValue *big.Int
 	stakedValue    *big.Int
 }
 
 func (p *premineParams) validateFlags() (err error) {
-	if p.nativeTokenRoot == "" {
-		return bridgeHelper.ErrMandatoryERC20Token
-	}
-
 	if err := types.IsValidAddress(p.nativeTokenRoot); err != nil {
 		return fmt.Errorf("invalid erc20 token address is provided: %w", err)
 	}
 
-	if p.rootERC20Predicate == "" {
-		return errMandatoryRootPredicateAddr
+	if types.StringToAddress(p.nativeTokenRoot) == types.ZeroAddress {
+		return errors.New("native erc20 token address must be non-zero")
 	}
 
 	if err := types.IsValidAddress(p.rootERC20Predicate); err != nil {
 		return fmt.Errorf("invalid root erc20 predicate address is provided: %w", err)
 	}
 
-	if p.bladeManager == "" {
-		return bridgeHelper.ErrMandatoryBladeManagerAddr
+	if types.StringToAddress(p.rootERC20Predicate) == types.ZeroAddress {
+		return errors.New("root erc20 predicate address must be non-zero")
 	}
 
 	if err := types.IsValidAddress(p.bladeManager); err != nil {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
 	}
 
-	if p.nonStakedValue, err = common.ParseUint256orHex(&p.nonStakedAmount); err != nil {
+	if types.StringToAddress(p.bladeManager) == types.ZeroAddress {
+		return errors.New("blade manager address must be non-zero")
+	}
+
+	if p.nonStakedValue, err = common.ParseUint256orHex(&p.premineAmount); err != nil {
 		return err
 	}
 

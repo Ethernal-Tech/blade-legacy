@@ -79,8 +79,8 @@ func setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&params.nonStakedAmount,
-		nonStakedAmountFlag,
+		&params.premineAmount,
+		premineAmountFlag,
 		"",
 		"amount to premine as non staked balance",
 	)
@@ -95,6 +95,9 @@ func setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
+	cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
+	cmd.MarkFlagRequired(rootERC20PredicateFlag)
+	cmd.MarkFlagRequired(bridgeHelper.Erc20TokenFlag)
 }
 
 func runPreRun(cmd *cobra.Command, _ []string) error {

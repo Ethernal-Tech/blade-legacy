@@ -455,13 +455,13 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			" token for genesis validators: %w", err)
 	}
 
-	premineCmdArgs := func(secret, key string, nonStakedAmount, stakedAmount *big.Int) error {
+	premineCmdArgs := func(secret, key string, premineAmount, stakedAmount *big.Int) error {
 		args := []string{
 			"bridge",
 			"premine",
 			"--jsonrpc", t.JSONRPCAddr(),
-			"--non-staked-amount", nonStakedAmount.String(),
-			"--staked-amount", stakedAmount.String(),
+			"--premine-amount", premineAmount.String(),
+			"--stake-amount", stakedAmount.String(),
 			"--erc20-token", polybftConfig.Bridge.RootNativeERC20Addr.String(),
 			"--root-erc20-predicate", polybftConfig.Bridge.RootERC20PredicateAddr.String(),
 			"--blade-manager", polybftConfig.Bridge.BladeManagerAddr.String(),
