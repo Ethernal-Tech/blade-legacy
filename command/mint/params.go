@@ -11,11 +11,11 @@ import (
 )
 
 type mintParams struct {
-	addresses          []string
-	amounts            []string
-	tokenAddr          string
-	deployerPrivateKey string
-	jsonRPCAddress     string
+	addresses        []string
+	amounts          []string
+	tokenAddr        string
+	minterPrivateKey string
+	jsonRPCAddress   string
 
 	amountValues []*big.Int
 }

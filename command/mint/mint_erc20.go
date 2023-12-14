@@ -41,31 +41,31 @@ func preRunCommand(cmd *cobra.Command, _ []string) error {
 
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&params.deployerPrivateKey,
+		&params.minterPrivateKey,
 		polybftsecrets.PrivateKeyFlag,
 		"",
-		"private key of the token deployer (minter)",
+		"the minter private key",
 	)
 
 	cmd.Flags().StringSliceVar(
 		&params.addresses,
 		bridgeHelper.AddressesFlag,
 		nil,
-		"addresses to which tokens should be minted",
+		"receivers addresses",
 	)
 
 	cmd.Flags().StringSliceVar(
 		&params.amounts,
 		bridgeHelper.AmountsFlag,
 		nil,
-		"token amounts which should be minted to given addresses",
+		"erc20 token amounts",
 	)
 
 	cmd.Flags().StringVar(
 		&params.tokenAddr,
 		bridgeHelper.Erc20TokenFlag,
 		"",
-		"address of the erc20 token to be minted",
+		"erc20 token address",
 	)
 }
 
@@ -80,7 +80,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	deployerKey, err := bridgeHelper.DecodePrivateKey(params.deployerPrivateKey)
+	deployerKey, err := bridgeHelper.DecodePrivateKey(params.minterPrivateKey)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize deployer private key: %w", err))
 
