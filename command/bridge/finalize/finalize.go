@@ -86,7 +86,7 @@ func setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
-	cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
+	_ = cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
 
 	helper.RegisterJSONRPCFlag(cmd)
 }

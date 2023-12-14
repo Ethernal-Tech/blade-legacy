@@ -95,9 +95,9 @@ func setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
-	cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
-	cmd.MarkFlagRequired(rootERC20PredicateFlag)
-	cmd.MarkFlagRequired(bridgeHelper.Erc20TokenFlag)
+	_ = cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
+	_ = cmd.MarkFlagRequired(rootERC20PredicateFlag)
+	_ = cmd.MarkFlagRequired(bridgeHelper.Erc20TokenFlag)
 }
 
 func runPreRun(cmd *cobra.Command, _ []string) error {

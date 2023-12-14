@@ -68,7 +68,7 @@ func setFlags(cmd *cobra.Command) {
 		"erc20 token address",
 	)
 
-	cmd.MarkFlagRequired(bridgeHelper.Erc20TokenFlag)
+	_ = cmd.MarkFlagRequired(bridgeHelper.Erc20TokenFlag)
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
