@@ -63,7 +63,7 @@ func setFlags(cmd *cobra.Command) {
 		&params.stakeToken,
 		polybftsecrets.StakeTokenFlag,
 		contracts.NativeERC20TokenContract.String(),
-		polybftsecrets.StakeTokenDesc,
+		polybftsecrets.StakeTokenFlagDesc,
 	)
 
 	helper.RegisterJSONRPCFlag(cmd)
