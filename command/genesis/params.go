@@ -191,16 +191,6 @@ func (p *genesisParams) validateFlags() error {
 			return fmt.Errorf("invalid validators path ('%s') provided. Error: %w", p.validatorsPath, err)
 		}
 	}
-    // Validate stake token address
-	if err := types.IsValidAddress(params.stakeToken); err != nil {
-		return fmt.Errorf("stake token address is not a valid address: %w", err)
-	}
-
-	params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
-
-	if params.stakeTokenAddr == types.ZeroAddress {
-		return errStakeTokenIsZeroAddress
-	}
 
 	// Validate min and max validators number
 	return command.ValidateMinMaxValidatorsNumber(p.minNumValidators, p.maxNumValidators)
