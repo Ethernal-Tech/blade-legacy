@@ -151,43 +151,59 @@ jobs:
         with:
           payload: |
             {
-              "blocks": [
+              "attachments": [
                 {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "K6 Loadtest Results"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Scenario*: `${{ inputs.scenario }}`\n *Average TPS*: `${{ steps.k6.outputs.tps_avg }}`\n*Max TPS*: `${{ steps.k6.outputs.tps_max }}`\n*Transactions*: `${{ steps.k6.outputs.iterations }}`\n*Block Number*: `${{ steps.k6.outputs.block }}`\n*Time to Mine*: `${{ steps.k6.outputs.ttm }}`\n*Average Gas Used*: `${{ steps.k6.outputs.gas_avg }}`\n*Max Gas Used*: `${{ steps.k6.outputs.gas_max }}`"
-                  }
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "context",
-                  "elements": [
-                      {
-                        "type": "mrkdwn",
-                        "text": "Environment: `${{ inputs.environment }}`"
-                      },
-                      {
-                        "type": "mrkdwn",
-                        "text": "JSON-RPC Endpoint: ${{ steps.set_rpc_url.outputs.rpc_url }}"
-                      },
-                      {
-                        "type": "mrkdwn",
-                        "text": "Workflow: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Results>"
+                  "color": "#03C03C",
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "K6 Loadtest ${{ inputs.scenario }} :zap:"
                       }
-                    ]
-                  }
-                ]
-              }
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "Environment: *${{ inputs.environment }}*"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "JSON-RPC URL: *${{ steps.set_rpc_url.outputs.rpc_url }}*"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "actions",
+                      "elements": [
+                        {
+                          "type": "button",
+                          "text": {
+                            "type": "plain_text",
+                            "text": "View workflow run"
+                          },
+                          "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "Average TPS: *${{ steps.k6.outputs.tps_avg }}*\nMax TPS: *${{ steps.k6.outputs.tps_max }}*\nTransactions: *${{ steps.k6.outputs.iterations }}*\nBlock Number: *${{ steps.k6.outputs.block }}*\nTime to Mine: *${{ steps.k6.outputs.ttm }}*\nAverage Gas Used: *${{ steps.k6.outputs.gas_avg }}*\nMax Gas Used: *${{ steps.k6.outputs.gas_max }}*"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
   destroy:
     environment: ${{ inputs.environment }}
     needs: [build, run_k6]

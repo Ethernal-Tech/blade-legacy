@@ -77,86 +77,127 @@ jobs:
         with:
           payload: |
             {
-              "blocks": [
+              "attachments": [
                 {
-                  "type": "header",
-                  "text": {
-                    "type": "plain_text",
-                    "text": "Nightly Build"
-                  }
+                  "color": "${{ needs.build.outputs.workflow_output == '' && needs.test.outputs.workflow_output == '' && needs.e2e-polybft.outputs.workflow_output == '' && needs.e2e-legacy.outputs.workflow_output == '' && needs.property.outputs.workflow_output == '' && needs.fuzz.outputs.workflow_output == '' && needs.loadtest.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "header",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Nightly Build ${{ needs.build.outputs.workflow_output == '' && needs.test.outputs.workflow_output == '' && needs.e2e-polybft.outputs.workflow_output == '' && needs.e2e-legacy.outputs.workflow_output == '' && needs.property.outputs.workflow_output == '' && needs.fuzz.outputs.workflow_output == '' && needs.loadtest.outputs.workflow_output == '' && ':rocket:' || ':rotating_light:' }}"
+                      }
+                    },
+                    {
+                      "type": "actions",
+                      "elements": [
+                        {
+                          "type": "button",
+                          "text": {
+                            "type": "plain_text",
+                            "text": "View workflow run"
+                          },
+                          "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                        }
+                      ]
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Status* ${{ needs.build.outputs.workflow_output == '' && needs.test.outputs.workflow_output == '' && needs.property.outputs.workflow_output == '' && needs.e2e.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.build.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Build*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Build ${{ needs.build.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.test.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Unit Tests*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Unit tests ${{ needs.test.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.property.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Property Tests*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Property tests ${{ needs.property.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.e2e-legacy.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Legacy E2E Tests*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "E2E tests ${{ needs.e2e.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.e2e-polybft.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*PolyBFT E2E Tests*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "E2E IBFT tests ${{ needs.e2eibft.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.fuzz.outputs.workflow_output == '' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Fuzz Tests*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Fuzz tests ${{ needs.fuzz.outputs.workflow_output == '' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
+                  "color": "${{ needs.loadtest.outputs.workflow_output_loadtest1 == 'true' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Load Tests multiple_EOA*"
+                      }
+                    }
+                  ]
                 },
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Load tests (multiple_EOA) ${{ needs.loadtest.outputs.workflow_output_loadtest1 == 'true' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
-                },
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Load tests (multiple_ERC20) ${{ needs.loadtest.outputs.workflow_output_loadtest2 == 'true' && ':white_check_mark:' || ':x: `failed`' }}"
-                  }
-                },
-                {
-                  "type": "divider"
-                },  
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "Workflow: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|Results>"
-                  }
+                  "color": "${{ needs.loadtest.outputs.workflow_output_loadtest2 == 'true' && '#03C03C' || '#E60012' }}",
+                  "blocks": [
+                    {
+                      "type": "section",
+                      "text": {
+                        "type": "mrkdwn",
+                        "text": "*Load Tests multiple_ERC20*"
+                      }
+                    }
+                  ]
                 }
               ]
             }
