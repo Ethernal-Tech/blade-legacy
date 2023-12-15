@@ -142,7 +142,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	bladeManagerAddr := ethgo.Address(types.StringToAddress(params.bladeManager))
 	txn := bridgeHelper.CreateTransaction(ownerKey.Address(), &bladeManagerAddr, premineInput, nil, false)
-	txn.Gas = types.StateTransactionGasLimit * 2
 
 	receipt, err = txRelayer.SendTransaction(txn, ownerKey)
 	if err != nil {
