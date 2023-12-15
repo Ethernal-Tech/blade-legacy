@@ -215,12 +215,12 @@ func decodeGenesisAccounts(genesisSetRaw string) (map[types.Address]*contractsap
 
 		preminedTokens, ok := rawAccount["preminedTokens"].(*big.Int)
 		if !ok {
-			return nil, errors.New("failed to retrieve genesis account non staked tokens")
+			return nil, errors.New("failed to retrieve genesis account non-staked balance")
 		}
 
 		stakedTokens, ok := rawAccount["stakedTokens"].(*big.Int)
 		if !ok {
-			return nil, errors.New("failed to retrieve genesis account staked tokens")
+			return nil, errors.New("failed to retrieve genesis account staked balance")
 		}
 
 		isValidator, ok := rawAccount["isValidator"].(bool)

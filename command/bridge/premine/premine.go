@@ -75,14 +75,14 @@ func setFlags(cmd *cobra.Command) {
 		&params.premineAmount,
 		premineAmountFlag,
 		"",
-		"amount to premine as non staked balance",
+		"amount to premine as a non-staked balance",
 	)
 
 	cmd.Flags().StringVar(
 		&params.stakedAmount,
 		stakedAmountFlag,
 		"",
-		"amount to premine as staked balance",
+		"amount to premine as a staked balance",
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
@@ -114,7 +114,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	approveTxn, err := bridgeHelper.CreateApproveERC20Txn(
-		new(big.Int).Add(params.nonStakedValue, params.stakedValue),
+		new(big.Int).Add(params.premineAmountValue, params.stakedValue),
 		params.bladeManagerAddr,
 		params.nativeTokenRootAddr, true)
 	if err != nil {
@@ -131,7 +131,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	premineFn := &contractsapi.AddGenesisBalanceBladeManagerFn{
-		NonStakeAmount: params.nonStakedValue,
+		NonStakeAmount: params.premineAmountValue,
 		StakeAmount:    params.stakedValue,
 	}
 
@@ -154,7 +154,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	outputter.WriteCommandResult(&premineResult{
 		Address:         ownerKey.Address().String(),
-		NonStakedAmount: params.nonStakedValue,
+		NonStakedAmount: params.premineAmountValue,
 		StakedAmount:    params.stakedValue,
 	})
 

@@ -26,7 +26,7 @@ type premineParams struct {
 	stakedAmount    string
 	premineAmount   string
 
-	nonStakedValue      *big.Int
+	premineAmountValue  *big.Int
 	stakedValue         *big.Int
 	nativeTokenRootAddr types.Address
 	bladeManagerAddr    types.Address
@@ -43,7 +43,7 @@ func (p *premineParams) validateFlags() (err error) {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
 	}
 
-	if p.nonStakedValue, err = common.ParseUint256orHex(&p.premineAmount); err != nil {
+	if p.premineAmountValue, err = common.ParseUint256orHex(&p.premineAmount); err != nil {
 		return err
 	}
 
