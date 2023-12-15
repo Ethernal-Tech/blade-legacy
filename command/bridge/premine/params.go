@@ -12,36 +12,34 @@ import (
 )
 
 const (
-	premineAmountFlag      = "premine-amount"
-	stakedAmountFlag       = "stake-amount"
-	rootERC20PredicateFlag = "root-erc20-predicate"
+	premineAmountFlag = "premine-amount"
+	stakedAmountFlag  = "stake-amount"
 )
 
 type premineParams struct {
-	accountDir         string
-	accountConfig      string
-	privateKey         string
-	bladeManager       string
-	rootERC20Predicate string
-	nativeTokenRoot    string
-	jsonRPC            string
-	stakedAmount       string
-	premineAmount      string
+	accountDir      string
+	accountConfig   string
+	privateKey      string
+	bladeManager    string
+	nativeTokenRoot string
+	jsonRPC         string
+	stakedAmount    string
+	premineAmount   string
 
-	nonStakedValue *big.Int
-	stakedValue    *big.Int
+	nonStakedValue      *big.Int
+	stakedValue         *big.Int
+	nativeTokenRootAddr types.Address
+	bladeManagerAddr    types.Address
 }
 
 func (p *premineParams) validateFlags() (err error) {
-	if err := types.IsValidAddress(p.nativeTokenRoot, false); err != nil {
+	p.nativeTokenRootAddr, err = types.IsValidAddress(p.nativeTokenRoot, false)
+	if err != nil {
 		return fmt.Errorf("invalid erc20 token address is provided: %w", err)
 	}
 
-	if err := types.IsValidAddress(p.rootERC20Predicate, false); err != nil {
-		return fmt.Errorf("invalid root erc20 predicate address is provided: %w", err)
-	}
-
-	if err := types.IsValidAddress(p.bladeManager, false); err != nil {
+	p.bladeManagerAddr, err = types.IsValidAddress(p.bladeManager, false)
+	if err != nil {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
 	}
 

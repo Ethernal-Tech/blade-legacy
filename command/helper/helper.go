@@ -252,7 +252,7 @@ func ParseAmount(amount string) (*big.Int, error) {
 }
 
 func ValidateProxyContractsAdmin(proxyContractsAdmin string) error {
-	if err := types.IsValidAddress(proxyContractsAdmin, false); err != nil {
+	if _, err := types.IsValidAddress(proxyContractsAdmin, false); err != nil {
 		return fmt.Errorf("proxy contracts admin address is not valid: %w", err)
 	}
 

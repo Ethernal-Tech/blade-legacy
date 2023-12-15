@@ -30,7 +30,7 @@ func (m *mintParams) validateFlags() error {
 	}
 
 	for _, addr := range m.addresses {
-		if err := types.IsValidAddress(addr, true); err != nil {
+		if _, err := types.IsValidAddress(addr, true); err != nil {
 			return err
 		}
 	}
@@ -45,7 +45,7 @@ func (m *mintParams) validateFlags() error {
 		m.amountValues[i] = amountValue
 	}
 
-	if err := types.IsValidAddress(m.tokenAddr, false); err != nil {
+	if _, err := types.IsValidAddress(m.tokenAddr, false); err != nil {
 		return fmt.Errorf("invalid erc20 token address is provided: %w", err)
 	}
 

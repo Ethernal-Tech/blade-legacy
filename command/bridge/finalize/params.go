@@ -16,14 +16,19 @@ type finalizeParams struct {
 	jsonRPC       string
 	bladeManager  string
 	genesisPath   string
+
+	bladeManagerAddr types.Address
 }
 
 func (fp *finalizeParams) validateFlags() error {
+	var err error
+
 	if fp.privateKey == "" {
 		return validatorHelper.ValidateSecretFlags(fp.accountDir, fp.accountConfig)
 	}
 
-	if err := types.IsValidAddress(fp.bladeManager, false); err != nil {
+	fp.bladeManagerAddr, err = types.IsValidAddress(fp.bladeManager, false)
+	if err != nil {
 		return fmt.Errorf("invalid blade manager address is provided: %w", err)
 	}
 
@@ -32,7 +37,7 @@ func (fp *finalizeParams) validateFlags() error {
 	}
 
 	// validate jsonrpc address
-	_, err := helper.ParseJSONRPCAddress(fp.jsonRPC)
+	_, err = helper.ParseJSONRPCAddress(fp.jsonRPC)
 
 	return err
 }

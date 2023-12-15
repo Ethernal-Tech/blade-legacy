@@ -190,11 +190,12 @@ func (p *genesisParams) validateFlags() error {
 			return err
 		}
 
-		if err := types.IsValidAddress(params.stakeToken, false); err != nil {
+		stakeTokenAddr, err := types.IsValidAddress(params.stakeToken, false)
+		if err != nil {
 			return fmt.Errorf("stake token address is not a valid address: %w", err)
 		}
 
-		params.stakeTokenAddr = types.StringToAddress(params.stakeToken)
+		params.stakeTokenAddr = stakeTokenAddr
 	}
 
 	// Validate validatorsPath only if validators information were not provided via CLI flag

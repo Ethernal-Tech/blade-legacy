@@ -105,7 +105,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("enlist validator failed: %w", err)
 	}
 
-	bladeManagerAddr := ethgo.Address(types.StringToAddress(params.bladeManager))
+	bladeManagerAddr := ethgo.Address(params.bladeManagerAddr)
 
 	// finalize genesis accounts on BladeManager so that no one can stake and premine no more
 	encoded, err := finalizeGenesisABIFn.Encode([]interface{}{})
