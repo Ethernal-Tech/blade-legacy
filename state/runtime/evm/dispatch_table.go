@@ -38,6 +38,7 @@ func init() {
 	register(SMOD, handler{opSMod, 2, 5})
 	register(EXP, handler{opExp, 2, 10})
 
+	register(PUSH0, handler{opPush0, 0, 2})
 	registerRange(PUSH1, PUSH32, opPush, 3)
 	registerRange(DUP1, DUP16, opDup, 3)
 	registerRange(SWAP1, SWAP16, opSwap, 3)
