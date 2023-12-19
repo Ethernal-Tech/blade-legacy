@@ -176,7 +176,7 @@ jobs:
                       "elements": [
                         {
                           "type": "mrkdwn",
-                          "text": "JSON-RPC URL: *${{ steps.set_rpc_url.outputs.rpc_url }}*"
+                          "text": "JSON-RPC: *<${{ steps.set_rpc_url.outputs.rpc_url }}|Open URL>*"
                         }
                       ]
                     },
