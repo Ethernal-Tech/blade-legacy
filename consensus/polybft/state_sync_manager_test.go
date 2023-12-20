@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	merkle "github.com/Ethernal-Tech/merkle-tree"
 	"github.com/hashicorp/go-hclog"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
@@ -18,7 +19,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
-	"github.com/0xPolygon/polygon-edge/merkle-tree"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -35,10 +35,6 @@ func newTestStateSyncManager(t *testing.T, key *validator.TestValidator, runtime
 
 	s := newStateSyncManager(hclog.NewNullLogger(), state,
 		&stateSyncConfig{
-			eventTrackerConfig: &eventTrackerConfig{
-				stateSenderAddr: types.Address{},
-				jsonrpcAddr:     "",
-			},
 			dataDir:           tmpDir,
 			topic:             topic,
 			key:               key.Key(),
@@ -241,7 +237,7 @@ func TestStateSyncManager_BuildCommitment(t *testing.T) {
 		{
 			MerkleTree: tree,
 			StateSyncCommitment: &contractsapi.StateSyncCommitment{
-				Root:    tree.Hash(),
+				Root:    types.Hash(tree.Hash()),
 				StartID: big.NewInt(0),
 				EndID:   big.NewInt(1),
 			},
@@ -476,13 +472,6 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 	})
 }
 
-func TestStateSyncManager_Close(t *testing.T) {
-	t.Parallel()
-
-	mgr := newTestStateSyncManager(t, validator.NewTestValidator(t, "A", 100), &mockRuntime{isActiveValidator: true})
-	require.NotPanics(t, func() { mgr.Close() })
-}
-
 func TestStateSyncManager_GetProofs(t *testing.T) {
 	t.Parallel()
 
@@ -551,7 +540,7 @@ func TestStateSyncManager_GetProofs_NoProof_BuildProofs(t *testing.T) {
 		Message: &contractsapi.StateSyncCommitment{
 			StartID: big.NewInt(fromIndex),
 			EndID:   big.NewInt(maxCommitmentSize),
-			Root:    tree.Hash(),
+			Root:    types.Hash(tree.Hash()),
 		},
 	}
 

@@ -13,6 +13,7 @@ import (
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/wallet"
 
+	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
@@ -35,7 +36,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		transfersCount        = 5
 		numBlockConfirmations = 2
 		// make epoch size long enough, so that all exit events are processed within the same epoch
-		epochSize            = 30
+		epochSize            = 40
 		sprintSize           = uint64(5)
 		numberOfAttempts     = 7
 		stateSyncedLogsCount = 2 // map token and deposit
@@ -156,6 +157,8 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 		t.Log("Deposits were successfully processed")
 
+		require.NoError(t, cluster.WaitForBlock(uint64(epochSize), 2*time.Minute))
+
 		// WITHDRAW ERC20 TOKENS
 		// send withdraw transaction
 		for i, senderKey := range receiverKeys {
@@ -172,62 +175,20 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		currentBlock, err := childEthEndpoint.GetBlockByNumber(ethgo.Latest, false)
-		require.NoError(t, err)
-
-		currentExtra, err := polybft.GetIbftExtra(currentBlock.ExtraData)
-		require.NoError(t, err)
-
-		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
-
-		currentEpoch := currentExtra.Checkpoint.EpochNumber
-
-		exitHelper := polybftCfg.Bridge.ExitHelperAddr
-		childJSONRPC := validatorSrv.JSONRPCAddr()
-
-		successfullExitTransactions := make([]bool, transfersCount)
-
-		for i := 0; i < numberOfAttempts; i++ {
-			t.Log("Number of attempts: ", i+1)
-
-			require.NoError(t, waitForRootchainEpoch(currentEpoch+uint64(i), 3*time.Minute,
-				rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
-
-			for exitEventID := uint64(1); exitEventID <= transfersCount; exitEventID++ {
-				if successfullExitTransactions[exitEventID-1] {
-					continue
-				}
-
-				// send exit transaction to exit helper
-				if err = cluster.Bridge.SendExitTransaction(exitHelper, exitEventID, childJSONRPC); err == nil {
-					successfullExitTransactions[exitEventID-1] = true
-
-					continue
-				}
-
-				if i == numberOfAttempts-1 {
-					require.NoError(t, err)
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := range receivers {
+				if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, uint64(i+1)) {
+					return false
 				}
 			}
 
-			allExitsSuccessfull := true
-			for _, isSuccessfull := range successfullExitTransactions {
-				if !isSuccessfull {
-					allExitsSuccessfull = false
+			return true
+		}))
 
-					break
-				}
-			}
-
-			if allExitsSuccessfull {
-				break
-			}
-		}
-
-		// assert that receiver's balances on RootERC20 smart contract are expected
 		for _, receiver := range receivers {
+			// assert that receiver's balance on RootERC20 smart contract is as expected
 			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, rootchainTxRelayer)
-			require.Equal(t, bridgeAmount, balance)
+			require.True(t, bridgeAmount.Cmp(balance) == 0)
 		}
 	})
 
@@ -472,14 +433,15 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	currentEpoch := currentExtra.Checkpoint.EpochNumber
 	require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute, rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
 
-	exitHelper := polybftCfg.Bridge.ExitHelperAddr
-	childJSONRPC := validatorSrv.JSONRPCAddr()
+	require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+		for i := 1; i <= transfersCount; i++ {
+			if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, uint64(i)) {
+				return false
+			}
+		}
 
-	for exitEventID := uint64(1); exitEventID <= transfersCount; exitEventID++ {
-		// send exit transaction to exit helper
-		err = cluster.Bridge.SendExitTransaction(exitHelper, exitEventID, childJSONRPC)
-		require.NoError(t, err)
-	}
+		return true
+	}))
 
 	// assert that owners of given token ids are the accounts on the root chain ERC 721 token
 	for i, receiver := range receiversAddrs {
@@ -661,14 +623,15 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute,
 		rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
 
-	exitHelper := polybftCfg.Bridge.ExitHelperAddr
-	childJSONRPC := validatorSrv.JSONRPCAddr()
+	require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+		for i := 1; i <= transfersCount; i++ {
+			if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, uint64(i)) {
+				return false
+			}
+		}
 
-	for exitEventID := uint64(1); exitEventID <= transfersCount; exitEventID++ {
-		// send exit transaction to exit helper
-		err = cluster.Bridge.SendExitTransaction(exitHelper, exitEventID, childJSONRPC)
-		require.NoError(t, err)
-	}
+		return true
+	}))
 
 	// assert that receiver's balances on RootERC1155 smart contract are expected
 	for i, receiver := range receivers {
@@ -752,8 +715,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	childchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(validatorSrv.JSONRPC()))
 	require.NoError(t, err)
 
-	var mintableTokenMapped contractsapi.MintableTokenMappedEvent
-
 	t.Run("bridge native tokens", func(t *testing.T) {
 		// rootToken represents deposit token (basically native mintable token from the Supernets)
 		rootToken := contracts.NativeERC20TokenContract
@@ -807,14 +768,15 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			waitForRootchainEpoch(extra.Checkpoint.EpochNumber, 2*time.Minute, rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
 
 		// first exit event is mapping child token on a rootchain
-		// remaining ones are deposits
-		for exitEventID := uint64(1); exitEventID <= transfersCount+1; exitEventID++ {
-			require.NoError(t,
-				cluster.Bridge.SendExitTransaction(polybftCfg.Bridge.ExitHelperAddr, exitEventID, validatorSrv.JSONRPCAddr()))
-		}
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := uint64(1); i <= transfersCount+1; i++ {
+				if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, i) {
+					return false
+				}
+			}
 
-		rootchainLatestBlock, err := rootchainTxRelayer.Client().Eth().BlockNumber()
-		require.NoError(t, err)
+			return true
+		}))
 
 		// retrieve child mintable token address from both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildMintableERC20Predicate.Abi, polybftCfg.Bridge.ChildMintableERC20PredicateAddr,
@@ -825,10 +787,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		t.Log("L1 child token", l1ChildToken)
 		t.Log("L2 child token", l2ChildToken)
 		require.Equal(t, l1ChildToken, l2ChildToken)
-
-		logs, err := getFilteredLogs(mintableTokenMapped.Sig(), 0, rootchainLatestBlock, rootchainTxRelayer.Client().Eth())
-		require.NoError(t, err)
-		require.Len(t, logs, 1)
 
 		// check that balances on rootchain have increased by deposited amounts
 		for _, depositor := range depositors {
@@ -884,9 +842,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	})
 
 	t.Run("bridge ERC 721 tokens", func(t *testing.T) {
-		rootchainInitialBlock, err := rootchainTxRelayer.Client().Eth().BlockNumber()
-		require.NoError(t, err)
-
 		// get initial exit id
 		initialExitEventID := getLastExitEventID(t, childchainTxRelayer)
 
@@ -955,13 +910,15 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		// first exit event is mapping child token on a rootchain
 		// remaining ones are the deposits
 		initialExitEventID++
-		for i := initialExitEventID; i <= initialExitEventID+transfersCount; i++ {
-			require.NoError(t,
-				cluster.Bridge.SendExitTransaction(polybftCfg.Bridge.ExitHelperAddr, i, validatorSrv.JSONRPCAddr()))
-		}
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := initialExitEventID; i <= initialExitEventID+transfersCount; i++ {
+				if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, i) {
+					return false
+				}
+			}
 
-		latestRootchainBlock, err := rootchainTxRelayer.Client().Eth().BlockNumber()
-		require.NoError(t, err)
+			return true
+		}))
 
 		// retrieve child token addresses on both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildMintableERC721Predicate.Abi, polybftCfg.Bridge.ChildMintableERC721PredicateAddr,
@@ -972,11 +929,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		t.Log("L1 child token", l1ChildToken)
 		t.Log("L2 child token", l2ChildToken)
 		require.Equal(t, l1ChildToken, l2ChildToken)
-
-		logs, err := getFilteredLogs(mintableTokenMapped.Sig(), rootchainInitialBlock, latestRootchainBlock,
-			rootchainTxRelayer.Client().Eth())
-		require.NoError(t, err)
-		require.Len(t, logs, 1)
 
 		// check owner on the rootchain
 		for i := uint64(0); i < transfersCount; i++ {
@@ -1085,7 +1037,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		depositAmount  = ethgo.Ether(5)
 		withdrawAmount = ethgo.Ether(1)
 		// make epoch size long enough, so that all exit events are processed within the same epoch
-		epochSize  = 30
+		epochSize  = 40
 		sprintSize = uint64(5)
 	)
 
@@ -1258,26 +1210,235 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute,
 			rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
 
-		exitHelper := polybftCfg.Bridge.ExitHelperAddr
-		childJSONRPC := validatorSrv.JSONRPCAddr()
-
 		oldBalances := map[types.Address]*big.Int{}
 		for _, receiver := range receivers {
 			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, rootchainTxRelayer)
 			oldBalances[types.StringToAddress(receiver)] = balance
 		}
 
-		for exitEventID := uint64(1); exitEventID <= uint64(transfersCount); exitEventID++ {
-			// send exit transaction to exit helper
-			err = cluster.Bridge.SendExitTransaction(exitHelper, exitEventID, childJSONRPC)
-			require.NoError(t, err)
-		}
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := uint64(1); i <= uint64(transfersCount); i++ {
+				if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, i) {
+					return false
+				}
+			}
+
+			return true
+		}))
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		for _, receiver := range receivers {
 			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, rootchainTxRelayer)
 			require.Equal(t, oldBalances[types.StringToAddress(receiver)].Add(
 				oldBalances[types.StringToAddress(receiver)], withdrawAmount), balance)
+		}
+	})
+}
+
+func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
+	var (
+		numBlockConfirmations = uint64(2)
+		epochSize             = 10
+		sprintSize            = uint64(5)
+		numberOfAttempts      = uint64(4)
+		stateSyncedLogsCount  = 2
+		exitEventsCount       = uint64(2)
+		tokensToTransfer      = ethgo.Gwei(10)
+		bigZero               = big.NewInt(0)
+	)
+
+	nonValidatorKey, err := wallet.GenerateKey()
+	require.NoError(t, err)
+
+	nonValidatorKeyRaw, err := nonValidatorKey.MarshallPrivateKey()
+	require.NoError(t, err)
+
+	rewardWalletKey, err := wallet.GenerateKey()
+	require.NoError(t, err)
+
+	rewardWalletKeyRaw, err := rewardWalletKey.MarshallPrivateKey()
+	require.NoError(t, err)
+
+	// start cluster with default, non-mintable native erc20 root token
+	// with london fork enabled
+	cluster := framework.NewTestCluster(t, 5,
+		framework.WithBridge(),
+		framework.WithEpochSize(epochSize),
+		framework.WithNumBlockConfirmations(numBlockConfirmations),
+		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
+		// this enables London (EIP-1559) fork
+		framework.WithBurnContract(&polybft.BurnContractInfo{
+			BlockNumber: 0,
+			Address:     types.StringToAddress("0xBurnContractAddress")}),
+		framework.WithSecretsCallback(func(_ []types.Address, tcc *framework.TestClusterConfig) {
+			nonValidatorKeyString := hex.EncodeToString(nonValidatorKeyRaw)
+			rewardWalletKeyString := hex.EncodeToString(rewardWalletKeyRaw)
+
+			// do premine to a non validator address
+			tcc.Premine = append(tcc.Premine,
+				fmt.Sprintf("%s:%s:%s",
+					nonValidatorKey.Address(),
+					command.DefaultPremineBalance.String(),
+					nonValidatorKeyString))
+
+			// do premine to reward wallet address
+			tcc.Premine = append(tcc.Premine,
+				fmt.Sprintf("%s:%s:%s",
+					rewardWalletKey.Address(),
+					command.DefaultPremineBalance.String(),
+					rewardWalletKeyString))
+		}),
+	)
+
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	require.NoError(t, err)
+
+	childEthEndpoint := cluster.Servers[0].JSONRPC().Eth()
+
+	defer cluster.Stop()
+
+	cluster.WaitForReady(t)
+
+	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	require.NoError(t, err)
+
+	checkBalancesFn := func(address types.Address, rootExpected, childExpected *big.Int) {
+		t.Log("Checking balance of native ERC20 token on root and child", "Address", address,
+			"Root expected", rootExpected, "Child Expected", childExpected)
+
+		balance := erc20BalanceOf(t, address,
+			polybftCfg.Bridge.RootNativeERC20Addr, rootchainTxRelayer)
+		t.Log("Balance of native ERC20 token on root", balance, "Address", address)
+		require.Equal(t, rootExpected, balance)
+
+		balance, err = childEthEndpoint.GetBalance(ethgo.Address(address), ethgo.Latest)
+		require.NoError(t, err)
+		t.Log("Balance of native ERC20 token on child", balance, "Address", address)
+		require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
+	}
+
+	t.Run("check the balances at the beginning", func(t *testing.T) {
+		// check the balances on root and child at the beginning to see if they are as expected
+		checkBalancesFn(types.Address(nonValidatorKey.Address()), bigZero, command.DefaultPremineBalance)
+		checkBalancesFn(types.Address(rewardWalletKey.Address()), bigZero, command.DefaultPremineBalance)
+
+		validatorsExpectedBalance := new(big.Int).Sub(command.DefaultPremineBalance, command.DefaultStake)
+		for _, server := range cluster.Servers {
+			validatorAccount, err := validatorHelper.GetAccountFromDir(server.DataDir())
+			require.NoError(t, err)
+
+			checkBalancesFn(validatorAccount.Address(), bigZero, validatorsExpectedBalance)
+		}
+	})
+
+	// this test case will check first if they can withdraw some of the premined amount of non-mintable token
+	t.Run("Do a withdraw for premined validator address and premined non-validator address", func(t *testing.T) {
+		validatorSrv := cluster.Servers[1]
+		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
+		require.NoError(t, err)
+
+		validatorRawKey, err := validatorAcc.Ecdsa.MarshallPrivateKey()
+		require.NoError(t, err)
+
+		err = cluster.Bridge.Withdraw(
+			common.ERC20,
+			hex.EncodeToString(validatorRawKey),
+			validatorAcc.Address().String(),
+			tokensToTransfer.String(),
+			"",
+			validatorSrv.JSONRPCAddr(),
+			contracts.ChildERC20PredicateContract,
+			contracts.NativeERC20TokenContract,
+			false)
+		require.NoError(t, err)
+
+		validatorBalanceAfterWithdraw, err := childEthEndpoint.GetBalance(
+			ethgo.Address(validatorAcc.Address()), ethgo.Latest)
+		require.NoError(t, err)
+
+		err = cluster.Bridge.Withdraw(
+			common.ERC20,
+			hex.EncodeToString(nonValidatorKeyRaw),
+			nonValidatorKey.Address().String(),
+			tokensToTransfer.String(),
+			"",
+			validatorSrv.JSONRPCAddr(),
+			contracts.ChildERC20PredicateContract,
+			contracts.NativeERC20TokenContract,
+			false)
+		require.NoError(t, err)
+
+		nonValidatorBalanceAfterWithdraw, err := childEthEndpoint.GetBalance(
+			nonValidatorKey.Address(), ethgo.Latest)
+		require.NoError(t, err)
+
+		currentBlock, err := childEthEndpoint.GetBlockByNumber(ethgo.Latest, false)
+		require.NoError(t, err)
+
+		currentExtra, err := polybft.GetIbftExtra(currentBlock.ExtraData)
+		require.NoError(t, err)
+
+		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
+
+		currentEpoch := currentExtra.Checkpoint.EpochNumber
+
+		require.NoError(t, waitForRootchainEpoch(currentEpoch+1, 3*time.Minute,
+			rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
+
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for exitEventID := uint64(1); exitEventID <= exitEventsCount; exitEventID++ {
+				if !isExitEventProcessed(t, polybftCfg.Bridge.ExitHelperAddr, rootchainTxRelayer, exitEventID) {
+					return false
+				}
+			}
+
+			return true
+		}))
+
+		// assert that receiver's balances on RootERC20 smart contract are expected
+		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw)
+		checkBalancesFn(types.Address(nonValidatorKey.Address()), tokensToTransfer, nonValidatorBalanceAfterWithdraw)
+	})
+
+	t.Run("Do a deposit to some validator and non-validator address", func(t *testing.T) {
+		validatorSrv := cluster.Servers[4]
+		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
+		require.NoError(t, err)
+
+		require.NoError(t, cluster.Bridge.Deposit(
+			common.ERC20,
+			polybftCfg.Bridge.RootNativeERC20Addr,
+			polybftCfg.Bridge.RootERC20PredicateAddr,
+			bridgeHelper.TestAccountPrivKey,
+			strings.Join([]string{validatorAcc.Address().String(), nonValidatorKey.Address().String()}, ","),
+			strings.Join([]string{tokensToTransfer.String(), tokensToTransfer.String()}, ","),
+			"",
+			cluster.Bridge.JSONRPCAddr(),
+			bridgeHelper.TestAccountPrivKey,
+			false),
+		)
+
+		currentBlock, err := childEthEndpoint.GetBlockByNumber(ethgo.Latest, false)
+		require.NoError(t, err)
+
+		// wait for a couple of sprints
+		finalBlockNum := currentBlock.Number + 5*sprintSize
+
+		// the transaction is processed and there should be a success event
+		var stateSyncedResult contractsapi.StateSyncResultEvent
+
+		for i := uint64(0); i < numberOfAttempts; i++ {
+			logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum+i*sprintSize, childEthEndpoint)
+			require.NoError(t, err)
+
+			if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
+				// assert that all deposits are executed successfully
+				checkStateSyncResultLogs(t, logs, stateSyncedLogsCount)
+
+				break
+			}
+
+			require.NoError(t, cluster.WaitForBlock(finalBlockNum+(i+1)*sprintSize, 2*time.Minute))
 		}
 	})
 }

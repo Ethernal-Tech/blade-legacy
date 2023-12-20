@@ -11,9 +11,9 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
-	"github.com/0xPolygon/polygon-edge/merkle-tree"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
+	merkle "github.com/Ethernal-Tech/merkle-tree"
 	hclog "github.com/hashicorp/go-hclog"
 	"github.com/umbracle/ethgo"
 	bolt "go.etcd.io/bbolt"
@@ -27,7 +27,7 @@ var (
 
 type CheckpointManager interface {
 	EventSubscriber
-	PostBlock(req *PostBlockRequest) error
+	PostBlock(req *PostBlockRequest)
 	BuildEventRoot(epoch uint64) (types.Hash, error)
 	GenerateExitProof(exitID uint64) (types.Proof, error)
 }
@@ -36,7 +36,7 @@ var _ CheckpointManager = (*dummyCheckpointManager)(nil)
 
 type dummyCheckpointManager struct{}
 
-func (d *dummyCheckpointManager) PostBlock(req *PostBlockRequest) error { return nil }
+func (d *dummyCheckpointManager) PostBlock(req *PostBlockRequest) {}
 func (d *dummyCheckpointManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
@@ -277,7 +277,7 @@ func (c *checkpointManager) isCheckpointBlock(blockNumber, checkpointsOffset uin
 
 // PostBlock is called on every insert of finalized block (either from consensus or syncer)
 // It sends a checkpoint if given block is checkpoint block and block proposer is given validator
-func (c *checkpointManager) PostBlock(req *PostBlockRequest) error {
+func (c *checkpointManager) PostBlock(req *PostBlockRequest) {
 	if c.isCheckpointBlock(req.FullBlock.Block.Header.Number,
 		req.CurrentClientConfig.CheckpointInterval, req.IsEpochEndingBlock) &&
 		bytes.Equal(c.key.Address().Bytes(), req.FullBlock.Block.Header.Miner) {
@@ -292,13 +292,11 @@ func (c *checkpointManager) PostBlock(req *PostBlockRequest) error {
 
 		c.lastSentBlock = req.FullBlock.Block.Number()
 	}
-
-	return nil
 }
 
 // BuildEventRoot returns an exit event root hash for exit tree of given epoch
 func (c *checkpointManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
-	exitEvents, err := c.state.CheckpointStore.getExitEventsByEpoch(epoch)
+	exitEvents, err := c.state.ExitStore.getExitEventsByEpoch(epoch)
 	if err != nil {
 		return types.ZeroHash, err
 	}
@@ -312,14 +310,14 @@ func (c *checkpointManager) BuildEventRoot(epoch uint64) (types.Hash, error) {
 		return types.ZeroHash, err
 	}
 
-	return tree.Hash(), nil
+	return types.Hash(tree.Hash()), nil
 }
 
 // GenerateExitProof generates proof of exit event
 func (c *checkpointManager) GenerateExitProof(exitID uint64) (types.Proof, error) {
 	c.logger.Debug("Generating proof for exit", "exitID", exitID)
 
-	exitEvent, err := c.state.CheckpointStore.getExitEvent(exitID)
+	exitEvent, err := c.state.ExitStore.getExitEvent(exitID)
 	if err != nil {
 		return types.Proof{}, err
 	}
@@ -381,7 +379,7 @@ func (c *checkpointManager) GenerateExitProof(exitID uint64) (types.Proof, error
 		return types.Proof{}, err
 	}
 
-	exitEvents, err := c.state.CheckpointStore.getExitEventsForProof(exitEvent.EpochNumber, checkpointBlock.Uint64())
+	exitEvents, err := c.state.ExitStore.getExitEventsForProof(exitEvent.EpochNumber, checkpointBlock.Uint64())
 	if err != nil {
 		return types.Proof{}, err
 	}
@@ -406,7 +404,7 @@ func (c *checkpointManager) GenerateExitProof(exitID uint64) (types.Proof, error
 	exitEventHex := hex.EncodeToString(exitEventEncoded)
 
 	return types.Proof{
-		Data: proof,
+		Data: types.FromMerkleToTypesHash(proof),
 		Metadata: map[string]interface{}{
 			"LeafIndex":       leafIndex,
 			"ExitEvent":       exitEventHex,
@@ -441,7 +439,12 @@ func (c *checkpointManager) ProcessLog(header *types.Header, log *ethgo.Log, dbT
 		return nil
 	}
 
-	return c.state.CheckpointStore.insertExitEvent(exitEvent, dbTx)
+	c.logger.Debug("An exit event happened",
+		"exitEventID", exitEvent.ID,
+		"epoch", exitEvent.EpochNumber,
+		"blockNumber", exitEvent.BlockNumber)
+
+	return c.state.ExitStore.insertExitEvent(exitEvent, dbTx)
 }
 
 // createExitTree creates an exit event merkle tree from provided exit events

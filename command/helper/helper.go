@@ -252,13 +252,8 @@ func ParseAmount(amount string) (*big.Int, error) {
 }
 
 func ValidateProxyContractsAdmin(proxyContractsAdmin string) error {
-	if err := types.IsValidAddress(proxyContractsAdmin); err != nil {
+	if _, err := types.IsValidAddress(proxyContractsAdmin, false); err != nil {
 		return fmt.Errorf("proxy contracts admin address is not valid: %w", err)
-	}
-
-	proxyContractsAdminAddr := types.StringToAddress(proxyContractsAdmin)
-	if proxyContractsAdminAddr == types.ZeroAddress {
-		return errors.New("proxy contracts admin address must not be zero address")
 	}
 
 	return nil
@@ -267,6 +262,7 @@ func ValidateProxyContractsAdmin(proxyContractsAdmin string) error {
 type PremineInfo struct {
 	Address types.Address
 	Amount  *big.Int
+	Key     string // only used for tests
 }
 
 // parsePremineInfo parses provided premine information and returns premine address and amount
@@ -274,6 +270,7 @@ func ParsePremineInfo(premineInfoRaw string) (*PremineInfo, error) {
 	var (
 		address types.Address
 		amount  = command.DefaultPremineBalance
+		key     string
 		err     error
 	)
 
@@ -286,10 +283,14 @@ func ParsePremineInfo(premineInfoRaw string) (*PremineInfo, error) {
 		}
 
 		address = types.StringToAddress(parts[0])
+
+		if len(parts) == 3 { // <addr>:<balance>:<key>
+			key = parts[2]
+		}
 	} else {
 		// <addr>
 		address = types.StringToAddress(premineInfoRaw)
 	}
 
-	return &PremineInfo{Address: address, Amount: amount}, nil
+	return &PremineInfo{Address: address, Amount: amount, Key: key}, nil
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
+	"github.com/Ethernal-Tech/merkle-tree"
 )
 
 const (
@@ -147,25 +148,48 @@ func StringToBytes(str string) []byte {
 	return b
 }
 
-// IsValidAddress checks if provided string is a valid Ethereum address
-func IsValidAddress(address string) error {
-	// remove 0x prefix if it exists
-	if strings.HasPrefix(address, "0x") {
-		address = address[2:]
+// FromTypesToMerkleHash fills array of merkle.Hash from array types.Hash
+func FromTypesToMerkleHash(hashes []Hash) []merkle.Hash {
+	merkleHashes := make([]merkle.Hash, 0, len(hashes))
+	for _, hash := range hashes {
+		merkleHashes = append(merkleHashes, merkle.Hash(hash))
 	}
+
+	return merkleHashes
+}
+
+// FromMerkleToTypesHash fills array of types.Hash from array merkle.Hash
+func FromMerkleToTypesHash(merkleHashes []merkle.Hash) []Hash {
+	hashes := make([]Hash, 0, len(merkleHashes))
+	for _, merkleHash := range merkleHashes {
+		hashes = append(hashes, Hash(merkleHash))
+	}
+
+	return hashes
+}
+
+// IsValidAddress checks if provided string is a valid Ethereum address
+func IsValidAddress(address string, zeroAddressAllowed bool) (Address, error) {
+	// remove 0x prefix if it exists
+	address = strings.TrimPrefix(address, "0x")
 
 	// decode the address
 	decodedAddress, err := hex.DecodeString(address)
 	if err != nil {
-		return fmt.Errorf("address %s contains invalid characters", address)
+		return ZeroAddress, fmt.Errorf("address %s contains invalid characters", address)
 	}
 
 	// check if the address has the correct length
 	if len(decodedAddress) != AddressLength {
-		return fmt.Errorf("address %s has invalid length", string(decodedAddress))
+		return ZeroAddress, fmt.Errorf("address %s has invalid length", string(decodedAddress))
 	}
 
-	return nil
+	addr := StringToAddress(address)
+	if !zeroAddressAllowed && addr == ZeroAddress {
+		return ZeroAddress, errors.New("zero address is not allowed")
+	}
+
+	return addr, nil
 }
 
 // UnmarshalText parses a hash in hex syntax.

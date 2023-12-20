@@ -28,6 +28,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
+const nativeTokenNonMintableConfig = "Blade:BLD:18:false"
+
 // getCheckpointManagerValidators queries rootchain validator set on CheckpointManager contract
 func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManagerAddr ethgo.Address) ([]*polybft.ValidatorInfo, error) {
 	validatorsCountRaw, err := ABICall(relayer, contractsapi.CheckpointManager,
@@ -296,7 +298,7 @@ func erc721OwnerOf(t *testing.T, tokenID *big.Int, tokenAddr types.Address, rela
 func queryNativeERC20Metadata(t *testing.T, funcName string, abiType *abi.Type, relayer txrelayer.TxRelayer) interface{} {
 	t.Helper()
 
-	valueHex, err := ABICall(relayer, contractsapi.NativeERC20,
+	valueHex, err := ABICall(relayer, contractsapi.NativeERC20Mintable,
 		ethgo.Address(contracts.NativeERC20TokenContract),
 		ethgo.ZeroAddress, funcName)
 	require.NoError(t, err)
@@ -344,4 +346,22 @@ func getLastExitEventID(t *testing.T, relayer txrelayer.TxRelayer) uint64 {
 	require.NoError(t, err)
 
 	return exitEventID
+}
+
+func isExitEventProcessed(t *testing.T, exitHelperAddr types.Address,
+	relayer txrelayer.TxRelayer, exitEventID uint64) bool {
+	t.Helper()
+
+	processedExitsFn := contractsapi.ExitHelper.Abi.Methods["processedExits"]
+
+	input, err := processedExitsFn.Encode([]interface{}{exitEventID})
+	require.NoError(t, err)
+
+	isProcessedRaw, err := relayer.Call(ethgo.ZeroAddress, ethgo.Address(exitHelperAddr), input)
+	require.NoError(t, err)
+
+	isProcessedAsNumber, err := common.ParseUint64orHex(&isProcessedRaw)
+	require.NoError(t, err)
+
+	return isProcessedAsNumber == 1
 }

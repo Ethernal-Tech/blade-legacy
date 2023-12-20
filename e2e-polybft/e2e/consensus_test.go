@@ -235,16 +235,10 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	secondValidator := cluster.Servers[validatorSetSize+1]
 
 	// register the first validator with stake
-	require.NoError(t, firstValidator.RegisterValidator())
+	require.NoError(t, firstValidator.RegisterValidatorWithStake(stakeAmount))
 
-	// register the second validator without stake
-	require.NoError(t, secondValidator.RegisterValidator())
-
-	// stake manually for the first validator
-	require.NoError(t, firstValidator.Stake(polybftConfig, stakeAmount))
-
-	// stake manually for the second validator
-	require.NoError(t, secondValidator.Stake(polybftConfig, stakeAmount))
+	// register the second validator with stake
+	require.NoError(t, secondValidator.RegisterValidatorWithStake(stakeAmount))
 
 	firstValidatorInfo, err := validatorHelper.GetValidatorInfo(firstValidatorAddr, relayer)
 	require.NoError(t, err)
@@ -391,7 +385,7 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	cluster := framework.NewTestCluster(t,
 		validatorCount,
 		framework.WithNativeTokenConfig(
-			fmt.Sprintf("%s:%s:%d", tokenName, tokenSymbol, decimals)),
+			fmt.Sprintf("%s:%s:%d:true", tokenName, tokenSymbol, decimals)),
 		framework.WithBladeAdmin(minter.Address().String()),
 		framework.WithEpochSize(epochSize),
 		framework.WithBaseFeeConfig(""),
@@ -526,7 +520,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	// sender must have premined some native tokens
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(types.Address(sender.Address())),
-		framework.WithBaseFeeConfig(""),
+		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 		framework.WithSecretsCallback(func(a []types.Address, config *framework.TestClusterConfig) {
 			for range a {
 				config.StakeAmounts = append(config.StakeAmounts, command.DefaultPremineBalance)

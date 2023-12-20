@@ -84,7 +84,9 @@ func main() {
 				"initialize",
 				"getCheckpointBlock",
 			},
-			[]string{},
+			[]string{
+				"CheckpointSubmitted",
+			},
 		},
 		{
 			"ExitHelper",
@@ -93,8 +95,11 @@ func main() {
 			[]string{
 				"initialize",
 				"exit",
+				"batchExit",
 			},
-			[]string{},
+			[]string{
+				"ExitProcessed",
+			},
 		},
 		{
 			"ChildERC20Predicate",
@@ -137,6 +142,15 @@ func main() {
 		{
 			"NativeERC20",
 			gensc.NativeERC20,
+			false,
+			[]string{
+				"initialize",
+			},
+			[]string{},
+		},
+		{
+			"NativeERC20Mintable",
+			gensc.NativeERC20Mintable,
 			false,
 			[]string{
 				"initialize",
@@ -366,6 +380,25 @@ func main() {
 				"commitEpoch",
 				"initialize",
 				"distributeRewardFor",
+			},
+			[]string{},
+		},
+		{
+			"EIP1559Burn",
+			gensc.EIP1559Burn,
+			false,
+			[]string{
+				"initialize",
+			},
+			[]string{},
+		},
+		{
+			"BladeManager",
+			gensc.BladeManager,
+			false,
+			[]string{
+				"initialize",
+				"addGenesisBalance",
 			},
 			[]string{},
 		},

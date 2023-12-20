@@ -11,13 +11,11 @@ import (
 )
 
 type mintParams struct {
-	addresses          []string
-	amounts            []string
-	accountDir         string
-	accountConfig      string
-	tokenAddr          string
-	deployerPrivateKey string
-	jsonRPCAddress     string
+	addresses        []string
+	amounts          []string
+	tokenAddr        string
+	minterPrivateKey string
+	jsonRPCAddress   string
 
 	amountValues []*big.Int
 }
@@ -32,7 +30,7 @@ func (m *mintParams) validateFlags() error {
 	}
 
 	for _, addr := range m.addresses {
-		if err := types.IsValidAddress(addr); err != nil {
+		if _, err := types.IsValidAddress(addr, true); err != nil {
 			return err
 		}
 	}
@@ -47,11 +45,7 @@ func (m *mintParams) validateFlags() error {
 		m.amountValues[i] = amountValue
 	}
 
-	if m.tokenAddr == "" {
-		return rootHelper.ErrMandatoryERC20Token
-	}
-
-	if err := types.IsValidAddress(m.tokenAddr); err != nil {
+	if _, err := types.IsValidAddress(m.tokenAddr, false); err != nil {
 		return fmt.Errorf("invalid erc20 token address is provided: %w", err)
 	}
 

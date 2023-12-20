@@ -1,6 +1,7 @@
 package framework
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
+	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
@@ -255,20 +257,20 @@ func (t *TestServer) Unstake(amount *big.Int) error {
 	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("unstake"))
 }
 
-// RegisterValidator is a wrapper function which registers new validator on a root chain
-func (t *TestServer) RegisterValidator() error {
+// RegisterValidator is a wrapper function which registers new validator
+func (t *TestServer) RegisterValidatorWithStake(amount *big.Int) error {
 	args := []string{
 		"validator",
 		"register-validator",
-		"--jsonrpc", t.JSONRPCAddr(),
 		"--" + polybftsecrets.AccountDirFlag, t.DataDir(),
+		"--jsonrpc", t.JSONRPCAddr(),
+		"--amount", amount.String(),
 	}
 
 	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("validator"))
 }
 
-// WhitelistValidators invokes whitelist-validators helper CLI command,
-// that whitelists validators on the root chain
+// WhitelistValidators invokes whitelist-validators helper CLI command that whitelists validators
 func (t *TestServer) WhitelistValidators(addresses []string) error {
 	args := []string{
 		"validator",
@@ -285,11 +287,21 @@ func (t *TestServer) WhitelistValidators(addresses []string) error {
 
 // MintNativeERC20Token mints given amounts of native erc20 token on blade to given addresses
 func (t *TestServer) MintNativeERC20Token(addresses []string, amounts []*big.Int) error {
+	acc, err := validatorHelper.GetAccountFromDir(t.DataDir())
+	if err != nil {
+		return err
+	}
+
+	rawKey, err := acc.Ecdsa.MarshallPrivateKey()
+	if err != nil {
+		return err
+	}
+
 	args := []string{
 		"mint-erc20",
-		"--" + polybftsecrets.AccountDirFlag, t.config.DataDir,
 		"--jsonrpc", t.JSONRPCAddr(),
 		"--erc20-token", contracts.NativeERC20TokenContract.String(),
+		"--private-key", hex.EncodeToString(rawKey),
 	}
 
 	for _, addr := range addresses {

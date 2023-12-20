@@ -336,6 +336,32 @@ func (g *GetCheckpointBlockCheckpointManagerFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(CheckpointManager.Abi.Methods["getCheckpointBlock"], buf, g)
 }
 
+type CheckpointSubmittedEvent struct {
+	Epoch       *big.Int   `abi:"epoch"`
+	BlockNumber *big.Int   `abi:"blockNumber"`
+	EventRoot   types.Hash `abi:"eventRoot"`
+}
+
+func (*CheckpointSubmittedEvent) Sig() ethgo.Hash {
+	return CheckpointManager.Abi.Events["CheckpointSubmitted"].ID()
+}
+
+func (c *CheckpointSubmittedEvent) Encode() ([]byte, error) {
+	return CheckpointManager.Abi.Events["CheckpointSubmitted"].Inputs.Encode(c)
+}
+
+func (c *CheckpointSubmittedEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !CheckpointManager.Abi.Events["CheckpointSubmitted"].Match(log) {
+		return false, nil
+	}
+
+	return true, decodeEvent(CheckpointManager.Abi.Events["CheckpointSubmitted"], log, c)
+}
+
+func (c *CheckpointSubmittedEvent) Decode(input []byte) error {
+	return CheckpointManager.Abi.Events["CheckpointSubmitted"].Inputs.DecodeStruct(input, &c)
+}
+
 type InitializeExitHelperFn struct {
 	NewCheckpointManager types.Address `abi:"newCheckpointManager"`
 }
@@ -369,6 +395,65 @@ func (e *ExitExitHelperFn) EncodeAbi() ([]byte, error) {
 
 func (e *ExitExitHelperFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(ExitHelper.Abi.Methods["exit"], buf, e)
+}
+
+type BatchExitInput struct {
+	BlockNumber  *big.Int     `abi:"blockNumber"`
+	LeafIndex    *big.Int     `abi:"leafIndex"`
+	UnhashedLeaf []byte       `abi:"unhashedLeaf"`
+	Proof        []types.Hash `abi:"proof"`
+}
+
+var BatchExitInputABIType = abi.MustNewType("tuple(uint256 blockNumber,uint256 leafIndex,bytes unhashedLeaf,bytes32[] proof)")
+
+func (b *BatchExitInput) EncodeAbi() ([]byte, error) {
+	return BatchExitInputABIType.Encode(b)
+}
+
+func (b *BatchExitInput) DecodeAbi(buf []byte) error {
+	return decodeStruct(BatchExitInputABIType, buf, &b)
+}
+
+type BatchExitExitHelperFn struct {
+	Inputs []*BatchExitInput `abi:"inputs"`
+}
+
+func (b *BatchExitExitHelperFn) Sig() []byte {
+	return ExitHelper.Abi.Methods["batchExit"].ID()
+}
+
+func (b *BatchExitExitHelperFn) EncodeAbi() ([]byte, error) {
+	return ExitHelper.Abi.Methods["batchExit"].Encode(b)
+}
+
+func (b *BatchExitExitHelperFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(ExitHelper.Abi.Methods["batchExit"], buf, b)
+}
+
+type ExitProcessedEvent struct {
+	ID         *big.Int `abi:"id"`
+	Success    bool     `abi:"success"`
+	ReturnData []byte   `abi:"returnData"`
+}
+
+func (*ExitProcessedEvent) Sig() ethgo.Hash {
+	return ExitHelper.Abi.Events["ExitProcessed"].ID()
+}
+
+func (e *ExitProcessedEvent) Encode() ([]byte, error) {
+	return ExitHelper.Abi.Events["ExitProcessed"].Inputs.Encode(e)
+}
+
+func (e *ExitProcessedEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !ExitHelper.Abi.Events["ExitProcessed"].Match(log) {
+		return false, nil
+	}
+
+	return true, decodeEvent(ExitHelper.Abi.Events["ExitProcessed"], log, e)
+}
+
+func (e *ExitProcessedEvent) Decode(input []byte) error {
+	return ExitHelper.Abi.Events["ExitProcessed"].Inputs.DecodeStruct(input, &e)
 }
 
 type InitializeChildERC20PredicateFn struct {
@@ -493,7 +578,6 @@ func (i *InitializeRootMintableERC20PredicateACLFn) DecodeAbi(buf []byte) error 
 
 type InitializeNativeERC20Fn struct {
 	Predicate_   types.Address `abi:"predicate_"`
-	Owner_       types.Address `abi:"owner_"`
 	RootToken_   types.Address `abi:"rootToken_"`
 	Name_        string        `abi:"name_"`
 	Symbol_      string        `abi:"symbol_"`
@@ -513,21 +597,43 @@ func (i *InitializeNativeERC20Fn) DecodeAbi(buf []byte) error {
 	return decodeMethod(NativeERC20.Abi.Methods["initialize"], buf, i)
 }
 
-type ApproveNativeERC20Fn struct {
+type InitializeNativeERC20MintableFn struct {
+	Predicate_   types.Address `abi:"predicate_"`
+	Owner_       types.Address `abi:"owner_"`
+	RootToken_   types.Address `abi:"rootToken_"`
+	Name_        string        `abi:"name_"`
+	Symbol_      string        `abi:"symbol_"`
+	Decimals_    uint8         `abi:"decimals_"`
+	TokenSupply_ *big.Int      `abi:"tokenSupply_"`
+}
+
+func (i *InitializeNativeERC20MintableFn) Sig() []byte {
+	return NativeERC20Mintable.Abi.Methods["initialize"].ID()
+}
+
+func (i *InitializeNativeERC20MintableFn) EncodeAbi() ([]byte, error) {
+	return NativeERC20Mintable.Abi.Methods["initialize"].Encode(i)
+}
+
+func (i *InitializeNativeERC20MintableFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(NativeERC20Mintable.Abi.Methods["initialize"], buf, i)
+}
+
+type ApproveNativeERC20MintableFn struct {
 	Spender types.Address `abi:"spender"`
 	Amount  *big.Int      `abi:"amount"`
 }
 
-func (a *ApproveNativeERC20Fn) Sig() []byte {
-	return NativeERC20.Abi.Methods["approve"].ID()
+func (a *ApproveNativeERC20MintableFn) Sig() []byte {
+	return NativeERC20Mintable.Abi.Methods["approve"].ID()
 }
 
-func (a *ApproveNativeERC20Fn) EncodeAbi() ([]byte, error) {
-	return NativeERC20.Abi.Methods["approve"].Encode(a)
+func (a *ApproveNativeERC20MintableFn) EncodeAbi() ([]byte, error) {
+	return NativeERC20Mintable.Abi.Methods["approve"].Encode(a)
 }
 
-func (a *ApproveNativeERC20Fn) DecodeAbi(buf []byte) error {
-	return decodeMethod(NativeERC20.Abi.Methods["approve"], buf, a)
+func (a *ApproveNativeERC20MintableFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(NativeERC20Mintable.Abi.Methods["approve"], buf, a)
 }
 
 type InitializeRootERC20PredicateFn struct {
@@ -1335,8 +1441,9 @@ func (w *WhitelistValidatorsStakeManagerFn) DecodeAbi(buf []byte) error {
 }
 
 type RegisterStakeManagerFn struct {
-	Signature [2]*big.Int `abi:"signature"`
-	Pubkey    [4]*big.Int `abi:"pubkey"`
+	Signature   [2]*big.Int `abi:"signature"`
+	Pubkey      [4]*big.Int `abi:"pubkey"`
+	StakeAmount *big.Int    `abi:"stakeAmount"`
 }
 
 func (r *RegisterStakeManagerFn) Sig() []byte {
@@ -1445,6 +1552,7 @@ func (s *StakeWithdrawnEvent) Decode(input []byte) error {
 type ValidatorRegisteredEvent struct {
 	Validator types.Address `abi:"validator"`
 	BlsKey    [4]*big.Int   `abi:"blsKey"`
+	Amount    *big.Int      `abi:"amount"`
 }
 
 func (*ValidatorRegisteredEvent) Sig() ethgo.Hash {
@@ -1601,6 +1709,74 @@ func (d *DistributeRewardForEpochManagerFn) EncodeAbi() ([]byte, error) {
 
 func (d *DistributeRewardForEpochManagerFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(EpochManager.Abi.Methods["distributeRewardFor"], buf, d)
+}
+
+type InitializeEIP1559BurnFn struct {
+	NewChildERC20Predicate types.Address `abi:"newChildERC20Predicate"`
+	NewBurnDestination     types.Address `abi:"newBurnDestination"`
+}
+
+func (i *InitializeEIP1559BurnFn) Sig() []byte {
+	return EIP1559Burn.Abi.Methods["initialize"].ID()
+}
+
+func (i *InitializeEIP1559BurnFn) EncodeAbi() ([]byte, error) {
+	return EIP1559Burn.Abi.Methods["initialize"].Encode(i)
+}
+
+func (i *InitializeEIP1559BurnFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(EIP1559Burn.Abi.Methods["initialize"], buf, i)
+}
+
+type GenesisAccount struct {
+	Addr           types.Address `abi:"addr"`
+	PreminedTokens *big.Int      `abi:"preminedTokens"`
+	StakedTokens   *big.Int      `abi:"stakedTokens"`
+	IsValidator    bool          `abi:"isValidator"`
+}
+
+var GenesisAccountABIType = abi.MustNewType("tuple(address addr,uint256 preminedTokens,uint256 stakedTokens,bool isValidator)")
+
+func (g *GenesisAccount) EncodeAbi() ([]byte, error) {
+	return GenesisAccountABIType.Encode(g)
+}
+
+func (g *GenesisAccount) DecodeAbi(buf []byte) error {
+	return decodeStruct(GenesisAccountABIType, buf, &g)
+}
+
+type InitializeBladeManagerFn struct {
+	NewRootERC20Predicate types.Address     `abi:"newRootERC20Predicate"`
+	GenesisAccounts       []*GenesisAccount `abi:"genesisAccounts"`
+}
+
+func (i *InitializeBladeManagerFn) Sig() []byte {
+	return BladeManager.Abi.Methods["initialize"].ID()
+}
+
+func (i *InitializeBladeManagerFn) EncodeAbi() ([]byte, error) {
+	return BladeManager.Abi.Methods["initialize"].Encode(i)
+}
+
+func (i *InitializeBladeManagerFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(BladeManager.Abi.Methods["initialize"], buf, i)
+}
+
+type AddGenesisBalanceBladeManagerFn struct {
+	NonStakeAmount *big.Int `abi:"nonStakeAmount"`
+	StakeAmount    *big.Int `abi:"stakeAmount"`
+}
+
+func (a *AddGenesisBalanceBladeManagerFn) Sig() []byte {
+	return BladeManager.Abi.Methods["addGenesisBalance"].ID()
+}
+
+func (a *AddGenesisBalanceBladeManagerFn) EncodeAbi() ([]byte, error) {
+	return BladeManager.Abi.Methods["addGenesisBalance"].Encode(a)
+}
+
+func (a *AddGenesisBalanceBladeManagerFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(BladeManager.Abi.Methods["addGenesisBalance"], buf, a)
 }
 
 type ProtectSetUpProxyGenesisProxyFn struct {

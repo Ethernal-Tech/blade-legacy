@@ -194,7 +194,7 @@ func TestIntegration_PerformExit(t *testing.T) {
 		EpochNumber:           epochNumber,
 		CurrentValidatorsHash: accSetHash,
 		NextValidatorsHash:    accSetHash,
-		EventRoot:             eventRoot,
+		EventRoot:             types.Hash(eventRoot),
 	}
 
 	checkpointHash, err := checkpointData.Hash(
@@ -249,7 +249,7 @@ func TestIntegration_PerformExit(t *testing.T) {
 		BlockNumber:  new(big.Int).SetUint64(blockNumber),
 		LeafIndex:    new(big.Int).SetUint64(leafIndex),
 		UnhashedLeaf: proofExitEvent,
-		Proof:        proof,
+		Proof:        types.FromMerkleToTypesHash(proof),
 	}).EncodeAbi()
 	require.NoError(t, err)
 
@@ -304,7 +304,7 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 				Code: contractsapi.EpochManager.DeployedBytecode,
 			},
 			contracts.NativeERC20TokenContract: {
-				Code: contractsapi.NativeERC20.DeployedBytecode,
+				Code: contractsapi.NativeERC20Mintable.DeployedBytecode,
 			},
 			contracts.StakeManagerContract: {
 				Code: contractsapi.StakeManager.DeployedBytecode,
@@ -357,6 +357,7 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 				NetworkParamsAddr:        contracts.NetworkParamsContract,
 				ForkParamsAddr:           contracts.ForkParamsContract,
 			},
+			StakeTokenAddr: contracts.NativeERC20TokenContract,
 		}
 
 		transition := newTestTransition(t, alloc)
