@@ -64,6 +64,9 @@ var (
 	ChildGovernor *contracts.Artifact
 	ChildTimelock *contracts.Artifact
 
+	// Account Abstraction
+	EntryPoint *contracts.Artifact
+
 	// test smart contracts
 	//go:embed test-contracts/*
 	testContracts          embed.FS
@@ -338,6 +341,11 @@ func init() {
 	}
 
 	ZexNFT, err = contracts.DecodeArtifact(readTestContractContent("ZexNFT.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	EntryPoint, err = contracts.DecodeArtifact([]byte(EntryPointArtifact))
 	if err != nil {
 		log.Fatal(err)
 	}
