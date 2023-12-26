@@ -14,10 +14,37 @@ import (
 )
 
 var (
-	two = big.NewInt(2)
+	two   = big.NewInt(2)
+	three = big.NewInt(3)
+	four  = big.NewInt(4)
+	five  = big.NewInt(5)
 
 	allEnabledForks = chain.AllForksEnabled.At(0)
 )
+
+type oneOperandsLogical []struct {
+	a              *big.Int
+	expectedResult bool
+}
+
+func testOneLogicalOperation(t *testing.T, f instruction, tests oneOperandsLogical) {
+	t.Helper()
+
+	s, closeFn := getState()
+	defer closeFn()
+
+	for _, i := range tests {
+		s.push(i.a)
+
+		f(s)
+
+		if i.expectedResult {
+			assert.Equal(t, uint64(1), s.pop().Uint64())
+		} else {
+			assert.Equal(t, uint64(0), s.pop().Uint64())
+		}
+	}
+}
 
 type twoOperandsArithmetic []struct {
 	a              *big.Int
@@ -31,13 +58,15 @@ func testArithmeticOperation(t *testing.T, f instruction, tests twoOperandsArith
 	s, closeFn := getState()
 	defer closeFn()
 
+	s.config = &allEnabledForks
+
 	for _, i := range tests {
 		s.push(i.b)
 		s.push(i.a)
 
 		f(s)
 
-		assert.EqualValues(t, i.expectedResult, s.pop())
+		assert.EqualValues(t, i.expectedResult.Uint64(), s.pop().Uint64())
 	}
 }
 
@@ -67,6 +96,30 @@ func testLogicalOperation(t *testing.T, f instruction, tests twoOperandsLogical)
 	}
 }
 
+type threeOperandsArithmetic []struct {
+	a              *big.Int
+	b              *big.Int
+	c              *big.Int
+	expectedResult *big.Int
+}
+
+func testThreeArithmeticOperation(t *testing.T, f instruction, tests threeOperandsArithmetic) {
+	t.Helper()
+
+	s, closeFn := getState()
+	defer closeFn()
+
+	for _, i := range tests {
+		s.push(i.c)
+		s.push(i.b)
+		s.push(i.a)
+
+		f(s)
+
+		assert.EqualValues(t, i.expectedResult.Uint64(), s.pop().Uint64())
+	}
+}
+
 func TestAdd(t *testing.T) {
 	testArithmeticOperation(t, opAdd, twoOperandsArithmetic{
 		{one, one, two},
@@ -85,6 +138,111 @@ func TestSub(t *testing.T) {
 	testArithmeticOperation(t, opSub, twoOperandsArithmetic{
 		{two, one, one},
 		{two, zero, two},
+	})
+}
+
+func TestDiv(t *testing.T) {
+	testArithmeticOperation(t, opDiv, twoOperandsArithmetic{
+		{two, two, one},
+		{two, one, two},
+		{zero, one, zero},
+	})
+}
+
+func TestSDiv(t *testing.T) {
+	testArithmeticOperation(t, opSDiv, twoOperandsArithmetic{
+		{two, two, one},
+		{two, one, two},
+		{zero, one, zero},
+	})
+}
+
+func TestMod(t *testing.T) {
+	testArithmeticOperation(t, opMod, twoOperandsArithmetic{
+		{three, two, one},
+		{two, two, zero},
+		{three, one, zero},
+	})
+}
+
+func TestSMod(t *testing.T) {
+	testArithmeticOperation(t, opSMod, twoOperandsArithmetic{
+		{three, two, one},
+		{two, two, zero},
+		{three, one, zero},
+	})
+}
+
+func TestAddMod(t *testing.T) {
+	testThreeArithmeticOperation(t, opAddMod, threeOperandsArithmetic{
+		{three, one, two, zero},
+		{two, one, two, one},
+	})
+}
+
+func TestMulMod(t *testing.T) {
+	testThreeArithmeticOperation(t, opMulMod, threeOperandsArithmetic{
+		{three, two, four, two},
+		{two, two, four, zero},
+	})
+}
+
+func TestOpAnd(t *testing.T) {
+	testLogicalOperation(t, opAnd, twoOperandsLogical{
+		{one, one, true},
+		{one, zero, false},
+		{zero, one, false},
+		{zero, zero, false},
+	})
+}
+
+func TestOpOr(t *testing.T) {
+	testLogicalOperation(t, opOr, twoOperandsLogical{
+		{one, one, true},
+		{one, zero, true},
+		{zero, one, true},
+		{zero, zero, false},
+	})
+}
+
+func TestXor(t *testing.T) {
+	testLogicalOperation(t, opXor, twoOperandsLogical{
+		{one, one, false},
+		{one, zero, true},
+		{zero, one, true},
+		{zero, zero, false},
+	})
+}
+
+func TestByte(t *testing.T) {
+	testArithmeticOperation(t, opByte, twoOperandsArithmetic{
+		{big.NewInt(31), one, one},
+		{big.NewInt(31), five, five},
+		{big.NewInt(32), two, zero},
+		{big.NewInt(30), one, zero},
+	})
+}
+
+func TestShl(t *testing.T) {
+	testArithmeticOperation(t, opShl, twoOperandsArithmetic{
+		{one, three, big.NewInt(6)},
+		{zero, three, three},
+	})
+}
+
+func TestShr(t *testing.T) {
+	testArithmeticOperation(t, opShr, twoOperandsArithmetic{
+		{one, five, two},
+		{two, five, one},
+		{zero, five, five},
+	})
+}
+
+func TestSar(t *testing.T) {
+	testArithmeticOperation(t, opSar, twoOperandsArithmetic{
+		{one, five, two},
+		{two, five, one},
+		{zero, five, five},
 	})
 }
 
@@ -137,6 +295,31 @@ func TestLt(t *testing.T) {
 		{one, one, false},
 		{one, two, true},
 		{two, one, false},
+	})
+}
+
+func TestEq(t *testing.T) {
+	testLogicalOperation(t, opEq, twoOperandsLogical{
+		{zero, zero, true},
+		{one, zero, false},
+		{zero, one, false},
+		{one, one, true},
+	})
+}
+
+func TestSlt(t *testing.T) {
+	testLogicalOperation(t, opSlt, twoOperandsLogical{
+		{one, one, false},
+		{one, zero, false},
+		{zero, one, true},
+	})
+}
+
+func TestSgt(t *testing.T) {
+	testLogicalOperation(t, opSgt, twoOperandsLogical{
+		{one, one, false},
+		{one, zero, true},
+		{zero, one, false},
 	})
 }
 
