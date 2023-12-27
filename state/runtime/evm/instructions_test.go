@@ -629,7 +629,6 @@ func TestExtCodeHash(t *testing.T) {
 
 		assert.Equal(t, s.gas, gasLeft)
 		assert.Equal(t, uint64(1), s.pop().Uint64())
-
 	})
 
 	t.Run("NonIstanbul", func(t *testing.T) {
