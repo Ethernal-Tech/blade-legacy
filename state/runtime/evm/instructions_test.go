@@ -54,6 +54,7 @@ type oneOperandsArithmetic []struct {
 
 func testOneArithmeticOperation(t *testing.T, f instruction, tests oneOperandsArithmetic) {
 	t.Helper()
+
 	s, closeFn := getState()
 	defer closeFn()
 
@@ -553,7 +554,6 @@ func TestExtCodeSize(t *testing.T) {
 
 		assert.Equal(t, gasLeft, s.gas)
 		assert.Equal(t, uint64(10), s.pop().Uint64())
-
 	})
 	t.Run("NoForks", func(t *testing.T) {
 		gasLeft := uint64(980)
@@ -572,14 +572,13 @@ func TestExtCodeSize(t *testing.T) {
 
 		assert.Equal(t, gasLeft, s.gas)
 		assert.Equal(t, uint64(10), s.pop().Uint64())
-
 	})
-
 }
 
 func TestGasPrice(t *testing.T) {
 	s, cancelFn := getState()
 	defer cancelFn()
+
 	mockHost := mockHost{}
 	mockHost.On("GetTxContext").Return(4, "0x1", 10).Once()
 
