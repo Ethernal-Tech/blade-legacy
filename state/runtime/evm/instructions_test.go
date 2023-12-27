@@ -10,6 +10,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -43,6 +44,25 @@ func testOneLogicalOperation(t *testing.T, f instruction, tests oneOperandsLogic
 		} else {
 			assert.Equal(t, uint64(0), s.pop().Uint64())
 		}
+	}
+}
+
+type oneOperandsArithmetic []struct {
+	a              *big.Int
+	expectedResult *big.Int
+}
+
+func testOneArithmeticOperation(t *testing.T, f instruction, tests oneOperandsArithmetic) {
+	t.Helper()
+	s, closeFn := getState()
+	defer closeFn()
+
+	for _, i := range tests {
+		s.push(i.a)
+
+		f(s)
+
+		assert.EqualValues(t, i.expectedResult.Uint64(), s.pop().Uint64())
 	}
 }
 
@@ -342,6 +362,324 @@ func TestMStore(t *testing.T) {
 	opMStore(s)
 
 	assert.Len(t, s.memory, 1024+32)
+}
+
+func TestMStore8(t *testing.T) {
+	s, closeFn := getState()
+	defer closeFn()
+
+	s.push(big.NewInt(10))
+	s.push(big.NewInt(1024))
+
+	s.gas = 1000
+	opMStore8(s)
+
+	assert.Len(t, s.memory, 1056)
+}
+
+func TestBalance(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	t.Run("Instanbul", func(t *testing.T) {
+		gasLeft := uint64(300)
+		s.config = &chain.ForksInTime{
+			Istanbul: true,
+		}
+		mockHost := mockHost{}
+		mockHost.On("GetBalance", mock.Anything).Return(100)
+
+		s.host = &mockHost
+		s.gas = 1000
+		opBalance(s)
+
+		assert.Equal(t, int64(100), s.pop().Int64())
+		assert.Equal(t, gasLeft, s.gas)
+	})
+
+	t.Run("Eip150", func(t *testing.T) {
+		gasLeft := uint64(600)
+		s.config = &chain.ForksInTime{
+			EIP150: true,
+		}
+		mockHost := mockHost{}
+		mockHost.On("GetBalance", mock.Anything).Return(100)
+
+		s.host = &mockHost
+		s.gas = 1000
+		opBalance(s)
+
+		assert.Equal(t, int64(100), s.pop().Int64())
+		assert.Equal(t, gasLeft, s.gas)
+	})
+
+	t.Run("OtherForks", func(t *testing.T) {
+		gasLeft := uint64(980)
+
+		s.config = &chain.ForksInTime{
+			London: true,
+		}
+		mockHost := mockHost{}
+		mockHost.On("GetBalance", mock.Anything).Return(100)
+
+		s.host = &mockHost
+		s.gas = 1000
+		opBalance(s)
+
+		assert.Equal(t, int64(100), s.pop().Int64())
+		assert.Equal(t, gasLeft, s.gas)
+	})
+}
+
+func TestSelfBalance(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.config = &chain.ForksInTime{
+		Istanbul: true,
+	}
+	mockHost := mockHost{}
+	mockHost.On("GetBalance", mock.Anything).Return(100).Once()
+
+	s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
+	s.host = &mockHost
+	s.gas = 1000
+	opSelfBalance(s)
+
+	assert.Equal(t, int64(100), s.pop().Int64())
+}
+
+func TestChainID(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.config = &chain.ForksInTime{
+		Istanbul: true,
+	}
+	mockHost := mockHost{}
+	mockHost.On("GetTxContext").Return(4, "0x1", 0).Once()
+
+	s.host = &mockHost
+	s.gas = 1000
+	opChainID(s)
+
+	assert.Equal(t, int64(4), s.pop().Int64())
+}
+
+func TestOrigin(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	mockHost := mockHost{}
+	mockHost.On("GetTxContext").Return(4, "0x1", 0).Once()
+
+	s.host = &mockHost
+	s.gas = 1000
+	opOrigin(s)
+	addr, ok := s.popAddr()
+	assert.True(t, ok)
+	assert.Equal(t, types.StringToAddress("0x1").Bytes(), addr.Bytes())
+}
+
+func TestCaller(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.msg = &runtime.Contract{Caller: types.StringToAddress("0x1")}
+	opCaller(s)
+
+	addr, ok := s.popAddr()
+	assert.True(t, ok)
+	assert.Equal(t, types.StringToAddress("0x1").Bytes(), addr.Bytes())
+}
+
+func TestCallValue(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	t.Run("Msg Value non nil", func(t *testing.T) {
+		s.msg = &runtime.Contract{Value: big.NewInt(10)}
+
+		opCallValue(s)
+		assert.Equal(t, big.NewInt(10), s.pop())
+	})
+
+	t.Run("Msg Value nil", func(t *testing.T) {
+		s.msg = &runtime.Contract{}
+
+		opCallValue(s)
+		assert.Equal(t, uint64(0), s.pop().Uint64())
+	})
+}
+
+func TestCallDataSize(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.msg = &runtime.Contract{Input: make([]byte, 10)}
+
+	opCallDataSize(s)
+	assert.Equal(t, uint64(10), s.pop().Uint64())
+}
+
+func TestCodeSize(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.code = make([]byte, 10)
+
+	opCodeSize(s)
+	assert.Equal(t, uint64(10), s.pop().Uint64())
+}
+
+func TestExtCodeSize(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	t.Run("EIP150", func(t *testing.T) {
+		gasLeft := uint64(300)
+		s.config = &chain.ForksInTime{
+			EIP150: true,
+		}
+		s.push(one)
+
+		mockHost := mockHost{}
+		mockHost.On("GetCodeSize", types.StringToAddress("0x1")).Return(10).Once()
+
+		s.host = &mockHost
+		s.gas = 1000
+
+		opExtCodeSize(s)
+
+		assert.Equal(t, gasLeft, s.gas)
+		assert.Equal(t, uint64(10), s.pop().Uint64())
+
+	})
+	t.Run("NoForks", func(t *testing.T) {
+		gasLeft := uint64(980)
+
+		s.push(one)
+
+		s.config = &chain.ForksInTime{EIP150: false}
+
+		mockHost := mockHost{}
+		mockHost.On("GetCodeSize", types.StringToAddress("0x1")).Return(10).Once()
+
+		s.host = &mockHost
+		s.gas = 1000
+
+		opExtCodeSize(s)
+
+		assert.Equal(t, gasLeft, s.gas)
+		assert.Equal(t, uint64(10), s.pop().Uint64())
+
+	})
+
+}
+
+func TestGasPrice(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+	mockHost := mockHost{}
+	mockHost.On("GetTxContext").Return(4, "0x1", 10).Once()
+
+	s.host = &mockHost
+
+	opGasPrice(s)
+
+	assert.Equal(t, bigToHash(big.NewInt(10)), s.popHash())
+}
+
+func TestReturnDataSize(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.config = &chain.ForksInTime{
+		Byzantium: true,
+	}
+
+	s.returnData = make([]byte, 1024)
+
+	opReturnDataSize(s)
+
+	assert.Equal(t, uint64(1024), s.pop().Uint64())
+}
+
+func TestExtCodeHash(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	t.Run("Istanbul", func(t *testing.T) {
+		gasLeft := uint64(300)
+		s.config = &chain.ForksInTime{
+			Constantinople: true,
+			Istanbul:       true,
+		}
+
+		s.push(big.NewInt(1))
+
+		s.gas = 1000
+
+		mockHost := mockHost{}
+		mockHost.On("Empty", types.StringToAddress("0x1")).Return(false).Once()
+		mockHost.On("GetCodeHash", types.StringToAddress("0x1")).Return("0x1").Once()
+
+		s.host = &mockHost
+
+		opExtCodeHash(s)
+
+		assert.Equal(t, s.gas, gasLeft)
+		assert.Equal(t, uint64(1), s.pop().Uint64())
+
+	})
+
+	t.Run("NonIstanbul", func(t *testing.T) {
+		gasLeft := uint64(600)
+		s.config = &chain.ForksInTime{
+			Constantinople: true,
+		}
+
+		s.push(big.NewInt(1))
+
+		s.gas = 1000
+
+		mockHost := mockHost{}
+		mockHost.On("Empty", mock.Anything).Return(true).Once()
+
+		s.host = &mockHost
+
+		opExtCodeHash(s)
+		assert.Equal(t, gasLeft, s.gas)
+		assert.Equal(t, zero.Int64(), s.pop().Int64())
+	})
+}
+
+func TestPCMSizeGas(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	t.Run("PC", func(t *testing.T) {
+		s.ip = 1
+		opPC(s)
+
+		assert.Equal(t, uint64(1), s.pop().Uint64())
+	})
+
+	t.Run("MSize", func(t *testing.T) {
+		s.memory = make([]byte, 1024)
+
+		opMSize(s)
+
+		assert.Equal(t, uint64(1024), s.pop().Uint64())
+	})
+
+	t.Run("Gas", func(t *testing.T) {
+		s.gas = 1000
+
+		opGas(s)
+
+		assert.Equal(t, uint64(1000), s.pop().Uint64())
+	})
 }
 
 type mockHostForInstructions struct {
