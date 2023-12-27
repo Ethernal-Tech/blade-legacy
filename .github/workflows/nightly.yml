@@ -89,6 +89,15 @@ jobs:
                       }
                     },
                     {
+                      "type": "context",
+                      "elements": [
+                        {
+                          "type": "mrkdwn",
+                          "text": "Logs: *<s3://blade-terraform-states/logs/${{ github.run_id }}|Open URL>*"
+                        }
+                      ]
+                    },
+                    {
                       "type": "actions",
                       "elements": [
                         {

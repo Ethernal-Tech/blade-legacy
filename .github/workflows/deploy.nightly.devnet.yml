@@ -119,6 +119,7 @@ jobs:
           sed 's/devnet13/${{ secrets.TF_VAR_DEPLOYMENT_NAME }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/blade_tag: .*/blade_tag: ${{ secrets.BLADE_TAG }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/is_bridge_active: .*/is_bridge_active: ${{ secrets.IS_BRIDGE_ACTIVE }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
+          sed 's/current_datetime\.stdout/${{ github.run_id }}/g' roles/upload-logs/tasks/logs.yml > roles/upload-logs/tasks/logs.yml.tmp && mv roles/upload-logs/tasks/logs.yml.tmp roles/upload-logs/tasks/logs.yml
       - name: Run Ansible
         working-directory: ansible
         run: |
@@ -186,6 +187,10 @@ jobs:
         with:
           repository: Ethernal-Tech/blade-deployment
           ref: refactoring
+      - name: Upload Logs
+        working-directory: ansible
+        run: |
+          ansible-playbook upload-logs.yml
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
