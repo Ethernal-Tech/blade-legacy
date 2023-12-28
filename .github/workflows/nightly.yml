@@ -93,7 +93,7 @@ jobs:
                       "elements": [
                         {
                           "type": "mrkdwn",
-                          "text": "Logs: *<s3://blade-terraform-states/logs/${{ github.run_id }}|Open URL>*"
+                          "text": "Logs: *<https://s3.console.aws.amazon.com/s3/buckets/blade-terraform-states?region=us-west-2&prefix=logs/${{ github.run_id }}/|Open URL>*"
                         }
                       ]
                     },
