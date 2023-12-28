@@ -92,13 +92,13 @@ func (m *mockHost) Selfdestruct(addr types.Address, beneficiary types.Address) {
 func (m *mockHost) GetTxContext() runtime.TxContext {
 	args := m.Called()
 
-	return runtime.TxContext{ChainID: int64(args.Int(0)),
-		Origin:   types.StringToAddress(args.String(1)),
-		GasPrice: bigToHash(big.NewInt(int64(args.Int(2))))}
+	return args.Get(0).(runtime.TxContext)
 }
 
 func (m *mockHost) GetBlockHash(number int64) types.Hash {
-	panic("Not implemented in tests") //nolint:gocritic
+	args := m.Called(number)
+
+	return bigToHash(big.NewInt(int64(args.Int(0))))
 }
 
 func (m *mockHost) EmitLog(addr types.Address, topics []types.Hash, data []byte) {
