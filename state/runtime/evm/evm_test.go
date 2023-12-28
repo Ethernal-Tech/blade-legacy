@@ -64,7 +64,7 @@ func (m *mockHost) SetNonPayable(bool) {
 func (m *mockHost) GetBalance(addr types.Address) *big.Int {
 	args := m.Called(addr)
 
-	return args.Get(0).(*big.Int)
+	return args.Get(0).(*big.Int) //nolint:forcetypeassert
 }
 
 func (m *mockHost) GetCodeSize(addr types.Address) int {
@@ -92,7 +92,7 @@ func (m *mockHost) Selfdestruct(addr types.Address, beneficiary types.Address) {
 func (m *mockHost) GetTxContext() runtime.TxContext {
 	args := m.Called()
 
-	return args.Get(0).(runtime.TxContext)
+	return args.Get(0).(runtime.TxContext) //nolint:forcetypeassert
 }
 
 func (m *mockHost) GetBlockHash(number int64) types.Hash {

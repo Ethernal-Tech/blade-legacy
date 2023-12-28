@@ -866,6 +866,7 @@ func TestGasLimit(t *testing.T) {
 
 func TestSelfDestruct(t *testing.T) {
 	addr := types.StringToAddress("0x1")
+
 	s, cancelFn := getState()
 	defer cancelFn()
 
