@@ -388,7 +388,7 @@ func TestBalance(t *testing.T) {
 			Istanbul: true,
 		}
 		mockHost := mockHost{}
-		mockHost.On("GetBalance", mock.Anything).Return(100)
+		mockHost.On("GetBalance", mock.Anything).Return(big.NewInt(100))
 
 		s.host = &mockHost
 		s.gas = 1000
@@ -404,7 +404,7 @@ func TestBalance(t *testing.T) {
 			EIP150: true,
 		}
 		mockHost := mockHost{}
-		mockHost.On("GetBalance", mock.Anything).Return(100)
+		mockHost.On("GetBalance", mock.Anything).Return(big.NewInt(100))
 
 		s.host = &mockHost
 		s.gas = 1000
@@ -421,7 +421,7 @@ func TestBalance(t *testing.T) {
 			London: true,
 		}
 		mockHost := mockHost{}
-		mockHost.On("GetBalance", mock.Anything).Return(100)
+		mockHost.On("GetBalance", mock.Anything).Return(big.NewInt(100))
 
 		s.host = &mockHost
 		s.gas = 1000
@@ -440,7 +440,7 @@ func TestSelfBalance(t *testing.T) {
 		Istanbul: true,
 	}
 	mockHost := mockHost{}
-	mockHost.On("GetBalance", mock.Anything).Return(100).Once()
+	mockHost.On("GetBalance", mock.Anything).Return(big.NewInt(100)).Once()
 
 	s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 	s.host = &mockHost
@@ -707,7 +707,7 @@ func TestExtCodeCopy(t *testing.T) {
 	})
 
 	t.Run("NonEIP150Fork", func(t *testing.T) {
-		leftGas := uint64(974)
+		leftGas := uint64(977)
 		s.config = &chain.ForksInTime{
 			EIP150: false,
 		}
@@ -862,6 +862,33 @@ func TestGasLimit(t *testing.T) {
 
 		assert.Equal(t, uint64(11), s.pop().Uint64())
 	})
+}
+
+func TestSelfDestruct(t *testing.T) {
+	addr := types.StringToAddress("0x1")
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.msg = &runtime.Contract{Static: false, Address: types.StringToAddress("0x2")}
+
+	s.config = &chain.ForksInTime{
+		EIP150: true,
+		EIP158: true,
+	}
+
+	s.gas = 100000
+	s.push(big.NewInt(1))
+
+	mockHost := mockHost{}
+	mockHost.On("Empty", addr).Return(true).Once()
+	mockHost.On("Selfdestruct", mock.Anything, mock.Anything)
+	mockHost.On("GetBalance", types.StringToAddress("0x2")).Return(big.NewInt(100)).Once()
+	s.host = &mockHost
+
+	opSelfDestruct(s)
+
+	assert.Equal(t, uint64(70000), s.gas)
+	assert.True(t, s.stop)
 }
 
 type mockHostForInstructions struct {

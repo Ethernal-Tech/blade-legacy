@@ -64,7 +64,7 @@ func (m *mockHost) SetNonPayable(bool) {
 func (m *mockHost) GetBalance(addr types.Address) *big.Int {
 	args := m.Called(addr)
 
-	return big.NewInt(int64(args.Int(0)))
+	return args.Get(0).(*big.Int)
 }
 
 func (m *mockHost) GetCodeSize(addr types.Address) int {
@@ -86,7 +86,7 @@ func (m *mockHost) GetCode(addr types.Address) []byte {
 }
 
 func (m *mockHost) Selfdestruct(addr types.Address, beneficiary types.Address) {
-	panic("Not implemented in tests") //nolint:gocritic
+	m.Called()
 }
 
 func (m *mockHost) GetTxContext() runtime.TxContext {
