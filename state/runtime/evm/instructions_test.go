@@ -732,6 +732,7 @@ func TestExtCodeCopy(t *testing.T) {
 
 func TestCallDataCopy(t *testing.T) {
 	gasLeft := uint64(994)
+
 	s, cancelFn := getState()
 	defer cancelFn()
 
