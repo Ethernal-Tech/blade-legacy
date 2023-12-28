@@ -217,7 +217,7 @@ jobs:
         working-directory: ansible
         run: |
           echo "${{ secrets.VAULT_PASSWORD_FILE }}" > password.txt
-          sed 's/current_datetime\.stdout/${{ github.run_id }}/g' roles/upload-logs/tasks/logs.yml > roles/upload-logs/tasks/logs.yml.tmp && mv roles/upload-logs/tasks/logs.yml.tmp roles/upload-logs/tasks/logs.yml
+          sed 's/{{ current_datetime\.stdout }}/${{ github.run_id }}/g' roles/upload-logs/tasks/logs.yml > roles/upload-logs/tasks/logs.yml.tmp && mv roles/upload-logs/tasks/logs.yml.tmp roles/upload-logs/tasks/logs.yml
       - name: Upload Logs
         working-directory: ansible
         run: |
