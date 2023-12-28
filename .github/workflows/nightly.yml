@@ -60,6 +60,7 @@ jobs:
       IS_BRIDGE_ACTIVE: ${{ secrets.IS_BRIDGE_ACTIVE }}
       PTA: ${{ secrets.PTA }}
       BLADE_TAG: ${{ secrets.BLADE_TAG }}
+      LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
     with:
       environment: devnet
  
