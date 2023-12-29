@@ -113,7 +113,8 @@ var (
 	BlockListBridgeAddr = types.StringToAddress("0x0300000000000000000000000000000000000004")
 
 	// EntryPointContract is the proxy address of EntryPoint contract which is a center point of account abstraction
-	EntryPointContract = types.StringToAddress("0x2001")
+	// EntryPoint must be deployed on this address, as it is the same on all networks
+	EntryPointContract = types.StringToAddress("0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789")
 	// EntryPointContract is an address of EntryPoint contract which is a center point of account abstraction
 	EntryPointContractV1 = types.StringToAddress("0x20011")
 )
