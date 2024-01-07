@@ -892,6 +892,64 @@ func TestSelfDestruct(t *testing.T) {
 	assert.True(t, s.stop)
 }
 
+func TestJump(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.code = make([]byte, 10)
+	s.bitmap = bitmap{big.NewInt(255).Bytes()}
+	s.push(five)
+
+	opJump(s)
+
+	assert.Equal(t, 4, s.ip)
+}
+
+func TestJumpI(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+
+	s.code = make([]byte, 10)
+	s.bitmap = bitmap{big.NewInt(255).Bytes()}
+	s.push(one)
+	s.push(five)
+
+	opJumpi(s)
+
+	assert.Equal(t, 4, s.ip)
+}
+
+func TestDup(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+	s.sp = 6
+
+	for i := 0; i < 10; i++ {
+		s.stack = append(s.stack, big.NewInt(int64(i)))
+	}
+
+	instr := opDup(4)
+	instr(s)
+
+	assert.Equal(t, uint64(2), s.pop().Uint64())
+}
+
+func TestSwap(t *testing.T) {
+	s, cancelFn := getState()
+	defer cancelFn()
+	s.sp = 6
+
+	for i := 0; i < 10; i++ {
+		s.stack = append(s.stack, big.NewInt(int64(i)))
+	}
+
+	instr := opSwap(4)
+	instr(s)
+
+	assert.Equal(t, uint64(5), s.stack[1].Uint64())
+	assert.Equal(t, uint64(1), s.stack[6-1].Uint64())
+}
+
 type mockHostForInstructions struct {
 	mockHost
 	nonce       uint64
