@@ -23,19 +23,21 @@ var (
 	allEnabledForks = chain.AllForksEnabled.At(0)
 )
 
-type oneOperandsLogical []struct {
-	a              *big.Int
+type OperandsLogical []struct {
+	operands       []*big.Int
 	expectedResult bool
 }
 
-func testOneLogicalOperation(t *testing.T, f instruction, tests oneOperandsLogical) {
+func testLogicalOperation(t *testing.T, f instruction, tests OperandsLogical) {
 	t.Helper()
 
 	s, closeFn := getState()
 	defer closeFn()
 
 	for _, i := range tests {
-		s.push(i.a)
+		for _, operand := range i.operands {
+			s.push(operand)
+		}
 
 		f(s)
 
@@ -47,93 +49,23 @@ func testOneLogicalOperation(t *testing.T, f instruction, tests oneOperandsLogic
 	}
 }
 
-type oneOperandsArithmetic []struct {
-	a              *big.Int
+type OperandsArithmetic []struct {
+	operands       []*big.Int
 	expectedResult *big.Int
 }
 
-func testOneArithmeticOperation(t *testing.T, f instruction, tests oneOperandsArithmetic) {
+func testArithmeticOperation(t *testing.T, f instruction, tests OperandsArithmetic) {
 	t.Helper()
 
 	s, closeFn := getState()
 	defer closeFn()
 
-	for _, i := range tests {
-		s.push(i.a)
-
-		f(s)
-
-		assert.EqualValues(t, i.expectedResult.Uint64(), s.pop().Uint64())
-	}
-}
-
-type twoOperandsArithmetic []struct {
-	a              *big.Int
-	b              *big.Int
-	expectedResult *big.Int
-}
-
-func testArithmeticOperation(t *testing.T, f instruction, tests twoOperandsArithmetic) {
-	t.Helper()
-
-	s, closeFn := getState()
-	defer closeFn()
-
-	s.config = &allEnabledForks
+	s.config = &chain.ForksInTime{Constantinople: true}
 
 	for _, i := range tests {
-		s.push(i.b)
-		s.push(i.a)
-
-		f(s)
-
-		assert.EqualValues(t, i.expectedResult.Uint64(), s.pop().Uint64())
-	}
-}
-
-type twoOperandsLogical []struct {
-	a              *big.Int
-	b              *big.Int
-	expectedResult bool
-}
-
-func testLogicalOperation(t *testing.T, f instruction, tests twoOperandsLogical) {
-	t.Helper()
-
-	s, closeFn := getState()
-	defer closeFn()
-
-	for _, i := range tests {
-		s.push(i.b)
-		s.push(i.a)
-
-		f(s)
-
-		if i.expectedResult {
-			assert.Equal(t, uint64(1), s.pop().Uint64())
-		} else {
-			assert.Equal(t, uint64(0), s.pop().Uint64())
+		for _, operand := range i.operands {
+			s.push(operand)
 		}
-	}
-}
-
-type threeOperandsArithmetic []struct {
-	a              *big.Int
-	b              *big.Int
-	c              *big.Int
-	expectedResult *big.Int
-}
-
-func testThreeArithmeticOperation(t *testing.T, f instruction, tests threeOperandsArithmetic) {
-	t.Helper()
-
-	s, closeFn := getState()
-	defer closeFn()
-
-	for _, i := range tests {
-		s.push(i.c)
-		s.push(i.b)
-		s.push(i.a)
 
 		f(s)
 
@@ -142,128 +74,128 @@ func testThreeArithmeticOperation(t *testing.T, f instruction, tests threeOperan
 }
 
 func TestAdd(t *testing.T) {
-	testArithmeticOperation(t, opAdd, twoOperandsArithmetic{
-		{one, one, two},
-		{zero, one, one},
+	testArithmeticOperation(t, opAdd, OperandsArithmetic{
+		{[]*big.Int{one, one}, two},
+		{[]*big.Int{zero, one}, one},
 	})
 }
 
 func TestMul(t *testing.T) {
-	testArithmeticOperation(t, opMul, twoOperandsArithmetic{
-		{two, two, big.NewInt(4)},
-		{big.NewInt(3), two, big.NewInt(6)},
+	testArithmeticOperation(t, opMul, OperandsArithmetic{
+		{[]*big.Int{two, two}, big.NewInt(4)},
+		{[]*big.Int{three, two}, big.NewInt(6)},
 	})
 }
 
 func TestSub(t *testing.T) {
-	testArithmeticOperation(t, opSub, twoOperandsArithmetic{
-		{two, one, one},
-		{two, zero, two},
+	testArithmeticOperation(t, opSub, OperandsArithmetic{
+		{[]*big.Int{one, two}, one},
+		{[]*big.Int{zero, two}, two},
 	})
 }
 
 func TestDiv(t *testing.T) {
-	testArithmeticOperation(t, opDiv, twoOperandsArithmetic{
-		{two, two, one},
-		{two, one, two},
-		{zero, one, zero},
+	testArithmeticOperation(t, opDiv, OperandsArithmetic{
+		{[]*big.Int{two, two}, one},
+		{[]*big.Int{one, two}, two},
+		{[]*big.Int{one, zero}, zero},
 	})
 }
 
 func TestSDiv(t *testing.T) {
-	testArithmeticOperation(t, opSDiv, twoOperandsArithmetic{
-		{two, two, one},
-		{two, one, two},
-		{zero, one, zero},
+	testArithmeticOperation(t, opSDiv, OperandsArithmetic{
+		{[]*big.Int{two, two}, one},
+		{[]*big.Int{one, two}, two},
+		{[]*big.Int{zero, one}, zero},
 	})
 }
 
 func TestMod(t *testing.T) {
-	testArithmeticOperation(t, opMod, twoOperandsArithmetic{
-		{three, two, one},
-		{two, two, zero},
-		{three, one, zero},
+	testArithmeticOperation(t, opMod, OperandsArithmetic{
+		{[]*big.Int{two, three}, one},
+		{[]*big.Int{two, two}, zero},
+		{[]*big.Int{one, three}, zero},
 	})
 }
 
 func TestSMod(t *testing.T) {
-	testArithmeticOperation(t, opSMod, twoOperandsArithmetic{
-		{three, two, one},
-		{two, two, zero},
-		{three, one, zero},
+	testArithmeticOperation(t, opSMod, OperandsArithmetic{
+		{[]*big.Int{two, three}, one},
+		{[]*big.Int{two, two}, zero},
+		{[]*big.Int{one, three}, zero},
 	})
 }
 
 func TestAddMod(t *testing.T) {
-	testThreeArithmeticOperation(t, opAddMod, threeOperandsArithmetic{
-		{three, one, two, zero},
-		{two, one, two, one},
+	testArithmeticOperation(t, opAddMod, OperandsArithmetic{
+		{[]*big.Int{three, one, two}, zero},
+		{[]*big.Int{two, one, two}, one},
 	})
 }
 
 func TestMulMod(t *testing.T) {
-	testThreeArithmeticOperation(t, opMulMod, threeOperandsArithmetic{
-		{three, two, four, two},
-		{two, two, four, zero},
+	testArithmeticOperation(t, opMulMod, OperandsArithmetic{
+		{[]*big.Int{three, two, four}, two},
+		{[]*big.Int{two, two, four}, zero},
 	})
 }
 
 func TestOpAnd(t *testing.T) {
-	testLogicalOperation(t, opAnd, twoOperandsLogical{
-		{one, one, true},
-		{one, zero, false},
-		{zero, one, false},
-		{zero, zero, false},
+	testLogicalOperation(t, opAnd, OperandsLogical{
+		{[]*big.Int{one, one}, true},
+		{[]*big.Int{one, zero}, false},
+		{[]*big.Int{zero, one}, false},
+		{[]*big.Int{zero, zero}, false},
 	})
 }
 
 func TestOpOr(t *testing.T) {
-	testLogicalOperation(t, opOr, twoOperandsLogical{
-		{one, one, true},
-		{one, zero, true},
-		{zero, one, true},
-		{zero, zero, false},
+	testLogicalOperation(t, opOr, OperandsLogical{
+		{[]*big.Int{one, one}, true},
+		{[]*big.Int{one, zero}, true},
+		{[]*big.Int{zero, one}, true},
+		{[]*big.Int{zero, zero}, false},
 	})
 }
 
 func TestXor(t *testing.T) {
-	testLogicalOperation(t, opXor, twoOperandsLogical{
-		{one, one, false},
-		{one, zero, true},
-		{zero, one, true},
-		{zero, zero, false},
+	testLogicalOperation(t, opXor, OperandsLogical{
+		{[]*big.Int{one, one}, false},
+		{[]*big.Int{one, zero}, true},
+		{[]*big.Int{zero, one}, true},
+		{[]*big.Int{zero, zero}, false},
 	})
 }
 
 func TestByte(t *testing.T) {
-	testArithmeticOperation(t, opByte, twoOperandsArithmetic{
-		{big.NewInt(31), one, one},
-		{big.NewInt(31), five, five},
-		{big.NewInt(32), two, zero},
-		{big.NewInt(30), one, zero},
+	testArithmeticOperation(t, opByte, OperandsArithmetic{
+		{[]*big.Int{one, big.NewInt(31)}, one},
+		{[]*big.Int{five, big.NewInt(31)}, five},
+		{[]*big.Int{two, big.NewInt(32)}, zero},
+		{[]*big.Int{one, big.NewInt(30)}, zero},
 	})
 }
 
 func TestShl(t *testing.T) {
-	testArithmeticOperation(t, opShl, twoOperandsArithmetic{
-		{one, three, big.NewInt(6)},
-		{zero, three, three},
+	testArithmeticOperation(t, opShl, OperandsArithmetic{
+		{[]*big.Int{three, one}, big.NewInt(6)},
+		{[]*big.Int{three, zero}, three},
 	})
 }
 
 func TestShr(t *testing.T) {
-	testArithmeticOperation(t, opShr, twoOperandsArithmetic{
-		{one, five, two},
-		{two, five, one},
-		{zero, five, five},
+	testArithmeticOperation(t, opShr, OperandsArithmetic{
+		{[]*big.Int{five, one}, two},
+		{[]*big.Int{five, two}, one},
+		{[]*big.Int{five, zero}, five},
 	})
 }
 
 func TestSar(t *testing.T) {
-	testArithmeticOperation(t, opSar, twoOperandsArithmetic{
-		{one, five, two},
-		{two, five, one},
-		{zero, five, five},
+	testArithmeticOperation(t, opSar, OperandsArithmetic{
+		{[]*big.Int{five, one}, two},
+		{[]*big.Int{five, two}, one},
+		{[]*big.Int{five, zero}, five},
 	})
 }
 
@@ -304,51 +236,51 @@ func TestPush0(t *testing.T) {
 }
 
 func TestGt(t *testing.T) {
-	testLogicalOperation(t, opGt, twoOperandsLogical{
-		{one, one, false},
-		{one, two, false},
-		{two, one, true},
+	testLogicalOperation(t, opGt, OperandsLogical{
+		{[]*big.Int{one, one}, false},
+		{[]*big.Int{two, one}, false},
+		{[]*big.Int{one, two}, true},
 	})
 }
 
 func TestLt(t *testing.T) {
-	testLogicalOperation(t, opLt, twoOperandsLogical{
-		{one, one, false},
-		{one, two, true},
-		{two, one, false},
+	testLogicalOperation(t, opLt, OperandsLogical{
+		{[]*big.Int{one, one}, false},
+		{[]*big.Int{two, one}, true},
+		{[]*big.Int{one, two}, false},
 	})
 }
 
 func TestEq(t *testing.T) {
-	testLogicalOperation(t, opEq, twoOperandsLogical{
-		{zero, zero, true},
-		{one, zero, false},
-		{zero, one, false},
-		{one, one, true},
+	testLogicalOperation(t, opEq, OperandsLogical{
+		{[]*big.Int{zero, zero}, true},
+		{[]*big.Int{one, zero}, false},
+		{[]*big.Int{zero, one}, false},
+		{[]*big.Int{one, one}, true},
 	})
 }
 
 func TestSlt(t *testing.T) {
-	testLogicalOperation(t, opSlt, twoOperandsLogical{
-		{one, one, false},
-		{one, zero, false},
-		{zero, one, true},
+	testLogicalOperation(t, opSlt, OperandsLogical{
+		{[]*big.Int{one, one}, false},
+		{[]*big.Int{zero, one}, false},
+		{[]*big.Int{one, zero}, true},
 	})
 }
 
 func TestSgt(t *testing.T) {
-	testLogicalOperation(t, opSgt, twoOperandsLogical{
-		{one, one, false},
-		{one, zero, true},
-		{zero, one, false},
+	testLogicalOperation(t, opSgt, OperandsLogical{
+		{[]*big.Int{one, one}, false},
+		{[]*big.Int{zero, one}, true},
+		{[]*big.Int{one, zero}, false},
 	})
 }
 
 func TestIsZero(t *testing.T) {
-	testLogicalOperation(t, opIsZero, twoOperandsLogical{
-		{one, one, false},
-		{zero, zero, true},
-		{two, two, false},
+	testLogicalOperation(t, opIsZero, OperandsLogical{
+		{[]*big.Int{one, one}, false},
+		{[]*big.Int{zero, zero}, true},
+		{[]*big.Int{two, two}, false},
 	})
 }
 
@@ -382,7 +314,7 @@ func TestBalance(t *testing.T) {
 	s, cancelFn := getState()
 	defer cancelFn()
 
-	t.Run("Instanbul", func(t *testing.T) {
+	t.Run("Istanbul", func(t *testing.T) {
 		gasLeft := uint64(300)
 		s.config = &chain.ForksInTime{
 			Istanbul: true,
@@ -398,7 +330,7 @@ func TestBalance(t *testing.T) {
 		assert.Equal(t, gasLeft, s.gas)
 	})
 
-	t.Run("Eip150", func(t *testing.T) {
+	t.Run("EIP150", func(t *testing.T) {
 		gasLeft := uint64(600)
 		s.config = &chain.ForksInTime{
 			EIP150: true,
@@ -683,7 +615,7 @@ func TestPCMSizeGas(t *testing.T) {
 func TestExtCodeCopy(t *testing.T) {
 	s, cancelFn := getState()
 	defer cancelFn()
-	t.Run("Eip150", func(t *testing.T) {
+	t.Run("EIP150", func(t *testing.T) {
 		leftGas := uint64(294)
 		s.config = &chain.ForksInTime{
 			EIP150: true,
@@ -922,6 +854,7 @@ func TestJumpI(t *testing.T) {
 func TestDup(t *testing.T) {
 	s, cancelFn := getState()
 	defer cancelFn()
+
 	s.sp = 6
 
 	for i := 0; i < 10; i++ {
@@ -937,6 +870,7 @@ func TestDup(t *testing.T) {
 func TestSwap(t *testing.T) {
 	s, cancelFn := getState()
 	defer cancelFn()
+
 	s.sp = 6
 
 	for i := 0; i < 10; i++ {
