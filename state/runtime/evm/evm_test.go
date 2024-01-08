@@ -37,7 +37,9 @@ func (m *mockHost) AccountExists(addr types.Address) bool {
 }
 
 func (m *mockHost) GetStorage(addr types.Address, key types.Hash) types.Hash {
-	panic("Not implemented in tests") //nolint:gocritic
+	args := m.Called()
+
+	return args.Get(0).(types.Hash)
 }
 
 func (m *mockHost) SetState(
@@ -54,7 +56,9 @@ func (m *mockHost) SetStorage(
 	value types.Hash,
 	config *chain.ForksInTime,
 ) runtime.StorageStatus {
-	panic("Not implemented in tests") //nolint:gocritic
+	args := m.Called()
+
+	return args.Get(0).(runtime.StorageStatus)
 }
 
 func (m *mockHost) SetNonPayable(bool) {
@@ -102,7 +106,7 @@ func (m *mockHost) GetBlockHash(number int64) types.Hash {
 }
 
 func (m *mockHost) EmitLog(addr types.Address, topics []types.Hash, data []byte) {
-	panic("Not implemented in tests") //nolint:gocritic
+	m.Called()
 }
 
 func (m *mockHost) Callx(*runtime.Contract, runtime.Host) *runtime.ExecutionResult {
