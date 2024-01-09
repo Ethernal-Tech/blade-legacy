@@ -39,7 +39,7 @@ func (m *mockHost) AccountExists(addr types.Address) bool {
 func (m *mockHost) GetStorage(addr types.Address, key types.Hash) types.Hash {
 	args := m.Called()
 
-	return args.Get(0).(types.Hash)
+	return args.Get(0).(types.Hash) //nolint:forcetypeassert
 }
 
 func (m *mockHost) SetState(
@@ -58,7 +58,7 @@ func (m *mockHost) SetStorage(
 ) runtime.StorageStatus {
 	args := m.Called()
 
-	return args.Get(0).(runtime.StorageStatus)
+	return args.Get(0).(runtime.StorageStatus) //nolint:forcetypeassert
 }
 
 func (m *mockHost) SetNonPayable(bool) {

@@ -167,7 +167,6 @@ func TestExp(t *testing.T) {
 		assert.Equal(t, uint64(990), s.gas)
 		assert.Equal(t, one, s.pop())
 	})
-
 }
 
 func TestAddMod(t *testing.T) {
@@ -702,7 +701,6 @@ func TestChainID(t *testing.T) {
 		assert.True(t, s.stop)
 		assert.Equal(t, s.err, errOpCodeNotFound)
 	})
-
 }
 
 func TestOrigin(t *testing.T) {
@@ -1319,7 +1317,6 @@ func TestLog(t *testing.T) {
 
 		assert.Equal(t, uint64(21475), s.gas)
 	})
-
 }
 
 type mockHostForInstructions struct {
