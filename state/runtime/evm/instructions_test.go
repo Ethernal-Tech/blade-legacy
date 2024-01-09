@@ -77,13 +77,17 @@ func TestAdd(t *testing.T) {
 	testArithmeticOperation(t, opAdd, OperandsArithmetic{
 		{[]*big.Int{one, one}, two},
 		{[]*big.Int{zero, one}, one},
+		{[]*big.Int{three, two}, five},
+		{[]*big.Int{zero, zero}, zero},
 	})
 }
 
 func TestMul(t *testing.T) {
 	testArithmeticOperation(t, opMul, OperandsArithmetic{
-		{[]*big.Int{two, two}, big.NewInt(4)},
+		{[]*big.Int{two, two}, four},
 		{[]*big.Int{three, two}, big.NewInt(6)},
+		{[]*big.Int{three, one}, three},
+		{[]*big.Int{zero, one}, zero},
 	})
 }
 
@@ -91,6 +95,7 @@ func TestSub(t *testing.T) {
 	testArithmeticOperation(t, opSub, OperandsArithmetic{
 		{[]*big.Int{one, two}, one},
 		{[]*big.Int{zero, two}, two},
+		{[]*big.Int{two, two}, zero},
 	})
 }
 
@@ -108,6 +113,7 @@ func TestSDiv(t *testing.T) {
 		{[]*big.Int{two, two}, one},
 		{[]*big.Int{one, two}, two},
 		{[]*big.Int{zero, one}, zero},
+		{[]*big.Int{one, zero}, zero},
 	})
 }
 
@@ -117,6 +123,7 @@ func TestMod(t *testing.T) {
 		{[]*big.Int{two, two}, zero},
 		{[]*big.Int{one, three}, zero},
 		{[]*big.Int{zero, one}, zero},
+		{[]*big.Int{three, five}, two},
 	})
 }
 
@@ -126,10 +133,11 @@ func TestSMod(t *testing.T) {
 		{[]*big.Int{two, two}, zero},
 		{[]*big.Int{one, three}, zero},
 		{[]*big.Int{zero, one}, zero},
+		{[]*big.Int{three, five}, two},
 	})
 }
 
-func TestAcquireBig(t *testing.T) {
+func TestReleaseAcquireBig(t *testing.T) {
 	releaseBig(five)
 
 	assert.Equal(t, five, acquireBig())
@@ -173,6 +181,7 @@ func TestAddMod(t *testing.T) {
 	testArithmeticOperation(t, opAddMod, OperandsArithmetic{
 		{[]*big.Int{three, one, two}, zero},
 		{[]*big.Int{two, one, two}, one},
+		{[]*big.Int{zero, one, one}, zero},
 	})
 }
 
@@ -180,10 +189,11 @@ func TestMulMod(t *testing.T) {
 	testArithmeticOperation(t, opMulMod, OperandsArithmetic{
 		{[]*big.Int{three, two, four}, two},
 		{[]*big.Int{two, two, four}, zero},
+		{[]*big.Int{zero, one, one}, zero},
 	})
 }
 
-func TestOpAnd(t *testing.T) {
+func TestAnd(t *testing.T) {
 	testLogicalOperation(t, opAnd, OperandsLogical{
 		{[]*big.Int{one, one}, true},
 		{[]*big.Int{one, zero}, false},
@@ -192,7 +202,7 @@ func TestOpAnd(t *testing.T) {
 	})
 }
 
-func TestOpOr(t *testing.T) {
+func TestOr(t *testing.T) {
 	testLogicalOperation(t, opOr, OperandsLogical{
 		{[]*big.Int{one, one}, true},
 		{[]*big.Int{one, zero}, true},
