@@ -378,7 +378,7 @@ func TestMload(t *testing.T) {
 	s.gas = 1000
 	s.push(big.NewInt(64))
 
-	opMload(s)
+	opMLoad(s)
 
 	assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 }
