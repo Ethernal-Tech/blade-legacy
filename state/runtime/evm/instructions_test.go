@@ -557,15 +557,13 @@ func TestMStore8(t *testing.T) {
 }
 
 func TestSload(t *testing.T) {
-	mockHost := mockHost{}
-	mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one))
 	t.Run("Istanbul", func(t *testing.T) {
 		s, closeFn := createState(&chain.ForksInTime{Istanbul: true})
 		defer closeFn()
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host = &mockHost
+		s.host.(*mockHost).On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once() //nolint:forcetypeassert
 
 		s.push(one)
 
@@ -580,7 +578,7 @@ func TestSload(t *testing.T) {
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host = &mockHost
+		s.host.(*mockHost).On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once() //nolint:forcetypeassert
 
 		s.push(one)
 
@@ -595,7 +593,7 @@ func TestSload(t *testing.T) {
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host = &mockHost
+		s.host.(*mockHost).On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once() //nolint:forcetypeassert
 
 		s.push(one)
 
@@ -687,7 +685,7 @@ func TestSStore(t *testing.T) {
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
+		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
 			mock.Anything, mock.Anything).Return(runtime.StorageDeleted).Once()
 
 		s.push(one)
@@ -707,7 +705,7 @@ func TestBalance(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance)
+		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance) //nolint:forcetypeassert
 
 		opBalance(s)
 
@@ -721,7 +719,7 @@ func TestBalance(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(big.NewInt(100))
+		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(big.NewInt(100)) //nolint:forcetypeassert
 
 		opBalance(s)
 
@@ -735,7 +733,7 @@ func TestBalance(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{London: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance)
+		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance) //nolint:forcetypeassert
 
 		opBalance(s)
 
@@ -751,7 +749,7 @@ func TestSelfBalance(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance).Once()
+		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance).Once() //nolint:forcetypeassert
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
@@ -764,7 +762,7 @@ func TestSelfBalance(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance).Once()
+		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance).Once() //nolint:forcetypeassert
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
@@ -782,7 +780,7 @@ func TestChainID(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{ChainID: 4}).Once()
+		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{ChainID: 4}).Once() //nolint:forcetypeassert
 
 		opChainID(s)
 
@@ -805,7 +803,7 @@ func TestOrigin(t *testing.T) {
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Origin: types.StringToAddress("0x1")}).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Origin: types.StringToAddress("0x1")}).Once() //nolint:forcetypeassert
 
 	opOrigin(s)
 
@@ -901,7 +899,7 @@ func TestExtCodeSize(t *testing.T) {
 		defer cancelFn()
 		s.push(one)
 
-		s.host.(*mockHost).On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once()
+		s.host.(*mockHost).On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once() //nolint:forcetypeassert
 
 		opExtCodeSize(s)
 
@@ -916,7 +914,7 @@ func TestExtCodeSize(t *testing.T) {
 
 		s.push(one)
 
-		s.host.(*mockHost).On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once()
+		s.host.(*mockHost).On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once() //nolint:forcetypeassert
 
 		opExtCodeSize(s)
 
@@ -931,7 +929,7 @@ func TestGasPrice(t *testing.T) {
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{GasPrice: bigToHash(big.NewInt(int64(gasPrice)))}).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{GasPrice: bigToHash(big.NewInt(int64(gasPrice)))}).Once() //nolint:forcetypeassert
 
 	opGasPrice(s)
 
@@ -976,8 +974,8 @@ func TestExtCodeHash(t *testing.T) {
 
 		s.push(one)
 
-		s.host.(*mockHost).On("Empty", types.StringToAddress("0x1")).Return(false).Once()
-		s.host.(*mockHost).On("GetCodeHash", types.StringToAddress("0x1")).Return("0x1").Once()
+		s.host.(*mockHost).On("Empty", types.StringToAddress("0x1")).Return(false).Once()       //nolint:forcetypeassert
+		s.host.(*mockHost).On("GetCodeHash", types.StringToAddress("0x1")).Return("0x1").Once() //nolint:forcetypeassert
 
 		opExtCodeHash(s)
 
@@ -995,7 +993,7 @@ func TestExtCodeHash(t *testing.T) {
 
 		s.push(one)
 
-		s.host.(*mockHost).On("Empty", mock.Anything).Return(true).Once()
+		s.host.(*mockHost).On("Empty", mock.Anything).Return(true).Once() //nolint:forcetypeassert
 
 		opExtCodeHash(s)
 		assert.Equal(t, gasLeft, s.gas)
@@ -1008,7 +1006,7 @@ func TestExtCodeHash(t *testing.T) {
 
 		s.push(one)
 
-		s.host.(*mockHost).On("Empty", mock.Anything).Return(true).Once()
+		s.host.(*mockHost).On("Empty", mock.Anything).Return(true).Once() //nolint:forcetypeassert
 
 		opExtCodeHash(s)
 		assert.True(t, s.stop)
@@ -1052,7 +1050,7 @@ func TestExtCodeCopy(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetCode", mock.Anything).Return("0x1").Once()
+		s.host.(*mockHost).On("GetCode", mock.Anything).Return("0x1").Once() //nolint:forcetypeassert
 
 		s.push(one)
 		s.push(zero)
@@ -1070,7 +1068,7 @@ func TestExtCodeCopy(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetCode", mock.Anything).Return("0x1").Once()
+		s.host.(*mockHost).On("GetCode", mock.Anything).Return("0x1").Once() //nolint:forcetypeassert
 
 		s.push(one)
 		s.push(zero)
@@ -1124,8 +1122,8 @@ func TestBlockHash(t *testing.T) {
 
 	s.push(three)
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Number: 5}).Once()
-	s.host.(*mockHost).On("GetBlockHash", mock.Anything).Return(bigToHash(three)).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Number: 5}).Once()    //nolint:forcetypeassert
+	s.host.(*mockHost).On("GetBlockHash", mock.Anything).Return(bigToHash(three)).Once() //nolint:forcetypeassert
 
 	opBlockHash(s)
 
@@ -1136,7 +1134,7 @@ func TestCoinBase(t *testing.T) {
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Coinbase: types.StringToAddress("0x1")}).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Coinbase: types.StringToAddress("0x1")}).Once() //nolint:forcetypeassert
 
 	opCoinbase(s)
 
@@ -1147,7 +1145,7 @@ func TestTimeStamp(t *testing.T) {
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Timestamp: 335}).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Timestamp: 335}).Once() //nolint:forcetypeassert
 
 	opTimestamp(s)
 
@@ -1158,7 +1156,7 @@ func TestNumber(t *testing.T) {
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Number: 5}).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Number: 5}).Once() //nolint:forcetypeassert
 
 	opNumber(s)
 
@@ -1169,7 +1167,7 @@ func TestDifficulty(t *testing.T) {
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Difficulty: bigToHash(five)}).Once()
+	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Difficulty: bigToHash(five)}).Once() //nolint:forcetypeassert
 
 	opDifficulty(s)
 
@@ -1183,7 +1181,7 @@ func TestGasLimit(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{GasLimit: 11}).Once()
+		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{GasLimit: 11}).Once() //nolint:forcetypeassert
 
 		opBaseFee(s)
 		assert.EqualError(t, errOpCodeNotFound, s.err.Error())
@@ -1193,7 +1191,7 @@ func TestGasLimit(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{London: true})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{BaseFee: big.NewInt(11)}).Once()
+		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{BaseFee: big.NewInt(11)}).Once() //nolint:forcetypeassert
 
 		opBaseFee(s)
 
@@ -1214,9 +1212,9 @@ func TestSelfDestruct(t *testing.T) {
 	s.gas = 100000
 	s.push(one)
 
-	s.host.(*mockHost).On("Empty", addr).Return(true).Once()
-	s.host.(*mockHost).On("Selfdestruct", mock.Anything, mock.Anything)
-	s.host.(*mockHost).On("GetBalance", types.StringToAddress("0x2")).Return(big.NewInt(100)).Once()
+	s.host.(*mockHost).On("Empty", addr).Return(true).Once()                                         //nolint:forcetypeassert
+	s.host.(*mockHost).On("Selfdestruct", mock.Anything, mock.Anything)                              //nolint:forcetypeassert
+	s.host.(*mockHost).On("GetBalance", types.StringToAddress("0x2")).Return(big.NewInt(100)).Once() //nolint:forcetypeassert
 
 	opSelfDestruct(s)
 
@@ -1336,7 +1334,7 @@ func TestLog(t *testing.T) {
 		s.push(big.NewInt(3))
 		s.push(big.NewInt(20))
 
-		s.host.(*mockHost).On("EmitLog", mock.Anything, mock.Anything, mock.Anything).Once()
+		s.host.(*mockHost).On("EmitLog", mock.Anything, mock.Anything, mock.Anything).Once() //nolint:forcetypeassert
 
 		for i := 0; i < 20; i++ {
 			s.push(big.NewInt(int64(i)))
