@@ -474,7 +474,7 @@ func TestSgt(t *testing.T) {
 }
 
 func TestSignExtension(t *testing.T) {
-	t.Run("Or", func(t *testing.T) {
+	t.Run("BitAboveZero", func(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
 
@@ -486,7 +486,7 @@ func TestSignExtension(t *testing.T) {
 			testArithmeticOperation(t, opSignExtension, testOperand, s)
 		}
 	})
-	t.Run("And", func(t *testing.T) {
+	t.Run("BitZero", func(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
 
@@ -528,42 +528,38 @@ func TestIsZero(t *testing.T) {
 	}
 }
 
-func TestMload(t *testing.T) {
-	s, closeFn := getState()
+func TestMStore(t *testing.T) {
+	s, closeFn := createState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.gas = 1000
-	s.push(big.NewInt(64))
+	s.push(one)            // value
+	s.push(big.NewInt(62)) // offset
+
+	opMStore(s)
+
+	s.push(big.NewInt(62))
 
 	opMLoad(s)
 
-	assert.Equal(t, zero.Uint64(), s.pop().Uint64())
-}
+	assert.Equal(t, one.Uint64(), s.pop().Uint64())
 
-func TestMStore(t *testing.T) {
-	s, closeFn := getState()
-	defer closeFn()
-
-	s.push(big.NewInt(10))   // value
-	s.push(big.NewInt(1024)) // offset
-
-	s.gas = 1000
-	opMStore(s)
-
-	assert.Len(t, s.memory, 1024+32)
 }
 
 func TestMStore8(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := createState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(big.NewInt(10))
-	s.push(big.NewInt(1024))
+	s.push(one)            //value
+	s.push(big.NewInt(62)) //offset
 
-	s.gas = 1000
 	opMStore8(s)
 
-	assert.Len(t, s.memory, 1056)
+	s.push(big.NewInt(31))
+
+	opMLoad(s)
+
+	assert.Equal(t, one.Uint64(), s.pop().Uint64())
+
 }
 
 func TestSload(t *testing.T) {
