@@ -85,7 +85,6 @@ func TestAdd(t *testing.T) {
 	for _, testOperand := range testOperands {
 		testArithmeticOperation(t, opAdd, testOperand, s)
 	}
-
 }
 
 func TestMul(t *testing.T) {
@@ -165,7 +164,6 @@ func TestMod(t *testing.T) {
 	for _, testOperand := range testOperands {
 		testArithmeticOperation(t, opMod, testOperand, s)
 	}
-
 }
 
 func TestSMod(t *testing.T) {
@@ -206,7 +204,6 @@ func TestExp(t *testing.T) {
 		for i, testOperand := range testOperands {
 			testArithmeticOperation(t, opExp, testOperand, s)
 			assert.Equal(t, uint64(startGas-gasConsumed*(i+1)), s.gas)
-
 		}
 	})
 
@@ -224,7 +221,6 @@ func TestExp(t *testing.T) {
 		for i, testOperand := range testOperands {
 			testArithmeticOperation(t, opExp, testOperand, s)
 			assert.Equal(t, uint64(startGas-gasConsumed*(i+1)), s.gas)
-
 		}
 	})
 }
@@ -559,7 +555,6 @@ func TestMStore8(t *testing.T) {
 	opMLoad(s)
 
 	assert.Equal(t, one.Uint64(), s.pop().Uint64())
-
 }
 
 func TestSload(t *testing.T) {
@@ -706,6 +701,7 @@ func TestSStore(t *testing.T) {
 
 func TestBalance(t *testing.T) {
 	balance := big.NewInt(100)
+
 	t.Run("Istanbul", func(t *testing.T) {
 		gasLeft := uint64(300)
 
@@ -751,6 +747,7 @@ func TestBalance(t *testing.T) {
 
 func TestSelfBalance(t *testing.T) {
 	balance := big.NewInt(100)
+
 	t.Run("IstanbulFork", func(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
@@ -781,6 +778,7 @@ func TestSelfBalance(t *testing.T) {
 
 func TestChainID(t *testing.T) {
 	chainID := int64(4)
+
 	t.Run("IstanbulFork", func(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
@@ -929,6 +927,7 @@ func TestExtCodeSize(t *testing.T) {
 
 func TestGasPrice(t *testing.T) {
 	gasPrice := 10
+
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
