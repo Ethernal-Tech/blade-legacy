@@ -102,7 +102,7 @@ func (m *mockHost) GetTxContext() runtime.TxContext {
 func (m *mockHost) GetBlockHash(number int64) types.Hash {
 	args := m.Called(number)
 
-	return args.Get(0).(types.Hash)
+	return args.Get(0).(types.Hash) //nolint:gocritic
 }
 
 func (m *mockHost) EmitLog(addr types.Address, topics []types.Hash, data []byte) {
