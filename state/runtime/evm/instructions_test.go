@@ -631,8 +631,8 @@ func TestSStore(t *testing.T) {
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once() //nolint:forcetypeassert
+		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
+			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once()
 
 		s.push(one)
 		s.push(zero)
@@ -650,8 +650,8 @@ func TestSStore(t *testing.T) {
 		s.gas = 10000
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once() //nolint:forcetypeassert
+		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
+			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once()
 
 		s.push(one)
 		s.push(zero)
@@ -667,8 +667,8 @@ func TestSStore(t *testing.T) {
 
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
-		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once() //nolint:forcetypeassert
+		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
+			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once()
 
 		s.push(one)
 		s.push(zero)
