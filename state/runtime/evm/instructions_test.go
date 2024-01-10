@@ -790,7 +790,7 @@ func TestChainID(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{ChainID: 4}).Once()
+		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{ChainID: 4}).Once() //nolint:forcetypeassert
 
 		opChainID(s)
 
