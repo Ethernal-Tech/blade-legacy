@@ -538,7 +538,6 @@ func TestMStore(t *testing.T) {
 	opMLoad(s)
 
 	assert.Equal(t, one.Uint64(), s.pop().Uint64())
-
 }
 
 func TestMStore8(t *testing.T) {
@@ -633,7 +632,7 @@ func TestSStore(t *testing.T) {
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once()
+			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once() //nolint:forcetypeassert
 
 		s.push(one)
 		s.push(zero)
@@ -652,7 +651,7 @@ func TestSStore(t *testing.T) {
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once()
+			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once() //nolint:forcetypeassert
 
 		s.push(one)
 		s.push(zero)
@@ -669,7 +668,7 @@ func TestSStore(t *testing.T) {
 		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything,
-			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once()
+			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once() //nolint:forcetypeassert
 
 		s.push(one)
 		s.push(zero)
@@ -894,6 +893,7 @@ func TestCodeSize(t *testing.T) {
 
 func TestExtCodeSize(t *testing.T) {
 	codeSize := 10
+
 	t.Run("EIP150", func(t *testing.T) {
 		gasLeft := uint64(300)
 
@@ -940,6 +940,7 @@ func TestGasPrice(t *testing.T) {
 
 func TestReturnDataSize(t *testing.T) {
 	dataSize := uint64(1024)
+
 	t.Run("Byzantium", func(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{Byzantium: true})
 		defer cancelFn()
@@ -1018,6 +1019,7 @@ func TestExtCodeHash(t *testing.T) {
 func TestPCMSizeGas(t *testing.T) {
 	memorySize := uint64(1024)
 	gasLeft := uint64(1000)
+
 	s, cancelFn := createState(&chain.ForksInTime{})
 	defer cancelFn()
 
@@ -1176,6 +1178,7 @@ func TestDifficulty(t *testing.T) {
 
 func TestGasLimit(t *testing.T) {
 	baseFee := uint64(11)
+
 	t.Run("NonLondonFork", func(t *testing.T) {
 		s, cancelFn := createState(&chain.ForksInTime{})
 		defer cancelFn()
