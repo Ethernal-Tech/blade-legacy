@@ -33,7 +33,6 @@ func getState(forks *chain.ForksInTime) (*state, func()) {
 	c.config = forks
 	c.gas = 1000
 
-	c.host = &mockHost{}
 	c.msg = &runtime.Contract{Static: false, Address: types.StringToAddress("0x1"), Input: one.Bytes(), Caller: types.StringToAddress("0x1")}
 
 	return c, func() {
