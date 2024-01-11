@@ -1372,7 +1372,9 @@ func TestLog(t *testing.T) {
 		s.push(big.NewInt(3))
 		s.push(big.NewInt(20))
 
-		s.host.(*mockHost).On("EmitLog", mock.Anything, mock.Anything, mock.Anything).Once()
+		mockHost := &mockHost{}
+		mockHost.On("EmitLog", mock.Anything, mock.Anything, mock.Anything).Once()
+		s.host = mockHost
 
 		for i := 0; i < 20; i++ {
 			s.push(big.NewInt(int64(i)))
