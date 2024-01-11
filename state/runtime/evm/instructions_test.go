@@ -61,18 +61,8 @@ func testArithmeticOperation(t *testing.T, f instruction, test OperandsArithmeti
 	assert.EqualValues(t, test.expectedResult.Uint64(), s.pop().Uint64())
 }
 
-func createState(forks *chain.ForksInTime) (*state, func()) {
-	s, closeFn := getState()
-
-	s.gas = 1000
-	s.config = forks
-	s.host = &mockHost{}
-
-	return s, closeFn
-}
-
 func TestAdd(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -88,7 +78,7 @@ func TestAdd(t *testing.T) {
 }
 
 func TestMul(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -104,7 +94,7 @@ func TestMul(t *testing.T) {
 }
 
 func TestSub(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -119,7 +109,7 @@ func TestSub(t *testing.T) {
 }
 
 func TestDiv(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -135,7 +125,7 @@ func TestDiv(t *testing.T) {
 }
 
 func TestSDiv(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -151,7 +141,7 @@ func TestSDiv(t *testing.T) {
 }
 
 func TestMod(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -167,7 +157,7 @@ func TestMod(t *testing.T) {
 }
 
 func TestSMod(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -194,11 +184,14 @@ func TestExp(t *testing.T) {
 		gasConsumed := 50
 		startGas := 1000
 
-		s, cancelFn := createState(&chain.ForksInTime{EIP158: true})
+		s, cancelFn := getState(&chain.ForksInTime{EIP158: true})
 		defer cancelFn()
 
 		testOperands := []OperandsArithmetic{
 			{[]*big.Int{one, one}, one},
+			{[]*big.Int{two, two}, four},
+			{[]*big.Int{two, three}, big.NewInt(9)},
+			{[]*big.Int{four, two}, big.NewInt(16)},
 		}
 
 		for i, testOperand := range testOperands {
@@ -211,11 +204,14 @@ func TestExp(t *testing.T) {
 		gasConsumed := 10
 		startGas := 1000
 
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		testOperands := []OperandsArithmetic{
 			{[]*big.Int{one, one}, one},
+			{[]*big.Int{two, two}, four},
+			{[]*big.Int{two, three}, big.NewInt(9)},
+			{[]*big.Int{four, two}, big.NewInt(16)},
 		}
 
 		for i, testOperand := range testOperands {
@@ -226,7 +222,7 @@ func TestExp(t *testing.T) {
 }
 
 func TestAddMod(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -241,7 +237,7 @@ func TestAddMod(t *testing.T) {
 }
 
 func TestMulMod(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -256,7 +252,7 @@ func TestMulMod(t *testing.T) {
 }
 
 func TestAnd(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -271,7 +267,7 @@ func TestAnd(t *testing.T) {
 }
 
 func TestOr(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -286,7 +282,7 @@ func TestOr(t *testing.T) {
 }
 
 func TestXor(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -301,7 +297,7 @@ func TestXor(t *testing.T) {
 }
 
 func TestByte(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -317,7 +313,7 @@ func TestByte(t *testing.T) {
 }
 
 func TestShl(t *testing.T) {
-	s, closeFn := createState(&chain.ForksInTime{Constantinople: true})
+	s, closeFn := getState(&chain.ForksInTime{Constantinople: true})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -331,7 +327,7 @@ func TestShl(t *testing.T) {
 }
 
 func TestShr(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{Constantinople: true})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -346,7 +342,7 @@ func TestShr(t *testing.T) {
 }
 
 func TestSar(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{Constantinople: true})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -362,7 +358,7 @@ func TestSar(t *testing.T) {
 
 func TestPush0(t *testing.T) {
 	t.Run("single push0 success", func(t *testing.T) {
-		s, closeFn := createState(&allEnabledForks)
+		s, closeFn := getState(&allEnabledForks)
 		defer closeFn()
 
 		opPush0(s)
@@ -371,7 +367,7 @@ func TestPush0(t *testing.T) {
 
 	t.Run("single push0 (EIP-3855 disabled)", func(t *testing.T) {
 		disabledEIP3855Fork := chain.AllForksEnabled.Copy().RemoveFork(chain.EIP3855).At(0)
-		s, closeFn := createState(&disabledEIP3855Fork)
+		s, closeFn := getState(&disabledEIP3855Fork)
 		defer closeFn()
 
 		opPush0(s)
@@ -379,7 +375,7 @@ func TestPush0(t *testing.T) {
 	})
 
 	t.Run("within stack size push0", func(t *testing.T) {
-		s, closeFn := createState(&allEnabledForks)
+		s, closeFn := getState(&allEnabledForks)
 		defer closeFn()
 
 		for i := 0; i < stackSize; i++ {
@@ -394,7 +390,7 @@ func TestPush0(t *testing.T) {
 }
 
 func TestGt(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -409,7 +405,7 @@ func TestGt(t *testing.T) {
 }
 
 func TestLt(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -424,7 +420,7 @@ func TestLt(t *testing.T) {
 }
 
 func TestEq(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -440,7 +436,7 @@ func TestEq(t *testing.T) {
 }
 
 func TestSlt(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -455,7 +451,7 @@ func TestSlt(t *testing.T) {
 }
 
 func TestSgt(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -471,11 +467,13 @@ func TestSgt(t *testing.T) {
 
 func TestSignExtension(t *testing.T) {
 	t.Run("BitAboveZero", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		testOperands := []OperandsArithmetic{
-			{[]*big.Int{one, new(big.Int).SetBit(big.NewInt(0), 15, 1)}, one},
+			{[]*big.Int{big.NewInt(128), zero}, new(big.Int).SetUint64(18446744073709551488)},
+			{[]*big.Int{big.NewInt(32768), one}, new(big.Int).SetUint64(18446744073709518848)},
+			{[]*big.Int{big.NewInt(8388608), two}, new(big.Int).SetUint64(18446744073701163008)},
 		}
 
 		for _, testOperand := range testOperands {
@@ -483,11 +481,13 @@ func TestSignExtension(t *testing.T) {
 		}
 	})
 	t.Run("BitZero", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		testOperands := []OperandsArithmetic{
-			{[]*big.Int{one, one}, one},
+			{[]*big.Int{one, two}, one},
+			{[]*big.Int{two, one}, two},
+			{[]*big.Int{two, zero}, two},
 		}
 
 		for _, testOperand := range testOperands {
@@ -497,7 +497,7 @@ func TestSignExtension(t *testing.T) {
 }
 
 func TestNot(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsArithmetic{
@@ -510,7 +510,7 @@ func TestNot(t *testing.T) {
 }
 
 func TestIsZero(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	testOperands := []OperandsLogical{
@@ -525,15 +525,17 @@ func TestIsZero(t *testing.T) {
 }
 
 func TestMStore(t *testing.T) {
-	s, closeFn := createState(&chain.ForksInTime{})
+	offset := big.NewInt(62)
+
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(one)            // value
-	s.push(big.NewInt(62)) // offset
+	s.push(one)    // value
+	s.push(offset) // offset
 
 	opMStore(s)
 
-	s.push(big.NewInt(62))
+	s.push(offset)
 
 	opMLoad(s)
 
@@ -541,15 +543,18 @@ func TestMStore(t *testing.T) {
 }
 
 func TestMStore8(t *testing.T) {
-	s, closeFn := createState(&chain.ForksInTime{})
+	offsetStore := big.NewInt(62)
+	offsetLoad := big.NewInt(31)
+
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(one)            //value
-	s.push(big.NewInt(62)) //offset
+	s.push(one)         //value
+	s.push(offsetStore) //offset
 
 	opMStore8(s)
 
-	s.push(big.NewInt(31))
+	s.push(offsetLoad)
 
 	opMLoad(s)
 
@@ -558,10 +563,8 @@ func TestMStore8(t *testing.T) {
 
 func TestSload(t *testing.T) {
 	t.Run("Istanbul", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{Istanbul: true})
+		s, closeFn := getState(&chain.ForksInTime{Istanbul: true})
 		defer closeFn()
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once() //nolint:forcetypeassert
 
@@ -573,10 +576,8 @@ func TestSload(t *testing.T) {
 	})
 
 	t.Run("EIP150", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{EIP150: true})
+		s, closeFn := getState(&chain.ForksInTime{EIP150: true})
 		defer closeFn()
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once() //nolint:forcetypeassert
 
@@ -588,10 +589,8 @@ func TestSload(t *testing.T) {
 	})
 
 	t.Run("NoForks", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{})
+		s, closeFn := getState(&chain.ForksInTime{})
 		defer closeFn()
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once() //nolint:forcetypeassert
 
@@ -605,12 +604,10 @@ func TestSload(t *testing.T) {
 
 func TestSStore(t *testing.T) {
 	t.Run("ErrOutOfGas", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{
+		s, closeFn := getState(&chain.ForksInTime{
 			Istanbul: true,
 		})
 		defer closeFn()
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.push(one)
 
@@ -619,15 +616,13 @@ func TestSStore(t *testing.T) {
 		assert.Equal(t, errOutOfGas, s.err)
 	})
 	t.Run("StorageUnchanged", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{
+		s, closeFn := getState(&chain.ForksInTime{
 			Istanbul:       true,
 			Constantinople: true,
 		})
 		defer closeFn()
 
 		s.gas = 10000
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
 			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once()
@@ -639,14 +634,13 @@ func TestSStore(t *testing.T) {
 		assert.Equal(t, uint64(9200), s.gas)
 	})
 	t.Run("StorageModified", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{
+		s, closeFn := getState(&chain.ForksInTime{
 			Istanbul:       true,
 			Constantinople: true,
 		})
 		defer closeFn()
 
 		s.gas = 10000
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
 			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once()
@@ -658,12 +652,10 @@ func TestSStore(t *testing.T) {
 		assert.Equal(t, uint64(5000), s.gas)
 	})
 	t.Run("StorageAdded", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{Istanbul: true, Constantinople: true})
+		s, closeFn := getState(&chain.ForksInTime{Istanbul: true, Constantinople: true})
 		defer closeFn()
 
 		s.gas = 25000
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
 			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once()
@@ -675,15 +667,13 @@ func TestSStore(t *testing.T) {
 		assert.Equal(t, uint64(5000), s.gas)
 	})
 	t.Run("StorageDeleted", func(t *testing.T) {
-		s, closeFn := createState(&chain.ForksInTime{
+		s, closeFn := getState(&chain.ForksInTime{
 			Istanbul:       true,
 			Constantinople: true,
 		})
 		defer closeFn()
 
 		s.gas = 10000
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		s.host.(*mockHost).On("SetStorage", mock.Anything, mock.Anything, //nolint:forcetypeassert
 			mock.Anything, mock.Anything).Return(runtime.StorageDeleted).Once()
@@ -702,7 +692,7 @@ func TestBalance(t *testing.T) {
 	t.Run("Istanbul", func(t *testing.T) {
 		gasLeft := uint64(300)
 
-		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
+		s, cancelFn := getState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance) //nolint:forcetypeassert
@@ -716,7 +706,7 @@ func TestBalance(t *testing.T) {
 	t.Run("EIP150", func(t *testing.T) {
 		gasLeft := uint64(600)
 
-		s, cancelFn := createState(&chain.ForksInTime{EIP150: true})
+		s, cancelFn := getState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(big.NewInt(100)) //nolint:forcetypeassert
@@ -730,7 +720,7 @@ func TestBalance(t *testing.T) {
 	t.Run("OtherForks", func(t *testing.T) {
 		gasLeft := uint64(980)
 
-		s, cancelFn := createState(&chain.ForksInTime{London: true})
+		s, cancelFn := getState(&chain.ForksInTime{London: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance) //nolint:forcetypeassert
@@ -746,12 +736,10 @@ func TestSelfBalance(t *testing.T) {
 	balance := big.NewInt(100)
 
 	t.Run("IstanbulFork", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
+		s, cancelFn := getState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance).Once() //nolint:forcetypeassert
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		opSelfBalance(s)
 
@@ -759,12 +747,10 @@ func TestSelfBalance(t *testing.T) {
 	})
 
 	t.Run("NoForkErrorExpected", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetBalance", mock.Anything).Return(balance).Once() //nolint:forcetypeassert
-
-		s.msg = &runtime.Contract{Address: types.StringToAddress("0x1")}
 
 		opSelfBalance(s)
 
@@ -777,7 +763,7 @@ func TestChainID(t *testing.T) {
 	chainID := int64(4)
 
 	t.Run("IstanbulFork", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{Istanbul: true})
+		s, cancelFn := getState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{ChainID: 4}).Once() //nolint:forcetypeassert
@@ -787,7 +773,7 @@ func TestChainID(t *testing.T) {
 		assert.Equal(t, chainID, s.pop().Int64())
 	})
 	t.Run("NoForksErrorExpected", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{ChainID: 4}).Once() //nolint:forcetypeassert
@@ -800,7 +786,7 @@ func TestChainID(t *testing.T) {
 }
 
 func TestOrigin(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Origin: types.StringToAddress("0x1")}).Once() //nolint:forcetypeassert
@@ -813,10 +799,9 @@ func TestOrigin(t *testing.T) {
 }
 
 func TestCaller(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.msg = &runtime.Contract{Caller: types.StringToAddress("0x1")}
 	opCaller(s)
 
 	addr, ok := s.popAddr()
@@ -826,20 +811,20 @@ func TestCaller(t *testing.T) {
 
 func TestCallValue(t *testing.T) {
 	t.Run("Msg Value non nil", func(t *testing.T) {
-		s, cancelFn := getState()
+		value := big.NewInt(10)
+
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.msg = &runtime.Contract{Value: big.NewInt(10)}
+		s.msg.Value = value
 
 		opCallValue(s)
-		assert.Equal(t, big.NewInt(10), s.pop())
+		assert.Equal(t, value, s.pop())
 	})
 
 	t.Run("Msg Value nil", func(t *testing.T) {
-		s, cancelFn := getState()
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
-
-		s.msg = &runtime.Contract{}
 
 		opCallValue(s)
 		assert.Equal(t, uint64(0), s.pop().Uint64())
@@ -848,20 +833,18 @@ func TestCallValue(t *testing.T) {
 
 func TestCallDataLoad(t *testing.T) {
 	t.Run("Zero", func(t *testing.T) {
-		s, cancelFn := getState()
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.msg = &runtime.Contract{Input: one.Bytes()}
 		s.push(one)
 
 		opCallDataLoad(s)
 		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 	})
 	t.Run("NotZero", func(t *testing.T) {
-		s, cancelFn := getState()
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.msg = &runtime.Contract{Input: one.Bytes()}
 		s.push(zero)
 
 		opCallDataLoad(s)
@@ -870,17 +853,17 @@ func TestCallDataLoad(t *testing.T) {
 }
 
 func TestCallDataSize(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.msg = &runtime.Contract{Input: make([]byte, 10)}
+	s.msg.Input = make([]byte, 10)
 
 	opCallDataSize(s)
 	assert.Equal(t, uint64(10), s.pop().Uint64())
 }
 
 func TestCodeSize(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.code = make([]byte, 10)
@@ -895,7 +878,7 @@ func TestExtCodeSize(t *testing.T) {
 	t.Run("EIP150", func(t *testing.T) {
 		gasLeft := uint64(300)
 
-		s, cancelFn := createState(&chain.ForksInTime{EIP150: true})
+		s, cancelFn := getState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
 		s.push(one)
 
@@ -909,7 +892,7 @@ func TestExtCodeSize(t *testing.T) {
 	t.Run("NoForks", func(t *testing.T) {
 		gasLeft := uint64(980)
 
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.push(one)
@@ -926,7 +909,7 @@ func TestExtCodeSize(t *testing.T) {
 func TestGasPrice(t *testing.T) {
 	gasPrice := 10
 
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{GasPrice: bigToHash(big.NewInt(int64(gasPrice)))}).Once() //nolint:forcetypeassert
@@ -940,7 +923,7 @@ func TestReturnDataSize(t *testing.T) {
 	dataSize := uint64(1024)
 
 	t.Run("Byzantium", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{Byzantium: true})
+		s, cancelFn := getState(&chain.ForksInTime{Byzantium: true})
 		defer cancelFn()
 
 		s.returnData = make([]byte, dataSize)
@@ -950,7 +933,7 @@ func TestReturnDataSize(t *testing.T) {
 		assert.Equal(t, dataSize, s.pop().Uint64())
 	})
 	t.Run("NoForks", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.returnData = make([]byte, dataSize)
@@ -966,7 +949,7 @@ func TestExtCodeHash(t *testing.T) {
 	t.Run("Istanbul", func(t *testing.T) {
 		gasLeft := uint64(300)
 
-		s, cancelFn := createState(&chain.ForksInTime{
+		s, cancelFn := getState(&chain.ForksInTime{
 			Constantinople: true,
 			Istanbul:       true,
 		})
@@ -986,7 +969,7 @@ func TestExtCodeHash(t *testing.T) {
 	t.Run("NonIstanbul", func(t *testing.T) {
 		gasLeft := uint64(600)
 
-		s, cancelFn := createState(&chain.ForksInTime{
+		s, cancelFn := getState(&chain.ForksInTime{
 			Constantinople: true,
 		})
 		defer cancelFn()
@@ -1001,7 +984,7 @@ func TestExtCodeHash(t *testing.T) {
 	})
 
 	t.Run("NoForks", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.push(one)
@@ -1018,7 +1001,7 @@ func TestPCMSizeGas(t *testing.T) {
 	memorySize := uint64(1024)
 	gasLeft := uint64(1000)
 
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	t.Run("PC", func(t *testing.T) {
@@ -1047,7 +1030,7 @@ func TestExtCodeCopy(t *testing.T) {
 	t.Run("EIP150", func(t *testing.T) {
 		leftGas := uint64(294)
 
-		s, cancelFn := createState(&chain.ForksInTime{EIP150: true})
+		s, cancelFn := getState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetCode", mock.Anything).Return("0x1").Once() //nolint:forcetypeassert
@@ -1065,7 +1048,7 @@ func TestExtCodeCopy(t *testing.T) {
 
 	t.Run("NonEIP150Fork", func(t *testing.T) {
 		leftGas := uint64(974)
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetCode", mock.Anything).Return("0x1").Once() //nolint:forcetypeassert
@@ -1085,16 +1068,12 @@ func TestExtCodeCopy(t *testing.T) {
 func TestCallDataCopy(t *testing.T) {
 	gasLeft := uint64(994)
 
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.push(big.NewInt(1))
 	s.push(zero)
 	s.push(big.NewInt(31))
-
-	s.msg = &runtime.Contract{
-		Input: big.NewInt(1).Bytes(),
-	}
 
 	opCallDataCopy(s)
 
@@ -1103,7 +1082,7 @@ func TestCallDataCopy(t *testing.T) {
 }
 
 func TestCodeCopy(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.push(big.NewInt(1))  //length
@@ -1117,7 +1096,7 @@ func TestCodeCopy(t *testing.T) {
 }
 
 func TestBlockHash(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.push(three)
@@ -1131,7 +1110,7 @@ func TestBlockHash(t *testing.T) {
 }
 
 func TestCoinBase(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Coinbase: types.StringToAddress("0x1")}).Once() //nolint:forcetypeassert
@@ -1142,7 +1121,7 @@ func TestCoinBase(t *testing.T) {
 }
 
 func TestTimeStamp(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Timestamp: 335}).Once() //nolint:forcetypeassert
@@ -1153,7 +1132,7 @@ func TestTimeStamp(t *testing.T) {
 }
 
 func TestNumber(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Number: 5}).Once() //nolint:forcetypeassert
@@ -1164,7 +1143,7 @@ func TestNumber(t *testing.T) {
 }
 
 func TestDifficulty(t *testing.T) {
-	s, cancelFn := createState(&chain.ForksInTime{})
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{Difficulty: bigToHash(five)}).Once() //nolint:forcetypeassert
@@ -1178,7 +1157,7 @@ func TestGasLimit(t *testing.T) {
 	baseFee := uint64(11)
 
 	t.Run("NonLondonFork", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{GasLimit: 11}).Once() //nolint:forcetypeassert
@@ -1188,7 +1167,7 @@ func TestGasLimit(t *testing.T) {
 	})
 
 	t.Run("LondonFork", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{London: true})
+		s, cancelFn := getState(&chain.ForksInTime{London: true})
 		defer cancelFn()
 
 		s.host.(*mockHost).On("GetTxContext").Return(runtime.TxContext{BaseFee: big.NewInt(11)}).Once() //nolint:forcetypeassert
@@ -1202,7 +1181,7 @@ func TestGasLimit(t *testing.T) {
 func TestSelfDestruct(t *testing.T) {
 	addr := types.StringToAddress("0x1")
 
-	s, cancelFn := createState(&chain.ForksInTime{
+	s, cancelFn := getState(&chain.ForksInTime{
 		EIP150: true,
 		EIP158: true})
 	defer cancelFn()
@@ -1223,7 +1202,7 @@ func TestSelfDestruct(t *testing.T) {
 }
 
 func TestJump(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.code = make([]byte, 10)
@@ -1236,7 +1215,7 @@ func TestJump(t *testing.T) {
 }
 
 func TestJumpI(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.code = make([]byte, 10)
@@ -1250,7 +1229,7 @@ func TestJumpI(t *testing.T) {
 }
 
 func TestDup(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.sp = 6
@@ -1266,7 +1245,7 @@ func TestDup(t *testing.T) {
 }
 
 func TestSwap(t *testing.T) {
-	s, cancelFn := getState()
+	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
 	s.sp = 6
@@ -1284,10 +1263,10 @@ func TestSwap(t *testing.T) {
 
 func TestLog(t *testing.T) {
 	t.Run("StaticCall", func(t *testing.T) {
-		s, cancelFn := getState()
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.msg = &runtime.Contract{Static: true}
+		s.msg.Static = true
 		s.sp = 1
 
 		s.push(big.NewInt(3))
@@ -1304,10 +1283,9 @@ func TestLog(t *testing.T) {
 	})
 
 	t.Run("StackUnderflow", func(t *testing.T) {
-		s, cancelFn := getState()
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.msg = &runtime.Contract{Static: false}
 		s.sp = 1
 
 		s.push(big.NewInt(3))
@@ -1324,10 +1302,9 @@ func TestLog(t *testing.T) {
 	})
 
 	t.Run("Log", func(t *testing.T) {
-		s, cancelFn := createState(&chain.ForksInTime{})
+		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.msg = &runtime.Contract{Static: false}
 		s.sp = 0
 		s.gas = 25000
 
@@ -1660,7 +1637,7 @@ func TestCreate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, closeFn := getState()
+			s, closeFn := getState(&chain.ForksInTime{})
 			defer closeFn()
 
 			s.msg = tt.contract
@@ -1879,7 +1856,7 @@ func Test_opReturnDataCopy(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 
-			state, closeFn := getState()
+			state, closeFn := getState(&chain.ForksInTime{})
 			defer closeFn()
 
 			state.gas = test.initState.gas
@@ -2023,7 +2000,7 @@ func Test_opCall(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			state, closeFn := getState()
+			state, closeFn := getState(&chain.ForksInTime{})
 			defer closeFn()
 
 			state.gas = test.initState.gas

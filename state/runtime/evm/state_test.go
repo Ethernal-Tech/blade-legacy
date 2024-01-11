@@ -3,7 +3,9 @@ package evm
 import (
 	"testing"
 
+	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
+	"github.com/0xPolygon/polygon-edge/types"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -25,8 +27,14 @@ func (c *codeHelper) pop() {
 	c.buf = append(c.buf, POP)
 }
 
-func getState() (*state, func()) {
+func getState(forks *chain.ForksInTime) (*state, func()) {
 	c := statePool.Get().(*state) //nolint:forcetypeassert
+
+	c.config = forks
+	c.gas = 1000
+
+	c.host = &mockHost{}
+	c.msg = &runtime.Contract{Static: false, Address: types.StringToAddress("0x1"), Input: one.Bytes(), Caller: types.StringToAddress("0x1")}
 
 	return c, func() {
 		c.reset()
@@ -35,7 +43,7 @@ func getState() (*state, func()) {
 }
 
 func TestStackTop(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	s.push(one)
@@ -51,7 +59,7 @@ func TestStackOverflow(t *testing.T) {
 		code.push1()
 	}
 
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	s.code = code.buf
@@ -74,7 +82,7 @@ func TestStackOverflow(t *testing.T) {
 }
 
 func TestStackUnderflow(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	code := codeHelper{}
@@ -106,7 +114,7 @@ func TestStackUnderflow(t *testing.T) {
 }
 
 func TestOpcodeNotFound(t *testing.T) {
-	s, closeFn := getState()
+	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
 	s.code = []byte{0xA5}
