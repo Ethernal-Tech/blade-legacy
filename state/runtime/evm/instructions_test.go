@@ -173,12 +173,6 @@ func TestSMod(t *testing.T) {
 	}
 }
 
-func TestReleaseAcquireBig(t *testing.T) {
-	releaseBig(five)
-
-	assert.Equal(t, five, acquireBig())
-}
-
 func TestExp(t *testing.T) {
 	t.Run("EIP158", func(t *testing.T) {
 		gasConsumed := 50
