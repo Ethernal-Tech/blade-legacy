@@ -5,9 +5,12 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
-	"github.com/0xPolygon/polygon-edge/types"
 
 	"github.com/stretchr/testify/assert"
+)
+
+const (
+	defaultInitialGas = uint64(1000)
 )
 
 type codeHelper struct {
@@ -31,9 +34,8 @@ func getState(forks *chain.ForksInTime) (*state, func()) {
 	c := statePool.Get().(*state) //nolint:forcetypeassert
 
 	c.config = forks
-	c.gas = 1000
-
-	c.msg = &runtime.Contract{Static: false, Address: types.StringToAddress("0x1"), Input: one.Bytes(), Caller: types.StringToAddress("0x1")}
+	c.gas = defaultInitialGas
+	c.msg = &runtime.Contract{}
 
 	return c, func() {
 		c.reset()

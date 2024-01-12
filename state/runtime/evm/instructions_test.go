@@ -362,16 +362,16 @@ func TestPush0(t *testing.T) {
 		defer closeFn()
 
 		opPush0(s)
-		assert.Equal(t, zero, s.pop())
+		require.Equal(t, zero, s.pop())
 	})
 
 	t.Run("single push0 (EIP-3855 disabled)", func(t *testing.T) {
-		disabledEIP3855Fork := chain.AllForksEnabled.Copy().RemoveFork(chain.EIP3855).At(0)
-		s, closeFn := getState(&disabledEIP3855Fork)
+		allExceptEIP3855Fork := chain.AllForksEnabled.Copy().RemoveFork(chain.EIP3855).At(0)
+		s, closeFn := getState(&allExceptEIP3855Fork)
 		defer closeFn()
 
 		opPush0(s)
-		assert.Error(t, errOpCodeNotFound, s.err)
+		require.Error(t, errOpCodeNotFound, s.err)
 	})
 
 	t.Run("within stack size push0", func(t *testing.T) {
@@ -831,11 +831,14 @@ func TestCaller(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
+	callerAddr := types.StringToAddress("0xabcd")
+	s.msg.Caller = callerAddr
+
 	opCaller(s)
 
 	addr, ok := s.popAddr()
 	assert.True(t, ok)
-	assert.Equal(t, types.StringToAddress("0x1").Bytes(), addr.Bytes())
+	assert.Equal(t, callerAddr, addr)
 }
 
 func TestCallValue(t *testing.T) {
@@ -1116,6 +1119,8 @@ func TestCallDataCopy(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
+	s.msg.Input = one.Bytes()
+
 	s.push(big.NewInt(1))
 	s.push(zero)
 	s.push(big.NewInt(31))
@@ -1245,7 +1250,7 @@ func TestSelfDestruct(t *testing.T) {
 		EIP158: true})
 	defer cancelFn()
 
-	s.msg = &runtime.Contract{Static: false, Address: types.StringToAddress("0x2")}
+	s.msg.Address = types.StringToAddress("0x2")
 
 	s.gas = 100000
 	s.push(one)
@@ -1366,7 +1371,6 @@ func TestLog(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.sp = 0
 		s.gas = 25000
 
 		s.push(big.NewInt(3))
