@@ -697,15 +697,20 @@ func TestSStore(t *testing.T) {
 func TestBalance(t *testing.T) {
 	balance := big.NewInt(100)
 
+	createMockHost := func() *mockHost {
+		mockHost := &mockHost{}
+		mockHost.On("GetBalance", mock.Anything).Return(balance)
+
+		return mockHost
+	}
+
 	t.Run("Istanbul", func(t *testing.T) {
 		gasLeft := uint64(300)
 
 		s, cancelFn := getState(&chain.ForksInTime{Istanbul: true})
 		defer cancelFn()
 
-		mockHost := &mockHost{}
-		mockHost.On("GetBalance", mock.Anything).Return(balance)
-		s.host = mockHost
+		s.host = createMockHost()
 
 		opBalance(s)
 
@@ -719,9 +724,7 @@ func TestBalance(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
 
-		mockHost := &mockHost{}
-		mockHost.On("GetBalance", mock.Anything).Return(big.NewInt(100))
-		s.host = mockHost
+		s.host = createMockHost()
 
 		opBalance(s)
 
@@ -735,8 +738,7 @@ func TestBalance(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{London: true})
 		defer cancelFn()
 
-		mockHost := &mockHost{}
-		mockHost.On("GetBalance", mock.Anything).Return(balance)
+		s.host = createMockHost()
 
 		opBalance(s)
 
