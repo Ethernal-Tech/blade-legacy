@@ -1933,7 +1933,6 @@ func Test_opReturnDataCopy(t *testing.T) {
 			state.code = nil
 			state.host = nil
 			state.msg = nil
-			state.evm = nil
 			state.tmp = nil
 			state.bitmap = bitmap{}
 			state.ret = nil
