@@ -1,10 +1,8 @@
 package tests
 
 import (
-	"embed"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -302,7 +300,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 		Nonce:     t.Nonce,
 		Value:     new(big.Int).Set(t.Value[i.Value]),
 		Gas:       t.GasLimit[i.Gas],
-		GasPrice:  new(big.Int).Set(gasPrice),
+		GasPrice:  gasPrice,
 		GasFeeCap: t.MaxFeePerGas,
 		GasTipCap: t.MaxPriorityFeePerGas,
 		Input:     hex.MustDecodeHex(t.Data[i.Data]),
@@ -436,7 +434,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(0),
 	},
-	"Istchain.anbul": {
+	"Istanbul": {
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -476,6 +474,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
 	},
+	"London": chain.AllForksEnabled,
 }
 
 func contains(l []string, name string) bool {
@@ -488,29 +487,26 @@ func contains(l []string, name string) bool {
 	return false
 }
 
-//go:embed tests
-var testsFS embed.FS
-
 func listFolders(tests ...string) ([]string, error) {
 	var folders []string
 
 	for _, t := range tests {
-		if err := fs.WalkDir(testsFS, t, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
+		dir, err := os.Open(t)
+		if err != nil {
+			return nil, err
+		}
+		defer dir.Close()
 
-			if d.IsDir() && t != "path" {
-				folders = append(folders, path)
-			}
-
-			return nil
-		}); err != nil {
+		fileInfos, err := dir.Readdir(-1)
+		if err != nil {
 			return nil, err
 		}
 
-		// Excluding root dir
-		folders = folders[1:]
+		for _, fileInfo := range fileInfos {
+			if fileInfo.IsDir() && t != "path" {
+				folders = append(folders, filepath.Join(t, fileInfo.Name()))
+			}
+		}
 	}
 
 	return folders, nil

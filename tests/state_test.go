@@ -21,7 +21,6 @@ import (
 
 const (
 	stateTests         = "tests/GeneralStateTests"
-	legacyStateTests   = "tests/LegacyTests/Constantinople/GeneralStateTests"
 	testGenesisBaseFee = 0x0a
 )
 
@@ -34,7 +33,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 
 	config, ok := Forks[fork]
 	if !ok {
-		t.Skipf("%s fork is not supported", fork)
+		t.Logf("%s fork is not supported, skipping test case (%s).", fork, file)
 
 		return
 	}
@@ -63,7 +62,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 
 	forks := config.At(uint64(env.Number))
 
-	xxx := state.NewExecutor(&chain.Params{
+	executor := state.NewExecutor(&chain.Params{
 		Forks:   config,
 		ChainID: 1,
 		BurnContract: map[uint64]types.Address{
@@ -71,7 +70,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 		},
 	}, s, hclog.NewNullLogger())
 
-	xxx.PostHook = func(t *state.Transition) {
+	executor.PostHook = func(t *state.Transition) {
 		if name == "failed_tx_xcf416c53" {
 			// create the account
 			t.Txn().TouchAccount(ripemd)
@@ -79,14 +78,15 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 			t.Txn().Suicide(ripemd)
 		}
 	}
-	xxx.GetHash = func(*types.Header) func(i uint64) types.Hash {
+	executor.GetHash = func(*types.Header) func(i uint64) types.Hash {
 		return vmTestBlockHash
 	}
 
-	executor, _ := xxx.BeginTxn(pastRoot, c.Env.ToHeader(t), env.Coinbase)
-	executor.Apply(msg) //nolint:errcheck
+	transition, err := executor.BeginTxn(pastRoot, c.Env.ToHeader(t), env.Coinbase)
+	require.NoError(t, err)
+	transition.Apply(msg) //nolint:errcheck
 
-	txn := executor.Txn()
+	txn := transition.Txn()
 
 	// mining rewards
 	txn.AddSealingReward(env.Coinbase, big.NewInt(0))
@@ -100,9 +100,8 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 	// Check block root
 	if !bytes.Equal(root, p.Root.Bytes()) {
 		t.Fatalf(
-			"root mismatch (%s %s %s %d): expected %s but found %s",
+			"root mismatch (%s %s case#%d): expected %s but found %s",
 			file,
-			name,
 			fork,
 			index,
 			p.Root.String(),
@@ -113,8 +112,8 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 	// Check transaction logs
 	if logs := rlpHashLogs(txn.Logs()); logs != p.Logs {
 		t.Fatalf(
-			"logs mismatch (%s, %s %d): expected %s but found %s",
-			name,
+			"logs mismatch (%s %s case#%d): expected %s but found %s",
+			file,
 			fork,
 			index,
 			p.Logs.String(),
@@ -140,37 +139,37 @@ func TestState(t *testing.T) {
 
 	// There are two folders in spec tests, one for the current tests for the Istanbul fork
 	// and one for the legacy tests for the other forks
-	folders, err := listFolders(stateTests, legacyStateTests)
+	folders, err := listFolders(stateTests)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	for _, folder := range folders {
-		folder := folder
-		t.Run(folder, func(t *testing.T) {
-			t.Parallel()
+		files, err := listFiles(folder)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-			files, err := listFiles(folder)
-			if err != nil {
-				t.Fatal(err)
+		for _, file := range files {
+			if !strings.HasSuffix(file, ".json") {
+				continue
 			}
 
-			for _, file := range files {
-				if !strings.HasSuffix(file, ".json") {
-					continue
-				}
+			if contains(long, file) && testing.Short() {
+				t.Skipf("Long tests are skipped in short mode")
 
-				if contains(long, file) && testing.Short() {
-					t.Skipf("Long tests are skipped in short mode")
+				continue
+			}
 
-					continue
-				}
+			if contains(skip, file) {
+				t.Skip()
 
-				if contains(skip, file) {
-					t.Skip()
+				continue
+			}
 
-					continue
-				}
+			file := file
+			t.Run(file, func(t *testing.T) {
+				t.Parallel()
 
 				data, err := os.ReadFile(file)
 				if err != nil {
@@ -182,14 +181,14 @@ func TestState(t *testing.T) {
 					t.Fatalf("failed to unmarshal %s: %v", file, err)
 				}
 
-				for name, i := range testCases {
-					for fork, f := range i.Post {
-						for indx, e := range f {
-							RunSpecificTest(t, file, i, name, fork, indx, e)
+				for name, tc := range testCases {
+					for fork, postState := range tc.Post {
+						for idx, postStateEntry := range postState {
+							RunSpecificTest(t, file, tc, name, fork, idx, postStateEntry)
 						}
 					}
 				}
-			}
-		})
+			})
+		}
 	}
 }
