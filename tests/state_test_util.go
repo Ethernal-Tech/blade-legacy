@@ -38,12 +38,40 @@ type env struct {
 	Timestamp  string `json:"currentTimestamp"`
 }
 
-func remove0xPrefix(str string) string {
-	if strings.HasPrefix(str, "0x") {
-		return strings.Replace(str, "0x", "", -1)
+func (e *env) ToHeader(t *testing.T) *types.Header {
+	t.Helper()
+
+	baseFee := uint64(0)
+	if e.BaseFee != "" {
+		baseFee = stringToUint64T(t, e.BaseFee)
 	}
 
-	return str
+	return &types.Header{
+		Miner:      stringToAddressT(t, e.Coinbase).Bytes(),
+		BaseFee:    baseFee,
+		Difficulty: stringToUint64T(t, e.Difficulty),
+		GasLimit:   stringToUint64T(t, e.GasLimit),
+		Number:     stringToUint64T(t, e.Number),
+		Timestamp:  stringToUint64T(t, e.Timestamp),
+	}
+}
+
+func (e *env) ToEnv(t *testing.T) runtime.TxContext {
+	t.Helper()
+
+	baseFee := new(big.Int)
+	if e.BaseFee != "" {
+		baseFee = stringToBigIntT(t, e.BaseFee)
+	}
+
+	return runtime.TxContext{
+		Coinbase:   stringToAddressT(t, e.Coinbase),
+		BaseFee:    baseFee,
+		Difficulty: stringToHashT(t, e.Difficulty),
+		GasLimit:   stringToInt64T(t, e.GasLimit),
+		Number:     stringToInt64T(t, e.Number),
+		Timestamp:  stringToInt64T(t, e.Timestamp),
+	}
 }
 
 func stringToAddress(str string) (types.Address, error) {
@@ -70,11 +98,11 @@ func stringToBigInt(str string) (*big.Int, error) {
 	base := 10
 
 	if strings.HasPrefix(str, "0x") {
-		str, base = remove0xPrefix(str), 16
+		str = strings.TrimPrefix(str, "0x")
+		base = 16
 	}
 
-	n, ok := big.NewInt(1).SetString(str, base)
-
+	n, ok := new(big.Int).SetString(str, base)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert %s to big.Int with base %d", str, base)
 	}
@@ -146,45 +174,7 @@ func stringToInt64T(t *testing.T, str string) int64 {
 	return int64(n)
 }
 
-func (e *env) ToHeader(t *testing.T) *types.Header {
-	t.Helper()
-
-	baseFee := uint64(0)
-	if e.BaseFee != "" {
-		baseFee = stringToUint64T(t, e.BaseFee)
-	}
-
-	return &types.Header{
-		Miner:      stringToAddressT(t, e.Coinbase).Bytes(),
-		BaseFee:    baseFee,
-		Difficulty: stringToUint64T(t, e.Difficulty),
-		GasLimit:   stringToUint64T(t, e.GasLimit),
-		Number:     stringToUint64T(t, e.Number),
-		Timestamp:  stringToUint64T(t, e.Timestamp),
-	}
-}
-
-func (e *env) ToEnv(t *testing.T) runtime.TxContext {
-	t.Helper()
-
-	baseFee := new(big.Int)
-	if e.BaseFee != "" {
-		baseFee = stringToBigIntT(t, e.BaseFee)
-	}
-
-	return runtime.TxContext{
-		Coinbase:   stringToAddressT(t, e.Coinbase),
-		BaseFee:    baseFee,
-		Difficulty: stringToHashT(t, e.Difficulty),
-		GasLimit:   stringToInt64T(t, e.GasLimit),
-		Number:     stringToInt64T(t, e.Number),
-		Timestamp:  stringToInt64T(t, e.Timestamp),
-	}
-}
-
-func buildState(
-	allocs map[types.Address]*chain.GenesisAccount,
-) (state.State, state.Snapshot, types.Hash, error) {
+func buildState(allocs map[types.Address]*chain.GenesisAccount) (state.State, state.Snapshot, types.Hash, error) {
 	s := itrie.NewState(itrie.NewMemoryStorage())
 	snap := s.NewSnapshot()
 
@@ -227,8 +217,6 @@ type postEntry struct {
 	TxBytes []byte
 }
 
-type postState []postEntry
-
 func (p *postEntry) UnmarshalJSON(input []byte) error {
 	type stateUnmarshall struct {
 		Root    string  `json:"hash"`
@@ -249,6 +237,8 @@ func (p *postEntry) UnmarshalJSON(input []byte) error {
 
 	return nil
 }
+
+type postState []postEntry
 
 type stTransaction struct {
 	Data                 []string       `json:"data"`
