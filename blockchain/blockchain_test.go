@@ -1663,6 +1663,7 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	var receipts types.Receipts
+	var transactions []*types.Transaction
 
 	db, err := leveldb.NewLevelDBStorage(
 		filepath.Join(p),
@@ -1682,14 +1683,16 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 	transactionsSplitString := strings.Split(transactionsString, ",")
 
 	for _, transaction := range transactionsSplitString {
+		transactions = append(transactions, createTestTransaction(types.StringToHash(transaction)))
 		receipts = append(receipts, createTestReceipt(createTestLogs(25, types.StringToAddress("0x1")), 35614, 153, types.StringToHash(transaction)))
 	}
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 1; i++ {
 		batchWriter := storage.NewBatchWriter(db)
-		block := &types.Block{Header: GetTestHeader(uint64(i))}
+		block := &types.Block{Header: GetTestHeader(uint64(i)), Transactions: transactions}
 
 		batchWriter.PutHeader(block.Header)
+		batchWriter.PutBody(block.Hash(), block.Body())
 		batchWriter.PutReceipts(block.Hash(), receipts)
 
 		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Header, big.NewInt(0), false))
@@ -1785,4 +1788,19 @@ func createTestLogs(logsCount int, address types.Address) []*types.Log {
 	}
 
 	return logs
+}
+
+func createTestTransaction(hash types.Hash) *types.Transaction {
+	recipient := types.StringToAddress("2")
+
+	return &types.Transaction{
+		Hash:     hash,
+		From:     types.StringToAddress("1"),
+		To:       &recipient,
+		GasPrice: big.NewInt(400),
+		Value:    big.NewInt(100),
+		V:        big.NewInt(1),
+		R:        big.NewInt(2),
+		S:        big.NewInt(3),
+	}
 }
