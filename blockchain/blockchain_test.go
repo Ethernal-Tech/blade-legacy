@@ -1692,7 +1692,7 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 		batchWriter.PutHeader(block.Header)
 		batchWriter.PutReceipts(block.Hash(), receipts)
 
-		blockchain.writeBatchAndUpdate(batchWriter, block.Header, big.NewInt(0), false)
+		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Header, big.NewInt(0), false))
 	}
 
 	dirSizeAfterBlocks, err := DirSize(p)
@@ -1702,7 +1702,6 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 	db.Close()
 
 	assert.NotEqual(t, dirSizeBeforeBlocks, dirSizeAfterBlocks)
-
 }
 
 func GetTestHeader(index uint64) *types.Header {
@@ -1742,6 +1741,7 @@ func createTestReceipt(logs []*types.Log, cumulativeGasUsed, gasUsed uint64, txH
 
 func DirSize(path string) (uint64, error) {
 	var size uint64
+
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		return size, err
@@ -1756,14 +1756,15 @@ func DirSize(path string) (uint64, error) {
 			size += subDirSize
 		} else {
 			fileInfo, err := entry.Info()
+
 			if err != nil {
 				log.Printf("failed to get info of file %s: %v\n", entry.Name(), err)
 				continue
 			}
+
 			size += uint64(fileInfo.Size())
 		}
 	}
-
 	return size, nil
 }
 
