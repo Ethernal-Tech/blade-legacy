@@ -1,0 +1,44 @@
+---
+
+name: Destroy DevNet
+on:  # yamllint disable-line rule:truthy
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment to run against
+        required: true
+        type: environment
+
+jobs:
+  destroy_devnet:
+    name: Destroy DevNet
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          repository: Ethernal-Tech/blade-deployment
+          ref: main
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2.0.3
+        with:
+          terraform_version: 1.4.5
+      - name: Configure terraform for DevNet
+        run: |
+          sed 's/# backend "s3" {}/backend "s3" {}/' main.tf > main.tf.tmp && mv main.tf.tmp main.tf
+      - name: Terraform Init
+        id: init
+        run: terraform init -backend-config="bucket=blade-terraform-states" -backend-config="key=state/devnet" -backend-config="region=${{ secrets.AWS_REGION }}"
+      - name: Retrieve state file from s3
+        run: aws s3 cp s3://blade-terraform-states/state/devnet state.json
+      - name: Terraform Destroy
+        id: destroy
+        run: terraform destroy -auto-approve -state=state.json
+        env:
+          TF_VAR_deployment_name: devnet

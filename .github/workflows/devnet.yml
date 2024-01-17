@@ -1,0 +1,31 @@
+---
+name: DevNet
+on:  #yamllint disable-line rule:truthy
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  build:
+    name: Build
+    uses: ./.github/workflows/build.yml
+
+  devnet:
+    name: Build Devnet
+    needs: build
+    concurrency: devnet
+    uses: ./.github/workflows/deploy.devnet.yml
+    secrets:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      TF_VAR_OWNER: ${{ secrets.TF_VAR_OWNER }}
+      TF_VAR_BASE_INSTANCE_TYPE: ${{ secrets.TF_VAR_BASE_INSTANCE_TYPE }}
+      VAULT_PASSWORD_FILE: ${{ secrets.VAULT_PASSWORD_FILE }}
+      IS_BRIDGE_ACTIVE: ${{ secrets.IS_BRIDGE_ACTIVE }}
+      BLADE_TAG: ${{ secrets.BLADE_TAG }}
+      LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+    with:
+      environment: devnet
