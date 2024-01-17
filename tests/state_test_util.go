@@ -29,6 +29,23 @@ type testCase struct {
 	Transaction *stTransaction                          `json:"transaction"`
 }
 
+func (t *testCase) checkError(fork string, index int, err error) error {
+	expectedError := t.Post[fork][index].ExpectException
+	if err == nil && expectedError == "" {
+		return nil
+	}
+
+	if err == nil && expectedError != "" {
+		return fmt.Errorf("expected error %q, got no error", expectedError)
+	}
+
+	if err != nil && expectedError == "" {
+		return fmt.Errorf("unexpected error: %w", err)
+	}
+
+	return nil
+}
+
 type env struct {
 	BaseFee    string `json:"currentBaseFee"`
 	Coinbase   string `json:"currentCoinbase"`
@@ -211,18 +228,20 @@ type indexes struct {
 }
 
 type postEntry struct {
-	Root    types.Hash
-	Logs    types.Hash
-	Indexes indexes
-	TxBytes []byte
+	Root            types.Hash
+	Logs            types.Hash
+	Indexes         indexes
+	ExpectException string
+	TxBytes         []byte
 }
 
 func (p *postEntry) UnmarshalJSON(input []byte) error {
 	type stateUnmarshall struct {
-		Root    string  `json:"hash"`
-		Logs    string  `json:"logs"`
-		Indexes indexes `json:"indexes"`
-		TxBytes string  `json:"txbytes"`
+		Root            string  `json:"hash"`
+		Logs            string  `json:"logs"`
+		Indexes         indexes `json:"indexes"`
+		ExpectException string  `json:"expectException"`
+		TxBytes         string  `json:"txbytes"`
 	}
 
 	var dec stateUnmarshall
@@ -233,6 +252,7 @@ func (p *postEntry) UnmarshalJSON(input []byte) error {
 	p.Root = types.StringToHash(dec.Root)
 	p.Logs = types.StringToHash(dec.Logs)
 	p.Indexes = dec.Indexes
+	p.ExpectException = dec.ExpectException
 	p.TxBytes = types.StringToBytes(dec.TxBytes)
 
 	return nil

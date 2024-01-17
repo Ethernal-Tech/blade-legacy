@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"os"
 	"strings"
@@ -28,14 +29,14 @@ var (
 	ripemd = types.StringToAddress("0000000000000000000000000000000000000003")
 )
 
-func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, index int, p postEntry) {
+func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, index int, p postEntry) error {
 	t.Helper()
 
 	config, ok := Forks[fork]
 	if !ok {
 		t.Logf("%s fork is not supported, skipping test case (%s).", fork, file)
 
-		return
+		return nil
 	}
 
 	env := c.Env.ToEnv(t)
@@ -54,11 +55,13 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 
 	msg, err := c.Transaction.At(p.Indexes, baseFee)
 	if err != nil {
-		t.Fatalf("failed to create transaction: %v", err)
+		return fmt.Errorf("failed to create transaction: %w", err)
 	}
 
 	s, snapshot, pastRoot, err := buildState(c.Pre)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	forks := config.At(uint64(env.Number))
 
@@ -83,8 +86,13 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 	}
 
 	transition, err := executor.BeginTxn(pastRoot, c.Env.ToHeader(t), env.Coinbase)
-	require.NoError(t, err)
-	transition.Apply(msg) //nolint:errcheck
+	if err != nil {
+		return err
+	}
+	_, err = transition.Apply(msg)
+	if err != nil {
+		return err
+	}
 
 	txn := transition.Txn()
 
@@ -92,10 +100,14 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 	txn.AddSealingReward(env.Coinbase, big.NewInt(0))
 
 	objs, err := txn.Commit(forks.EIP155)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	_, root, err := snapshot.Commit(objs)
-	require.NoError(t, err)
+	if err != nil {
+		return err
+	}
 
 	// Check block root
 	if !bytes.Equal(root, p.Root.Bytes()) {
@@ -120,6 +132,8 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 			logs.String(),
 		)
 	}
+
+	return nil
 }
 
 func TestState(t *testing.T) {
@@ -184,7 +198,8 @@ func TestState(t *testing.T) {
 				for name, tc := range testCases {
 					for fork, postState := range tc.Post {
 						for idx, postStateEntry := range postState {
-							RunSpecificTest(t, file, tc, name, fork, idx, postStateEntry)
+							err := RunSpecificTest(t, file, tc, name, fork, idx, postStateEntry)
+							require.NoError(t, tc.checkError(fork, idx, err))
 						}
 					}
 				}
