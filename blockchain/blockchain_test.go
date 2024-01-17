@@ -1754,6 +1754,7 @@ func DirSize(path string) (uint64, error) {
 			if err != nil {
 				log.Printf("failed to calculate size of directory %s: %v\n", entry.Name(), err)
 			}
+
 			size += subDirSize
 		} else {
 			fileInfo, err := entry.Info()
