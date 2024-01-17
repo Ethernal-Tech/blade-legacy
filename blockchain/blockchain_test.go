@@ -1750,6 +1750,7 @@ func DirSize(path string) (uint64, error) {
 	for _, entry := range entries {
 		if entry.IsDir() {
 			subDirSize, err := DirSize(path + "/" + entry.Name())
+
 			if err != nil {
 				log.Printf("failed to calculate size of directory %s: %v\n", entry.Name(), err)
 			}
@@ -1761,10 +1762,10 @@ func DirSize(path string) (uint64, error) {
 				log.Printf("failed to get info of file %s: %v\n", entry.Name(), err)
 				continue
 			}
-
 			size += uint64(fileInfo.Size())
 		}
 	}
+
 	return size, nil
 }
 
