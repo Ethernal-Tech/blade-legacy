@@ -1761,6 +1761,7 @@ func DirSize(path string) (uint64, error) {
 
 			if err != nil {
 				log.Printf("failed to get info of file %s: %v\n", entry.Name(), err)
+
 				continue
 			}
 			size += uint64(fileInfo.Size())
