@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -302,6 +303,10 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 		}
 
 		gasPrice = common.BigMin(new(big.Int).Add(t.MaxPriorityFeePerGas, baseFee), t.MaxFeePerGas)
+	}
+
+	if gasPrice == nil {
+		return nil, errors.New("no gas price provided")
 	}
 
 	valueHex := t.Value[i.Value]
