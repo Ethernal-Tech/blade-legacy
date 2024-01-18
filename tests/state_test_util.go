@@ -263,7 +263,7 @@ type postState []postEntry
 type stTransaction struct {
 	Data                 []string       `json:"data"`
 	GasLimit             []uint64       `json:"gasLimit"`
-	Value                []*big.Int     `json:"value"`
+	Value                []string       `json:"value"`
 	GasPrice             *big.Int       `json:"gasPrice"`
 	MaxFeePerGas         *big.Int       `json:"maxFeePerGas"`
 	MaxPriorityFeePerGas *big.Int       `json:"maxPriorityFeePerGas"`
@@ -304,11 +304,23 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 		gasPrice = common.BigMin(new(big.Int).Add(t.MaxPriorityFeePerGas, baseFee), t.MaxFeePerGas)
 	}
 
+	valueHex := t.Value[i.Value]
+	value := new(big.Int)
+
+	if valueHex != "0x" {
+		v, err := common.ParseUint256orHex(&valueHex)
+		if err != nil {
+			return nil, err
+		}
+
+		value = v
+	}
+
 	return &types.Transaction{
 		From:      t.From,
 		To:        t.To,
 		Nonce:     t.Nonce,
-		Value:     new(big.Int).Set(t.Value[i.Value]),
+		Value:     value,
 		Gas:       t.GasLimit[i.Gas],
 		GasPrice:  gasPrice,
 		GasFeeCap: t.MaxFeePerGas,
@@ -336,6 +348,7 @@ func (t *stTransaction) UnmarshalJSON(input []byte) error {
 	}
 
 	t.Data = dec.Data
+	t.Value = dec.Value
 
 	for _, i := range dec.GasLimit {
 		j, err := stringToUint64(i)
@@ -344,22 +357,6 @@ func (t *stTransaction) UnmarshalJSON(input []byte) error {
 		}
 
 		t.GasLimit = append(t.GasLimit, j)
-	}
-
-	for _, i := range dec.Value {
-		value := new(big.Int)
-		loopVal := i
-
-		if loopVal != "0x" {
-			v, err := common.ParseUint256orHex(&loopVal)
-			if err != nil {
-				return err
-			}
-
-			value = v
-		}
-
-		t.Value = append(t.Value, value)
 	}
 
 	var err error
