@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/chain"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -62,6 +63,21 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 	}
 
 	forks := forksInTime.At(uint64(env.Number))
+
+	// Try to recover tx with current signer
+	if len(p.TxBytes) != 0 {
+		var ttx types.Transaction
+		err := ttx.UnmarshalRLP(p.TxBytes)
+		if err != nil {
+			return err
+		}
+
+		signer := crypto.NewSigner(forks, 1)
+
+		if _, err := signer.Sender(&ttx); err != nil {
+			return err
+		}
+	}
 
 	executor := state.NewExecutor(&chain.Params{
 		Forks:   forksInTime,
