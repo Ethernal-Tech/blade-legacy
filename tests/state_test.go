@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -29,21 +30,18 @@ var (
 	ripemd = types.StringToAddress("0000000000000000000000000000000000000003")
 )
 
-func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, index int, p postEntry) error {
+func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, index int, p postEntry) error {
 	t.Helper()
 
-	config, ok := Forks[fork]
-	if !ok {
-		t.Logf("%s fork is not supported, skipping test case (%s).", fork, file)
-
-		return nil
-	}
+	testName := filepath.Base(file)
+	testName = strings.TrimSuffix(testName, ".json")
 
 	env := c.Env.ToEnv(t)
+	forksInTime := fc.forks
 
 	var baseFee *big.Int
 
-	if config.IsActive(chain.London, 0) {
+	if forksInTime.IsActive(chain.London, 0) {
 		if c.Env.BaseFee != "" {
 			baseFee = stringToBigIntT(t, c.Env.BaseFee)
 		} else {
@@ -63,10 +61,10 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 		return err
 	}
 
-	forks := config.At(uint64(env.Number))
+	forks := forksInTime.At(uint64(env.Number))
 
 	executor := state.NewExecutor(&chain.Params{
-		Forks:   config,
+		Forks:   forksInTime,
 		ChainID: 1,
 		BurnContract: map[uint64]types.Address{
 			0: types.ZeroAddress,
@@ -74,7 +72,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 	}, s, hclog.NewNullLogger())
 
 	executor.PostHook = func(t *state.Transition) {
-		if name == "failed_tx_xcf416c53" {
+		if testName == "failed_tx_xcf416c53" {
 			// create the account
 			t.Txn().TouchAccount(ripemd)
 			// now remove it
@@ -114,7 +112,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 		t.Fatalf(
 			"root mismatch (%s %s case#%d): expected %s but found %s",
 			file,
-			fork,
+			fc.name,
 			index,
 			p.Root.String(),
 			hex.EncodeToHex(root),
@@ -126,7 +124,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, name, fork string, i
 		t.Fatalf(
 			"logs mismatch (%s %s case#%d): expected %s but found %s",
 			file,
-			fork,
+			fc.name,
 			index,
 			p.Logs.String(),
 			logs.String(),
@@ -195,10 +193,18 @@ func TestState(t *testing.T) {
 					t.Fatalf("failed to unmarshal %s: %v", file, err)
 				}
 
-				for name, tc := range testCases {
+				for _, tc := range testCases {
 					for fork, postState := range tc.Post {
+						forks, exists := Forks[fork]
+						if !exists {
+							t.Logf("%s fork is not supported, skipping test case.", fork)
+							continue
+						}
+
+						fc := &forkConfig{name: fork, forks: forks}
+
 						for idx, postStateEntry := range postState {
-							err := RunSpecificTest(t, file, tc, name, fork, idx, postStateEntry)
+							err := RunSpecificTest(t, file, tc, fc, idx, postStateEntry)
 							require.NoError(t, tc.checkError(fork, idx, err))
 						}
 					}
@@ -206,4 +212,9 @@ func TestState(t *testing.T) {
 			})
 		}
 	}
+}
+
+type forkConfig struct {
+	name  string
+	forks *chain.Forks
 }
