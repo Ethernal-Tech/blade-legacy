@@ -1680,9 +1680,12 @@ func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
 }
 
 func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) {
+	t.Helper()
+
 	var blockCounter = uint64(0)
 
 	quitChan := make(chan bool)
+
 	p, err := os.MkdirTemp("", "DiskUsageTest")
 	require.NoError(t, err)
 
@@ -1705,10 +1708,10 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) 
 					t.Log(err)
 				}
 				t.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", blockCounter, dirSizeValue, float64(dirSizeValue)/float64(blockCounter))
+
 				time.Sleep(time.Millisecond * time.Duration(checkInterval))
 			}
 		}
-
 	}
 
 	blockchain := &Blockchain{db: db}
