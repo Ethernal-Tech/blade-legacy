@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -1659,16 +1660,56 @@ func TestBlockchain_WriteFullBlock(t *testing.T) {
 }
 
 func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
+	const (
+		checkInterval  = 10000 //milliseconds
+		numberOfBlocks = 100
+		blockTime      = 2000 //milliseconds
+	)
+
+	blockWriter(t, checkInterval, blockTime, numberOfBlocks)
+}
+
+func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
+	const (
+		checkInterval  = 15 // milliseconds
+		numberOfBlocks = 100
+		blockTime      = 0 //milliseconds
+	)
+
+	blockWriter(t, checkInterval, blockTime, numberOfBlocks)
+}
+
+func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) {
+	var blockCounter = uint64(0)
+
+	quitChan := make(chan bool)
 	p, err := os.MkdirTemp("", "DiskUsageTest")
 	require.NoError(t, err)
 
 	var receipts types.Receipts
-	var transactions []*types.Transaction
+	var transactions []*types.Transaction //nolint:prealloc
 
 	db, err := leveldb.NewLevelDBStorage(
 		filepath.Join(p),
 		hclog.NewNullLogger(),
 	)
+
+	dirSizeCheck := func() {
+		for {
+			select {
+			case <-quitChan:
+				return
+			default:
+				dirSizeValue, err := DirSize(p)
+				if err != nil {
+					t.Log(err)
+				}
+				t.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", blockCounter, dirSizeValue, float64(dirSizeValue)/float64(blockCounter))
+				time.Sleep(time.Millisecond * time.Duration(checkInterval))
+			}
+		}
+
+	}
 
 	blockchain := &Blockchain{db: db}
 
@@ -1687,7 +1728,9 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 		receipts = append(receipts, createTestReceipt(createTestLogs(25, types.StringToAddress("0x1")), 35614, 153, types.StringToHash(transaction)))
 	}
 
-	for i := 0; i < 1; i++ {
+	go dirSizeCheck()
+
+	for i := 0; i < int(numberOfBlocks); i++ {
 		batchWriter := storage.NewBatchWriter(db)
 		block := &types.Block{Header: GetTestHeader(uint64(i)), Transactions: transactions}
 
@@ -1696,11 +1739,16 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 		batchWriter.PutReceipts(block.Hash(), receipts)
 
 		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Header, big.NewInt(0), false))
+
+		blockCounter++
+
+		time.Sleep(time.Millisecond * time.Duration(blockTime))
 	}
+	quitChan <- true
 
 	dirSizeAfterBlocks, err := DirSize(p)
 	require.NoError(t, err)
-	t.Logf("DIRSIZE IS: %d", dirSizeAfterBlocks)
+	t.Logf("DIRSIZE After All blocks: %d, average blocks size: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
 
 	db.Close()
 
