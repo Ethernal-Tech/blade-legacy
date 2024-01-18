@@ -413,7 +413,6 @@ func (t *stTransaction) UnmarshalJSON(input []byte) error {
 }
 
 // forks
-
 var Forks = map[string]*chain.Forks{
 	"Frontier": {},
 	"Homestead": {
@@ -444,6 +443,15 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(0),
 	},
+	"ConstantinopleFix": {
+		chain.Homestead:      chain.NewFork(0),
+		chain.EIP150:         chain.NewFork(0),
+		chain.EIP155:         chain.NewFork(0),
+		chain.EIP158:         chain.NewFork(0),
+		chain.Byzantium:      chain.NewFork(0),
+		chain.Constantinople: chain.NewFork(0),
+		chain.Petersburg:     chain.NewFork(0),
+	},
 	"Istanbul": {
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
@@ -472,10 +480,23 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium: chain.NewFork(5),
 	},
 	"ByzantiumToConstantinopleAt5": {
+		chain.Homestead:      chain.NewFork(0),
+		chain.EIP150:         chain.NewFork(0),
+		chain.EIP155:         chain.NewFork(0),
+		chain.EIP158:         chain.NewFork(0),
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(5),
 	},
-	"ConstantinopleFix": {
+	"ByzantiumToConstantinopleFixAt5": {
+		chain.Homestead:      chain.NewFork(0),
+		chain.EIP150:         chain.NewFork(0),
+		chain.EIP155:         chain.NewFork(0),
+		chain.EIP158:         chain.NewFork(0),
+		chain.Byzantium:      chain.NewFork(0),
+		chain.Constantinople: chain.NewFork(5),
+		chain.Petersburg:     chain.NewFork(5),
+	},
+	"ConstantinopleFixToIstanbulAt5": {
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -483,8 +504,19 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
+		chain.Istanbul:       chain.NewFork(5),
 	},
-	"London": chain.AllForksEnabled,
+	"London": {
+		chain.Homestead:      chain.NewFork(0),
+		chain.EIP150:         chain.NewFork(0),
+		chain.EIP155:         chain.NewFork(0),
+		chain.EIP158:         chain.NewFork(0),
+		chain.Byzantium:      chain.NewFork(0),
+		chain.Constantinople: chain.NewFork(0),
+		chain.Petersburg:     chain.NewFork(0),
+		chain.Istanbul:       chain.NewFork(0),
+		chain.London:         chain.NewFork(0),
+	},
 }
 
 func contains(l []string, name string) bool {
