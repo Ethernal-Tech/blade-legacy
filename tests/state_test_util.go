@@ -261,16 +261,20 @@ func (p *postEntry) UnmarshalJSON(input []byte) error {
 
 type postState []postEntry
 
+// TODO: Check do we need access lists in the stTransaction
+// (we do not have them in the types.Transaction either)
+//
+//nolint:godox
 type stTransaction struct {
 	Data                 []string       `json:"data"`
-	GasLimit             []uint64       `json:"gasLimit"`
 	Value                []string       `json:"value"`
+	Nonce                uint64         `json:"nonce"`
+	To                   *types.Address `json:"to"`
+	GasLimit             []uint64       `json:"gasLimit"`
 	GasPrice             *big.Int       `json:"gasPrice"`
 	MaxFeePerGas         *big.Int       `json:"maxFeePerGas"`
 	MaxPriorityFeePerGas *big.Int       `json:"maxPriorityFeePerGas"`
-	Nonce                uint64         `json:"nonce"`
-	From                 types.Address  `json:"secretKey"`
-	To                   *types.Address `json:"to"`
+	From                 types.Address  // derived field
 }
 
 func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, error) {
@@ -343,7 +347,8 @@ func (t *stTransaction) UnmarshalJSON(input []byte) error {
 		MaxFeePerGas         string   `json:"maxFeePerGas,omitempty"`
 		MaxPriorityFeePerGas string   `json:"maxPriorityFeePerGas,omitempty"`
 		Nonce                string   `json:"nonce,omitempty"`
-		SecretKey            string   `json:"secretKey,omitempty"`
+		PrivateKey           string   `json:"secretKey,omitempty"`
+		Sender               string   `json:"sender"`
 		To                   string   `json:"to,omitempty"`
 	}
 
@@ -390,15 +395,15 @@ func (t *stTransaction) UnmarshalJSON(input []byte) error {
 		}
 	}
 
-	t.From = types.Address{}
-
-	if len(dec.SecretKey) > 0 {
-		secretKey, err := common.ParseBytes(&dec.SecretKey)
+	if dec.Sender != "" {
+		t.From = types.StringToAddress(dec.Sender)
+	} else if len(dec.PrivateKey) > 0 {
+		senderPrivKey, err := common.ParseBytes(&dec.PrivateKey)
 		if err != nil {
 			return fmt.Errorf("failed to parse secret key: %w", err)
 		}
 
-		key, err := crypto.ParseECDSAPrivateKey(secretKey)
+		key, err := crypto.ParseECDSAPrivateKey(senderPrivKey)
 		if err != nil {
 			return fmt.Errorf("invalid private key: %w", err)
 		}
