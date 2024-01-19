@@ -38,11 +38,11 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 	testName = strings.TrimSuffix(testName, ".json")
 
 	env := c.Env.ToEnv(t)
-	forksInTime := fc.forks
+	forks := fc.forks
 
 	var baseFee *big.Int
 
-	if forksInTime.IsActive(chain.London, 0) {
+	if forks.IsActive(chain.London, 0) {
 		if c.Env.BaseFee != "" {
 			baseFee = stringToBigIntT(t, c.Env.BaseFee)
 		} else {
@@ -62,7 +62,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 		return err
 	}
 
-	forks := forksInTime.At(uint64(env.Number))
+	currentForks := forks.At(uint64(env.Number))
 
 	// Try to recover tx with current signer
 	if len(p.TxBytes) != 0 {
@@ -72,7 +72,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 			return err
 		}
 
-		signer := crypto.NewSigner(forks, 1)
+		signer := crypto.NewSigner(currentForks, 1)
 
 		if _, err := signer.Sender(&ttx); err != nil {
 			return err
@@ -80,7 +80,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 	}
 
 	executor := state.NewExecutor(&chain.Params{
-		Forks:   forksInTime,
+		Forks:   forks,
 		ChainID: 1,
 		BurnContract: map[uint64]types.Address{
 			0: types.ZeroAddress,
@@ -113,7 +113,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 	// mining rewards
 	txn.AddSealingReward(env.Coinbase, big.NewInt(0))
 
-	objs, err := txn.Commit(forks.EIP155)
+	objs, err := txn.Commit(currentForks.EIP155)
 	if err != nil {
 		return err
 	}
