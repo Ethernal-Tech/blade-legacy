@@ -1,14 +1,15 @@
 package blockchain
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
 	"os"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
@@ -1666,7 +1667,17 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 		blockTime      = 2000 //milliseconds
 	)
 
-	blockWriter(t, checkInterval, blockTime, numberOfBlocks)
+	jsonFile, err := os.Open("testblock.json")
+	require.NoError(t, err)
+
+	byteValue, _ := io.ReadAll(jsonFile)
+
+	receiptsJsonFile, err := os.Open("receipts.json")
+	require.NoError(t, err)
+
+	receiptsByteVaulue, _ := io.ReadAll(receiptsJsonFile)
+
+	blockWriter(t, checkInterval, blockTime, numberOfBlocks, byteValue, receiptsByteVaulue)
 }
 
 func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
@@ -1675,11 +1686,20 @@ func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
 		numberOfBlocks = 100
 		blockTime      = 0 //milliseconds
 	)
+	jsonFile, err := os.Open("testblock.json")
+	require.NoError(t, err)
 
-	blockWriter(t, checkInterval, blockTime, numberOfBlocks)
+	byteValue, _ := io.ReadAll(jsonFile)
+
+	receiptsJsonFile, err := os.Open("receipts.json")
+	require.NoError(t, err)
+
+	receiptsByteVaulue, _ := io.ReadAll(receiptsJsonFile)
+
+	blockWriter(t, checkInterval, blockTime, numberOfBlocks, byteValue, receiptsByteVaulue)
 }
 
-func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) {
+func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, byteToRead []byte, receiptsBytesToRead []byte) {
 	t.Helper()
 
 	var blockCounter = uint64(0)
@@ -1689,14 +1709,16 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) 
 	p, err := os.MkdirTemp("", "DiskUsageTest")
 	require.NoError(t, err)
 
-	var receipts types.Receipts
-
-	var transactions []*types.Transaction //nolint:prealloc
-
 	db, err := leveldb.NewLevelDBStorage(
 		filepath.Join(p),
 		hclog.NewNullLogger(),
 	)
+
+	block, err := CustomJsonUnmarshall(byteToRead)
+	require.NoError(t, err)
+
+	receipts, err := CustomReceiptsUnmarshall(receiptsBytesToRead)
+	require.NoError(t, err)
 
 	dirSizeCheck := func() {
 		for {
@@ -1727,24 +1749,18 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) 
 	require.NoError(t, err)
 	t.Logf("DIRSIZE IS: %d", dirSizeBeforeBlocks)
 
-	transactionsSplitString := strings.Split(transactionsString, ",")
-
-	for _, transaction := range transactionsSplitString {
-		transactions = append(transactions, createTestTransaction(types.StringToHash(transaction)))
-		receipts = append(receipts, createTestReceipt(createTestLogs(25, types.StringToAddress("0x1")), 35614, 153, types.StringToHash(transaction)))
-	}
-
 	go dirSizeCheck()
 
 	for i := 0; i < int(numberOfBlocks); i++ {
 		batchWriter := storage.NewBatchWriter(db)
-		block := &types.Block{Header: GetTestHeader(uint64(i)), Transactions: transactions}
+		block.Block.Header.Number = uint64(i)
 
-		batchWriter.PutHeader(block.Header)
-		batchWriter.PutBody(block.Hash(), block.Body())
-		batchWriter.PutReceipts(block.Hash(), receipts)
+		batchWriter.PutHeader(block.Block.Header)
+		batchWriter.PutBody(block.Block.Hash(), block.Block.Body())
 
-		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Header, big.NewInt(0), false))
+		batchWriter.PutReceipts(block.Block.Hash(), receipts)
+
+		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Block.Header, big.NewInt(0), false))
 
 		blockCounter++
 
@@ -1761,39 +1777,190 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64) 
 	assert.NotEqual(t, dirSizeBeforeBlocks, dirSizeAfterBlocks)
 }
 
-func GetTestHeader(index uint64) *types.Header {
-	return &types.Header{Hash: types.StringToHash(fmt.Sprintf("0x99fb59f3f0cec0c2041fa3d85f9c998157c7265d8ac1ff1a1dbb072fc3ac8d3d%d", index)),
-		ParentHash:   types.StringToHash("0x670954530901d461823d49426ad1bc6163c35f91e4e1b57ec5925795c990a932"),
-		Sha3Uncles:   types.StringToHash("0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347"),
-		Miner:        types.StringToBytes("0x95222290dd7278aa3ddd389cc1e1d165cc4bafe5"),
-		StateRoot:    types.StringToHash("0x4baffff1af649a4a1ac3895a4e6b9882b04955733b61941a46a7f313962ac2be"),
-		TxRoot:       types.StringToHash("0xc93ac950c3cab224555d3dbe22e7b918fdcc700a1b5e68f776783031a8989ac6"),
-		ReceiptsRoot: types.StringToHash("0x9b35c4cbe7b62baa5aa23a511e9300e34fa9a8b9f8bf3a30b3c0dfe5ac0f03c1"),
-		Number:       index,
-		GasUsed:      16659603,
-		GasLimit:     30000000,
-		ExtraData:    types.StringToBytes("0x6265617665726275696c642e6f7267"),
-		LogsBloom:    types.Bloom(types.StringToBytes("0x5cffdd8375299b5870f8d6ccc731bbc1991a66bddb89060e06acfd029da27f3f33f9770dd9bac7c04ef81b1e585265bd220bcb28eca77f926fa1c4f724ec2f087e52585d656fbb7d7f92732ffd2c2ce0923b58b16df4e8f599c43eddd3fb082adec776b16b36b3a7815c4bd697627c97aaff8078231d4e77d62735ded51d5a904da0a77e069ea7791fab17650b9e223643ee858de3c99ff870672d7368742e7b6fa81b555de4eb4661932ece0e9ed6d21e71de67c1bf8f4af9673347149fc0dcdf5705b33d8e7a4b660e278f46cdb1ed6bcb37267ff122bc0be190ae38b6e06c71fbbf4add86d8dc07a557a02173c5a49cb295f1ca8c055f59ab074d539f9de7")),
-		Timestamp:    1705060811,
-		Difficulty:   0,
-		Nonce:        types.ZeroNonce,
-		MixHash:      types.StringToHash("0xe101fdbfe5155c5489eabc80bab08728861695d8c0a66431df2e76a8ae59ac90"),
+func CustomJsonUnmarshall(jsonData []byte) (*types.FullBlock, error) {
+	var (
+		dat map[string]interface{}
+		err error
+	)
+
+	if err = json.Unmarshal(jsonData, &dat); err != nil {
+		return nil, err
 	}
+
+	header := &types.Header{}
+
+	header.ParentHash = types.StringToHash(dat["parentHash"].(string))
+	header.Sha3Uncles = types.StringToHash(dat["parentHash"].(string))
+	header.StateRoot = types.StringToHash(dat["stateRoot"].(string))
+	header.ReceiptsRoot = types.StringToHash(dat["receiptsRoot"].(string))
+	header.LogsBloom = types.Bloom(types.StringToBytes(dat["logsBloom"].(string)))
+
+	difficulty := dat["difficulty"].(string)
+	header.Difficulty, err = common.ParseUint64orHex(&difficulty)
+	if err != nil {
+		return nil, err
+	}
+
+	number := dat["number"].(string)
+	header.Number, err = common.ParseUint64orHex(&number)
+	if err != nil {
+		return nil, err
+	}
+
+	gasLimit := dat["gasLimit"].(string)
+	header.GasLimit, err = common.ParseUint64orHex(&gasLimit)
+	if err != nil {
+		return nil, err
+	}
+
+	gasUsed := dat["gasUsed"].(string)
+	header.GasUsed, err = common.ParseUint64orHex(&gasUsed)
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp := dat["timestamp"].(string)
+	header.Timestamp, err = common.ParseUint64orHex(&timestamp)
+	if err != nil {
+		return nil, err
+	}
+
+	header.ExtraData = types.StringToBytes(dat["extraData"].(string))
+
+	nonce := dat["nonce"].(string)
+	nonceNumber, err := common.ParseUint64orHex(&nonce)
+	if err != nil {
+		return nil, err
+	}
+	header.Nonce = types.Nonce{byte(nonceNumber)}
+
+	header.Hash = types.StringToHash(dat["hash"].(string))
+
+	var transactions []*types.Transaction
+
+	for _, transactionJson := range dat["transactions"].([]interface{}) {
+		tr := transactionJson.(map[string]interface{})
+		transaction := &types.Transaction{}
+		transaction.Hash = types.StringToHash(tr["hash"].(string))
+		nonce := tr["nonce"].(string)
+		nonceNumber, err := common.ParseUint64orHex(&nonce)
+		if err != nil {
+			return nil, err
+		}
+		transaction.Nonce = nonceNumber
+
+		transaction.From = types.StringToAddress(tr["from"].(string))
+		addr := types.StringToAddress(tr["to"].(string))
+		transaction.To = &addr
+
+		value := tr["value"].(string)
+		valueNumber, err := common.ParseUint256orHex(&value)
+		transaction.Value = valueNumber
+
+		gasPrice := tr["gasPrice"].(string)
+		gasPriceNumber, err := common.ParseUint256orHex(&gasPrice)
+		transaction.GasPrice = gasPriceNumber
+
+		transaction.Input = []byte(tr["input"].(string))
+
+		v := tr["v"].(string)
+		vNumber, err := common.ParseUint256orHex(&v)
+		transaction.V = vNumber
+
+		r := tr["r"].(string)
+		rNumber, err := common.ParseUint256orHex(&r)
+		transaction.R = rNumber
+
+		s := tr["s"].(string)
+		sNumber, err := common.ParseUint256orHex(&s)
+		transaction.S = sNumber
+
+		chainID := tr["chainId"].(string)
+		chainIDNumber, err := common.ParseUint256orHex(&chainID)
+		transaction.ChainID = chainIDNumber
+
+		txType := tr["type"].(string)
+		txTypeNumber, err := common.ParseUint64orHex(&txType)
+		transaction.Type = types.TxType(txTypeNumber)
+
+		transactions = append(transactions, transaction)
+	}
+
+	return &types.FullBlock{Block: &types.Block{Header: header, Transactions: transactions}}, nil
 }
 
-func createTestReceipt(logs []*types.Log, cumulativeGasUsed, gasUsed uint64, txHash types.Hash) *types.Receipt {
-	success := types.ReceiptSuccess
+func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
+	var (
+		dat      map[string]interface{}
+		err      error
+		receipts []*types.Receipt
+	)
 
-	return &types.Receipt{
-		Root:              types.ZeroHash,
-		CumulativeGasUsed: cumulativeGasUsed,
-		Status:            &success,
-		LogsBloom:         types.CreateBloom(nil),
-		Logs:              logs,
-		GasUsed:           gasUsed,
-		TxHash:            txHash,
-		TransactionType:   types.DynamicFeeTx,
+	if err = json.Unmarshal(jsonData, &dat); err != nil {
+		return nil, err
 	}
+
+	for _, receiptInterface := range dat["result"].([]interface{}) {
+		receipt := &types.Receipt{}
+		receiptJson := receiptInterface.(map[string]interface{})
+
+		receipt.TxHash = types.StringToHash(receiptJson["transactionHash"].(string))
+		if receiptJson["contractAddress"] != nil {
+			addr := types.StringToAddress(receiptJson["contractAddress"].(string))
+			receipt.ContractAddress = (*types.Address)(&addr)
+		}
+
+		cumulativeGasUsed := receiptJson["cumulativeGasUsed"].(string)
+		receipt.CumulativeGasUsed, err = common.ParseUint64orHex(&cumulativeGasUsed)
+		if err != nil {
+			return nil, err
+		}
+
+		gasUsed := receiptJson["gasUsed"].(string)
+		receipt.GasUsed, err = common.ParseUint64orHex(&gasUsed)
+		if err != nil {
+			return nil, err
+		}
+
+		receipt.LogsBloom = types.Bloom(types.StringToBytes(receiptJson["logsBloom"].(string)))
+
+		status := receiptJson["status"].(string)
+		statusNumber, err := common.ParseUint64orHex(&status)
+		if err != nil {
+			return nil, err
+		}
+
+		if statusNumber == 1 {
+			success := types.ReceiptSuccess
+			receipt.Status = &success
+		} else {
+			failed := types.ReceiptFailed
+			receipt.Status = &failed
+		}
+
+		var logs []*types.Log
+
+		for _, logInterface := range receiptJson["logs"].([]interface{}) {
+			log := &types.Log{}
+			logJson := logInterface.(map[string]interface{})
+
+			log.Address = types.StringToAddress(logJson["address"].(string))
+
+			if logJson["topics"] != nil {
+				for _, topic := range logJson["topics"].([]interface{}) {
+					log.Topics = append(log.Topics, types.StringToHash(topic.(string)))
+				}
+			}
+
+			log.Data = types.StringToBytes(logJson["data"].(string))
+
+			logs = append(logs, log)
+		}
+
+		receipts = append(receipts, receipt)
+	}
+
+	return receipts, nil
 }
 
 func DirSize(path string) (uint64, error) {
@@ -1826,35 +1993,4 @@ func DirSize(path string) (uint64, error) {
 	}
 
 	return size, nil
-}
-
-func createTestLogs(logsCount int, address types.Address) []*types.Log {
-	logs := make([]*types.Log, 0, logsCount)
-	for i := 0; i < logsCount; i++ {
-		logs = append(logs, &types.Log{
-			Address: address,
-			Topics: []types.Hash{
-				types.StringToHash("100"),
-				types.StringToHash("ABCD"),
-			},
-			Data: types.StringToBytes(hex.EncodeToString([]byte("Lorem Ipsum Dolor"))),
-		})
-	}
-
-	return logs
-}
-
-func createTestTransaction(hash types.Hash) *types.Transaction {
-	recipient := types.StringToAddress("2")
-
-	return &types.Transaction{
-		Hash:     hash,
-		From:     types.StringToAddress("1"),
-		To:       &recipient,
-		GasPrice: big.NewInt(400),
-		Value:    big.NewInt(100),
-		V:        big.NewInt(1),
-		R:        big.NewInt(2),
-		S:        big.NewInt(3),
-	}
 }
