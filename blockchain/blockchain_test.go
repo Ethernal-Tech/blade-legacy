@@ -1704,7 +1704,7 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 	t.Helper()
 
 	type blockCounter struct {
-		mu sync.Mutex
+		mu sync.RWMutex
 		x  uint64
 	}
 
@@ -1739,11 +1739,11 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 					t.Log(err)
 				}
 
-				counter.mu.Lock()
+				counter.mu.RLock()
 
 				t.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
 
-				counter.mu.Unlock()
+				counter.mu.RUnlock()
 
 				time.Sleep(time.Millisecond * time.Duration(checkInterval))
 			}
