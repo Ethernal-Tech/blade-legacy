@@ -1671,10 +1671,10 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 
 	byteValue, _ := io.ReadAll(jsonFile)
 
-	receiptsJsonFile, err := os.Open("receipts.json")
+	receiptsJSONFile, err := os.Open("receipts.json")
 	require.NoError(t, err)
 
-	receiptsByteVaulue, _ := io.ReadAll(receiptsJsonFile)
+	receiptsByteVaulue, _ := io.ReadAll(receiptsJSONFile)
 
 	blockWriter(t, checkInterval, blockTime, numberOfBlocks, byteValue, receiptsByteVaulue)
 }
@@ -1691,10 +1691,10 @@ func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
 
 	byteValue, _ := io.ReadAll(jsonFile)
 
-	receiptsJsonFile, err := os.Open("receipts.json")
+	receiptsJSONFile, err := os.Open("receipts.json")
 	require.NoError(t, err)
 
-	receiptsByteVaulue, _ := io.ReadAll(receiptsJsonFile)
+	receiptsByteVaulue, _ := io.ReadAll(receiptsJSONFile)
 
 	blockWriter(t, checkInterval, blockTime, numberOfBlocks, byteValue, receiptsByteVaulue)
 }
@@ -1778,10 +1778,10 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 }
 
 func CustomJsonUnmarshall(jsonData []byte) (*types.FullBlock, error) {
-	var (
+	var ( //nolint:prealloc
 		dat          map[string]interface{}
 		err          error
-		transactions []*types.Transaction //nolint:prealloc
+		transactions []*types.Transaction
 	)
 
 	if err = json.Unmarshal(jsonData, &dat); err != nil {
@@ -1790,10 +1790,10 @@ func CustomJsonUnmarshall(jsonData []byte) (*types.FullBlock, error) {
 
 	header := &types.Header{}
 
-	header.ParentHash = types.StringToHash(dat["parentHash"].(string))
-	header.Sha3Uncles = types.StringToHash(dat["parentHash"].(string))
-	header.StateRoot = types.StringToHash(dat["stateRoot"].(string))
-	header.ReceiptsRoot = types.StringToHash(dat["receiptsRoot"].(string))
+	header.ParentHash = types.StringToHash(dat["parentHash"].(string))     //nolint:forcetypeassert
+	header.Sha3Uncles = types.StringToHash(dat["parentHash"].(string))     //nolint:forcetypeassert
+	header.StateRoot = types.StringToHash(dat["stateRoot"].(string))       //nolint:forcetypeassert
+	header.ReceiptsRoot = types.StringToHash(dat["receiptsRoot"].(string)) //nolint:forcetypeassert
 	header.LogsBloom = types.Bloom(types.StringToBytes(dat["logsBloom"].(string)))
 
 	difficulty := dat["difficulty"].(string)
@@ -1854,6 +1854,7 @@ func CustomJsonUnmarshall(jsonData []byte) (*types.FullBlock, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		transaction.Nonce = nonceNumber
 
 		transaction.From = types.StringToAddress(tr["from"].(string))
@@ -1897,7 +1898,7 @@ func CustomJsonUnmarshall(jsonData []byte) (*types.FullBlock, error) {
 }
 
 func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
-	var (
+	var ( //nolint:prealloc
 		dat      map[string]interface{}
 		err      error
 		receipts []*types.Receipt //nolint:prealloc
@@ -1919,12 +1920,14 @@ func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
 		}
 
 		cumulativeGasUsed := receiptJson["cumulativeGasUsed"].(string)
+
 		receipt.CumulativeGasUsed, err = common.ParseUint64orHex(&cumulativeGasUsed)
 		if err != nil {
 			return nil, err
 		}
 
 		gasUsed := receiptJson["gasUsed"].(string)
+
 		receipt.GasUsed, err = common.ParseUint64orHex(&gasUsed)
 		if err != nil {
 			return nil, err
@@ -1933,6 +1936,7 @@ func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
 		receipt.LogsBloom = types.Bloom(types.StringToBytes(receiptJson["logsBloom"].(string)))
 
 		status := receiptJson["status"].(string)
+
 		statusNumber, err := common.ParseUint64orHex(&status)
 		if err != nil {
 			return nil, err
