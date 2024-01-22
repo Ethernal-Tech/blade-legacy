@@ -1750,8 +1750,9 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	for ; ; <-blockTicker.C {
 		batchWriter := storage.NewBatchWriter(db)
+
 		counter.mu.RLock()
-		block.Block.Header.Number = uint64(counter.x)
+		block.Block.Header.Number = counter.x
 		block.Block.Header.Hash = types.StringToHash(fmt.Sprintf("%d", counter.x))
 
 		for i, transaction := range block.Block.Transactions {
@@ -1779,6 +1780,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 		if counter.x == numberOfBlocks {
 			counter.mu.RUnlock()
+
 			break
 		}
 
