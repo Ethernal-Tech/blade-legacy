@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
 
@@ -1702,7 +1703,12 @@ func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
 func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, byteToRead []byte, receiptsBytesToRead []byte) {
 	t.Helper()
 
-	var blockCounter = uint64(0)
+	type blockCounter struct {
+		mu sync.Mutex
+		x  uint64
+	}
+
+	counter := &blockCounter{x: 0}
 
 	quitChan := make(chan bool)
 
@@ -1733,7 +1739,11 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 					t.Log(err)
 				}
 
-				t.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", blockCounter, dirSizeValue, float64(dirSizeValue)/float64(blockCounter))
+				counter.mu.Lock()
+
+				t.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
+
+				counter.mu.Unlock()
 
 				time.Sleep(time.Millisecond * time.Duration(checkInterval))
 			}
@@ -1763,7 +1773,11 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 
 		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Block.Header, big.NewInt(0), false))
 
-		blockCounter++
+		counter.mu.Lock()
+
+		counter.x++
+
+		counter.mu.Unlock()
 
 		time.Sleep(time.Millisecond * time.Duration(blockTime))
 	}
