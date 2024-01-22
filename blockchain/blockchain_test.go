@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -1662,46 +1661,30 @@ func TestBlockchain_WriteFullBlock(t *testing.T) {
 
 func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 	const (
-		checkInterval  = 10000 //milliseconds
+		checkInterval  = 100 * time.Millisecond
 		numberOfBlocks = 100
-		blockTime      = 2000 //milliseconds
+		blockTime      = 1 * time.Nanosecond
 	)
 
-	jsonFile, err := os.Open("testblock.json")
+	jsonFile, err := os.Open("testfiles/testblock.json")
 	require.NoError(t, err)
 
-	byteValue, _ := io.ReadAll(jsonFile)
-
-	receiptsJSONFile, err := os.Open("receipts.json")
+	byteValue, err := io.ReadAll(jsonFile)
 	require.NoError(t, err)
 
-	receiptsByteVaulue, _ := io.ReadAll(receiptsJSONFile)
+	receiptsJSONFile, err := os.Open("testfiles/testreceipts.json")
+	require.NoError(t, err)
 
-	blockWriter(t, checkInterval, blockTime, numberOfBlocks, byteValue, receiptsByteVaulue)
+	receiptsBytes, err := io.ReadAll(receiptsJSONFile)
+	require.NoError(t, err)
+
+	blockWriter(t, numberOfBlocks, blockTime, checkInterval, byteValue, receiptsBytes)
 }
 
-func TestDiskUsageWriteBatchAndUpdateNoTimeout(t *testing.T) {
-	const (
-		checkInterval  = 15 // milliseconds
-		numberOfBlocks = 100
-		blockTime      = 0 //milliseconds
-	)
+func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval time.Duration, byteToRead []byte, receiptsBytesToRead []byte) {
+	tb.Helper()
 
-	jsonFile, err := os.Open("testblock.json")
-	require.NoError(t, err)
-
-	byteValue, _ := io.ReadAll(jsonFile)
-
-	receiptsJSONFile, err := os.Open("receipts.json")
-	require.NoError(t, err)
-
-	receiptsByteVaulue, _ := io.ReadAll(receiptsJSONFile)
-
-	blockWriter(t, checkInterval, blockTime, numberOfBlocks, byteValue, receiptsByteVaulue)
-}
-
-func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, byteToRead []byte, receiptsBytesToRead []byte) {
-	t.Helper()
+	blockTicker := time.NewTicker(blockTime)
 
 	type blockCounter struct {
 		mu sync.RWMutex
@@ -1712,66 +1695,72 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 
 	quitChan := make(chan bool)
 
-	p, err := os.MkdirTemp("", "DiskUsageTest")
-	require.NoError(t, err)
+	p := fmt.Sprintf("/tmp/blockchain-disk-usage-test")
+	err := os.Mkdir(p, 0775)
 
 	db, err := leveldb.NewLevelDBStorage(
 		filepath.Join(p),
 		hclog.NewNullLogger(),
 	)
-	require.NoError(t, err)
+	require.NoError(tb, err)
 
-	block, err := CustomJSONBlockUnmarshall(byteToRead)
-	require.NoError(t, err)
+	block, err := customJSONBlockUnmarshall(tb, byteToRead)
+	require.NoError(tb, err)
 
-	receipts, err := CustomReceiptsUnmarshall(receiptsBytesToRead)
-	require.NoError(t, err)
+	receipts, err := customReceiptsUnmarshall(tb, receiptsBytesToRead)
+	require.NoError(tb, err)
 
 	dirSizeCheck := func() {
+		ticker := time.NewTicker(checkInterval)
+
 		for {
 			select {
 			case <-quitChan:
 				return
-			default:
-				dirSizeValue, err := DirSize(p)
+			case <-ticker.C:
+				dirSizeValue, err := dirSize(tb, p)
 
 				if err != nil {
-					t.Log(err)
+					tb.Log(err)
 				}
 
 				counter.mu.RLock()
 
-				t.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
+				tb.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
 
 				counter.mu.RUnlock()
-
-				time.Sleep(time.Millisecond * time.Duration(checkInterval))
 			}
 		}
 	}
 
 	blockchain := &Blockchain{db: db}
 
-	require.NoError(t, os.MkdirAll(p, 0755))
-
-	require.NoError(t, err)
-
-	dirSizeBeforeBlocks, err := DirSize(p)
-	require.NoError(t, err)
-	t.Logf("DIRSIZE IS: %d", dirSizeBeforeBlocks)
+	dirSizeBeforeBlocks, err := dirSize(tb, p)
+	require.NoError(tb, err)
+	tb.Logf("DIRSIZE IS: %d", dirSizeBeforeBlocks)
 
 	go dirSizeCheck()
 
-	for i := 0; i < int(numberOfBlocks); i++ {
+	for ; ; <-blockTicker.C {
 		batchWriter := storage.NewBatchWriter(db)
-		block.Block.Header.Number = uint64(i)
+		counter.mu.RLock()
+		block.Block.Header.Number = uint64(counter.x)
+		block.Block.Header.Hash = types.StringToHash(fmt.Sprintf("%d", counter.x))
+
+		for i, transaction := range block.Block.Transactions {
+			transaction.Nonce = counter.x * uint64(i)
+			addr := types.StringToAddress(fmt.Sprintf("%d", counter.x*uint64(i)))
+			transaction.To = &addr
+		}
+
+		counter.mu.RUnlock()
 
 		batchWriter.PutHeader(block.Block.Header)
 		batchWriter.PutBody(block.Block.Hash(), block.Block.Body())
 
 		batchWriter.PutReceipts(block.Block.Hash(), receipts)
 
-		require.NoError(t, blockchain.writeBatchAndUpdate(batchWriter, block.Block.Header, big.NewInt(0), false))
+		require.NoError(tb, blockchain.writeBatchAndUpdate(batchWriter, block.Block.Header, big.NewInt(0), false))
 
 		counter.mu.Lock()
 
@@ -1779,20 +1768,36 @@ func blockWriter(t *testing.T, checkInterval, blockTime, numberOfBlocks uint64, 
 
 		counter.mu.Unlock()
 
-		time.Sleep(time.Millisecond * time.Duration(blockTime))
+		counter.mu.RLock()
+
+		if counter.x == numberOfBlocks {
+			counter.mu.RUnlock()
+			break
+		}
+
+		counter.mu.RUnlock()
 	}
+
 	quitChan <- true
 
-	dirSizeAfterBlocks, err := DirSize(p)
-	require.NoError(t, err)
-	t.Logf("DIRSIZE After All blocks: %d, average blocks size: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
+	dirSizeAfterBlocks, err := dirSize(tb, p)
+	require.NoError(tb, err)
+	tb.Logf("DIRSIZE After All blocks: %d, average blocks size: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
 
 	db.Close()
 
-	assert.NotEqual(t, dirSizeBeforeBlocks, dirSizeAfterBlocks)
+	tb.Cleanup(func() {
+		if err := os.RemoveAll(p); err != nil {
+			tb.Fatal(err)
+		}
+	})
+
+	assert.NotEqual(tb, dirSizeBeforeBlocks, dirSizeAfterBlocks)
 }
 
-func CustomJSONBlockUnmarshall(jsonData []byte) (*types.FullBlock, error) {
+func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock, error) {
+	tb.Helper()
+
 	var ( //nolint:prealloc
 		dat          map[string]interface{}
 		err          error
@@ -1947,7 +1952,9 @@ func CustomJSONBlockUnmarshall(jsonData []byte) (*types.FullBlock, error) {
 	return &types.FullBlock{Block: &types.Block{Header: header, Transactions: transactions}}, nil
 }
 
-func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
+func customReceiptsUnmarshall(tb testing.TB, jsonData []byte) ([]*types.Receipt, error) {
+	tb.Helper()
+
 	var ( //nolint:prealloc
 		dat      map[string]interface{}
 		err      error
@@ -2025,34 +2032,26 @@ func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
 	return receipts, nil
 }
 
-func DirSize(path string) (uint64, error) {
-	var size uint64
+func dirSize(tb testing.TB, dir string) (int64, error) {
+	tb.Helper()
 
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return size, err
-	}
+	var totalSize int64
 
-	for _, entry := range entries {
-		if entry.IsDir() {
-			subDirSize, err := DirSize(path + "/" + entry.Name())
-
-			if err != nil {
-				log.Printf("failed to calculate size of directory %s: %v\n", entry.Name(), err)
-			}
-
-			size += subDirSize
-		} else {
-			fileInfo, err := entry.Info()
-
-			if err != nil {
-				log.Printf("failed to get info of file %s: %v\n", entry.Name(), err)
-
-				continue
-			}
-			size += uint64(fileInfo.Size())
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
+
+		if !info.IsDir() {
+			totalSize += info.Size()
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return 0, err
 	}
 
-	return size, nil
+	return totalSize, nil
 }
