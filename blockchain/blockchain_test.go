@@ -1845,8 +1845,8 @@ func CustomJSONBlockUnmarshall(jsonData []byte) (*types.FullBlock, error) {
 
 	header.Hash = types.StringToHash(dat["hash"].(string)) //nolint:forcetypeassert
 
-	for _, transactionJson := range dat["transactions"].([]interface{}) { //nolint:forcetypeassert
-		tr := transactionJson.(map[string]interface{}) //nolint:forcetypeassert
+	for _, transactionJSON := range dat["transactions"].([]interface{}) { //nolint:forcetypeassert
+		tr := transactionJSON.(map[string]interface{}) //nolint:forcetypeassert
 		transaction := &types.Transaction{}
 		transaction.Hash = types.StringToHash(tr["hash"].(string)) //nolint:forcetypeassert
 		nonce := tr["nonce"].(string)                              //nolint:forcetypeassert
@@ -1877,6 +1877,7 @@ func CustomJSONBlockUnmarshall(jsonData []byte) (*types.FullBlock, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		transaction.GasPrice = gasPriceNumber
 
 		transaction.Input = []byte(tr["input"].(string)) //nolint:forcetypeassert
@@ -1987,14 +1988,14 @@ func CustomReceiptsUnmarshall(jsonData []byte) ([]*types.Receipt, error) {
 
 		var logs []*types.Log
 
-		for _, logInterface := range receiptJSON["logs"].([]interface{}) {
+		for _, logInterface := range receiptJSON["logs"].([]interface{}) { //nolint:forcetypeassert
 			log := &types.Log{}
 			logJSON := logInterface.(map[string]interface{}) //nolint:forcetypeassert
 
 			log.Address = types.StringToAddress(logJSON["address"].(string)) //nolint:forcetypeassert
 
 			if logJSON["topics"] != nil {
-				for _, topic := range logJSON["topics"].([]interface{}) {
+				for _, topic := range logJSON["topics"].([]interface{}) { //nolint:forcetypeassert
 					log.Topics = append(log.Topics, types.StringToHash(topic.(string))) //nolint:forcetypeassert
 				}
 			}
