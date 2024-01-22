@@ -1697,6 +1697,13 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	p := fmt.Sprintf("/tmp/blockchain-disk-usage-test")
 	err := os.Mkdir(p, 0775)
+	require.NoError(tb, err)
+
+	tb.Cleanup(func() {
+		if err := os.RemoveAll(p); err != nil {
+			tb.Fatal(err)
+		}
+	})
 
 	db, err := leveldb.NewLevelDBStorage(
 		filepath.Join(p),
@@ -1785,12 +1792,6 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 	tb.Logf("DIRSIZE After All blocks: %d, average blocks size: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
 
 	db.Close()
-
-	tb.Cleanup(func() {
-		if err := os.RemoveAll(p); err != nil {
-			tb.Fatal(err)
-		}
-	})
 
 	assert.NotEqual(tb, dirSizeBeforeBlocks, dirSizeAfterBlocks)
 }
