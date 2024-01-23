@@ -1666,10 +1666,10 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 		blockTime      = 1 * time.Nanosecond
 	)
 
-	jsonFile, err := os.Open("testfiles/testblock.json")
+	blockJSONFile, err := os.Open("testfiles/testblock.json")
 	require.NoError(t, err)
 
-	byteValue, err := io.ReadAll(jsonFile)
+	blockBytes, err := io.ReadAll(blockJSONFile)
 	require.NoError(t, err)
 
 	receiptsJSONFile, err := os.Open("testfiles/testreceipts.json")
@@ -1678,7 +1678,7 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 	receiptsBytes, err := io.ReadAll(receiptsJSONFile)
 	require.NoError(t, err)
 
-	blockWriter(t, numberOfBlocks, blockTime, checkInterval, byteValue, receiptsBytes)
+	blockWriter(t, numberOfBlocks, blockTime, checkInterval, blockBytes, receiptsBytes)
 }
 
 func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval time.Duration, byteToRead []byte, receiptsBytesToRead []byte) {
@@ -1714,7 +1714,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 	block, err := customJSONBlockUnmarshall(tb, byteToRead)
 	require.NoError(tb, err)
 
-	receipts, err := customReceiptsUnmarshall(tb, receiptsBytesToRead)
+	receipts, err := customJSONReceiptsUnmarshall(tb, receiptsBytesToRead)
 	require.NoError(tb, err)
 
 	dirSizeCheck := func() {
@@ -1955,7 +1955,7 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 	return &types.FullBlock{Block: &types.Block{Header: header, Transactions: transactions}}, nil
 }
 
-func customReceiptsUnmarshall(tb testing.TB, jsonData []byte) ([]*types.Receipt, error) {
+func customJSONReceiptsUnmarshall(tb testing.TB, jsonData []byte) ([]*types.Receipt, error) {
 	tb.Helper()
 
 	var ( //nolint:prealloc
