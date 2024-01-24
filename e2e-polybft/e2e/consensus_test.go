@@ -752,6 +752,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 
 func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
 	var newValue = big.NewInt(234586)
+
 	admin, err := wallet.GenerateKey()
 	require.NoError(t, err)
 
@@ -764,6 +765,7 @@ func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
 
 	srv := cluster.Servers[0]
 	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(srv.JSONRPCAddr()))
+	require.NoError(t, err)
 
 	//deploy wrapper contract
 	receipt, err := txRelayer.SendTransaction(
@@ -772,11 +774,12 @@ func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
 			Input: contractsapi.Wrapper.Bytecode,
 		},
 		admin)
+	require.NoError(t, err)
 
 	//address of wrapper contract
 	wrapperAddress := receipt.ContractAddress
 
-	cluster.WaitForBlock(10, time.Minute)
+	require.NoError(t, cluster.WaitForBlock(10, time.Minute))
 
 	//getAddress returns address of nested contract
 	getAddress := contractsapi.Wrapper.Abi.GetMethod("getAddress")
@@ -806,7 +809,7 @@ func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
 		Input: encoded,
 	}
 
-	receipt, err = txRelayer.SendTransaction(txn, admin)
+	_, err = txRelayer.SendTransaction(txn, admin)
 	require.NoError(t, err)
 
 	//getting new value from wrapper contract
