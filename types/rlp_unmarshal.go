@@ -674,6 +674,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 			if err != nil {
 				return err
 			}
+
 			txAccessList[i].Address = BytesToAddress(addressBytes)
 
 			// Read the storage keys

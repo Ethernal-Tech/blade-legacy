@@ -483,6 +483,7 @@ func opSload(c *state) {
 	loc := c.top()
 
 	var gas uint64
+
 	if c.config.Berlin {
 		if _, slotPresent := c.accessList.Contains(c.msg.Address, bigToHash(loc)); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
