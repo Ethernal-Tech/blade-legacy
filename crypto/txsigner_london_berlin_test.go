@@ -19,47 +19,56 @@ func TestLondonSignerSender(t *testing.T) {
 	testTable := []struct {
 		name        string
 		chainID     *big.Int
-		isGomestead bool
+		isHomestead bool
+		txType      types.TxType
 	}{
 		{
 			"mainnet",
 			big.NewInt(1),
 			true,
+			types.LegacyTx,
 		},
 		{
 			"expanse mainnet",
 			big.NewInt(2),
 			true,
+			types.DynamicFeeTx,
 		},
 		{
 			"ropsten",
 			big.NewInt(3),
 			true,
+			types.DynamicFeeTx,
 		},
 		{
 			"rinkeby",
 			big.NewInt(4),
 			true,
+			types.AccessListTx,
 		},
 		{
 			"goerli",
 			big.NewInt(5),
 			true,
+			types.AccessListTx,
 		},
 		{
 			"kovan",
 			big.NewInt(42),
 			true,
+			types.StateTx,
 		},
 		{
 			"geth private",
 			big.NewInt(1337),
 			true,
+			types.StateTx,
 		},
 		{
 			"mega large",
 			big.NewInt(0).Exp(big.NewInt(2), big.NewInt(20), nil), // 2**20
 			true,
+			types.AccessListTx,
 		},
 	}
 
@@ -73,14 +82,25 @@ func TestLondonSignerSender(t *testing.T) {
 				t.Fatalf("Unable to generate key")
 			}
 
-			txn := &types.Transaction{
-				To:       &toAddress,
-				Value:    big.NewInt(1),
-				GasPrice: big.NewInt(0),
+			var txn *types.Transaction
+			switch testCase.txType {
+			case types.AccessListTx:
+				txn = types.NewTx(&types.AccessListStruct{
+					To:       &toAddress,
+					Value:    big.NewInt(1),
+					GasPrice: big.NewInt(0),
+				})
+			case types.DynamicFeeTx, types.LegacyTx, types.StateTx:
+				txn = types.NewTx(&types.MixedTx{
+					To:       &toAddress,
+					Value:    big.NewInt(1),
+					GasPrice: big.NewInt(0),
+				})
 			}
 
 			chainID := testCase.chainID.Uint64()
-			signer := NewLondonSigner(chainID, true, NewEIP155Signer(chainID, true))
+			berlinSigner := NewBerlinSigner(chainID, true, NewEIP155Signer(chainID, true))
+			signer := NewLondonSigner(chainID, true, berlinSigner)
 
 			signedTx, signErr := signer.SignTx(txn, key)
 			if signErr != nil {
@@ -100,7 +120,8 @@ func TestLondonSignerSender(t *testing.T) {
 func Test_LondonSigner_Sender(t *testing.T) {
 	t.Parallel()
 
-	signer := NewLondonSigner(100, true, NewEIP155Signer(100, true))
+	berlinSigner := NewBerlinSigner(100, true, NewEIP155Signer(100, true))
+	signer := NewLondonSigner(100, true, berlinSigner)
 	to := types.StringToAddress("0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF")
 
 	r, ok := big.NewInt(0).SetString("102623819621514684481463796449525884981685455700611671612296611353030973716382", 10)
@@ -116,7 +137,7 @@ func Test_LondonSigner_Sender(t *testing.T) {
 	}{
 		{
 			name: "sender is 0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6",
-			tx: &types.Transaction{
+			tx: types.NewTx(&types.MixedTx{
 				Type:      types.DynamicFeeTx,
 				GasPrice:  big.NewInt(1000000402),
 				GasTipCap: ethgo.Gwei(1),
@@ -127,7 +148,7 @@ func Test_LondonSigner_Sender(t *testing.T) {
 				V:         big.NewInt(0),
 				R:         r,
 				S:         s,
-			},
+			}),
 			sender: types.StringToAddress("0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6"),
 		},
 	}
