@@ -381,6 +381,7 @@ func (t *Transaction) UnmarshalRLP(input []byte) error {
 		}
 
 		t.SetTransactionType(tType)
+
 		offset = 1
 	}
 
@@ -501,6 +502,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 
 		// input
 		var txInput []byte
+
 		txInput, err = getElem().GetBytes(txInput)
 		if err != nil {
 			return err
@@ -532,6 +534,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 				if err != nil {
 					return err
 				}
+
 				txAccessList[i].Address = BytesToAddress(addressBytes)
 
 				// Read the storage keys
@@ -543,6 +546,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 				}
 
 				txAccessList[i].StorageKeys = make([]Hash, len(storageKeysElems))
+
 				for j, storageKeyVV := range storageKeysElems {
 					storageKeyBytes, err := storageKeyVV.Bytes()
 					if err != nil {
@@ -551,7 +555,6 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 
 					txAccessList[i].StorageKeys[j] = BytesToHash(storageKeyBytes)
 				}
-
 			}
 
 			t.SetAccessList(txAccessList)
@@ -639,6 +642,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 
 		// input
 		var txInput []byte
+
 		txInput, err = getElem().GetBytes(txInput)
 		if err != nil {
 			return err
@@ -681,6 +685,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 			}
 
 			txAccessList[i].StorageKeys = make([]Hash, len(storageKeysElems))
+
 			for j, storageKeyVV := range storageKeysElems {
 				storageKeyBytes, err := storageKeyVV.Bytes()
 				if err != nil {
@@ -689,7 +694,6 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 
 				txAccessList[i].StorageKeys[j] = BytesToHash(storageKeyBytes)
 			}
-
 		}
 
 		t.SetAccessList(txAccessList)

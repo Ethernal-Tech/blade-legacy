@@ -486,6 +486,7 @@ func opSload(c *state) {
 	if c.config.Berlin {
 		if _, slotPresent := c.accessList.Contains(c.msg.Address, bigToHash(loc)); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
+
 			c.accessList.AddSlot(c.msg.Address, bigToHash(loc))
 		} else {
 			gas = WarmStorageReadCostEIP2929
@@ -531,6 +532,7 @@ func opSStore(c *state) {
 	if c.config.Berlin {
 		if _, slotPresent := c.accessList.Contains(c.msg.Address, key); !slotPresent {
 			cost = ColdStorageReadCostEIP2929
+
 			c.accessList.AddSlot(c.msg.Address, key)
 		}
 	}
@@ -996,6 +998,7 @@ func opSelfDestruct(c *state) {
 	// EIP 2929 gas
 	if c.config.Berlin && !c.accessList.ContainsAddress(address) {
 		gas += ColdAccountAccessCostEIP2929
+
 		c.accessList.AddAddress(address)
 	}
 

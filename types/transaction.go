@@ -311,6 +311,7 @@ func DeepCopyTxData(data TxData) TxData {
 	}
 
 	v, r, s := data.rawSignatureValues()
+
 	var vCopy, rCopy, sCopy *big.Int
 
 	if v != nil {
