@@ -65,6 +65,7 @@ issues:
         - gosec
         - unparam
         - lll
+        - forcetypeassert
     - path: gen_sc_data\.go
       linters:
         - wsl
