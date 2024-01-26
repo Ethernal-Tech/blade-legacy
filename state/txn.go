@@ -95,7 +95,7 @@ func (txn *Txn) getStateObject(addr types.Address) (*StateObject, bool) {
 	// Try to get state from radix tree which holds transient states during block processing first
 	val, exists := txn.txn.Get(addr.Bytes())
 	if exists {
-		obj := val.(*StateObject)
+		obj := val.(*StateObject) //nolint:forcetypeassert
 		if obj.Deleted {
 			return nil, false
 		}
@@ -207,7 +207,7 @@ func (txn *Txn) EmitLog(addr types.Address, topics []types.Hash, data []byte) {
 	if !exists {
 		logs = []*types.Log{}
 	} else {
-		logs = val.([]*types.Log)
+		logs = val.([]*types.Log) //nolint:forcetypeassert
 	}
 
 	logs = append(logs, log)
@@ -324,7 +324,7 @@ func (txn *Txn) GetState(addr types.Address, key types.Hash) types.Hash {
 				return types.Hash{}
 			}
 
-			return types.BytesToHash(val.([]byte))
+			return types.BytesToHash(val.([]byte)) //nolint:forcetypeassert
 		}
 	}
 
@@ -395,7 +395,6 @@ func (txn *Txn) GetCode(addr types.Address) []byte {
 	// TODO; Should we move this to state? (to be fixed in EVM-527)
 	v, ok := txn.codeCache.Get(addr)
 	if ok {
-
 		return v.([]byte)
 	}
 
