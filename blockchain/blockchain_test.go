@@ -1791,7 +1791,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	dirSizeAfterBlocks, err := dirSize(tb, p)
 	require.NoError(tb, err)
-	tb.Logf("DIRSIZE After All blocks: %d, average blocks size: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
+	tb.Logf("Db size final [bytes]: %d, db size per block [bytes]: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
 
 	db.Close()
 
