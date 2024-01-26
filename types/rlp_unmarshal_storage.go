@@ -71,6 +71,7 @@ func (b *Body) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 // UnmarshalStoreRLP unmarshals transaction from byte slice. Hash must be computed manually after!
 func (t *Transaction) UnmarshalStoreRLP(input []byte) error {
 	t.SetTransactionType(LegacyTx)
+
 	offset := 0
 
 	if len(input) > 0 && input[0] <= RLPSingleByteUpperLimit {
@@ -80,6 +81,7 @@ func (t *Transaction) UnmarshalStoreRLP(input []byte) error {
 		}
 
 		t.SetTransactionType(tType)
+
 		offset = 1
 	}
 

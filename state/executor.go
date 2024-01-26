@@ -607,6 +607,7 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 
 	gasPrice := msg.GetGasPrice(t.ctx.BaseFee.Uint64())
 	value := new(big.Int)
+
 	if msg.Value() != nil {
 		value = value.Set(msg.Value())
 	}
