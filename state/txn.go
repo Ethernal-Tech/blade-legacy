@@ -395,7 +395,7 @@ func (txn *Txn) GetCode(addr types.Address) []byte {
 	// TODO; Should we move this to state? (to be fixed in EVM-527)
 	v, ok := txn.codeCache.Get(addr)
 	if ok {
-		return v.([]byte)
+		return v.([]byte) //nolint:forcetypeassert
 	}
 
 	code, _ := txn.snapshot.GetCode(types.BytesToHash(object.Account.CodeHash))
@@ -462,7 +462,7 @@ func (txn *Txn) Logs() []*types.Log {
 
 	txn.txn.Delete(logIndex)
 
-	return data.([]*types.Log)
+	return data.([]*types.Log) //nolint:forcetypeassert
 }
 
 func (txn *Txn) GetRefund() uint64 {
@@ -471,7 +471,7 @@ func (txn *Txn) GetRefund() uint64 {
 		return 0
 	}
 
-	return data.(uint64)
+	return data.(uint64) //nolint:forcetypeassert
 }
 
 // GetCommittedState returns the state of the address in the trie
