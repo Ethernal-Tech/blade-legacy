@@ -262,7 +262,6 @@ func TestForkManager_HandlerReplacement(t *testing.T) {
 		handlersMap: map[HandlerDesc][]forkHandler{},
 	}
 	execute := func(name HandlerDesc, block uint64) string {
-
 		return forkManager.GetHandler(name, block).(func() string)()
 	}
 
@@ -298,7 +297,6 @@ func TestForkManager_HandlerPrecedence(t *testing.T) {
 		handlersMap: map[HandlerDesc][]forkHandler{},
 	}
 	execute := func(name HandlerDesc, block uint64) string {
-
 		return forkManager.GetHandler(name, block).(func() string)()
 	}
 
