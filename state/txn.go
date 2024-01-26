@@ -616,7 +616,7 @@ func (txn *Txn) Commit(deleteEmptyObjects bool) ([]*Object, error) {
 					if v == nil {
 						store.Deleted = true
 					} else {
-						store.Val = v.([]byte)
+						store.Val = v.([]byte) //nolint:forcetypeassert
 					}
 					obj.Storage = append(obj.Storage, store)
 
