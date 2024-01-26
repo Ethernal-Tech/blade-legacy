@@ -330,13 +330,13 @@ func (tp *txPoolMock) Prepare() {
 func (tp *txPoolMock) Length() uint64 {
 	args := tp.Called()
 
-	return args[0].(uint64) //nolint
+	return args[0].(uint64)
 }
 
 func (tp *txPoolMock) Peek() *types.Transaction {
 	args := tp.Called()
 
-	return args[0].(*types.Transaction) //nolint
+	return args[0].(*types.Transaction)
 }
 
 func (tp *txPoolMock) Pop(tx *types.Transaction) {
@@ -380,13 +380,13 @@ func (tp *syncerMock) Close() error {
 func (tp *syncerMock) GetSyncProgression() *progress.Progression {
 	args := tp.Called()
 
-	return args[0].(*progress.Progression) //nolint
+	return args[0].(*progress.Progression)
 }
 
 func (tp *syncerMock) HasSyncPeer() bool {
 	args := tp.Called()
 
-	return args[0].(bool) //nolint
+	return args[0].(bool)
 }
 
 func (tp *syncerMock) Sync(func(*types.FullBlock) bool) error {
