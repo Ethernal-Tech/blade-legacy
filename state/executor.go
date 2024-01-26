@@ -606,7 +606,10 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	}
 
 	gasPrice := msg.GetGasPrice(t.ctx.BaseFee.Uint64())
-	value := new(big.Int).Set(msg.Value())
+	value := new(big.Int)
+	if msg.Value() != nil {
+		value = value.Set(msg.Value())
+	}
 
 	// set the specific transaction fields in the context
 	t.ctx.GasPrice = types.BytesToHash(gasPrice.Bytes())
