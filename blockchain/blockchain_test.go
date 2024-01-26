@@ -1744,7 +1744,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	dirSizeBeforeBlocks, err := dirSize(tb, p)
 	require.NoError(tb, err)
-	tb.Logf("DIRSIZE IS: %d", dirSizeBeforeBlocks)
+	tb.Logf("Empty db size [bytes]: %d", dirSizeBeforeBlocks)
 
 	go dirSizeCheck()
 
