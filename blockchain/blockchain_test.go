@@ -1733,7 +1733,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 				counter.mu.RLock()
 
-				tb.Logf("BLOCK: %d DIRSIZE IS: %d and average is:%.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
+				tb.Logf("Block: %d, db size [bytes]: %d and size per block [bytes]: %.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
 
 				counter.mu.RUnlock()
 			}
