@@ -95,7 +95,7 @@ func (txn *Txn) getStateObject(addr types.Address) (*StateObject, bool) {
 	// Try to get state from radix tree which holds transient states during block processing first
 	val, exists := txn.txn.Get(addr.Bytes())
 	if exists {
-		obj := val.(*StateObject) //nolint:forcetypeassert
+		obj := val.(*StateObject)
 		if obj.Deleted {
 			return nil, false
 		}
@@ -207,7 +207,7 @@ func (txn *Txn) EmitLog(addr types.Address, topics []types.Hash, data []byte) {
 	if !exists {
 		logs = []*types.Log{}
 	} else {
-		logs = val.([]*types.Log) //nolint:forcetypeassert
+		logs = val.([]*types.Log)
 	}
 
 	logs = append(logs, log)
@@ -323,7 +323,7 @@ func (txn *Txn) GetState(addr types.Address, key types.Hash) types.Hash {
 			if val == nil {
 				return types.Hash{}
 			}
-			//nolint:forcetypeassert
+
 			return types.BytesToHash(val.([]byte))
 		}
 	}
@@ -396,7 +396,7 @@ func (txn *Txn) GetCode(addr types.Address) []byte {
 	v, ok := txn.codeCache.Get(addr)
 
 	if ok {
-		//nolint:forcetypeassert
+
 		return v.([]byte)
 	}
 
@@ -463,7 +463,7 @@ func (txn *Txn) Logs() []*types.Log {
 	}
 
 	txn.txn.Delete(logIndex)
-	//nolint:forcetypeassert
+
 	return data.([]*types.Log)
 }
 
@@ -473,7 +473,6 @@ func (txn *Txn) GetRefund() uint64 {
 		return 0
 	}
 
-	//nolint:forcetypeassert
 	return data.(uint64)
 }
 
@@ -619,7 +618,7 @@ func (txn *Txn) Commit(deleteEmptyObjects bool) ([]*Object, error) {
 					if v == nil {
 						store.Deleted = true
 					} else {
-						store.Val = v.([]byte) //nolint:forcetypeassert
+						store.Val = v.([]byte)
 					}
 					obj.Storage = append(obj.Storage, store)
 
