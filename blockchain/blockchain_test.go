@@ -32,8 +32,6 @@ import (
 const (
 	B  = 1
 	KB = 1024 * B
-	MB = 1024 * KB
-	GB = 1024 * MB
 )
 
 func TestGenesis(t *testing.T) {
@@ -1681,15 +1679,29 @@ func TestDiskUsageWriteBatchAndUpdate(t *testing.T) {
 	blockWriter(t, numberOfBlocks, blockTime, checkInterval, blockBytes, receiptsBytes)
 }
 
+type blockCounter struct {
+	mu sync.RWMutex
+	x  uint64
+}
+
+func (bc *blockCounter) Add() {
+	bc.mu.Lock()
+	bc.x++
+	bc.mu.Unlock()
+}
+
+func (bc *blockCounter) GetValue() uint64 {
+	bc.mu.RLock()
+	tmp := bc.x
+	bc.mu.RUnlock()
+
+	return tmp
+}
+
 func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval time.Duration, byteToRead []byte, receiptsBytesToRead []byte) {
 	tb.Helper()
 
 	blockTicker := time.NewTicker(blockTime)
-
-	type blockCounter struct {
-		mu sync.RWMutex
-		x  uint64
-	}
 
 	counter := &blockCounter{x: 0}
 
@@ -1719,6 +1731,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	dirSizeCheck := func() {
 		ticker := time.NewTicker(checkInterval)
+		defer ticker.Stop()
 
 		for {
 			select {
@@ -1731,11 +1744,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 					tb.Log(err)
 				}
 
-				counter.mu.RLock()
-
-				tb.Logf("Block: %d, db size [bytes]: %d and size per block [bytes]: %.2f", counter.x, dirSizeValue, float64(dirSizeValue)/float64(counter.x))
-
-				counter.mu.RUnlock()
+				tb.Logf("Block: %d, db size [kilobytes]: %.2f and size per block [kilobytes]: %.2f", counter.GetValue(), float64(dirSizeValue)/float64(KB), (float64(dirSizeValue)/float64(counter.GetValue()))/KB)
 			}
 		}
 	}
@@ -1744,24 +1753,23 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	dirSizeBeforeBlocks, err := dirSize(tb, p)
 	require.NoError(tb, err)
-	tb.Logf("Empty db size [bytes]: %d", dirSizeBeforeBlocks)
+	tb.Logf("Empty db size [kilobytes]: %d", dirSizeBeforeBlocks/KB)
 
 	go dirSizeCheck()
 
-	for ; ; <-blockTicker.C {
+	for {
+		<-blockTicker.C
+
 		batchWriter := storage.NewBatchWriter(db)
 
-		counter.mu.RLock()
-		block.Block.Header.Number = counter.x
-		block.Block.Header.Hash = types.StringToHash(fmt.Sprintf("%d", counter.x))
+		block.Block.Header.Number = counter.GetValue()
+		block.Block.Header.Hash = types.StringToHash(fmt.Sprintf("%d", counter.GetValue()))
 
 		for i, transaction := range block.Block.Transactions {
 			transaction.Nonce = counter.x * uint64(i)
-			addr := types.StringToAddress(fmt.Sprintf("%d", counter.x*uint64(i)))
+			addr := types.StringToAddress(fmt.Sprintf("%d", counter.GetValue()*uint64(i)))
 			transaction.To = &addr
 		}
-
-		counter.mu.RUnlock()
 
 		batchWriter.PutHeader(block.Block.Header)
 		batchWriter.PutBody(block.Block.Hash(), block.Block.Body())
@@ -1770,28 +1778,19 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 		require.NoError(tb, blockchain.writeBatchAndUpdate(batchWriter, block.Block.Header, big.NewInt(0), false))
 
-		counter.mu.Lock()
+		counter.Add()
 
-		counter.x++
-
-		counter.mu.Unlock()
-
-		counter.mu.RLock()
-
-		if counter.x == numberOfBlocks {
-			counter.mu.RUnlock()
+		if counter.GetValue() == numberOfBlocks {
 
 			break
 		}
-
-		counter.mu.RUnlock()
 	}
 
 	quitChan <- true
 
 	dirSizeAfterBlocks, err := dirSize(tb, p)
 	require.NoError(tb, err)
-	tb.Logf("Db size final [bytes]: %d, db size per block [bytes]: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
+	tb.Logf("Db size final [kilobytes]: %d, db size per block [kilobytes]: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
 
 	db.Close()
 
@@ -1801,10 +1800,9 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock, error) {
 	tb.Helper()
 
-	var ( //nolint:prealloc
-		dat          map[string]interface{}
-		err          error
-		transactions []*types.Transaction
+	var (
+		dat map[string]interface{}
+		err error
 	)
 
 	if err = json.Unmarshal(jsonData, &dat); err != nil {
@@ -1814,7 +1812,7 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 	header := &types.Header{}
 
 	header.ParentHash = types.StringToHash(dat["parentHash"].(string))
-	header.Sha3Uncles = types.StringToHash(dat["parentHash"].(string))
+	header.Sha3Uncles = types.StringToHash(dat["sha3Uncles"].(string))
 	header.StateRoot = types.StringToHash(dat["stateRoot"].(string))
 	header.ReceiptsRoot = types.StringToHash(dat["receiptsRoot"].(string))
 	header.LogsBloom = types.Bloom(types.StringToBytes(dat["logsBloom"].(string)))
@@ -1867,7 +1865,10 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 
 	header.Hash = types.StringToHash(dat["hash"].(string))
 
-	for _, transactionJSON := range dat["transactions"].([]interface{}) {
+	transactionsJSON := dat["transactions"].([]interface{})
+	transactions := make([]*types.Transaction, 0, len(transactionsJSON))
+
+	for _, transactionJSON := range transactionsJSON {
 		tr := transactionJSON.(map[string]interface{})
 		transaction := &types.Transaction{}
 		transaction.Hash = types.StringToHash(tr["hash"].(string))
@@ -1949,6 +1950,25 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 
 		transaction.Type = types.TxType(txTypeNumber)
 
+		if tr["maxFeePerGas"] != nil {
+			gasFeeCap := tr["maxFeePerGas"].(string)
+
+			gasFeeCapNumber, err := common.ParseUint256orHex(&gasFeeCap)
+			require.NoError(tb, err)
+
+			transaction.GasFeeCap = gasFeeCapNumber
+		}
+
+		if tr["maxPriorityFeePerGas"] != nil {
+
+			gasTipCap := tr["maxPriorityFeePerGas"].(string)
+
+			gasTipCapNumber, err := common.ParseUint256orHex(&gasTipCap)
+			require.NoError(tb, err)
+
+			transaction.GasTipCap = gasTipCapNumber
+		}
+
 		transactions = append(transactions, transaction)
 	}
 
@@ -1958,17 +1978,19 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 func customJSONReceiptsUnmarshall(tb testing.TB, jsonData []byte) ([]*types.Receipt, error) {
 	tb.Helper()
 
-	var ( //nolint:prealloc
-		dat      map[string]interface{}
-		err      error
-		receipts []*types.Receipt
+	var (
+		dat map[string]interface{}
+		err error
 	)
 
 	if err = json.Unmarshal(jsonData, &dat); err != nil {
 		return nil, err
 	}
 
-	for _, receiptInterface := range dat["result"].([]interface{}) {
+	receiptsJSON := dat["result"].([]interface{})
+	receipts := make([]*types.Receipt, 0, len(receiptsJSON))
+
+	for _, receiptInterface := range receiptsJSON {
 		receipt := &types.Receipt{}
 		receiptJSON := receiptInterface.(map[string]interface{})
 
