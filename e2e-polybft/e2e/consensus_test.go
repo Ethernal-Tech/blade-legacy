@@ -792,14 +792,14 @@ func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 	require.NotEqual(t, ethgo.ZeroAddress, numberPersisterAddr)
 
 	// set value to NumberPersister contract
-	setValueFn := contractsapi.Wrapper.Abi.GetMethod("setValue")
+	setNumberFn := contractsapi.Wrapper.Abi.GetMethod("setNumber")
 
-	setValueInput, err := setValueFn.Encode([]interface{}{numberToPersist})
+	setValueInput, err := setNumberFn.Encode([]interface{}{numberToPersist})
 	require.NoError(t, err)
 
 	txn := &ethgo.Transaction{
 		From:  admin.Address(),
-		To:    &numberPersisterAddr,
+		To:    &wrapperAddr,
 		Input: setValueInput,
 	}
 
