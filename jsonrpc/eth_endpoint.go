@@ -203,7 +203,7 @@ func (e *Eth) BlockNumber() (interface{}, error) {
 
 // SendRawTransaction sends a raw transaction
 func (e *Eth) SendRawTransaction(buf argBytes) (interface{}, error) {
-	tx := types.NewTx(&types.MixedTx{})
+	tx := &types.Transaction{}
 	if err := tx.UnmarshalRLP(buf); err != nil {
 		return nil, err
 	}

@@ -66,7 +66,7 @@ func RunSpecificTest(t *testing.T, file string, c testCase, fc *forkConfig, inde
 
 	// Try to recover tx with current signer
 	if len(p.TxBytes) != 0 {
-		ttx := types.NewTx(&types.MixedTx{})
+		ttx := &types.Transaction{}
 		err := ttx.UnmarshalRLP(p.TxBytes)
 		if err != nil {
 			return err

@@ -68,6 +68,20 @@ func NewTx(inner TxData) *Transaction {
 	return t
 }
 
+// InitInnerData initializes the inner data of a Transaction based on the given transaction type.
+// It sets the Inner field of the Transaction to either an AccessListStruct or a MixedTx,
+// depending on the value of txType.
+func (t *Transaction) InitInnerData(txType TxType) {
+	switch txType {
+	case AccessListTx:
+		t.Inner = &AccessListStruct{}
+	default:
+		t.Inner = &MixedTx{}
+	}
+
+	t.Inner.setTransactionType(txType)
+}
+
 type TxData interface {
 	transactionType() TxType
 	//copy() TxData // creates a deep copy and initializes all fields  //check:Logic Not implemented

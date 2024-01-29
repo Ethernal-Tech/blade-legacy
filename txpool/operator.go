@@ -24,7 +24,7 @@ func (p *TxPool) AddTxn(ctx context.Context, raw *proto.AddTxnReq) (*proto.AddTx
 		return nil, fmt.Errorf("transaction's field raw is empty")
 	}
 
-	txn := types.NewTx(&types.MixedTx{})
+	txn := &types.Transaction{}
 	if err := txn.UnmarshalRLP(raw.Raw.Value); err != nil {
 		return nil, err
 	}

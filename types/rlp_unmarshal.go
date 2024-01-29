@@ -370,8 +370,7 @@ func (l *Log) unmarshalRLPFrom(_ *fastrlp.Parser, v *fastrlp.Value) error {
 // UnmarshalRLP unmarshals transaction from byte slice
 // Caution: Hash calculation should be done from the outside!
 func (t *Transaction) UnmarshalRLP(input []byte) error {
-	t.SetTransactionType(LegacyTx)
-
+	txType := LegacyTx
 	offset := 0
 
 	if len(input) > 0 && input[0] <= RLPSingleByteUpperLimit {
@@ -380,10 +379,12 @@ func (t *Transaction) UnmarshalRLP(input []byte) error {
 			return err
 		}
 
-		t.SetTransactionType(tType)
+		txType = tType
 
 		offset = 1
 	}
+
+	t.InitInnerData(txType)
 
 	if err := UnmarshalRlp(t.unmarshalRLPFrom, input[offset:]); err != nil {
 		return err

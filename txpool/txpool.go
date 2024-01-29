@@ -938,7 +938,7 @@ func (p *TxPool) addGossipTx(obj interface{}, _ peer.ID) {
 		return
 	}
 
-	tx := types.NewTx(&types.MixedTx{})
+	tx := &types.Transaction{}
 
 	// decode tx
 	if err := tx.UnmarshalRLP(raw.Raw.Value); err != nil {
