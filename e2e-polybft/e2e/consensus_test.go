@@ -750,8 +750,8 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 	}
 }
 
-func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
-	var newValue = big.NewInt(234586)
+func TestE2E_Deploy_Embedded_Contracts(t *testing.T) {
+	newValue := big.NewInt(234586)
 
 	admin, err := wallet.GenerateKey()
 	require.NoError(t, err)
@@ -779,21 +779,18 @@ func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
 	//address of wrapper contract
 	wrapperAddress := receipt.ContractAddress
 
-	require.NoError(t, cluster.WaitForBlock(10, time.Minute))
+	//getAddressFn returns address of nested contract
+	getAddressFn := contractsapi.Wrapper.Abi.GetMethod("getAddress")
 
-	//getAddress returns address of nested contract
-	getAddress := contractsapi.Wrapper.Abi.GetMethod("getAddress")
-
-	encode, err := getAddress.Encode([]interface{}{})
+	encode, err := getAddressFn.Encode([]interface{}{})
 	require.NoError(t, err)
 
 	response, err := txRelayer.Call(admin.Address(), wrapperAddress, encode)
 	require.NoError(t, err)
 
 	//address of nested contract
-	numberPersisterAddress := types.StringToAddress(response)
-
-	numberPersisterAddressEthGo := ethgo.Address(numberPersisterAddress)
+	numberPersisterAddress := ethgo.Address(types.StringToAddress(response))
+	require.NotEqual(t, ethgo.ZeroAddress, numberPersisterAddress)
 
 	setValueFn := contractsapi.SetValueNumberPersisterFn{
 		Value: newValue,
@@ -805,7 +802,7 @@ func TestE2E_Deploy_Dummy_Contracts(t *testing.T) {
 
 	txn := &ethgo.Transaction{
 		From:  admin.Address(),
-		To:    &numberPersisterAddressEthGo,
+		To:    &numberPersisterAddress,
 		Input: encoded,
 	}
 

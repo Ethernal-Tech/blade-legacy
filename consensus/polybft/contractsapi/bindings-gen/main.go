@@ -482,22 +482,6 @@ func main() {
 			},
 			[]string{},
 		},
-		{
-			"Wrapper",
-			gensc.Wrapper,
-			false,
-			[]string{
-				"getAddress",
-				"getNumber"},
-			[]string{},
-		},
-		{
-			"NumberPersister",
-			gensc.NumberPersister,
-			false,
-			[]string{"setValue"},
-			[]string{},
-		},
 	}
 
 	generatedData := &generatedData{}
