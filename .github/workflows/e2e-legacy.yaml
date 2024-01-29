@@ -24,7 +24,7 @@ jobs:
       e2e_legacy_output_failure: ${{ steps.run_e2e_legacy_failure.outputs.test_output }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4.1.1
         with:
           submodules: recursive
 

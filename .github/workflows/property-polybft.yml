@@ -23,7 +23,7 @@ jobs:
       property_output_failure: ${{ steps.run_property_failure.outputs.test_output }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4.1.1
 
       - name: Install Go
         uses: actions/setup-go@v5.0.0

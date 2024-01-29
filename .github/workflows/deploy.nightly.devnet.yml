@@ -71,7 +71,7 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4.1.1
         with:
           repository: Ethernal-Tech/blade-deployment
           ref: main
@@ -185,7 +185,7 @@ jobs:
     environment: ${{ inputs.environment }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4.1.0
+        uses: actions/checkout@v4.1.1
         with:
           repository: Ethernal-Tech/blade-deployment
           ref: main
