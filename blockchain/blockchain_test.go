@@ -1753,9 +1753,9 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	blockchain := &Blockchain{db: db}
 
-	initialDbSize, err := dirSize(tb, dbPath)
+	initialDBSize, err := dirSize(tb, dbPath)
 	require.NoError(tb, err)
-	tb.Logf("Empty db size: %d [kb]", initialDbSize/kB)
+	tb.Logf("Empty db size: %d [kb]", initialDBSize/kB)
 
 	go dirSizeCheck()
 
@@ -1789,12 +1789,13 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	quitCh <- struct{}{}
 
-	finalDbSize, err := dirSize(tb, dbPath)
-	avgDbSize := float64(finalDbSize) / float64(numberOfBlocks)
+	finalDBSize, err := dirSize(tb, dbPath)
 	require.NoError(tb, err)
-	tb.Logf("Db size final: %d [kb], db size per block: %.2f [kb]", finalDbSize/kB, avgDbSize/kB)
 
-	require.Greater(tb, finalDbSize, initialDbSize)
+	avgDBSize := float64(finalDBSize) / float64(numberOfBlocks)
+	tb.Logf("Db size final: %d [kb], db size per block: %.2f [kb]", finalDBSize/kB, avgDBSize/kB)
+
+	require.Greater(tb, finalDBSize, initialDBSize)
 }
 
 func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock, error) {
