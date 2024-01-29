@@ -47,25 +47,13 @@ func (e *LondonOrBerlinSigner) Hash(tx *types.Transaction) types.Hash {
 // Sender returns the transaction sender
 func (e *LondonOrBerlinSigner) Sender(tx *types.Transaction) (types.Address, error) {
 	// Apply fallback signer for non-dynamic-fee-txs
-	if tx.Type() != types.DynamicFeeTx {
+	if tx.Type() != types.DynamicFeeTx && tx.Type() != types.AccessListTx {
 		return e.fallbackSigner.Sender(tx)
 	}
 
 	v, r, s := tx.RawSignatureValues()
 
-	sig, err := encodeSignature(r, s, v, e.isHomestead)
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	pub, err := Ecrecover(e.Hash(tx).Bytes(), sig)
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	buf := Keccak256(pub[1:])[12:]
-
-	return types.BytesToAddress(buf), nil
+	return recoverAddress(e.Hash(tx), r, s, v, e.isHomestead)
 }
 
 // SignTx signs the transaction using the passed in private key

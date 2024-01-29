@@ -39,19 +39,7 @@ func (f *FrontierSigner) Sender(tx *types.Transaction) (types.Address, error) {
 
 	refV.Sub(refV, big27)
 
-	sig, err := encodeSignature(r, s, refV, f.isHomestead)
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	pub, err := Ecrecover(f.Hash(tx).Bytes(), sig)
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	buf := Keccak256(pub[1:])[12:]
-
-	return types.BytesToAddress(buf), nil
+	return recoverAddress(f.Hash(tx), r, s, refV, f.isHomestead)
 }
 
 // SignTx signs the transaction using the passed in private key

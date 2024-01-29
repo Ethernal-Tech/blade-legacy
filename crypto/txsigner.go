@@ -66,6 +66,26 @@ func encodeSignature(R, S, V *big.Int, isHomestead bool) ([]byte, error) {
 	return sig, nil
 }
 
+// recoverAddress recovers the sender address from a transaction hash and signature parameters.
+// It takes the transaction hash, r, s, v values of the signature,
+// and a flag indicating if the transaction is in the Homestead format.
+// It returns the recovered address and an error if any.
+func recoverAddress(txHash types.Hash, r, s, v *big.Int, isHomestead bool) (types.Address, error) {
+	sig, err := encodeSignature(r, s, v, isHomestead)
+	if err != nil {
+		return types.Address{}, err
+	}
+
+	pub, err := Ecrecover(txHash.Bytes(), sig)
+	if err != nil {
+		return types.Address{}, err
+	}
+
+	buf := Keccak256(pub[1:])[12:]
+
+	return types.BytesToAddress(buf), nil
+}
+
 // calcTxHash calculates the transaction hash (keccak256 hash of the RLP value)
 // LegacyTx:
 // keccak256(RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, 0))

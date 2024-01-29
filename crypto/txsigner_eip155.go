@@ -52,19 +52,7 @@ func (e *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error) {
 	bigV.Sub(bigV, mulOperand)
 	bigV.Sub(bigV, big35)
 
-	sig, err := encodeSignature(r, s, bigV, e.isHomestead)
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	pub, err := Ecrecover(e.Hash(tx).Bytes(), sig)
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	buf := Keccak256(pub[1:])[12:]
-
-	return types.BytesToAddress(buf), nil
+	return recoverAddress(e.Hash(tx), r, s, bigV, e.isHomestead)
 }
 
 // SignTx signs the transaction using the passed in private key
