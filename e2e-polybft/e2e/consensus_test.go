@@ -750,7 +750,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 	}
 }
 
-func TestE2E_Deploy_Embedded_Contracts(t *testing.T) {
+func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 	numberToPersist := big.NewInt(234586)
 
 	admin, err := wallet.GenerateKey()
@@ -763,7 +763,7 @@ func TestE2E_Deploy_Embedded_Contracts(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Servers[0].JSONRPCAddr()))
+	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(cluster.Servers[0].JSONRPC()))
 	require.NoError(t, err)
 
 	// deploy Wrapper contract
@@ -778,19 +778,20 @@ func TestE2E_Deploy_Embedded_Contracts(t *testing.T) {
 	// address of Wrapper contract
 	wrapperAddr := receipt.ContractAddress
 
-	// getAddressFn returns address of the nested (NumberPersister) contract
+	// getAddressFn returns address of the NumberPersister (nested) contract
 	getAddressFn := contractsapi.Wrapper.Abi.GetMethod("getAddress")
 
 	getAddrInput, err := getAddressFn.Encode([]interface{}{})
 	require.NoError(t, err)
 
-	response, err := txRelayer.Call(admin.Address(), wrapperAddr, getAddrInput)
+	response, err := txRelayer.Call(ethgo.ZeroAddress, wrapperAddr, getAddrInput)
 	require.NoError(t, err)
 
-	// address of NumberPersister (nested) contract
-	numberPersisterAddress := ethgo.Address(types.StringToAddress(response))
-	require.NotEqual(t, ethgo.ZeroAddress, numberPersisterAddress)
+	// address of the NumberPersister (nested) contract
+	numberPersisterAddr := ethgo.Address(types.StringToAddress(response))
+	require.NotEqual(t, ethgo.ZeroAddress, numberPersisterAddr)
 
+	// set value to NumberPersister contract
 	setValueFn := contractsapi.Wrapper.Abi.GetMethod("setValue")
 
 	setValueInput, err := setValueFn.Encode([]interface{}{numberToPersist})
@@ -798,20 +799,21 @@ func TestE2E_Deploy_Embedded_Contracts(t *testing.T) {
 
 	txn := &ethgo.Transaction{
 		From:  admin.Address(),
-		To:    &numberPersisterAddress,
+		To:    &numberPersisterAddr,
 		Input: setValueInput,
 	}
 
-	_, err = txRelayer.SendTransaction(txn, admin)
+	receipt, err = txRelayer.SendTransaction(txn, admin)
 	require.NoError(t, err)
+	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
 	// getting new value from wrapper contract
 	getNumberFn := contractsapi.Wrapper.Abi.GetMethod("getNumber")
 
-	getValueInput, err := getNumberFn.Encode([]interface{}{})
+	getNumberInput, err := getNumberFn.Encode([]interface{}{})
 	require.NoError(t, err)
 
-	response, err = txRelayer.Call(admin.Address(), wrapperAddr, getValueInput)
+	response, err = txRelayer.Call(ethgo.ZeroAddress, wrapperAddr, getNumberInput)
 	require.NoError(t, err)
 
 	parsedResponse, err := common.ParseUint256orHex(&response)
