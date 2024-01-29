@@ -31,7 +31,7 @@ import (
 
 const (
 	B  = 1
-	KB = 1024 * B
+	kB = 1024 * B
 )
 
 func TestGenesis(t *testing.T) {
@@ -1684,18 +1684,18 @@ type blockCounter struct {
 	x  uint64
 }
 
-func (bc *blockCounter) Add() {
+func (bc *blockCounter) Increment() {
 	bc.mu.Lock()
+	defer bc.mu.Unlock()
+
 	bc.x++
-	bc.mu.Unlock()
 }
 
 func (bc *blockCounter) GetValue() uint64 {
 	bc.mu.RLock()
-	tmp := bc.x
-	bc.mu.RUnlock()
+	defer bc.mu.RUnlock()
 
-	return tmp
+	return bc.x
 }
 
 func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval time.Duration, byteToRead []byte, receiptsBytesToRead []byte) {
@@ -1705,23 +1705,25 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 	counter := &blockCounter{x: 0}
 
-	quitChan := make(chan bool)
+	quitCh := make(chan struct{})
 
-	p := fmt.Sprintf("/tmp/blockchain-disk-usage-test")
-	err := os.Mkdir(p, 0775)
+	dbPath := "/tmp/blockchain-disk-usage-test"
+	err := common.CreateDirSafe(dbPath, 0755)
 	require.NoError(tb, err)
 
-	tb.Cleanup(func() {
-		if err := os.RemoveAll(p); err != nil {
-			tb.Fatal(err)
-		}
-	})
-
 	db, err := leveldb.NewLevelDBStorage(
-		filepath.Join(p),
+		filepath.Join(dbPath),
 		hclog.NewNullLogger(),
 	)
 	require.NoError(tb, err)
+
+	tb.Cleanup(func() {
+		db.Close()
+
+		if err := os.RemoveAll(dbPath); err != nil {
+			tb.Fatal(err)
+		}
+	})
 
 	block, err := customJSONBlockUnmarshall(tb, byteToRead)
 	require.NoError(tb, err)
@@ -1735,25 +1737,25 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 		for {
 			select {
-			case <-quitChan:
+			case <-quitCh:
 				return
 			case <-ticker.C:
-				dirSizeValue, err := dirSize(tb, p)
-
+				dirSizeValue, err := dirSize(tb, dbPath)
 				if err != nil {
 					tb.Log(err)
 				}
 
-				tb.Logf("Block: %d, db size [kilobytes]: %.2f and size per block [kilobytes]: %.2f", counter.GetValue(), float64(dirSizeValue)/float64(KB), (float64(dirSizeValue)/float64(counter.GetValue()))/KB)
+				tb.Logf("Block: %d, db size: %.2f [kb] and size per block: %.2f [kb]",
+					counter.GetValue(), float64(dirSizeValue)/float64(kB), (float64(dirSizeValue)/float64(counter.GetValue()))/kB)
 			}
 		}
 	}
 
 	blockchain := &Blockchain{db: db}
 
-	dirSizeBeforeBlocks, err := dirSize(tb, p)
+	initialDbSize, err := dirSize(tb, dbPath)
 	require.NoError(tb, err)
-	tb.Logf("Empty db size [kilobytes]: %d", dirSizeBeforeBlocks/KB)
+	tb.Logf("Empty db size: %d [kb]", initialDbSize/kB)
 
 	go dirSizeCheck()
 
@@ -1778,23 +1780,21 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 
 		require.NoError(tb, blockchain.writeBatchAndUpdate(batchWriter, block.Block.Header, big.NewInt(0), false))
 
-		counter.Add()
+		counter.Increment()
 
 		if counter.GetValue() == numberOfBlocks {
-
 			break
 		}
 	}
 
-	quitChan <- true
+	quitCh <- struct{}{}
 
-	dirSizeAfterBlocks, err := dirSize(tb, p)
+	finalDbSize, err := dirSize(tb, dbPath)
+	avgDbSize := float64(finalDbSize) / float64(numberOfBlocks)
 	require.NoError(tb, err)
-	tb.Logf("Db size final [kilobytes]: %d, db size per block [kilobytes]: %.2f", dirSizeAfterBlocks, float64(dirSizeAfterBlocks)/float64(numberOfBlocks))
+	tb.Logf("Db size final: %d [kb], db size per block: %.2f [kb]", finalDbSize/kB, avgDbSize/kB)
 
-	db.Close()
-
-	assert.NotEqual(tb, dirSizeBeforeBlocks, dirSizeAfterBlocks)
+	require.Greater(tb, finalDbSize, initialDbSize)
 }
 
 func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock, error) {
@@ -1950,8 +1950,9 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 
 		transaction.Type = types.TxType(txTypeNumber)
 
-		if tr["maxFeePerGas"] != nil {
-			gasFeeCap := tr["maxFeePerGas"].(string)
+		gasFeeCapGeneric, ok := tr["maxFeePerGas"]
+		if ok {
+			gasFeeCap := gasFeeCapGeneric.(string)
 
 			gasFeeCapNumber, err := common.ParseUint256orHex(&gasFeeCap)
 			require.NoError(tb, err)
@@ -1959,9 +1960,9 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 			transaction.GasFeeCap = gasFeeCapNumber
 		}
 
-		if tr["maxPriorityFeePerGas"] != nil {
-
-			gasTipCap := tr["maxPriorityFeePerGas"].(string)
+		gasTipCapGeneric, ok := tr["maxPriorityFeePerGas"]
+		if ok {
+			gasTipCap := gasTipCapGeneric.(string)
 
 			gasTipCapNumber, err := common.ParseUint256orHex(&gasTipCap)
 			require.NoError(tb, err)
@@ -2060,7 +2061,7 @@ func customJSONReceiptsUnmarshall(tb testing.TB, jsonData []byte) ([]*types.Rece
 func dirSize(tb testing.TB, dir string) (int64, error) {
 	tb.Helper()
 
-	var totalSize int64
+	totalSize := int64(0)
 
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
