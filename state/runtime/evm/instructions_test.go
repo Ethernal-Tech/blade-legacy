@@ -58,7 +58,7 @@ func testArithmeticOperation(t *testing.T, f instruction, test OperandsArithmeti
 
 	f(s)
 
-	assert.EqualValues(t, test.expectedResult.Uint64(), s.pop().Uint64())
+	assert.EqualValues(t, test.expectedResult, s.pop())
 }
 
 func TestAdd(t *testing.T) {
@@ -464,10 +464,16 @@ func TestSignExtension(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
+		firstValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129639808", 10)
+		require.True(t, ok)
+		secondValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129607168", 10)
+		require.True(t, ok)
+		thirdValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913121251328", 10)
+
 		testOperands := []OperandsArithmetic{
-			{[]*big.Int{big.NewInt(128), zero}, new(big.Int).SetUint64(18446744073709551488)},
-			{[]*big.Int{big.NewInt(32768), one}, new(big.Int).SetUint64(18446744073709518848)},
-			{[]*big.Int{big.NewInt(8388608), two}, new(big.Int).SetUint64(18446744073701163008)},
+			{[]*big.Int{big.NewInt(128), zero}, firstValue},
+			{[]*big.Int{big.NewInt(32768), one}, secondValue},
+			{[]*big.Int{big.NewInt(8388608), two}, thirdValue},
 		}
 
 		for _, testOperand := range testOperands {
@@ -494,9 +500,14 @@ func TestNot(t *testing.T) {
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
+	firstValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129639935", 10)
+	require.True(t, ok)
+	secondValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129639934", 10)
+	require.True(t, ok)
+
 	testOperands := []OperandsArithmetic{
-		{[]*big.Int{zero}, new(big.Int).SetUint64(uint64(math.MaxUint64))},
-		{[]*big.Int{one}, new(big.Int).SetUint64(uint64(math.MaxUint64) - 1)},
+		{[]*big.Int{zero}, firstValue},
+		{[]*big.Int{one}, secondValue},
 	}
 	for _, testOperand := range testOperands {
 		testArithmeticOperation(t, opNot, testOperand, s)
@@ -860,20 +871,24 @@ func TestCallValue(t *testing.T) {
 }
 
 func TestCallDataLoad(t *testing.T) {
-	t.Run("Zero", func(t *testing.T) {
+	t.Run("NonZeroOffset", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.push(one)
 
+		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
+
 		opCallDataLoad(s)
 		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 	})
-	t.Run("NotZero", func(t *testing.T) {
+	t.Run("ZeroOffset", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
 		s.push(zero)
+
+		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
 		opCallDataLoad(s)
 		assert.NotEqual(t, zero, s.pop())

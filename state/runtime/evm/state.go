@@ -180,7 +180,7 @@ func (c *state) pop() *big.Int {
 	o := c.stack[c.sp-1]
 	c.sp--
 
-	return o
+	return new(big.Int).Set(o)
 }
 
 func (c *state) peekAt(n int) *big.Int {
