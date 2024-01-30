@@ -283,7 +283,7 @@ func NewServer(config *Config) (*Server, error) {
 	config.Chain.Genesis.StateRoot = genesisRoot
 
 	// Use the london signer with eip-155 as a fallback one
-	var signer crypto.TxSigner = crypto.NewLondonSigner(
+	var signer crypto.TxSigner = crypto.NewLondonOrBerlinSigner(
 		uint64(m.config.Chain.Params.ChainID),
 		config.Chain.Params.Forks.IsActive(chain.Homestead, 0),
 		crypto.NewEIP155Signer(

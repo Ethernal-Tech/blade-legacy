@@ -40,13 +40,8 @@ func NewSigner(forks chain.ForksInTime, chainID uint64) TxSigner {
 
 	// London signer requires a fallback signer that is defined above.
 	// This is the reason why the london signer check is separated.
-	if forks.London {
-		// return NewLondonSigner(chainID, forks.Homestead, signer)
-		return NewLondonSigner(chainID, forks.Homestead, NewBerlinSigner(chainID, forks.Homestead, signer))
-	}
-
-	if forks.Berlin {
-		return NewBerlinSigner(chainID, forks.Homestead, signer)
+	if forks.London || forks.Berlin {
+		return NewLondonOrBerlinSigner(chainID, forks.Homestead, signer)
 	}
 
 	return signer

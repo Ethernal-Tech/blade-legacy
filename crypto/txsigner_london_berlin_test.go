@@ -75,20 +75,19 @@ func TestLondonSignerSender(t *testing.T) {
 			case types.AccessListTx:
 				txn = types.NewTx(&types.AccessListStruct{
 					To:       &recipient,
-					Value:    big.NewInt(10),
-					GasPrice: big.NewInt(15),
+					Value:    big.NewInt(1),
+					GasPrice: big.NewInt(5),
 				})
 			case types.DynamicFeeTx, types.LegacyTx, types.StateTx:
 				txn = types.NewTx(&types.MixedTx{
 					To:       &recipient,
-					Value:    big.NewInt(10),
-					GasPrice: big.NewInt(15),
+					Value:    big.NewInt(1),
+					GasPrice: big.NewInt(5),
 				})
 			}
 
 			chainID := tc.chainID.Uint64()
-			berlinSigner := NewBerlinSigner(chainID, true, NewEIP155Signer(chainID, true))
-			signer := NewLondonSigner(chainID, true, berlinSigner)
+			signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID, true))
 
 			signedTx, err := signer.SignTx(txn, key)
 			require.NoError(t, err, "unable to sign transaction")
@@ -104,8 +103,7 @@ func TestLondonSignerSender(t *testing.T) {
 func Test_LondonSigner_Sender(t *testing.T) {
 	t.Parallel()
 
-	berlinSigner := NewBerlinSigner(100, true, NewEIP155Signer(100, true))
-	signer := NewLondonSigner(100, true, berlinSigner)
+	signer := NewLondonOrBerlinSigner(100, true, NewEIP155Signer(100, true))
 	to := types.StringToAddress("0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF")
 
 	r, ok := big.NewInt(0).SetString("102623819621514684481463796449525884981685455700611671612296611353030973716382", 10)
