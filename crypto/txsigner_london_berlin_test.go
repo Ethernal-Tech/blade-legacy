@@ -75,14 +75,14 @@ func TestLondonSignerSender(t *testing.T) {
 			case types.AccessListTx:
 				txn = types.NewTx(&types.AccessListStruct{
 					To:       &recipient,
-					Value:    big.NewInt(1),
-					GasPrice: big.NewInt(0),
+					Value:    big.NewInt(10),
+					GasPrice: big.NewInt(15),
 				})
 			case types.DynamicFeeTx, types.LegacyTx, types.StateTx:
 				txn = types.NewTx(&types.MixedTx{
 					To:       &recipient,
-					Value:    big.NewInt(1),
-					GasPrice: big.NewInt(0),
+					Value:    big.NewInt(10),
+					GasPrice: big.NewInt(15),
 				})
 			}
 

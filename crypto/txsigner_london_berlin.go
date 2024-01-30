@@ -47,11 +47,16 @@ func (e *LondonOrBerlinSigner) Hash(tx *types.Transaction) types.Hash {
 // Sender returns the transaction sender
 func (e *LondonOrBerlinSigner) Sender(tx *types.Transaction) (types.Address, error) {
 	// Apply fallback signer for non-dynamic-fee-txs
-	if tx.Type() != types.DynamicFeeTx && tx.Type() != types.AccessListTx {
+	if tx.Type() != types.DynamicFeeTx {
 		return e.fallbackSigner.Sender(tx)
 	}
 
 	v, r, s := tx.RawSignatureValues()
+	if tx.Type() == types.AccessListTx {
+		// AL txs are defined to use 0 and 1 as their recovery
+		// id, add 27 to become equivalent to unprotected Homestead signatures.
+		v = new(big.Int).Add(v, big.NewInt(27))
+	}
 
 	return recoverAddress(e.Hash(tx), r, s, v, e.isHomestead)
 }
