@@ -20,9 +20,9 @@ type TxType byte
 // List of supported transaction types
 const (
 	LegacyTx     TxType = 0x0
-	StateTx      TxType = 0x7f
-	DynamicFeeTx TxType = 0x02
 	AccessListTx TxType = 0x01
+	DynamicFeeTx TxType = 0x02
+	StateTx      TxType = 0x7f
 )
 
 func txTypeFromByte(b byte) (TxType, error) {
