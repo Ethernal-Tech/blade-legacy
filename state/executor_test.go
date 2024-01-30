@@ -11,7 +11,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/state/runtime/evm"
-	"github.com/0xPolygon/polygon-edge/state/runtime/precompiled"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -262,7 +261,7 @@ func Test_Transition_EIP2929(t *testing.T) {
 			enabledForks := chain.AllForksEnabled.At(0)
 			transition := NewTransition(enabledForks, state, txn)
 			initialAccessList := runtime.NewAccessList()
-			initialAccessList.PrepareAccessList(transition.ctx.Origin, &addr, precompiled.ActivePrecompiles, nil)
+			initialAccessList.PrepareAccessList(transition.ctx.Origin, &addr, transition.precompiles.Addrs, nil)
 
 			result := transition.Call2(transition.ctx.Origin, addr, nil, big.NewInt(0), uint64(1000000), initialAccessList)
 			assert.Equal(t, tt.gasConsumed, result.GasUsed, "Gas consumption for %s is inaccurate according to EIP 2929", tt.name)
