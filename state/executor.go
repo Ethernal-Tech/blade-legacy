@@ -337,6 +337,7 @@ var emptyFrom = types.Address{}
 
 // Write writes another transaction to the executor
 func (t *Transition) Write(txn *types.Transaction) error {
+
 	if txn.From() == emptyFrom &&
 		(txn.Type() == types.LegacyTx || txn.Type() == types.DynamicFeeTx) {
 		// Decrypt the from address
@@ -619,7 +620,7 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	// set up initial access list
 	initialAccessList := runtime.NewAccessList()
 	if t.config.Berlin { // check if berlin fork is activated or not
-		initialAccessList.PrepareAccessList(msg.From(), msg.To(), precompiled.ActivePrecompiles, msg.AccessList())
+		initialAccessList.PrepareAccessList(msg.From(), msg.To(), t.precompiles.Addrs, msg.AccessList())
 	}
 
 	var result *runtime.ExecutionResult

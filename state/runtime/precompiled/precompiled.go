@@ -18,9 +18,6 @@ var (
 	abiBoolTrue, abiBoolFalse []byte
 )
 
-// ActivePrecompiles stores addresses of active precompiles
-var ActivePrecompiles []types.Address
-
 func init() {
 	// abiBoolTrue is ABI encoded true boolean value
 	encodedBool, err := abi.MustNewType("bool").Encode(true)
@@ -39,22 +36,6 @@ func init() {
 	abiBoolFalse = encodedBool
 }
 
-func init() {
-	ActivePrecompiles = []types.Address{
-		types.StringToAddress("1"),
-		types.StringToAddress("2"),
-		types.StringToAddress("3"),
-		types.StringToAddress("4"),
-		types.StringToAddress("5"),
-		types.StringToAddress("6"),
-		types.StringToAddress("7"),
-		types.StringToAddress("8"),
-		types.StringToAddress("9"),
-		types.StringToAddress(contracts.NativeTransferPrecompile.String()),
-		types.StringToAddress(contracts.BLSAggSigsVerificationPrecompile.String()),
-	}
-}
-
 type contract interface {
 	gas(input []byte, config *chain.ForksInTime) uint64
 	run(input []byte, caller types.Address, host runtime.Host) ([]byte, error)
@@ -62,9 +43,9 @@ type contract interface {
 
 // Precompiled is the runtime for the precompiled contracts
 type Precompiled struct {
-	buf          []byte
-	contracts    map[types.Address]contract
-	ContractAddr []types.Address
+	buf       []byte
+	contracts map[types.Address]contract
+	Addrs     []types.Address
 }
 
 // NewPrecompiled creates a new runtime for the precompiled contracts
@@ -100,13 +81,14 @@ func (p *Precompiled) setupContracts() {
 	p.register(contracts.BLSAggSigsVerificationPrecompile.String(), &blsAggSignsVerification{})
 }
 
-func (p *Precompiled) register(addrStr string, b contract) {
+func (p *Precompiled) register(precompileAddrRaw string, b contract) {
 	if len(p.contracts) == 0 {
 		p.contracts = map[types.Address]contract{}
 	}
 
-	p.contracts[types.StringToAddress(addrStr)] = b
-	p.ContractAddr = append(p.ContractAddr, types.StringToAddress(addrStr))
+	precompileAddr := types.StringToAddress(precompileAddrRaw)
+	p.contracts[precompileAddr] = b
+	p.Addrs = append(p.Addrs, precompileAddr)
 }
 
 var (
