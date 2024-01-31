@@ -103,7 +103,7 @@ func TestToTransaction_Returns_V_R_S_ValuesWithoutLeading0(t *testing.T) {
 	v, _ := hex.DecodeHex(hexWithLeading0)
 	r, _ := hex.DecodeHex(hexWithLeading0)
 	s, _ := hex.DecodeHex(hexWithLeading0)
-	txn := types.NewTx(&types.MixedTx{
+	txn := types.NewTx(&types.MixedTxn{
 		Nonce:    0,
 		GasPrice: big.NewInt(0),
 		Gas:      0,
@@ -134,7 +134,7 @@ func TestToTransaction_EIP1559(t *testing.T) {
 	v, _ := hex.DecodeHex(hexWithLeading0)
 	r, _ := hex.DecodeHex(hexWithLeading0)
 	s, _ := hex.DecodeHex(hexWithLeading0)
-	txn := types.NewTx(&types.MixedTx{
+	txn := types.NewTx(&types.MixedTxn{
 		Nonce:     0,
 		GasPrice:  nil,
 		GasTipCap: big.NewInt(10),

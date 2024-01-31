@@ -73,13 +73,13 @@ func TestLondonSignerSender(t *testing.T) {
 			var txn *types.Transaction
 			switch tc.txType {
 			case types.AccessListTx:
-				txn = types.NewTx(&types.AccessListStruct{
+				txn = types.NewTx(&types.AccessListTxn{
 					To:       &recipient,
 					Value:    big.NewInt(1),
 					GasPrice: big.NewInt(5),
 				})
 			case types.DynamicFeeTx, types.LegacyTx, types.StateTx:
-				txn = types.NewTx(&types.MixedTx{
+				txn = types.NewTx(&types.MixedTxn{
 					To:       &recipient,
 					Value:    big.NewInt(1),
 					GasPrice: big.NewInt(5),
@@ -119,7 +119,7 @@ func Test_LondonSigner_Sender(t *testing.T) {
 	}{
 		{
 			name: "sender is 0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6",
-			tx: types.NewTx(&types.MixedTx{
+			tx: types.NewTx(&types.MixedTxn{
 				Type:      types.DynamicFeeTx,
 				GasPrice:  big.NewInt(1000000402),
 				GasTipCap: ethgo.Gwei(1),

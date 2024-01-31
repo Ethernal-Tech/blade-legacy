@@ -716,7 +716,7 @@ func validateHeaderFields(parent *types.Header, header *types.Header, blockTimeD
 // createStateTransactionWithData creates a state transaction
 // with provided target address and inputData parameter which is ABI encoded byte array.
 func createStateTransactionWithData(target types.Address, inputData []byte) *types.Transaction {
-	tx := types.NewTx(&types.MixedTx{
+	tx := types.NewTx(&types.MixedTxn{
 		From:     contracts.SystemCaller,
 		To:       &target,
 		Type:     types.StateTx,

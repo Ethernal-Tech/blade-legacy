@@ -238,7 +238,7 @@ type GenerateTxReqParams struct {
 func generateTx(params GenerateTxReqParams) (*types.Transaction, error) {
 	signer := crypto.NewEIP155Signer(100, true)
 
-	signedTx, signErr := signer.SignTx(types.NewTx(&types.MixedTx{
+	signedTx, signErr := signer.SignTx(types.NewTx(&types.MixedTxn{
 		Nonce:    params.Nonce,
 		From:     params.ReferenceAddr,
 		To:       &params.ToAddress,

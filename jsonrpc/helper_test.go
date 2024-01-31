@@ -14,7 +14,7 @@ import (
 func createTestTransaction(hash types.Hash) *types.Transaction {
 	recipient := types.StringToAddress("2")
 
-	return types.NewTx(&types.MixedTx{
+	return types.NewTx(&types.MixedTxn{
 		Hash:     hash,
 		From:     types.StringToAddress("1"),
 		To:       &recipient,
@@ -707,7 +707,7 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:     &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTx{
+			expected: types.NewTx(&types.MixedTxn{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(gas),
@@ -731,7 +731,7 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:    &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTx{
+			expected: types.NewTx(&types.MixedTxn{
 				From:      types.ZeroAddress,
 				To:        &to,
 				Gas:       uint64(gas),
@@ -766,7 +766,7 @@ func TestDecodeTxn(t *testing.T) {
 					}, nil
 				},
 			},
-			expected: types.NewTx(&types.MixedTx{
+			expected: types.NewTx(&types.MixedTxn{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(gas),
@@ -792,7 +792,7 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:    &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTx{
+			expected: types.NewTx(&types.MixedTxn{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(gas),
@@ -813,7 +813,7 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce: &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTx{
+			expected: types.NewTx(&types.MixedTxn{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(0),

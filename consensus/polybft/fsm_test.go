@@ -100,7 +100,7 @@ func TestFSM_verifyCommitEpochTx(t *testing.T) {
 	assert.NoError(t, fsm.verifyCommitEpochTx(commitEpochTx))
 
 	// submit tampered commit epoch transaction to the epoch ending block
-	alteredCommitEpochTx := types.NewTx(&types.MixedTx{
+	alteredCommitEpochTx := types.NewTx(&types.MixedTxn{
 		To:    &contracts.EpochManagerContract,
 		Input: []byte{},
 		Gas:   0,

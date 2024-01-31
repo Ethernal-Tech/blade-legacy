@@ -32,9 +32,9 @@ func (b *Body) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 		var bTxn *Transaction
 		switch txType {
 		case AccessListTx:
-			bTxn = NewTx(&AccessListStruct{})
+			bTxn = NewTx(&AccessListTxn{})
 		case DynamicFeeTx, StateTx, LegacyTx:
-			bTxn = NewTx(&MixedTx{
+			bTxn = NewTx(&MixedTxn{
 				Type: txType,
 			})
 		}

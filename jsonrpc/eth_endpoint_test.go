@@ -46,7 +46,7 @@ func TestEth_DecodeTxn(t *testing.T) {
 				Data:      nil,
 				Nonce:     toArgUint64Ptr(0),
 			},
-			res: types.NewTx(&types.MixedTx{
+			res: types.NewTx(&types.MixedTxn{
 				From:      addr1,
 				To:        &addr2,
 				Gas:       21000,
@@ -68,7 +68,7 @@ func TestEth_DecodeTxn(t *testing.T) {
 				Value:    toArgBytesPtr(oneEther.Bytes()),
 				Data:     nil,
 			},
-			res: types.NewTx(&types.MixedTx{
+			res: types.NewTx(&types.MixedTxn{
 				From:      types.ZeroAddress,
 				To:        &addr2,
 				Gas:       21000,
@@ -96,7 +96,7 @@ func TestEth_DecodeTxn(t *testing.T) {
 				Value:    toArgBytesPtr(oneEther.Bytes()),
 				Data:     nil,
 			},
-			res: types.NewTx(&types.MixedTx{
+			res: types.NewTx(&types.MixedTxn{
 				From:      addr1,
 				To:        &addr2,
 				Gas:       21000,
@@ -119,7 +119,7 @@ func TestEth_DecodeTxn(t *testing.T) {
 				Data:     nil,
 				Nonce:    toArgUint64Ptr(1),
 			},
-			res: types.NewTx(&types.MixedTx{
+			res: types.NewTx(&types.MixedTxn{
 				From:      addr1,
 				To:        &addr2,
 				Gas:       21000,
@@ -141,7 +141,7 @@ func TestEth_DecodeTxn(t *testing.T) {
 				Data:     nil,
 				Nonce:    toArgUint64Ptr(1),
 			},
-			res: types.NewTx(&types.MixedTx{
+			res: types.NewTx(&types.MixedTxn{
 				From:      addr1,
 				To:        &addr2,
 				Gas:       0,
@@ -278,7 +278,7 @@ func TestEth_TxnType(t *testing.T) {
 		Type:      toArgUint64Ptr(uint64(types.DynamicFeeTx)),
 	}
 
-	expectedRes := types.NewTx(&types.MixedTx{
+	expectedRes := types.NewTx(&types.MixedTxn{
 		From:      addr1,
 		To:        &addr2,
 		Gas:       21000,

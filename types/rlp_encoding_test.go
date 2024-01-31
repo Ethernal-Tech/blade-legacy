@@ -43,7 +43,7 @@ func TestRLPEncoding(t *testing.T) {
 
 func TestRLPMarshall_And_Unmarshall_Transaction(t *testing.T) {
 	addrTo := StringToAddress("11")
-	txn := NewTx(&MixedTx{
+	txn := NewTx(&MixedTxn{
 		Nonce:    0,
 		GasPrice: big.NewInt(11),
 		Gas:      11,
@@ -57,7 +57,7 @@ func TestRLPMarshall_And_Unmarshall_Transaction(t *testing.T) {
 
 	txn.ComputeHash()
 
-	unmarshalledTxn := NewTx(&MixedTx{})
+	unmarshalledTxn := NewTx(&MixedTxn{})
 	marshaledRlp := txn.MarshalRLP()
 
 	if err := unmarshalledTxn.UnmarshalRLP(marshaledRlp); err != nil {
@@ -137,7 +137,7 @@ func TestRLPUnmarshal_Header_ComputeHash(t *testing.T) {
 func TestRLPMarshall_And_Unmarshall_TypedTransaction(t *testing.T) {
 	addrTo := StringToAddress("11")
 	addrFrom := StringToAddress("22")
-	originalTx := NewTx(&MixedTx{
+	originalTx := NewTx(&MixedTxn{
 		Nonce:     0,
 		GasPrice:  big.NewInt(11),
 		GasFeeCap: big.NewInt(12),
@@ -165,7 +165,7 @@ func TestRLPMarshall_And_Unmarshall_TypedTransaction(t *testing.T) {
 
 			txRLP := originalTx.MarshalRLP()
 
-			unmarshalledTx := NewTx(&MixedTx{})
+			unmarshalledTx := NewTx(&MixedTxn{})
 			assert.NoError(t, unmarshalledTx.UnmarshalRLP(txRLP))
 
 			unmarshalledTx.ComputeHash()
@@ -240,7 +240,7 @@ func TestRLPMarshall_Unmarshall_Missing_Data(t *testing.T) {
 				v, err := parser.Parse(testData)
 				assert.Nil(t, err)
 
-				unmarshalledTx := NewTx(&MixedTx{
+				unmarshalledTx := NewTx(&MixedTxn{
 					Type: txType,
 				})
 

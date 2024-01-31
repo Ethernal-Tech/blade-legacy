@@ -108,9 +108,9 @@ func (b *Block) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 		var bTxn *Transaction
 		switch txType {
 		case AccessListTx:
-			bTxn = NewTx(&AccessListStruct{})
+			bTxn = NewTx(&AccessListTxn{})
 		case DynamicFeeTx, LegacyTx, StateTx:
-			bTxn = NewTx(&MixedTx{
+			bTxn = NewTx(&MixedTxn{
 				Type: txType,
 			})
 		}
@@ -430,7 +430,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 	}
 
 	switch t.Inner.(type) {
-	case *MixedTx:
+	case *MixedTxn:
 		// Load Chain ID for dynamic transactions
 		if t.Type() == DynamicFeeTx {
 			txChainID := new(big.Int)
@@ -591,7 +591,7 @@ func (t *Transaction) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) erro
 				t.SetFrom(BytesToAddress(vv))
 			}
 		}
-	case *AccessListStruct:
+	case *AccessListTxn:
 		txChainID := new(big.Int)
 		if err = getElem().GetBigInt(txChainID); err != nil {
 			return err

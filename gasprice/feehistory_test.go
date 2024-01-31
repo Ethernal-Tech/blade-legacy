@@ -194,7 +194,7 @@ func TestGasHelper_FeeHistory(t *testing.T) {
 					b.Header.Miner = sender.Bytes()
 
 					for i := 0; i < 3; i++ {
-						tx := types.NewTx(&types.MixedTx{
+						tx := types.NewTx(&types.MixedTxn{
 							From:      sender,
 							Value:     ethgo.Ether(1),
 							To:        &types.ZeroAddress,

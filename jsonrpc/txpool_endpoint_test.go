@@ -295,7 +295,7 @@ func (s *mockTxPoolStore) GetBaseFee() uint64 {
 }
 
 func newTestTransaction(nonce uint64, from types.Address) *types.Transaction {
-	txn := types.NewTx(&types.MixedTx{
+	txn := types.NewTx(&types.MixedTxn{
 		Nonce:    nonce,
 		GasPrice: big.NewInt(1),
 		Gas:      nonce * 100,
@@ -314,7 +314,7 @@ func newTestTransaction(nonce uint64, from types.Address) *types.Transaction {
 }
 
 func newTestDynamicFeeTransaction(nonce uint64, from types.Address) *types.Transaction {
-	txn := types.NewTx(&types.MixedTx{
+	txn := types.NewTx(&types.MixedTxn{
 		Type:      types.DynamicFeeTx,
 		Nonce:     nonce,
 		GasTipCap: big.NewInt(2),

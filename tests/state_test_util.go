@@ -325,7 +325,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 		value = v
 	}
 
-	return types.NewTx(&types.MixedTx{
+	return types.NewTx(&types.MixedTxn{
 		From:      t.From,
 		To:        t.To,
 		Nonce:     t.Nonce,

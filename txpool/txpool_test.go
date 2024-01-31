@@ -56,7 +56,7 @@ func newTx(addr types.Address, nonce, slots uint64) *types.Transaction {
 		return nil
 	}
 
-	return types.NewTx(&types.MixedTx{
+	return types.NewTx(&types.MixedTxn{
 		From:     addr,
 		Nonce:    nonce,
 		Value:    big.NewInt(1),
@@ -2093,25 +2093,25 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 
 		accountMap := pool.accounts.initOnce(addr1, storeNonce)
 		accountMap.enqueued.push(&types.Transaction{
-			Inner: &types.MixedTx{
+			Inner: &types.MixedTxn{
 				Nonce: storeNonce + 2,
 				Hash:  types.StringToHash("0xffa"),
 			},
 		})
 		accountMap.enqueued.push(&types.Transaction{
-			Inner: &types.MixedTx{
+			Inner: &types.MixedTxn{
 				Nonce: storeNonce + 4,
 				Hash:  types.StringToHash("0xff1"),
 			},
 		})
 		accountMap.promoted.push(&types.Transaction{
-			Inner: &types.MixedTx{
+			Inner: &types.MixedTxn{
 				Nonce: storeNonce,
 				Hash:  types.StringToHash("0xff2"),
 			},
 		})
 		accountMap.promoted.push(&types.Transaction{
-			Inner: &types.MixedTx{
+			Inner: &types.MixedTxn{
 				Nonce: storeNonce + 1,
 				Hash:  types.StringToHash("0xff3"),
 			},

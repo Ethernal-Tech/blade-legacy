@@ -84,7 +84,7 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 					b.Header.Miner = sender.Bytes()
 
 					for i := 0; i < 3; i++ {
-						tx := types.NewTx(&types.MixedTx{
+						tx := types.NewTx(&types.MixedTxn{
 							From:      sender,
 							Value:     ethgo.Ether(1),
 							To:        &types.ZeroAddress,
@@ -219,7 +219,7 @@ func createTestTxs(t *testing.T, backend *backendMock, numOfTxsPerBlock, txCap i
 		for i := 0; i < numOfTxsPerBlock; i++ {
 			senderKey, sender := tests.GenerateKeyAndAddr(t)
 
-			tx := types.NewTx(&types.MixedTx{
+			tx := types.NewTx(&types.MixedTxn{
 				From:      sender,
 				Value:     ethgo.Ether(1),
 				To:        &types.ZeroAddress,

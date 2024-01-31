@@ -54,7 +54,7 @@ func generateTxs(t *testing.T, startNonce, count int, from types.Address, to *ty
 	txs := make([]*types.Transaction, count)
 
 	for i := range txs {
-		tx := types.NewTx(&types.MixedTx{
+		tx := types.NewTx(&types.MixedTxn{
 			Gas:       types.StateTransactionGasLimit,
 			Nonce:     uint64(startNonce + i),
 			From:      from,

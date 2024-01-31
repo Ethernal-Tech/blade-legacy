@@ -19,8 +19,28 @@ func (al TxAccessList) StorageKeys() int {
 	return sum
 }
 
-// transaction structure
-type AccessListStruct struct {
+// Copy makes a deep copy of the access list.
+func (al TxAccessList) Copy() TxAccessList {
+	if al == nil {
+		return nil
+	}
+
+	newAccessList := make(TxAccessList, len(al))
+
+	for i, item := range al {
+		var copiedAddress Address
+
+		copy(copiedAddress[:], item.Address[:])
+		newAccessList[i] = AccessTuple{
+			Address:     copiedAddress,
+			StorageKeys: append([]Hash{}, item.StorageKeys...),
+		}
+	}
+
+	return newAccessList
+}
+
+type AccessListTxn struct {
 	Nonce    uint64
 	GasPrice *big.Int
 	Gas      uint64
@@ -31,87 +51,85 @@ type AccessListStruct struct {
 	Hash     Hash
 	From     Address
 
-	//Type TxType
-
 	ChainID    *big.Int
 	AccessList TxAccessList
 }
 
-func (tx *AccessListStruct) transactionType() TxType { return AccessListTx }
-func (tx *AccessListStruct) chainID() *big.Int       { return tx.ChainID }
-func (tx *AccessListStruct) input() []byte           { return tx.Input }
-func (tx *AccessListStruct) gas() uint64             { return tx.Gas }
-func (tx *AccessListStruct) gasPrice() *big.Int      { return tx.GasPrice } //check:EIP2718
-func (tx *AccessListStruct) gasTipCap() *big.Int     { return tx.GasPrice }
-func (tx *AccessListStruct) gasFeeCap() *big.Int     { return tx.GasPrice }
-func (tx *AccessListStruct) value() *big.Int         { return tx.Value }
-func (tx *AccessListStruct) nonce() uint64           { return tx.Nonce }
-func (tx *AccessListStruct) to() *Address            { return tx.To }
-func (tx *AccessListStruct) from() Address           { return tx.From }
+func (tx *AccessListTxn) transactionType() TxType { return AccessListTx }
+func (tx *AccessListTxn) chainID() *big.Int       { return tx.ChainID }
+func (tx *AccessListTxn) input() []byte           { return tx.Input }
+func (tx *AccessListTxn) gas() uint64             { return tx.Gas }
+func (tx *AccessListTxn) gasPrice() *big.Int      { return tx.GasPrice }
+func (tx *AccessListTxn) gasTipCap() *big.Int     { return tx.GasPrice }
+func (tx *AccessListTxn) gasFeeCap() *big.Int     { return tx.GasPrice }
+func (tx *AccessListTxn) value() *big.Int         { return tx.Value }
+func (tx *AccessListTxn) nonce() uint64           { return tx.Nonce }
+func (tx *AccessListTxn) to() *Address            { return tx.To }
+func (tx *AccessListTxn) from() Address           { return tx.From }
 
-func (tx *AccessListStruct) hash() Hash { return tx.Hash }
+func (tx *AccessListTxn) hash() Hash { return tx.Hash }
 
-func (tx *AccessListStruct) rawSignatureValues() (v, r, s *big.Int) {
+func (tx *AccessListTxn) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S
 }
 
-func (tx *AccessListStruct) accessList() TxAccessList {
+func (tx *AccessListTxn) accessList() TxAccessList {
 	return tx.AccessList
 }
 
 // set methods for transaction fields
-func (tx *AccessListStruct) setSignatureValues(v, r, s *big.Int) {
+func (tx *AccessListTxn) setSignatureValues(v, r, s *big.Int) {
 	tx.V, tx.R, tx.S = v, r, s
 }
 
-func (tx *AccessListStruct) setFrom(addr Address) {
+func (tx *AccessListTxn) setFrom(addr Address) {
 	tx.From = addr
 }
 
-func (tx *AccessListStruct) setGas(gas uint64) {
+func (tx *AccessListTxn) setGas(gas uint64) {
 	tx.Gas = gas
 }
 
-func (tx *AccessListStruct) setChainID(id *big.Int) {
+func (tx *AccessListTxn) setChainID(id *big.Int) {
 	tx.ChainID = id
 }
 
-func (tx *AccessListStruct) setGasPrice(gas *big.Int) {
+func (tx *AccessListTxn) setGasPrice(gas *big.Int) {
 	tx.GasPrice = gas
 }
 
-func (tx *AccessListStruct) setGasFeeCap(gas *big.Int) {
+func (tx *AccessListTxn) setGasFeeCap(gas *big.Int) {
 	tx.GasPrice = gas
 }
 
-func (tx *AccessListStruct) setGasTipCap(gas *big.Int) {
+func (tx *AccessListTxn) setGasTipCap(gas *big.Int) {
 	tx.GasPrice = gas
 }
 
-func (tx *AccessListStruct) setTransactionType(t TxType) {
+func (tx *AccessListTxn) setTransactionType(t TxType) {
 	// no need to set a transaction type for access list type of transaction
 }
 
-func (tx *AccessListStruct) setValue(value *big.Int) {
+func (tx *AccessListTxn) setValue(value *big.Int) {
 	tx.Value = value
 }
 
-func (tx *AccessListStruct) setInput(input []byte) {
+func (tx *AccessListTxn) setInput(input []byte) {
 	tx.Input = input
 }
 
-func (tx *AccessListStruct) setTo(addeess *Address) {
+func (tx *AccessListTxn) setTo(addeess *Address) {
 	tx.To = addeess
 }
 
-func (tx *AccessListStruct) setNonce(nonce uint64) {
+func (tx *AccessListTxn) setNonce(nonce uint64) {
 	tx.Nonce = nonce
 }
 
-func (tx *AccessListStruct) setAccessList(accessList TxAccessList) {
+func (tx *AccessListTxn) setAccessList(accessList TxAccessList) {
 	tx.AccessList = accessList
 }
 
-func (tx *AccessListStruct) setHash(h Hash) {
+func (tx *AccessListTxn) setHash(h Hash) {
 	tx.Hash = h
 }

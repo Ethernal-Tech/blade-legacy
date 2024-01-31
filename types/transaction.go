@@ -62,7 +62,6 @@ type Transaction struct {
 // NewTx creates a new transaction.
 func NewTx(inner TxData) *Transaction {
 	t := new(Transaction)
-	//check EIP2930: diff in geth with deep copy
 	t.Inner = inner
 
 	return t
@@ -74,9 +73,9 @@ func NewTx(inner TxData) *Transaction {
 func (t *Transaction) InitInnerData(txType TxType) {
 	switch txType {
 	case AccessListTx:
-		t.Inner = &AccessListStruct{}
+		t.Inner = &AccessListTxn{}
 	default:
-		t.Inner = &MixedTx{}
+		t.Inner = &MixedTxn{}
 	}
 
 	t.Inner.setTransactionType(txType)
@@ -84,8 +83,6 @@ func (t *Transaction) InitInnerData(txType TxType) {
 
 type TxData interface {
 	transactionType() TxType
-	//copy() TxData // creates a deep copy and initializes all fields  //check:Logic Not implemented
-
 	chainID() *big.Int
 	nonce() uint64
 	gasPrice() *big.Int
@@ -261,23 +258,24 @@ func (t *Transaction) Copy() *Transaction {
 	}
 
 	newTx := new(Transaction)
-	innerCopy := DeepCopyTxData(t.Inner)
+	innerCopy := CopyTxData(t.Inner)
 	newTx.Inner = innerCopy
 
 	return newTx
 }
 
-func DeepCopyTxData(data TxData) TxData {
+// CopyTxData creates a deep copy of the provided TxData
+func CopyTxData(data TxData) TxData {
 	if data == nil {
 		return nil
 	}
 
 	var copyData TxData
 	switch data.(type) {
-	case *MixedTx:
-		copyData = &MixedTx{}
-	case *AccessListStruct:
-		copyData = &AccessListStruct{}
+	case *MixedTxn:
+		copyData = &MixedTxn{}
+	case *AccessListTxn:
+		copyData = &AccessListTxn{}
 	}
 
 	if copyData == nil {
@@ -351,29 +349,9 @@ func DeepCopyTxData(data TxData) TxData {
 	copy(inputCopy, data.input()[:])
 
 	copyData.setInput(inputCopy)
-	copyData.setAccessList(DeepCopyTxAccessList(data.accessList()))
+	copyData.setAccessList(data.accessList().Copy())
 
 	return copyData
-}
-
-func DeepCopyTxAccessList(accessList TxAccessList) TxAccessList {
-	if accessList == nil {
-		return nil
-	}
-
-	accessListCopy := make(TxAccessList, len(accessList))
-
-	for i, item := range accessList {
-		var copiedAddress Address
-
-		copy(copiedAddress[:], item.Address[:])
-		accessListCopy[i] = AccessTuple{
-			Address:     copiedAddress,
-			StorageKeys: append([]Hash{}, item.StorageKeys...),
-		}
-	}
-
-	return accessListCopy
 }
 
 // Cost returns gas * gasPrice + value

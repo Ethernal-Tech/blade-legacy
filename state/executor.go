@@ -337,8 +337,7 @@ var emptyFrom = types.Address{}
 
 // Write writes another transaction to the executor
 func (t *Transition) Write(txn *types.Transaction) error {
-	if txn.From() == emptyFrom &&
-		(txn.Type() == types.LegacyTx || txn.Type() == types.DynamicFeeTx) {
+	if txn.From() == emptyFrom && txn.Type() != types.StateTx {
 		// Decrypt the from address
 		signer := crypto.NewSigner(t.config, uint64(t.ctx.ChainID))
 

@@ -219,7 +219,7 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 		txType = types.TxType(*arg.Type)
 	}
 
-	txn := types.NewTx(&types.MixedTx{
+	txn := types.NewTx(&types.MixedTxn{
 		From:      *arg.From,
 		Gas:       uint64(*arg.Gas),
 		GasPrice:  new(big.Int).SetBytes(*arg.GasPrice),
