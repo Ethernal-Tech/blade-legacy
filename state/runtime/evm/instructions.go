@@ -805,7 +805,6 @@ func opCallDataCopy(c *state) {
 func opReturnDataCopy(c *state) {
 	if !c.config.Byzantium {
 		c.exit(errOpCodeNotFound)
-
 		return
 	}
 
@@ -813,37 +812,44 @@ func opReturnDataCopy(c *state) {
 	dataOffset := c.pop()
 	length := c.pop()
 
+	// Check if the dataOffset is uint64, this will also check for overflow
 	if !dataOffset.IsUint64() {
 		c.exit(errReturnDataOutOfBounds)
+		return
+	}
 
+	// Check if sum of dataOffset and length overflows uint64
+	var end = new(big.Int)
+	end.Add(dataOffset, length)
+	if !end.IsUint64() {
+		c.exit(errReturnDataOutOfBounds)
+		return
+	}
+
+	// Check if the length of return data has enough space to receive offset + length bytes
+	endAddress := end.Uint64()
+	if uint64(len(c.returnData)) < endAddress {
+		c.exit(errReturnDataOutOfBounds)
 		return
 	}
 
 	// if length is 0, return immediately since no need for the data copying nor memory allocation
-	if length.Sign() == 0 || !c.allocateMemory(memOffset, length) {
+	if length.Sign() == 0 {
+		return
+	}
+
+	if !c.allocateMemory(memOffset, length) {
+		// Error code is set inside the allocateMemory call
 		return
 	}
 
 	ulength := length.Uint64()
 	if !c.consumeGas(((ulength + 31) / 32) * copyGas) {
+		// Error code is set inside the consumeGas
 		return
 	}
 
-	dataEnd := length.Add(dataOffset, length)
-	if !dataEnd.IsUint64() {
-		c.exit(errReturnDataOutOfBounds)
-
-		return
-	}
-
-	dataEndIndex := dataEnd.Uint64()
-	if uint64(len(c.returnData)) < dataEndIndex {
-		c.exit(errReturnDataOutOfBounds)
-
-		return
-	}
-
-	data := c.returnData[dataOffset.Uint64():dataEndIndex]
+	data := c.returnData[dataOffset.Uint64():endAddress]
 	copy(c.memory[memOffset.Uint64():memOffset.Uint64()+ulength], data)
 }
 
