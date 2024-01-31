@@ -469,6 +469,7 @@ func TestSignExtension(t *testing.T) {
 		secondValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129607168", 10)
 		require.True(t, ok)
 		thirdValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913121251328", 10)
+		require.True(t, ok)
 
 		testOperands := []OperandsArithmetic{
 			{[]*big.Int{big.NewInt(128), zero}, firstValue},
