@@ -38,9 +38,9 @@ func testLogicalOperation(t *testing.T, f instruction, test OperandsLogical, s *
 	f(s)
 
 	if test.expectedResult {
-		assert.Equal(t, uint64(1), s.pop().Uint64())
+		assert.Equal(t, one, s.pop())
 	} else {
-		assert.Equal(t, uint64(0), s.pop().Uint64())
+		assert.Equal(t, zero, s.pop())
 	}
 }
 
