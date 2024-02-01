@@ -819,8 +819,7 @@ func opReturnDataCopy(c *state) {
 	}
 
 	// Check if sum of dataOffset and length overflows uint64
-	var end = new(big.Int)
-	end.Add(dataOffset, length)
+	end := new(big.Int).Add(dataOffset, length)
 	if !end.IsUint64() {
 		c.exit(errReturnDataOutOfBounds)
 		return
