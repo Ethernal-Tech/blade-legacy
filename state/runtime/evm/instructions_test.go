@@ -1914,7 +1914,7 @@ func Test_opReturnDataCopy(t *testing.T) {
 			},
 		},
 		{
-			name:   "should return error if sum of data offset and lenght overflows uint64",
+			name:   "should return error if sum of data offset and length overflows uint64",
 			config: &allEnabledForks,
 			initState: &state{
 				stack: []*big.Int{
