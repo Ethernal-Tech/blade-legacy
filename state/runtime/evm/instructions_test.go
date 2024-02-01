@@ -1726,7 +1726,7 @@ func TestCreate(t *testing.T) {
 func Test_opReturnDataCopy(t *testing.T) {
 	t.Parallel()
 
-	// Positive number that does not fit in uint64
+	// Positive number that does not fit in uint64 (math.MaxUint64 + 1)
 	largeNumber := "18446744073709551616"
 	bigIntValue := new(big.Int)
 	bigIntValue.SetString(largeNumber, 10)
