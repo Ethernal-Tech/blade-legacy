@@ -961,7 +961,7 @@ func TestGasPrice(t *testing.T) {
 	defer cancelFn()
 
 	mockHost := &mockHost{}
-	mockHost.On("GetTxContext").Return(runtime.TxContext{GasPrice: bigToHash(big.NewInt(int64(gasPrice)))}).Once()
+	mockHost.On("GetTxContext").Return(runtime.TxContext{GasPrice: bigToHash(big.NewInt(gasPrice))}).Once()
 	s.host = mockHost
 
 	opGasPrice(s)
