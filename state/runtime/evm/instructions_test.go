@@ -58,7 +58,7 @@ func testArithmeticOperation(t *testing.T, f instruction, test OperandsArithmeti
 
 	f(s)
 
-	assert.EqualValues(t, test.expectedResult, s.pop())
+	assert.Equal(t, test.expectedResult, s.pop())
 }
 
 func TestAdd(t *testing.T) {
@@ -545,7 +545,7 @@ func TestMStore(t *testing.T) {
 
 	opMLoad(s)
 
-	assert.Equal(t, one.Uint64(), s.pop().Uint64())
+	assert.Equal(t, one, s.pop())
 }
 
 func TestMStore8(t *testing.T) {
@@ -564,7 +564,7 @@ func TestMStore8(t *testing.T) {
 
 	opMLoad(s)
 
-	assert.Equal(t, one.Uint64(), s.pop().Uint64())
+	assert.Equal(t, one, s.pop())
 }
 
 func TestSload(t *testing.T) {
@@ -726,7 +726,7 @@ func TestBalance(t *testing.T) {
 
 		opBalance(s)
 
-		assert.EqualValues(t, balance, s.pop())
+		assert.Equal(t, balance, s.pop())
 		assert.Equal(t, gasLeft, s.gas)
 	})
 
@@ -740,7 +740,7 @@ func TestBalance(t *testing.T) {
 
 		opBalance(s)
 
-		assert.Equal(t, int64(100), s.pop().Int64())
+		assert.Equal(t, big.NewInt(100), s.pop())
 		assert.Equal(t, gasLeft, s.gas)
 	})
 
@@ -754,7 +754,7 @@ func TestBalance(t *testing.T) {
 
 		opBalance(s)
 
-		assert.EqualValues(t, balance, s.pop())
+		assert.Equal(t, balance, s.pop())
 		assert.Equal(t, gasLeft, s.gas)
 	})
 }
@@ -772,7 +772,7 @@ func TestSelfBalance(t *testing.T) {
 
 		opSelfBalance(s)
 
-		assert.Equal(t, int64(100), s.pop().Int64())
+		assert.Equal(t, big.NewInt(100), s.pop())
 	})
 
 	t.Run("NoForkErrorExpected", func(t *testing.T) {
@@ -803,7 +803,7 @@ func TestChainID(t *testing.T) {
 
 		opChainID(s)
 
-		assert.Equal(t, chainID, s.pop().Int64())
+		assert.Equal(t, big.NewInt(chainID), s.pop())
 	})
 	t.Run("NoForksErrorExpected", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
@@ -867,7 +867,7 @@ func TestCallValue(t *testing.T) {
 		defer cancelFn()
 
 		opCallValue(s)
-		assert.Equal(t, uint64(0), s.pop().Uint64())
+		assert.Equal(t, zero, s.pop())
 	})
 }
 
@@ -881,7 +881,7 @@ func TestCallDataLoad(t *testing.T) {
 		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
 		opCallDataLoad(s)
-		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
+		assert.Equal(t, zero, s.pop())
 	})
 	t.Run("ZeroOffset", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
@@ -903,7 +903,7 @@ func TestCallDataSize(t *testing.T) {
 	s.msg.Input = make([]byte, 10)
 
 	opCallDataSize(s)
-	assert.Equal(t, uint64(10), s.pop().Uint64())
+	assert.Equal(t, big.NewInt(10), s.pop())
 }
 
 func TestCodeSize(t *testing.T) {
@@ -913,7 +913,7 @@ func TestCodeSize(t *testing.T) {
 	s.code = make([]byte, 10)
 
 	opCodeSize(s)
-	assert.Equal(t, uint64(10), s.pop().Uint64())
+	assert.Equal(t, big.NewInt(10), s.pop())
 }
 
 func TestExtCodeSize(t *testing.T) {
@@ -933,7 +933,7 @@ func TestExtCodeSize(t *testing.T) {
 		opExtCodeSize(s)
 
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, uint64(codeSize), s.pop().Uint64())
+		assert.Equal(t, big.NewInt(int64(codeSize)), s.pop())
 	})
 	t.Run("NoForks", func(t *testing.T) {
 		gasLeft := uint64(980)
@@ -950,12 +950,12 @@ func TestExtCodeSize(t *testing.T) {
 		opExtCodeSize(s)
 
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, uint64(codeSize), s.pop().Uint64())
+		assert.Equal(t, big.NewInt(int64(codeSize)), s.pop())
 	})
 }
 
 func TestGasPrice(t *testing.T) {
-	gasPrice := 10
+	gasPrice := int64(10)
 
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
@@ -966,11 +966,11 @@ func TestGasPrice(t *testing.T) {
 
 	opGasPrice(s)
 
-	assert.Equal(t, bigToHash(big.NewInt(int64(gasPrice))), s.popHash())
+	assert.Equal(t, bigToHash(big.NewInt(gasPrice)), s.popHash())
 }
 
 func TestReturnDataSize(t *testing.T) {
-	dataSize := uint64(1024)
+	dataSize := int64(1024)
 
 	t.Run("Byzantium", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{Byzantium: true})
@@ -980,7 +980,7 @@ func TestReturnDataSize(t *testing.T) {
 
 		opReturnDataSize(s)
 
-		assert.Equal(t, dataSize, s.pop().Uint64())
+		assert.Equal(t, big.NewInt(dataSize), s.pop())
 	})
 	t.Run("NoForks", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
@@ -1015,7 +1015,7 @@ func TestExtCodeHash(t *testing.T) {
 		opExtCodeHash(s)
 
 		assert.Equal(t, s.gas, gasLeft)
-		assert.Equal(t, one.Uint64(), s.pop().Uint64())
+		assert.Equal(t, one, s.pop())
 	})
 
 	t.Run("NonIstanbul", func(t *testing.T) {
@@ -1034,7 +1034,7 @@ func TestExtCodeHash(t *testing.T) {
 
 		opExtCodeHash(s)
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, zero.Int64(), s.pop().Int64())
+		assert.Equal(t, zero, s.pop())
 	})
 
 	t.Run("NoForks", func(t *testing.T) {
@@ -1064,7 +1064,7 @@ func TestPCMSizeGas(t *testing.T) {
 		s.ip = 1
 		opPC(s)
 
-		assert.Equal(t, uint64(1), s.pop().Uint64())
+		assert.Equal(t, one, s.pop())
 	})
 
 	t.Run("MSize", func(t *testing.T) {
@@ -1072,13 +1072,13 @@ func TestPCMSizeGas(t *testing.T) {
 
 		opMSize(s)
 
-		assert.Equal(t, memorySize, s.pop().Uint64())
+		assert.Equal(t, new(big.Int).SetUint64(memorySize), s.pop())
 	})
 
 	t.Run("Gas", func(t *testing.T) {
 		opGas(s)
 
-		assert.Equal(t, gasLeft, s.pop().Uint64())
+		assert.Equal(t, new(big.Int).SetUint64(gasLeft), s.pop())
 	})
 }
 
@@ -1196,7 +1196,7 @@ func TestTimeStamp(t *testing.T) {
 
 	opTimestamp(s)
 
-	assert.Equal(t, uint64(335), s.pop().Uint64())
+	assert.Equal(t, big.NewInt(335), s.pop())
 }
 
 func TestNumber(t *testing.T) {
@@ -1209,7 +1209,7 @@ func TestNumber(t *testing.T) {
 
 	opNumber(s)
 
-	assert.Equal(t, uint64(5), s.pop().Uint64())
+	assert.Equal(t, five, s.pop())
 }
 
 func TestDifficulty(t *testing.T) {
@@ -1250,7 +1250,7 @@ func TestGasLimit(t *testing.T) {
 
 		opBaseFee(s)
 
-		assert.Equal(t, baseFee, s.pop().Uint64())
+		assert.Equal(t, new(big.Int).SetUint64(baseFee), s.pop())
 	})
 }
 
@@ -1319,7 +1319,7 @@ func TestDup(t *testing.T) {
 	instr := opDup(4)
 	instr(s)
 
-	assert.Equal(t, uint64(2), s.pop().Uint64())
+	assert.Equal(t, two, s.pop())
 }
 
 func TestSwap(t *testing.T) {
@@ -1335,8 +1335,8 @@ func TestSwap(t *testing.T) {
 	instr := opSwap(4)
 	instr(s)
 
-	assert.Equal(t, uint64(5), s.stack[1].Uint64())
-	assert.Equal(t, uint64(1), s.stack[6-1].Uint64())
+	assert.Equal(t, five, s.stack[1])
+	assert.Equal(t, one, s.stack[6-1])
 }
 
 func TestLog(t *testing.T) {
