@@ -604,9 +604,8 @@ func TestTraceCall(t *testing.T) {
 			Input:     &input,
 			Nonce:     &nonce,
 		}
-		decodedTx = types.NewTx(&types.MixedTxn{
+		decodedTx = types.NewTx(&types.DynamicFeeTx{
 			Nonce:     uint64(nonce),
-			GasPrice:  new(big.Int).SetBytes([]byte(gasPrice)),
 			GasTipCap: new(big.Int).SetBytes([]byte(gasTipCap)),
 			GasFeeCap: new(big.Int).SetBytes([]byte(gasFeeCap)),
 			Gas:       uint64(gas),

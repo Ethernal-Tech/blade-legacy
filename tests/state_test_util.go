@@ -348,19 +348,12 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 		}), nil
 	}
 
-	txType := types.LegacyTx
-	if isDynamiFeeTx {
-		txType = types.DynamicFeeTx
-	}
-
-	return types.NewTx(&types.MixedTxn{
-		Type:       txType,
+	return types.NewTx(&types.DynamicFeeTx{
 		From:       t.From,
 		To:         t.To,
 		Nonce:      t.Nonce,
 		Value:      value,
 		Gas:        t.GasLimit[i.Gas],
-		GasPrice:   gasPrice,
 		GasFeeCap:  t.MaxFeePerGas,
 		GasTipCap:  t.MaxPriorityFeePerGas,
 		Input:      hex.MustDecodeHex(t.Data[i.Data]),

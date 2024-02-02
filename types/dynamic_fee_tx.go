@@ -7,144 +7,94 @@ import (
 	"github.com/umbracle/fastrlp"
 )
 
-type TxAccessList []AccessTuple
-
-type AccessTuple struct {
-	Address     Address
-	StorageKeys []Hash
-}
-
-// StorageKeys returns the total number of storage keys in the access list.
-func (al TxAccessList) StorageKeys() int {
-	sum := 0
-	for _, tuple := range al {
-		sum += len(tuple.StorageKeys)
-	}
-
-	return sum
-}
-
-// Copy makes a deep copy of the access list.
-func (al TxAccessList) Copy() TxAccessList {
-	if al == nil {
-		return nil
-	}
-
-	newAccessList := make(TxAccessList, len(al))
-
-	for i, item := range al {
-		var copiedAddress Address
-
-		copy(copiedAddress[:], item.Address[:])
-		newAccessList[i] = AccessTuple{
-			Address:     copiedAddress,
-			StorageKeys: append([]Hash{}, item.StorageKeys...),
-		}
-	}
-
-	return newAccessList
-}
-
-type AccessListTxn struct {
-	Nonce    uint64
-	GasPrice *big.Int
-	Gas      uint64
-	To       *Address
-	Value    *big.Int
-	Input    []byte
-	V, R, S  *big.Int
-	Hash     Hash
-	From     Address
+type DynamicFeeTx struct {
+	Nonce     uint64
+	GasTipCap *big.Int
+	GasFeeCap *big.Int
+	Gas       uint64
+	To        *Address
+	Value     *big.Int
+	Input     []byte
+	V, R, S   *big.Int
+	Hash      Hash
+	From      Address
 
 	ChainID    *big.Int
 	AccessList TxAccessList
 }
 
-func (tx *AccessListTxn) transactionType() TxType { return AccessListTxType }
-func (tx *AccessListTxn) chainID() *big.Int       { return tx.ChainID }
-func (tx *AccessListTxn) input() []byte           { return tx.Input }
-func (tx *AccessListTxn) gas() uint64             { return tx.Gas }
-func (tx *AccessListTxn) gasPrice() *big.Int      { return tx.GasPrice }
-func (tx *AccessListTxn) gasTipCap() *big.Int     { return tx.GasPrice }
-func (tx *AccessListTxn) gasFeeCap() *big.Int     { return tx.GasPrice }
-func (tx *AccessListTxn) value() *big.Int         { return tx.Value }
-func (tx *AccessListTxn) nonce() uint64           { return tx.Nonce }
-func (tx *AccessListTxn) to() *Address            { return tx.To }
-func (tx *AccessListTxn) from() Address           { return tx.From }
+func (tx *DynamicFeeTx) transactionType() TxType { return DynamicFeeTxType }
+func (tx *DynamicFeeTx) chainID() *big.Int       { return tx.ChainID }
+func (tx *DynamicFeeTx) input() []byte           { return tx.Input }
+func (tx *DynamicFeeTx) gas() uint64             { return tx.Gas }
+func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
+func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
+func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
+func (tx *DynamicFeeTx) value() *big.Int         { return tx.Value }
+func (tx *DynamicFeeTx) nonce() uint64           { return tx.Nonce }
+func (tx *DynamicFeeTx) to() *Address            { return tx.To }
+func (tx *DynamicFeeTx) from() Address           { return tx.From }
 
-func (tx *AccessListTxn) hash() Hash { return tx.Hash }
+func (tx *DynamicFeeTx) hash() Hash { return ZeroHash }
 
-func (tx *AccessListTxn) rawSignatureValues() (v, r, s *big.Int) {
+func (tx *DynamicFeeTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S
 }
 
-func (tx *AccessListTxn) accessList() TxAccessList {
-	return tx.AccessList
-}
+func (tx *DynamicFeeTx) accessList() TxAccessList { return tx.AccessList }
 
-// set methods for transaction fields
-func (tx *AccessListTxn) setSignatureValues(v, r, s *big.Int) {
+func (tx *DynamicFeeTx) setSignatureValues(v, r, s *big.Int) {
 	tx.V, tx.R, tx.S = v, r, s
 }
 
-func (tx *AccessListTxn) setFrom(addr Address) {
-	tx.From = addr
-}
+func (tx *DynamicFeeTx) setFrom(addr Address) { tx.From = addr }
 
-func (tx *AccessListTxn) setGas(gas uint64) {
+func (tx *DynamicFeeTx) setGas(gas uint64) {
 	tx.Gas = gas
 }
 
-func (tx *AccessListTxn) setChainID(id *big.Int) {
+func (tx *DynamicFeeTx) setChainID(id *big.Int) {
 	tx.ChainID = id
 }
 
-func (tx *AccessListTxn) setGasPrice(gas *big.Int) {
-	tx.GasPrice = gas
+func (tx *DynamicFeeTx) setGasPrice(gas *big.Int) {}
+
+func (tx *DynamicFeeTx) setGasFeeCap(gas *big.Int) {
+	tx.GasFeeCap = gas
 }
 
-func (tx *AccessListTxn) setGasFeeCap(gas *big.Int) {
-	tx.GasPrice = gas
+func (tx *DynamicFeeTx) setGasTipCap(gas *big.Int) {
+	tx.GasTipCap = gas
 }
 
-func (tx *AccessListTxn) setGasTipCap(gas *big.Int) {
-	tx.GasPrice = gas
-}
-
-func (tx *AccessListTxn) setTransactionType(t TxType) {
-	// no need to set a transaction type for access list type of transaction
-}
-
-func (tx *AccessListTxn) setValue(value *big.Int) {
+func (tx *DynamicFeeTx) setValue(value *big.Int) {
 	tx.Value = value
 }
 
-func (tx *AccessListTxn) setInput(input []byte) {
+func (tx *DynamicFeeTx) setInput(input []byte) {
 	tx.Input = input
 }
 
-func (tx *AccessListTxn) setTo(addeess *Address) {
-	tx.To = addeess
+func (tx *DynamicFeeTx) setTo(address *Address) {
+	tx.To = address
 }
 
-func (tx *AccessListTxn) setNonce(nonce uint64) {
+func (tx *DynamicFeeTx) setNonce(nonce uint64) {
 	tx.Nonce = nonce
 }
 
-func (tx *AccessListTxn) setAccessList(accessList TxAccessList) {
+func (tx *DynamicFeeTx) setAccessList(accessList TxAccessList) {
 	tx.AccessList = accessList
 }
 
-func (tx *AccessListTxn) setHash(h Hash) {
-	tx.Hash = h
-}
+func (tx *DynamicFeeTx) setHash(h Hash) { tx.Hash = h }
 
 // unmarshalRLPFrom unmarshals a Transaction in RLP format
 // Be careful! This function does not de-serialize tx type, it assumes that t.Type is already set
 // Hash calculation should also be done from the outside!
 // Use UnmarshalRLP in most cases
-func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
-	numOfElems := 11
+func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
+	numOfElems := 12
 	elems, err := v.GetElems()
 	if err != nil {
 		return err
@@ -160,6 +110,8 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 	if numElems := len(elems); numElems != numOfElems {
 		return fmt.Errorf("incorrect number of transaction elements, expected %d but found %d", numOfElems, numElems)
 	}
+
+	// Load Chain ID
 	txChainID := new(big.Int)
 	if err = getElem().GetBigInt(txChainID); err != nil {
 		return err
@@ -175,13 +127,21 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	tx.setNonce(txNonce)
 
-	// gasPrice
-	txGasPrice := new(big.Int)
-	if err = getElem().GetBigInt(txGasPrice); err != nil {
+	// gasTipCap
+	txGasTipCap := new(big.Int)
+	if err = getElem().GetBigInt(txGasTipCap); err != nil {
 		return err
 	}
 
-	tx.setGasPrice(txGasPrice)
+	tx.setGasTipCap(txGasTipCap)
+
+	// gasFeeCap
+	txGasFeeCap := new(big.Int)
+	if err = getElem().GetBigInt(txGasFeeCap); err != nil {
+		return err
+	}
+
+	tx.setGasFeeCap(txGasFeeCap)
 
 	// gas
 	txGas, err := getElem().GetUint64()
@@ -219,7 +179,6 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	tx.setInput(txInput)
 
-	//accessList
 	accessListVV, err := getElem().GetElems()
 	if err != nil {
 		return err
@@ -294,12 +253,15 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 // MarshalRLPWith marshals the transaction to RLP with a specific fastrlp.Arena
 // Be careful! This function does not serialize tx type as a first byte.
 // Use MarshalRLP/MarshalRLPTo in most cases
-func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
+func (tx *DynamicFeeTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv := arena.NewArray()
 
 	vv.Set(arena.NewBigInt(tx.chainID()))
 	vv.Set(arena.NewUint(tx.nonce()))
-	vv.Set(arena.NewBigInt(tx.gasPrice()))
+	// Add EIP-1559 related fields.
+	// For non-dynamic-fee-tx gas price is used.
+	vv.Set(arena.NewBigInt(tx.gasTipCap()))
+	vv.Set(arena.NewBigInt(tx.gasFeeCap()))
 	vv.Set(arena.NewUint(tx.gas()))
 
 	// Address may be empty
@@ -312,7 +274,7 @@ func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv.Set(arena.NewBigInt(tx.value()))
 	vv.Set(arena.NewCopyBytes(tx.input()))
 
-	// add accessList
+	// Convert TxAccessList to RLP format and add it to the vv array.
 	accessListVV := arena.NewArray()
 
 	for _, accessTuple := range tx.accessList() {
@@ -330,6 +292,7 @@ func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 
 	vv.Set(accessListVV)
 
+	// signature values
 	v, r, s := tx.rawSignatureValues()
 	vv.Set(arena.NewBigInt(v))
 	vv.Set(arena.NewBigInt(r))
@@ -338,8 +301,8 @@ func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	return vv
 }
 
-func (tx *AccessListTxn) copy() TxData {
-	cpy := &AccessListTxn{}
+func (tx *DynamicFeeTx) copy() TxData {
+	cpy := &DynamicFeeTx{}
 
 	if tx.chainID() != nil {
 		chainID := new(big.Int)
@@ -350,11 +313,18 @@ func (tx *AccessListTxn) copy() TxData {
 
 	cpy.setNonce(tx.nonce())
 
-	if tx.gasPrice() != nil {
-		gasPrice := new(big.Int)
-		gasPrice.Set(tx.gasPrice())
+	if tx.gasTipCap() != nil {
+		gasTipCap := new(big.Int)
+		gasTipCap.Set(tx.gasTipCap())
 
-		cpy.setGasPrice(gasPrice)
+		cpy.setGasTipCap(gasTipCap)
+	}
+
+	if tx.gasFeeCap() != nil {
+		gasFeeCap := new(big.Int)
+		gasFeeCap.Set(tx.gasFeeCap())
+
+		cpy.setGasFeeCap(gasFeeCap)
 	}
 
 	cpy.setGas(tx.gas())
@@ -370,8 +340,6 @@ func (tx *AccessListTxn) copy() TxData {
 
 	inputCopy := make([]byte, len(tx.input()))
 	copy(inputCopy, tx.input()[:])
-
-	cpy.setInput(inputCopy)
 
 	cpy.setInput(inputCopy)
 
@@ -394,13 +362,11 @@ func (tx *AccessListTxn) copy() TxData {
 		sCopy.Set(s)
 	}
 
-	cpy.setHash(tx.hash())
-
-	cpy.setFrom(tx.from())
-
 	cpy.setSignatureValues(vCopy, rCopy, sCopy)
 
 	cpy.setAccessList(tx.accessList().Copy())
+
+	cpy.setHash(tx.hash())
 
 	return cpy
 }

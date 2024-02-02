@@ -14,7 +14,7 @@ import (
 func createTestTransaction(hash types.Hash) *types.Transaction {
 	recipient := types.StringToAddress("2")
 
-	return types.NewTx(&types.MixedTxn{
+	return types.NewTx(&types.LegacyTx{
 		Hash:     hash,
 		From:     types.StringToAddress("1"),
 		To:       &recipient,
@@ -51,7 +51,7 @@ func createTestReceipt(logs []*types.Log, cumulativeGasUsed, gasUsed uint64, txH
 		Logs:              logs,
 		GasUsed:           gasUsed,
 		TxHash:            txHash,
-		TransactionType:   types.DynamicFeeTx,
+		TransactionType:   types.DynamicFeeTxType,
 	}
 }
 
@@ -707,11 +707,10 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:     &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTxn{
+			expected: types.NewTx(&types.DynamicFeeTx{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(gas),
-				GasPrice:  new(big.Int).SetBytes([]byte(gasPrice)),
 				GasTipCap: new(big.Int).SetBytes([]byte(gasTipCap)),
 				GasFeeCap: new(big.Int).SetBytes([]byte(gasFeeCap)),
 				Value:     new(big.Int).SetBytes([]byte(value)),
@@ -731,11 +730,10 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:    &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTxn{
+			expected: types.NewTx(&types.DynamicFeeTx{
 				From:      types.ZeroAddress,
 				To:        &to,
 				Gas:       uint64(gas),
-				GasPrice:  new(big.Int).SetBytes([]byte(gasPrice)),
 				GasTipCap: new(big.Int),
 				GasFeeCap: new(big.Int),
 				Value:     new(big.Int).SetBytes([]byte(value)),
@@ -766,11 +764,10 @@ func TestDecodeTxn(t *testing.T) {
 					}, nil
 				},
 			},
-			expected: types.NewTx(&types.MixedTxn{
+			expected: types.NewTx(&types.DynamicFeeTx{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(gas),
-				GasPrice:  new(big.Int).SetBytes([]byte(gasPrice)),
 				GasTipCap: new(big.Int),
 				GasFeeCap: new(big.Int),
 				Value:     new(big.Int).SetBytes([]byte(value)),
@@ -792,11 +789,10 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:    &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTxn{
+			expected: types.NewTx(&types.DynamicFeeTx{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(gas),
-				GasPrice:  new(big.Int).SetBytes([]byte(gasPrice)),
 				GasTipCap: new(big.Int),
 				GasFeeCap: new(big.Int),
 				Value:     new(big.Int).SetBytes([]byte(value)),
@@ -813,11 +809,10 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce: &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.MixedTxn{
+			expected: types.NewTx(&types.DynamicFeeTx{
 				From:      from,
 				To:        &to,
 				Gas:       uint64(0),
-				GasPrice:  new(big.Int),
 				GasTipCap: new(big.Int),
 				GasFeeCap: new(big.Int),
 				Value:     new(big.Int),

@@ -40,7 +40,7 @@ func (tx *MixedTxn) rawSignatureValues() (v, r, s *big.Int) {
 }
 
 func (tx *MixedTxn) accessList() TxAccessList {
-	if tx.transactionType() == DynamicFeeTx {
+	if tx.transactionType() == DynamicFeeTxType {
 		return tx.AccessList
 	}
 

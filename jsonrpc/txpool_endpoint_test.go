@@ -60,7 +60,7 @@ func TestContentEndpoint(t *testing.T) {
 
 		txData = response.Pending[address1][testTx2.Nonce()]
 		assert.NotNil(t, txData)
-		assert.Equal(t, (argUint64)(types.DynamicFeeTx), txData.Type)
+		assert.Equal(t, (argUint64)(types.DynamicFeeTxType), txData.Type)
 		assert.Equal(t, testTx2.Gas(), uint64(txData.Gas))
 		assert.Equal(t, (*argBig)(nil), txData.GasPrice)
 		assert.Equal(t, *(testTx2.GasFeeCap()), big.Int(*txData.GasFeeCap))
@@ -109,7 +109,7 @@ func TestContentEndpoint(t *testing.T) {
 
 		txData = response.Queued[address2][testTx2.Nonce()]
 		assert.NotNil(t, txData)
-		assert.Equal(t, (argUint64)(types.DynamicFeeTx), txData.Type)
+		assert.Equal(t, (argUint64)(types.DynamicFeeTxType), txData.Type)
 		assert.Equal(t, testTx2.Gas(), uint64(txData.Gas))
 		assert.Equal(t, (*argBig)(nil), txData.GasPrice)
 		assert.Equal(t, *(testTx2.GasFeeCap()), big.Int(*txData.GasFeeCap))
@@ -294,7 +294,7 @@ func (s *mockTxPoolStore) GetBaseFee() uint64 {
 }
 
 func newTestTransaction(nonce uint64, from types.Address) *types.Transaction {
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		Nonce:    nonce,
 		GasPrice: big.NewInt(1),
 		Gas:      nonce * 100,
@@ -313,8 +313,7 @@ func newTestTransaction(nonce uint64, from types.Address) *types.Transaction {
 }
 
 func newTestDynamicFeeTransaction(nonce uint64, from types.Address) *types.Transaction {
-	txn := types.NewTx(&types.MixedTxn{
-		Type:      types.DynamicFeeTx,
+	txn := types.NewTx(&types.DynamicFeeTx{
 		Nonce:     nonce,
 		GasTipCap: big.NewInt(2),
 		GasFeeCap: big.NewInt(4),

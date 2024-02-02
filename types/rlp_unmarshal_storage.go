@@ -31,12 +31,14 @@ func (b *Body) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	if err = unmarshalRLPFrom(p, tuple[0], func(txType TxType, p *fastrlp.Parser, v *fastrlp.Value) error {
 		var bTxn *Transaction
 		switch txType {
-		case AccessListTx:
+		case AccessListTxType:
 			bTxn = NewTx(&AccessListTxn{})
-		case DynamicFeeTx, StateTx, LegacyTx:
-			bTxn = NewTx(&MixedTxn{
-				Type: txType,
-			})
+		case LegacyTxType:
+			bTxn = NewTx(&LegacyTx{})
+		case StateTxType:
+			bTxn = NewTx(&StateTx{})
+		case DynamicFeeTxType:
+			bTxn = NewTx(&DynamicFeeTx{})
 		}
 
 		if err = bTxn.unmarshalStoreRLPFrom(p, v); err != nil {
@@ -70,8 +72,6 @@ func (b *Body) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 
 // UnmarshalStoreRLP unmarshals transaction from byte slice. Hash must be computed manually after!
 func (t *Transaction) UnmarshalStoreRLP(input []byte) error {
-	t.SetTransactionType(LegacyTx)
-
 	offset := 0
 
 	if len(input) > 0 && input[0] <= RLPSingleByteUpperLimit {
@@ -80,7 +80,16 @@ func (t *Transaction) UnmarshalStoreRLP(input []byte) error {
 			return err
 		}
 
-		t.SetTransactionType(tType)
+		switch tType {
+		case LegacyTxType:
+			t.SetTxData(&LegacyTx{})
+		case StateTxType:
+			t.SetTxData(&StateTx{})
+		case AccessListTxType:
+			t.SetTxData(&AccessListTxn{})
+		default:
+			t.SetTxData(&DynamicFeeTx{})
+		}
 
 		offset = 1
 	}
@@ -105,13 +114,11 @@ func (t *Transaction) unmarshalStoreRLPFrom(p *fastrlp.Parser, v *fastrlp.Value)
 			return err
 		}
 
-		t.SetTransactionType(tType)
-
 		elems = elems[1:]
 	}
 
 	// consensus part
-	if err = t.unmarshalRLPFrom(p, elems[0]); err != nil {
+	if err = t.Inner.unmarshalRLPFrom(p, elems[0]); err != nil {
 		return err
 	}
 
@@ -144,7 +151,7 @@ func (r *Receipts) unmarshalStoreRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 }
 
 func (r *Receipt) UnmarshalStoreRLP(input []byte) error {
-	r.TransactionType = LegacyTx
+	r.TransactionType = LegacyTxType
 	offset := 0
 
 	if len(input) > 0 && input[0] <= RLPSingleByteUpperLimit {
