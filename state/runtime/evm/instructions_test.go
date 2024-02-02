@@ -501,16 +501,14 @@ func TestNot(t *testing.T) {
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	firstValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129639935", 10)
-	require.True(t, ok)
-	secondValue, ok := new(big.Int).SetString("115792089237316195423570985008687907853269984665640564039457584007913129639934", 10)
-	require.True(t, ok)
-
 	testOperands := []OperandsArithmetic{
-		{[]*big.Int{zero}, firstValue},
-		{[]*big.Int{one}, secondValue},
+		{[]*big.Int{big.NewInt(-1)}, zero},
+		{[]*big.Int{zero}, tt256m1},
+		{[]*big.Int{one}, new(big.Int).Sub(tt256m1, big.NewInt(1))},
+		{[]*big.Int{big.NewInt(10)}, new(big.Int).Sub(tt256m1, big.NewInt(10))},
 	}
 	for _, testOperand := range testOperands {
+		t.Log(testOperand.expectedResult)
 		testArithmeticOperation(t, opNot, testOperand, s)
 	}
 }
