@@ -805,30 +805,28 @@ func opCallDataCopy(c *state) {
 func opReturnDataCopy(c *state) {
 	if !c.config.Byzantium {
 		c.exit(errOpCodeNotFound)
+
 		return
 	}
 
-	memOffset := c.pop()
-	dataOffset := c.pop()
-	length := c.pop()
+	var (
+		memOffset  = c.pop()
+		dataOffset = c.pop()
+		length     = c.pop()
+	)
 
-	// Check if the dataOffset is uint64, this will also check for overflow
-	if !dataOffset.IsUint64() {
-		c.exit(errReturnDataOutOfBounds)
-		return
-	}
-
-	// Check if sum of dataOffset and length overflows uint64
+	// Check if:
+	// 1. the dataOffset is uint64 (overflow check)
+	// 2. the sum of dataOffset and length overflows uint64
+	// 3. the length of return data has enough space to receive offset + length bytes
 	end := new(big.Int).Add(dataOffset, length)
-	if !end.IsUint64() {
-		c.exit(errReturnDataOutOfBounds)
-		return
-	}
-
-	// Check if the length of return data has enough space to receive offset + length bytes
 	endAddress := end.Uint64()
-	if uint64(len(c.returnData)) < endAddress {
+
+	if !dataOffset.IsUint64() ||
+		!end.IsUint64() ||
+		uint64(len(c.returnData)) < endAddress {
 		c.exit(errReturnDataOutOfBounds)
+
 		return
 	}
 
