@@ -1127,6 +1127,22 @@ func TestCallDataCopy(t *testing.T) {
 	assert.Equal(t, big.NewInt(1).FillBytes(make([]byte, 32)), s.memory)
 }
 
+func TestCodeCopyLenZero(t *testing.T) {
+	s, cancelFn := getState(&chain.ForksInTime{})
+	var expectedGas = s.gas
+	defer cancelFn()
+
+	s.push(big.NewInt(0)) //length
+	s.push(big.NewInt(0)) //dataOffset
+	s.push(big.NewInt(0)) //memOffset
+
+	opCodeCopy(s)
+
+	// We check that no gas was spent and there was no error
+	assert.Equal(t, expectedGas, s.gas)
+	assert.Equal(t, s.err, nil)
+}
+
 func TestCodeCopy(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
