@@ -1129,8 +1129,9 @@ func TestCallDataCopy(t *testing.T) {
 
 func TestCodeCopyLenZero(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
-	var expectedGas = s.gas
 	defer cancelFn()
+
+	var expectedGas = s.gas
 
 	s.push(big.NewInt(0)) //length
 	s.push(big.NewInt(0)) //dataOffset
