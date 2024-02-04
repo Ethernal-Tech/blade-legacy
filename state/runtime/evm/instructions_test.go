@@ -1141,7 +1141,7 @@ func TestCodeCopyLenZero(t *testing.T) {
 
 	// We check that no gas was spent and there was no error
 	assert.Equal(t, expectedGas, s.gas)
-	assert.Equal(t, s.err, nil)
+	assert.NoError(t, s.err)
 }
 
 func TestCodeCopy(t *testing.T) {
