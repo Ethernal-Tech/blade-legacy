@@ -232,11 +232,12 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 		})
 	case types.LegacyTxType:
 		txn = types.NewTx(&types.LegacyTx{
-			From:  *arg.From,
-			Gas:   uint64(*arg.Gas),
-			Value: new(big.Int).SetBytes(*arg.Value),
-			Input: input,
-			Nonce: uint64(*arg.Nonce),
+			From:     *arg.From,
+			Gas:      uint64(*arg.Gas),
+			Value:    new(big.Int).SetBytes(*arg.Value),
+			Input:    input,
+			Nonce:    uint64(*arg.Nonce),
+			GasPrice: new(big.Int).SetBytes(*arg.GasPrice),
 		})
 	case types.StateTxType:
 		txn = types.NewTx(&types.StateTx{

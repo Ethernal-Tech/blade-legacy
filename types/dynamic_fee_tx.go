@@ -35,7 +35,7 @@ func (tx *DynamicFeeTx) nonce() uint64           { return tx.Nonce }
 func (tx *DynamicFeeTx) to() *Address            { return tx.To }
 func (tx *DynamicFeeTx) from() Address           { return tx.From }
 
-func (tx *DynamicFeeTx) hash() Hash { return ZeroHash }
+func (tx *DynamicFeeTx) hash() Hash { return tx.Hash }
 
 func (tx *DynamicFeeTx) rawSignatureValues() (v, r, s *big.Int) {
 	return tx.V, tx.R, tx.S
@@ -367,6 +367,8 @@ func (tx *DynamicFeeTx) copy() TxData {
 	cpy.setAccessList(tx.accessList().Copy())
 
 	cpy.setHash(tx.hash())
+
+	cpy.setFrom(tx.from())
 
 	return cpy
 }

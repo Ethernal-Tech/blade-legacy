@@ -671,10 +671,12 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	// Check if the given tx is not underpriced
-	if tx.GetGasPrice(baseFee).Cmp(new(big.Int).SetUint64(p.priceLimit)) < 0 {
-		metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
+	if tx.Type() != types.DynamicFeeTxType {
+		if tx.GetGasPrice(baseFee).Cmp(new(big.Int).SetUint64(p.priceLimit)) < 0 {
+			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
 
-		return ErrUnderpriced
+			return ErrUnderpriced
+		}
 	}
 
 	// Check nonce ordering

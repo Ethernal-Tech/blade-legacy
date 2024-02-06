@@ -27,7 +27,7 @@ func (tx *LegacyTx) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *LegacyTx) gasTipCap() *big.Int     { return nil }
 func (tx *LegacyTx) gasFeeCap() *big.Int     { return nil }
 func (tx *LegacyTx) value() *big.Int         { return tx.Value }
-func (tx *LegacyTx) nonce() uint64           { return 0 }
+func (tx *LegacyTx) nonce() uint64           { return tx.Nonce }
 func (tx *LegacyTx) to() *Address            { return tx.To }
 func (tx *LegacyTx) from() Address           { return tx.From }
 
@@ -87,7 +87,7 @@ func (tx *LegacyTx) setHash(h Hash) { tx.Hash = h }
 // Hash calculation should also be done from the outside!
 // Use UnmarshalRLP in most cases
 func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
-	numOfElems := 9
+	num := 9
 	elems, err := v.GetElems()
 	if err != nil {
 		return err
@@ -100,8 +100,8 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 		return val
 	}
 
-	if numElems := len(elems); numElems != numOfElems {
-		return fmt.Errorf("incorrect number of transaction elements, expected %d but found %d", numOfElems, numElems)
+	if numElems := len(elems); numElems != num {
+		return fmt.Errorf("legacy incorrect number of transaction elements, expected %d but found %d", num, numElems)
 	}
 
 	// nonce
@@ -258,6 +258,8 @@ func (tx *LegacyTx) copy() TxData {
 	cpy.setSignatureValues(vCopy, rCopy, sCopy)
 
 	cpy.setHash(tx.hash())
+
+	cpy.setFrom(tx.from())
 
 	return cpy
 }

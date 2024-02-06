@@ -70,6 +70,7 @@ func newTx(addr types.Address, nonce, slots uint64, txType types.TxType) *types.
 		})
 	case types.LegacyTxType:
 		tx = types.NewTx(&types.LegacyTx{
+			From:     addr,
 			Nonce:    nonce,
 			Value:    big.NewInt(1),
 			GasPrice: big.NewInt(0).SetUint64(defaultPriceLimit),
@@ -87,10 +88,13 @@ func newTx(addr types.Address, nonce, slots uint64, txType types.TxType) *types.
 		})
 	default:
 		tx = types.NewTx(&types.DynamicFeeTx{
-			Nonce: nonce,
-			Value: big.NewInt(1),
-			Gas:   validGasLimit,
-			Input: input,
+			From:      addr,
+			Nonce:     nonce,
+			Value:     big.NewInt(1),
+			GasTipCap: big.NewInt(100),
+			GasFeeCap: big.NewInt(100),
+			Gas:       validGasLimit,
+			Input:     input,
 		})
 	}
 
@@ -249,7 +253,7 @@ func TestAddTxErrors(t *testing.T) {
 		t.Parallel()
 		pool := setupPool()
 
-		tx := newTx(addr1, 0, 1, types.DynamicFeeTxType)
+		tx := newTx(addr1, 0, 1, types.LegacyTxType)
 
 		// Sign with a private key that corresponds
 		// to a different address
@@ -282,7 +286,7 @@ func TestAddTxErrors(t *testing.T) {
 
 		// nonce is 1000000 so ErrNonceTooLow
 		// doesn't get triggered
-		tx := newTx(defaultAddr, 1000000, 1, types.StateTxType)
+		tx := newTx(defaultAddr, 1000000, 1, types.LegacyTxType)
 		tx = signTx(tx)
 
 		assert.ErrorIs(t,
@@ -298,7 +302,7 @@ func TestAddTxErrors(t *testing.T) {
 		// fill the pool
 		pool.gauge.increase(defaultMaxSlots)
 
-		tx := newTx(defaultAddr, 0, 1, types.DynamicFeeTxType)
+		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
 		tx = signTx(tx)
 
 		assert.ErrorIs(t,
@@ -315,7 +319,7 @@ func TestAddTxErrors(t *testing.T) {
 		pool.gauge.increase(defaultMaxSlots - 1)
 
 		// create tx requiring 1 slot
-		tx := newTx(defaultAddr, 0, 1, types.DynamicFeeTxType)
+		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
 		tx = signTx(tx)
 
 		//	enqueue tx
@@ -327,7 +331,7 @@ func TestAddTxErrors(t *testing.T) {
 		t.Parallel()
 		pool := setupPool()
 
-		tx := newTx(defaultAddr, 0, 1, types.DynamicFeeTxType)
+		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
 		tx.SetGas(1)
 		tx = signTx(tx)
 
@@ -593,7 +597,7 @@ func TestAddTxHighPressure(t *testing.T) {
 			println("slots", slots, "max", pool.gauge.max)
 			pool.gauge.increase(slots)
 
-			tx := newTx(addr1, 5, 1, types.AccessListTxType)
+			tx := newTx(addr1, 5, 1, types.LegacyTxType)
 			assert.NoError(t, pool.addTx(local, tx))
 
 			_, exists := pool.index.get(tx.Hash())
@@ -2276,7 +2280,7 @@ func Test_TxPool_validateTx(t *testing.T) {
 		pool := setupPool()
 
 		// undefined gas tip cap
-		tx := newTx(defaultAddr, 0, 1, types.DynamicFeeTxType)
+		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
 		tx.SetGasFeeCap(big.NewInt(10000))
 
 		signedTx := signTx(tx)
@@ -2288,7 +2292,7 @@ func Test_TxPool_validateTx(t *testing.T) {
 		)
 
 		// undefined gas fee cap
-		tx = newTx(defaultAddr, 1, 1, types.DynamicFeeTxType)
+		tx = newTx(defaultAddr, 1, 1, types.LegacyTxType)
 		tx.SetGasTipCap(big.NewInt(1000))
 
 		signedTx = signTx(tx)
@@ -2750,17 +2754,17 @@ func TestExecutablesOrder(t *testing.T) {
 	newPricedTx := func(
 		addr types.Address, nonce, gasPrice uint64, gasFeeCap uint64, value uint64) *types.Transaction {
 		var tx *types.Transaction
-		tx.SetValue(new(big.Int).SetUint64(value))
 
 		if gasPrice == 0 {
 			tx = newTx(addr, nonce, 1, types.DynamicFeeTxType)
 			tx.SetGasFeeCap(new(big.Int).SetUint64(gasFeeCap))
 			tx.SetGasTipCap(new(big.Int).SetUint64(2))
-			tx.SetGasPrice(big.NewInt(0))
 		} else {
 			tx = newTx(addr, nonce, 1, types.LegacyTxType)
 			tx.SetGasPrice(new(big.Int).SetUint64(gasPrice))
 		}
+
+		tx.SetValue(new(big.Int).SetUint64(value))
 
 		return tx
 	}
@@ -2936,8 +2940,10 @@ func TestExecutablesOrder(t *testing.T) {
 			// verify the highest priced transactions
 			// were processed first
 			for i, tx := range successful {
-				require.Equal(t, test.expectedPriceOrder[i][0], tx.GasPrice().Uint64())
-				require.Equal(t, test.expectedPriceOrder[i][1], tx.Value().Uint64())
+				if tx.Type() != types.DynamicFeeTxType {
+					require.Equal(t, test.expectedPriceOrder[i][0], tx.GasPrice().Uint64())
+					require.Equal(t, test.expectedPriceOrder[i][1], tx.Value().Uint64())
+				}
 			}
 		})
 	}

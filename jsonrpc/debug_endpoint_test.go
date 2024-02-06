@@ -603,6 +603,7 @@ func TestTraceCall(t *testing.T) {
 			Data:      &data,
 			Input:     &input,
 			Nonce:     &nonce,
+			Type:      toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
 		}
 		decodedTx = types.NewTx(&types.DynamicFeeTx{
 			Nonce:     uint64(nonce),
