@@ -115,6 +115,17 @@ func (t *Transaction) unmarshalStoreRLPFrom(p *fastrlp.Parser, v *fastrlp.Value)
 		}
 
 		elems = elems[1:]
+
+		switch tType {
+		case LegacyTxType:
+			t.SetTxData(&LegacyTx{})
+		case StateTxType:
+			t.SetTxData(&StateTx{})
+		case AccessListTxType:
+			t.SetTxData(&AccessListTxn{})
+		default:
+			t.SetTxData(&DynamicFeeTx{})
+		}
 	}
 
 	// consensus part
