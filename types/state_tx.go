@@ -220,7 +220,7 @@ func (tx *StateTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	return vv
 }
 
-func (tx *StateTx) copy() TxData {
+func (tx *StateTx) copy() TxData { //nolint:dupl
 	cpy := &StateTx{}
 
 	cpy.setNonce(tx.nonce())

@@ -95,6 +95,7 @@ func (tx *DynamicFeeTx) setHash(h Hash) { tx.Hash = h }
 // Use UnmarshalRLP in most cases
 func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	numOfElems := 12
+
 	elems, err := v.GetElems()
 	if err != nil {
 		return err

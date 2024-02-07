@@ -98,7 +98,7 @@ func Test_maxPriceQueue(t *testing.T) {
 				}),
 			},
 		},
-		{
+		{ //nolint:dupl
 			name:    "sort txs without base fee by fee cap",
 			baseFee: 0,
 			unsorted: []*types.Transaction{
@@ -136,7 +136,7 @@ func Test_maxPriceQueue(t *testing.T) {
 				}),
 			},
 		},
-		{
+		{ //nolint:dupl
 			name:    "sort txs without base fee by tip cap",
 			baseFee: 0,
 			unsorted: []*types.Transaction{

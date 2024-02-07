@@ -145,6 +145,7 @@ func (tx *AccessListTxn) setHash(h Hash) {
 // Use UnmarshalRLP in most cases
 func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	numOfElems := 11
+
 	elems, err := v.GetElems()
 	if err != nil {
 		return err
@@ -160,7 +161,9 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 	if numElems := len(elems); numElems != numOfElems {
 		return fmt.Errorf("incorrect number of transaction elements, expected %d but found %d", numOfElems, numElems)
 	}
+
 	txChainID := new(big.Int)
+
 	if err = getElem().GetBigInt(txChainID); err != nil {
 		return err
 	}

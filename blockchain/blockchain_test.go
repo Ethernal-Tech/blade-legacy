@@ -1870,6 +1870,7 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 		tr := transactionJSON.(map[string]interface{})
 
 		var txData types.TxData
+
 		txType := tr["type"].(string)
 
 		txTypeNumber, err := common.ParseUint64orHex(&txType)
