@@ -90,6 +90,7 @@ func (tx *StateTx) setHash(h Hash) { tx.Hash = h }
 // Use UnmarshalRLP in most cases
 func (tx *StateTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	numOfElems := 10
+
 	elems, err := v.GetElems()
 	if err != nil {
 		return err

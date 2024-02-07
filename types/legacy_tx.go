@@ -88,6 +88,7 @@ func (tx *LegacyTx) setHash(h Hash) { tx.Hash = h }
 // Use UnmarshalRLP in most cases
 func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	num := 9
+
 	elems, err := v.GetElems()
 	if err != nil {
 		return err
