@@ -104,17 +104,9 @@ func (b *Block) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 
 	// transactions
 	if err = unmarshalRLPFrom(p, elems[1], func(txType TxType, p *fastrlp.Parser, v *fastrlp.Value) error {
-		var bTxn *Transaction
-		switch txType {
-		case AccessListTxType:
-			bTxn = NewTx(&AccessListTxn{})
-		case LegacyTxType:
-			bTxn = NewTx(&LegacyTx{})
-		case StateTxType:
-			bTxn = NewTx(&StateTx{})
-		case DynamicFeeTxType:
-			bTxn = NewTx(&DynamicFeeTx{})
-		}
+		bTxn := &Transaction{}
+
+		bTxn.InitInnerData(txType)
 
 		if err = bTxn.Inner.unmarshalRLPFrom(p, v); err != nil {
 			return err

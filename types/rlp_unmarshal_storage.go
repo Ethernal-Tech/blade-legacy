@@ -29,17 +29,8 @@ func (b *Body) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 
 	// transactions
 	if err = unmarshalRLPFrom(p, tuple[0], func(txType TxType, p *fastrlp.Parser, v *fastrlp.Value) error {
-		var bTxn *Transaction
-		switch txType {
-		case AccessListTxType:
-			bTxn = NewTx(&AccessListTxn{})
-		case LegacyTxType:
-			bTxn = NewTx(&LegacyTx{})
-		case StateTxType:
-			bTxn = NewTx(&StateTx{})
-		case DynamicFeeTxType:
-			bTxn = NewTx(&DynamicFeeTx{})
-		}
+		bTxn := &Transaction{}
+		bTxn.InitInnerData(txType)
 
 		if err = bTxn.unmarshalStoreRLPFrom(p, v); err != nil {
 			return err
@@ -80,16 +71,7 @@ func (t *Transaction) UnmarshalStoreRLP(input []byte) error {
 			return err
 		}
 
-		switch tType {
-		case LegacyTxType:
-			t.SetTxData(&LegacyTx{})
-		case StateTxType:
-			t.SetTxData(&StateTx{})
-		case AccessListTxType:
-			t.SetTxData(&AccessListTxn{})
-		default:
-			t.SetTxData(&DynamicFeeTx{})
-		}
+		t.InitInnerData(tType)
 
 		offset = 1
 	}
@@ -116,16 +98,7 @@ func (t *Transaction) unmarshalStoreRLPFrom(p *fastrlp.Parser, v *fastrlp.Value)
 
 		elems = elems[1:]
 
-		switch tType {
-		case LegacyTxType:
-			t.SetTxData(&LegacyTx{})
-		case StateTxType:
-			t.SetTxData(&StateTx{})
-		case AccessListTxType:
-			t.SetTxData(&AccessListTxn{})
-		default:
-			t.SetTxData(&DynamicFeeTx{})
-		}
+		t.InitInnerData(tType)
 	}
 
 	// consensus part

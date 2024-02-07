@@ -149,37 +149,59 @@ func TestRLPUnmarshal_Header_ComputeHash(t *testing.T) {
 	assert.Equal(t, h.Hash, h2.Hash)
 }
 
-/* func TestRLPMarshall_And_Unmarshall_TypedTransaction(t *testing.T) {
+func TestRLPMarshall_And_Unmarshall_TypedTransaction(t *testing.T) {
 	addrTo := StringToAddress("11")
 	addrFrom := StringToAddress("22")
-	originalTx := NewTx(&MixedTxn{
-		Nonce:     0,
-		GasPrice:  big.NewInt(11),
-		GasFeeCap: big.NewInt(12),
-		GasTipCap: big.NewInt(13),
-		Gas:       11,
-		To:        &addrTo,
-		From:      addrFrom,
-		Value:     big.NewInt(1),
-		Input:     []byte{1, 2},
-		V:         big.NewInt(25),
-		S:         big.NewInt(26),
-		R:         big.NewInt(27),
-	})
 
-	txTypes := []TxType{
-		StateTxType,
-		LegacyTxType,
-		DynamicFeeTxType,
+	originalTxs := []*Transaction{
+		NewTx(&StateTx{
+			Nonce:    0,
+			GasPrice: big.NewInt(11),
+			Gas:      11,
+			To:       &addrTo,
+			From:     addrFrom,
+			Value:    big.NewInt(1),
+			Input:    []byte{1, 2},
+			V:        big.NewInt(25),
+			S:        big.NewInt(26),
+			R:        big.NewInt(27),
+		}),
+		NewTx(&LegacyTx{
+			Nonce:    0,
+			GasPrice: big.NewInt(11),
+			Gas:      11,
+			To:       &addrTo,
+			From:     addrFrom,
+			Value:    big.NewInt(1),
+			Input:    []byte{1, 2},
+			V:        big.NewInt(25),
+			S:        big.NewInt(26),
+			R:        big.NewInt(27),
+		}),
+		NewTx(&DynamicFeeTx{
+			Nonce:     0,
+			GasFeeCap: big.NewInt(12),
+			GasTipCap: big.NewInt(13),
+			Gas:       11,
+			To:        &addrTo,
+			From:      addrFrom,
+			Value:     big.NewInt(1),
+			Input:     []byte{1, 2},
+			V:         big.NewInt(25),
+			S:         big.NewInt(26),
+			R:         big.NewInt(27),
+		}),
 	}
 
-	for _, v := range txTypes {
-		t.Run(v.String(), func(t *testing.T) {
+	for _, originalTx := range originalTxs {
+		t.Run(originalTx.Type().String(), func(t *testing.T) {
 			originalTx.ComputeHash()
+
+			unmarshalledTx := &Transaction{}
+			unmarshalledTx.InitInnerData(originalTx.Type())
 
 			txRLP := originalTx.MarshalRLP()
 
-			unmarshalledTx := NewTx(&MixedTxn{})
 			assert.NoError(t, unmarshalledTx.UnmarshalRLP(txRLP))
 
 			unmarshalledTx.ComputeHash()
@@ -187,7 +209,7 @@ func TestRLPUnmarshal_Header_ComputeHash(t *testing.T) {
 			assert.Equal(t, originalTx.Hash(), unmarshalledTx.Hash())
 		})
 	}
-} */
+}
 
 func TestRLPMarshall_Unmarshall_Missing_Data(t *testing.T) {
 	t.Parallel()
@@ -254,18 +276,9 @@ func TestRLPMarshall_Unmarshall_Missing_Data(t *testing.T) {
 				v, err := parser.Parse(testData)
 				assert.Nil(t, err)
 
-				var unmarshalledTx *Transaction
+				unmarshalledTx := &Transaction{}
 
-				switch txType {
-				case AccessListTxType:
-					unmarshalledTx = NewTx(&AccessListTxn{})
-				case StateTxType:
-					unmarshalledTx = NewTx(&StateTx{})
-				case LegacyTxType:
-					unmarshalledTx = NewTx(&LegacyTx{})
-				case DynamicFeeTxType:
-					unmarshalledTx = NewTx(&DynamicFeeTx{})
-				}
+				unmarshalledTx.InitInnerData(txType)
 
 				if tt.expectedErr {
 					assert.Error(t, unmarshalledTx.Inner.unmarshalRLPFrom(parser, v), tt.name)

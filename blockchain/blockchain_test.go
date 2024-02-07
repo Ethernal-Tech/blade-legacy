@@ -590,7 +590,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 	t.Run("should succeed if tx has from field", func(t *testing.T) {
 		t.Parallel()
 
-		tx := types.NewTx(&types.StateTx{
+		tx := types.NewTx(&types.LegacyTx{
 			Value: big.NewInt(10),
 			V:     big.NewInt(1),
 			From:  addr,
@@ -864,8 +864,8 @@ func Test_recoverFromFieldsInTransactions(t *testing.T) {
 			},
 		}
 
-		tx1 := types.NewTx(&types.StateTx{Nonce: 0, From: addr1})
-		tx2 := types.NewTx(&types.StateTx{Nonce: 1, From: addr2})
+		tx1 := types.NewTx(&types.LegacyTx{Nonce: 0, From: addr1})
+		tx2 := types.NewTx(&types.LegacyTx{Nonce: 1, From: addr2})
 
 		computeTxHashes(tx1, tx2)
 
@@ -1602,7 +1602,7 @@ func TestBlockchain_WriteFullBlock(t *testing.T) {
 		{GasUsed: 100},
 		{GasUsed: 200},
 	}
-	tx := types.NewTx(&types.StateTx{
+	tx := types.NewTx(&types.LegacyTx{
 		Value: big.NewInt(1),
 	})
 
@@ -1892,7 +1892,7 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 			continue
 		}
 
-		transaction := types.NewTx(&types.StateTx{})
+		transaction := types.NewTx(txData)
 		transaction.SetHash(types.StringToHash(tr["hash"].(string)))
 		nonce := tr["nonce"].(string)
 

@@ -1152,7 +1152,7 @@ func TestAddTx(t *testing.T) {
 				gasPrice,
 				slots uint64,
 			) *types.Transaction {
-				tx := newTx(addr, nonce, slots, types.StateTxType)
+				tx := newTx(addr, nonce, slots, types.LegacyTxType)
 				tx.GasPrice().SetUint64(gasPrice)
 
 				return tx
@@ -1385,7 +1385,7 @@ func TestPromoteHandler(t *testing.T) {
 		txs := make([]*types.Transaction, 20)
 
 		for i := 0; i < 20; i++ {
-			txs[i] = newTx(addr1, uint64(i), 1, types.StateTxType)
+			txs[i] = newTx(addr1, uint64(i), 1, types.LegacyTxType)
 		}
 
 		for _, tx := range txs {
