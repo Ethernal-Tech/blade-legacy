@@ -241,7 +241,7 @@ func TestTxPool_RecoverableError(t *testing.T) {
 	_, receiverAddress := tests.GenerateKeyAndAddr(t)
 
 	transactions := []*types.Transaction{
-		types.NewTx(&types.StateTx{
+		types.NewTx(&types.LegacyTx{
 			Nonce:    0,
 			GasPrice: big.NewInt(framework.DefaultGasPrice),
 			Gas:      22000,
@@ -348,7 +348,7 @@ func TestTxPool_GetPendingTx(t *testing.T) {
 	operator := server.TxnPoolOperator()
 	client := server.JSONRPC()
 
-	signedTx, err := signer.SignTx(types.NewTx(&types.StateTx{
+	signedTx, err := signer.SignTx(types.NewTx(&types.LegacyTx{
 		Nonce:    0,
 		GasPrice: big.NewInt(1000000000),
 		Gas:      framework.DefaultGasLimit - 1,
