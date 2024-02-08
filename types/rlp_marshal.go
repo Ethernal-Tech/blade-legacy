@@ -187,5 +187,5 @@ func (t *Transaction) MarshalRLPTo(dst []byte) []byte {
 		dst = append(dst, byte(t.Type()))
 	}
 
-	return MarshalRLPTo(t.Inner.marshalRLPWith, dst)
+	return MarshalRLPTo(t.MarshalRLPWith, dst)
 }

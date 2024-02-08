@@ -24,8 +24,8 @@ func (tx *LegacyTx) chainID() *big.Int       { return nil }
 func (tx *LegacyTx) input() []byte           { return tx.Input }
 func (tx *LegacyTx) gas() uint64             { return tx.Gas }
 func (tx *LegacyTx) gasPrice() *big.Int      { return tx.GasPrice }
-func (tx *LegacyTx) gasTipCap() *big.Int     { return nil }
-func (tx *LegacyTx) gasFeeCap() *big.Int     { return nil }
+func (tx *LegacyTx) gasTipCap() *big.Int     { return tx.GasPrice }
+func (tx *LegacyTx) gasFeeCap() *big.Int     { return tx.GasPrice }
 func (tx *LegacyTx) value() *big.Int         { return tx.Value }
 func (tx *LegacyTx) nonce() uint64           { return tx.Nonce }
 func (tx *LegacyTx) to() *Address            { return tx.To }
@@ -56,9 +56,13 @@ func (tx *LegacyTx) setGasPrice(gas *big.Int) {
 	tx.GasPrice = gas
 }
 
-func (tx *LegacyTx) setGasFeeCap(gas *big.Int) {}
+func (tx *LegacyTx) setGasFeeCap(gas *big.Int) {
+	tx.GasPrice = gas
+}
 
-func (tx *LegacyTx) setGasTipCap(gas *big.Int) {}
+func (tx *LegacyTx) setGasTipCap(gas *big.Int) {
+	tx.GasPrice = gas
+}
 
 func (tx *LegacyTx) setTransactionType(t TxType) {}
 

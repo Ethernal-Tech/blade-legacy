@@ -56,47 +56,22 @@ func newTx(addr types.Address, nonce, slots uint64, txType types.TxType) *types.
 		return nil
 	}
 
-	var tx *types.Transaction
+	tx := types.NewTxWithType(txType)
 
 	switch txType {
-	case types.AccessListTxType:
-		tx = types.NewTx(&types.AccessListTxn{
-			From:     addr,
-			Nonce:    nonce,
-			Value:    big.NewInt(1),
-			GasPrice: big.NewInt(0).SetUint64(defaultPriceLimit),
-			Gas:      validGasLimit,
-			Input:    input,
-		})
-	case types.LegacyTxType:
-		tx = types.NewTx(&types.LegacyTx{
-			From:     addr,
-			Nonce:    nonce,
-			Value:    big.NewInt(1),
-			GasPrice: big.NewInt(0).SetUint64(defaultPriceLimit),
-			Gas:      validGasLimit,
-			Input:    input,
-		})
-	case types.StateTxType:
-		tx = types.NewTx(&types.StateTx{
-			From:     addr,
-			Nonce:    nonce,
-			Value:    big.NewInt(1),
-			GasPrice: big.NewInt(0).SetUint64(defaultPriceLimit),
-			Gas:      validGasLimit,
-			Input:    input,
-		})
+	case types.DynamicFeeTxType:
+		tx.SetGasFeeCap(big.NewInt(100))
+		tx.SetGasTipCap(big.NewInt(100))
+
 	default:
-		tx = types.NewTx(&types.DynamicFeeTx{
-			From:      addr,
-			Nonce:     nonce,
-			Value:     big.NewInt(1),
-			GasTipCap: big.NewInt(100),
-			GasFeeCap: big.NewInt(100),
-			Gas:       validGasLimit,
-			Input:     input,
-		})
+		tx.SetGasPrice(big.NewInt(0).SetUint64(defaultPriceLimit))
 	}
+
+	tx.SetFrom(addr)
+	tx.SetNonce(nonce)
+	tx.SetValue(big.NewInt(1))
+	tx.SetGas(validGasLimit)
+	tx.SetInput(input)
 
 	return tx
 }

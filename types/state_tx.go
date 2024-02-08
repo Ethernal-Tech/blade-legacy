@@ -24,8 +24,8 @@ func (tx *StateTx) chainID() *big.Int       { return nil }
 func (tx *StateTx) input() []byte           { return tx.Input }
 func (tx *StateTx) gas() uint64             { return tx.Gas }
 func (tx *StateTx) gasPrice() *big.Int      { return tx.GasPrice }
-func (tx *StateTx) gasTipCap() *big.Int     { return nil }
-func (tx *StateTx) gasFeeCap() *big.Int     { return nil }
+func (tx *StateTx) gasTipCap() *big.Int     { return tx.GasPrice }
+func (tx *StateTx) gasFeeCap() *big.Int     { return tx.GasPrice }
 func (tx *StateTx) value() *big.Int         { return tx.Value }
 func (tx *StateTx) nonce() uint64           { return tx.Nonce }
 func (tx *StateTx) to() *Address            { return tx.To }
@@ -60,9 +60,13 @@ func (tx *StateTx) setGasPrice(gas *big.Int) {
 	tx.GasPrice = gas
 }
 
-func (tx *StateTx) setGasFeeCap(gas *big.Int) {}
+func (tx *StateTx) setGasFeeCap(gas *big.Int) {
+	tx.GasPrice = gas
+}
 
-func (tx *StateTx) setGasTipCap(gas *big.Int) {}
+func (tx *StateTx) setGasTipCap(gas *big.Int) {
+	tx.GasPrice = gas
+}
 
 func (tx *StateTx) setValue(value *big.Int) {
 	tx.Value = value

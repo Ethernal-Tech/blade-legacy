@@ -163,8 +163,6 @@ func GetNextNonce(address types.Address, number BlockNumber, store nonceGetter) 
 }
 
 func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonce bool) (*types.Transaction, error) {
-	var txn *types.Transaction
-
 	if arg == nil {
 		return nil, errors.New("missing value for required argument 0")
 	}
@@ -221,43 +219,21 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 		txType = types.TxType(*arg.Type)
 	}
 
+	txn := types.NewTxWithType(txType)
+
 	switch txType {
-	case types.AccessListTxType:
-		txn = types.NewTx(&types.AccessListTxn{
-			From:  *arg.From,
-			Gas:   uint64(*arg.Gas),
-			Value: new(big.Int).SetBytes(*arg.Value),
-			Input: input,
-			Nonce: uint64(*arg.Nonce),
-		})
 	case types.LegacyTxType:
-		txn = types.NewTx(&types.LegacyTx{
-			From:     *arg.From,
-			Gas:      uint64(*arg.Gas),
-			Value:    new(big.Int).SetBytes(*arg.Value),
-			Input:    input,
-			Nonce:    uint64(*arg.Nonce),
-			GasPrice: new(big.Int).SetBytes(*arg.GasPrice),
-		})
-	case types.StateTxType:
-		txn = types.NewTx(&types.StateTx{
-			From:  *arg.From,
-			Gas:   uint64(*arg.Gas),
-			Value: new(big.Int).SetBytes(*arg.Value),
-			Input: input,
-			Nonce: uint64(*arg.Nonce),
-		})
+		txn.SetGasPrice(new(big.Int).SetBytes(*arg.GasPrice))
 	case types.DynamicFeeTxType:
-		txn = types.NewTx(&types.DynamicFeeTx{
-			From:      *arg.From,
-			Gas:       uint64(*arg.Gas),
-			GasTipCap: new(big.Int).SetBytes(*arg.GasTipCap),
-			GasFeeCap: new(big.Int).SetBytes(*arg.GasFeeCap),
-			Value:     new(big.Int).SetBytes(*arg.Value),
-			Input:     input,
-			Nonce:     uint64(*arg.Nonce),
-		})
+		txn.SetGasTipCap(new(big.Int).SetBytes(*arg.GasTipCap))
+		txn.SetGasFeeCap(new(big.Int).SetBytes(*arg.GasFeeCap))
 	}
+
+	txn.SetFrom(*arg.From)
+	txn.SetGas(uint64(*arg.Gas))
+	txn.SetValue(new(big.Int).SetBytes(*arg.Value))
+	txn.SetInput(input)
+	txn.SetNonce(uint64(*arg.Nonce))
 
 	if arg.To != nil {
 		txn.SetTo(arg.To)

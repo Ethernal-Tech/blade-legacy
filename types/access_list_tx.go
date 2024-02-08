@@ -45,6 +45,64 @@ func (al TxAccessList) Copy() TxAccessList {
 	return newAccessList
 }
 
+func (al TxAccessList) unmarshallRLPFrom(p *fastrlp.Parser, accessListVV []*fastrlp.Value) error {
+	for i, accessTupleVV := range accessListVV {
+		accessTupleElems, err := accessTupleVV.GetElems()
+		if err != nil {
+			return err
+		}
+
+		// Read the address
+		addressVV := accessTupleElems[0]
+
+		addressBytes, err := addressVV.Bytes()
+		if err != nil {
+			return err
+		}
+
+		al[i].Address = BytesToAddress(addressBytes)
+
+		// Read the storage keys
+		storageKeysArrayVV := accessTupleElems[1]
+
+		storageKeysElems, err := storageKeysArrayVV.GetElems()
+		if err != nil {
+			return err
+		}
+
+		al[i].StorageKeys = make([]Hash, len(storageKeysElems))
+
+		for j, storageKeyVV := range storageKeysElems {
+			storageKeyBytes, err := storageKeyVV.Bytes()
+			if err != nil {
+				return err
+			}
+
+			al[i].StorageKeys[j] = BytesToHash(storageKeyBytes)
+		}
+	}
+
+	return nil
+}
+
+func (al TxAccessList) marshallRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
+	accessListVV := arena.NewArray()
+
+	for _, accessTuple := range al {
+		accessTupleVV := arena.NewArray()
+		accessTupleVV.Set(arena.NewCopyBytes(accessTuple.Address.Bytes()))
+
+		storageKeysVV := arena.NewArray()
+		for _, storageKey := range accessTuple.StorageKeys {
+			storageKeysVV.Set(arena.NewCopyBytes(storageKey.Bytes()))
+		}
+
+		accessTupleVV.Set(storageKeysVV)
+		accessListVV.Set(accessTupleVV)
+	}
+	return accessListVV
+}
+
 type AccessListTxn struct {
 	Nonce    uint64
 	GasPrice *big.Int
@@ -233,41 +291,7 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 		txAccessList = make(TxAccessList, len(accessListVV))
 	}
 
-	for i, accessTupleVV := range accessListVV {
-		accessTupleElems, err := accessTupleVV.GetElems()
-		if err != nil {
-			return err
-		}
-
-		// Read the address
-		addressVV := accessTupleElems[0]
-
-		addressBytes, err := addressVV.Bytes()
-		if err != nil {
-			return err
-		}
-
-		txAccessList[i].Address = BytesToAddress(addressBytes)
-
-		// Read the storage keys
-		storageKeysArrayVV := accessTupleElems[1]
-
-		storageKeysElems, err := storageKeysArrayVV.GetElems()
-		if err != nil {
-			return err
-		}
-
-		txAccessList[i].StorageKeys = make([]Hash, len(storageKeysElems))
-
-		for j, storageKeyVV := range storageKeysElems {
-			storageKeyBytes, err := storageKeyVV.Bytes()
-			if err != nil {
-				return err
-			}
-
-			txAccessList[i].StorageKeys[j] = BytesToHash(storageKeyBytes)
-		}
-	}
+	txAccessList.unmarshallRLPFrom(p, accessListVV)
 
 	tx.setAccessList(txAccessList)
 
@@ -315,23 +339,8 @@ func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv.Set(arena.NewBigInt(tx.value()))
 	vv.Set(arena.NewCopyBytes(tx.input()))
 
-	// add accessList
-	accessListVV := arena.NewArray()
-
-	for _, accessTuple := range tx.accessList() {
-		accessTupleVV := arena.NewArray()
-		accessTupleVV.Set(arena.NewCopyBytes(accessTuple.Address.Bytes()))
-
-		storageKeysVV := arena.NewArray()
-		for _, storageKey := range accessTuple.StorageKeys {
-			storageKeysVV.Set(arena.NewCopyBytes(storageKey.Bytes()))
-		}
-
-		accessTupleVV.Set(storageKeysVV)
-		accessListVV.Set(accessTupleVV)
-	}
-
-	vv.Set(accessListVV)
+	// Convert TxAccessList to RLP format and add it to the vv array.
+	vv.Set(tx.accessList().marshallRLPWith(arena))
 
 	v, r, s := tx.rawSignatureValues()
 	vv.Set(arena.NewBigInt(v))

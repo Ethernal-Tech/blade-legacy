@@ -49,7 +49,7 @@ func (t *Transaction) marshalStoreRLPWith(a *fastrlp.Arena) *fastrlp.Value {
 	}
 
 	// consensus part
-	vv.Set(t.Inner.marshalRLPWith(a))
+	vv.Set(t.MarshalRLPWith(a))
 	// context part
 	vv.Set(a.NewBytes(t.From().Bytes()))
 

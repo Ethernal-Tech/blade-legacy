@@ -276,9 +276,7 @@ func TestRLPMarshall_Unmarshall_Missing_Data(t *testing.T) {
 				v, err := parser.Parse(testData)
 				assert.Nil(t, err)
 
-				unmarshalledTx := &Transaction{}
-
-				unmarshalledTx.InitInnerData(txType)
+				unmarshalledTx := NewTxWithType(txType)
 
 				if tt.expectedErr {
 					assert.Error(t, unmarshalledTx.Inner.unmarshalRLPFrom(parser, v), tt.name)

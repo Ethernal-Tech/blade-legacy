@@ -104,9 +104,7 @@ func (b *Block) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 
 	// transactions
 	if err = unmarshalRLPFrom(p, elems[1], func(txType TxType, p *fastrlp.Parser, v *fastrlp.Value) error {
-		bTxn := &Transaction{}
-
-		bTxn.InitInnerData(txType)
+		bTxn := NewTxWithType(txType)
 
 		if err = bTxn.Inner.unmarshalRLPFrom(p, v); err != nil {
 			return err
@@ -379,7 +377,7 @@ func (t *Transaction) UnmarshalRLP(input []byte) error {
 
 	t.InitInnerData(txType)
 
-	if err := UnmarshalRlp(t.Inner.unmarshalRLPFrom, input[offset:]); err != nil {
+	if err := UnmarshalRlp(t.UnmarshalRLPFrom, input[offset:]); err != nil {
 		return err
 	}
 

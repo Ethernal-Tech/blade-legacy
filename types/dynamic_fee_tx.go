@@ -27,7 +27,7 @@ func (tx *DynamicFeeTx) transactionType() TxType { return DynamicFeeTxType }
 func (tx *DynamicFeeTx) chainID() *big.Int       { return tx.ChainID }
 func (tx *DynamicFeeTx) input() []byte           { return tx.Input }
 func (tx *DynamicFeeTx) gas() uint64             { return tx.Gas }
-func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
+func (tx *DynamicFeeTx) gasPrice() *big.Int      { return tx.GasFeeCap }
 func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
 func (tx *DynamicFeeTx) value() *big.Int         { return tx.Value }
@@ -57,7 +57,9 @@ func (tx *DynamicFeeTx) setChainID(id *big.Int) {
 	tx.ChainID = id
 }
 
-func (tx *DynamicFeeTx) setGasPrice(gas *big.Int) {}
+func (tx *DynamicFeeTx) setGasPrice(gas *big.Int) {
+	tx.GasTipCap = gas
+}
 
 func (tx *DynamicFeeTx) setGasFeeCap(gas *big.Int) {
 	tx.GasFeeCap = gas
@@ -190,41 +192,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		txAccessList = make(TxAccessList, len(accessListVV))
 	}
 
-	for i, accessTupleVV := range accessListVV {
-		accessTupleElems, err := accessTupleVV.GetElems()
-		if err != nil {
-			return err
-		}
-
-		// Read the address
-		addressVV := accessTupleElems[0]
-
-		addressBytes, err := addressVV.Bytes()
-		if err != nil {
-			return err
-		}
-
-		txAccessList[i].Address = BytesToAddress(addressBytes)
-
-		// Read the storage keys
-		storageKeysArrayVV := accessTupleElems[1]
-
-		storageKeysElems, err := storageKeysArrayVV.GetElems()
-		if err != nil {
-			return err
-		}
-
-		txAccessList[i].StorageKeys = make([]Hash, len(storageKeysElems))
-
-		for j, storageKeyVV := range storageKeysElems {
-			storageKeyBytes, err := storageKeyVV.Bytes()
-			if err != nil {
-				return err
-			}
-
-			txAccessList[i].StorageKeys[j] = BytesToHash(storageKeyBytes)
-		}
-	}
+	txAccessList.unmarshallRLPFrom(p, accessListVV)
 
 	tx.setAccessList(txAccessList)
 
@@ -276,22 +244,7 @@ func (tx *DynamicFeeTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv.Set(arena.NewCopyBytes(tx.input()))
 
 	// Convert TxAccessList to RLP format and add it to the vv array.
-	accessListVV := arena.NewArray()
-
-	for _, accessTuple := range tx.accessList() {
-		accessTupleVV := arena.NewArray()
-		accessTupleVV.Set(arena.NewCopyBytes(accessTuple.Address.Bytes()))
-
-		storageKeysVV := arena.NewArray()
-		for _, storageKey := range accessTuple.StorageKeys {
-			storageKeysVV.Set(arena.NewCopyBytes(storageKey.Bytes()))
-		}
-
-		accessTupleVV.Set(storageKeysVV)
-		accessListVV.Set(accessTupleVV)
-	}
-
-	vv.Set(accessListVV)
+	vv.Set(tx.accessList().marshallRLPWith(arena))
 
 	// signature values
 	v, r, s := tx.rawSignatureValues()

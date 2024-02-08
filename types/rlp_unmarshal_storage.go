@@ -29,8 +29,7 @@ func (b *Body) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 
 	// transactions
 	if err = unmarshalRLPFrom(p, tuple[0], func(txType TxType, p *fastrlp.Parser, v *fastrlp.Value) error {
-		bTxn := &Transaction{}
-		bTxn.InitInnerData(txType)
+		bTxn := NewTxWithType(txType)
 
 		if err = bTxn.unmarshalStoreRLPFrom(p, v); err != nil {
 			return err
@@ -102,7 +101,7 @@ func (t *Transaction) unmarshalStoreRLPFrom(p *fastrlp.Parser, v *fastrlp.Value)
 	}
 
 	// consensus part
-	if err = t.Inner.unmarshalRLPFrom(p, elems[0]); err != nil {
+	if err = t.UnmarshalRLPFrom(p, elems[0]); err != nil {
 		return err
 	}
 

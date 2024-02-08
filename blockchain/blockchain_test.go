@@ -1869,8 +1869,6 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 	for _, transactionJSON := range transactionsJSON {
 		tr := transactionJSON.(map[string]interface{})
 
-		var txData types.TxData
-
 		txType := tr["type"].(string)
 
 		txTypeNumber, err := common.ParseUint64orHex(&txType)
@@ -1878,22 +1876,7 @@ func customJSONBlockUnmarshall(tb testing.TB, jsonData []byte) (*types.FullBlock
 			return nil, err
 		}
 
-		switch types.TxType(txTypeNumber) {
-		case types.AccessListTxType:
-			txData = &types.AccessListTxn{}
-		case types.StateTxType:
-			txData = &types.DynamicFeeTx{}
-		case types.LegacyTxType:
-			txData = &types.LegacyTx{}
-		default:
-			txData = &types.DynamicFeeTx{}
-		}
-
-		if txData == nil {
-			continue
-		}
-
-		transaction := types.NewTx(txData)
+		transaction := types.NewTxWithType(types.TxType(txTypeNumber))
 		transaction.SetHash(types.StringToHash(tr["hash"].(string)))
 		nonce := tr["nonce"].(string)
 

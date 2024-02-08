@@ -228,6 +228,14 @@ func (t *Transaction) SetHash(h Hash) {
 	t.Inner.setHash(h)
 }
 
+func (t *Transaction) MarshalRLPWith(a *fastrlp.Arena) *fastrlp.Value {
+	return t.Inner.marshalRLPWith(a)
+}
+
+func (t *Transaction) UnmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
+	return t.Inner.unmarshalRLPFrom(p, v)
+}
+
 // IsContractCreation checks if tx is contract creation
 func (t *Transaction) IsContractCreation() bool {
 	return t.To() == nil
@@ -377,4 +385,12 @@ func FindTxByHash(txs []*Transaction, hash Hash) (*Transaction, int) {
 	}
 
 	return nil, -1
+}
+
+func NewTxWithType(txType TxType) *Transaction {
+	tx := &Transaction{}
+
+	tx.InitInnerData(txType)
+
+	return tx
 }
