@@ -1,5 +1,5 @@
 ---
-name: "CLA Assistant"
+name: CLA Assistant
 on: # yamllint disable-line rule:truthy
   issue_comment:
     types:
@@ -10,7 +10,7 @@ on: # yamllint disable-line rule:truthy
       - synchronize
 
 jobs:
-  CLAssistant:
+  cla-assistant:
     runs-on: ubuntu-latest
     steps:
       - name: "Check CLA"
