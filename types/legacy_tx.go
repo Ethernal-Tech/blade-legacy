@@ -57,11 +57,10 @@ func (tx *LegacyTx) setGasPrice(gas *big.Int) {
 }
 
 func (tx *LegacyTx) setGasFeeCap(gas *big.Int) {
-	tx.GasPrice = gas
 }
 
 func (tx *LegacyTx) setGasTipCap(gas *big.Int) {
-	tx.GasPrice = gas
+
 }
 
 func (tx *LegacyTx) setTransactionType(t TxType) {}

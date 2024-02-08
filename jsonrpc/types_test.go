@@ -365,7 +365,8 @@ func Test_toBlock(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedJSON := loadTestData(t, "testsuite/block-with-txn-full.json")
-	require.JSONEq(t, expectedJSON, string(res))
+	str := string(res)
+	require.JSONEq(t, expectedJSON, str)
 }
 
 func loadTestData(t *testing.T, name string) string {
