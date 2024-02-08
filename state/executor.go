@@ -425,8 +425,28 @@ func (t *Transition) Txn() *Txn {
 	return t.state
 }
 
+// In case account checks should not be skipped, check if code hash is hash for
+// an empty object or empty code hash.
+func (t Transition) checkAccount(msg *types.Transaction) bool {
+	// If needed, skip account checks
+	if !msg.SkipAccountChecks {
+		codeHash := t.state.GetCodeHash(msg.From)
+		if codeHash != (types.Hash{}) && codeHash != types.EmptyCodeHash {
+			return false
+		}
+	}
+
+	return true
+}
+
 // Apply applies a new transaction
 func (t *Transition) Apply(msg *types.Transaction) (*runtime.ExecutionResult, error) {
+
+	if !t.checkAccount(msg) {
+		return nil, fmt.Errorf("%w: address %v, codehash: %v", ErrSenderNoEOA, msg.From.String(),
+			t.state.GetCodeHash(msg.From).String())
+	}
+
 	s := t.state.Snapshot()
 
 	result, err := t.apply(msg)
@@ -516,6 +536,7 @@ func (t *Transition) checkDynamicFees(msg *types.Transaction) error {
 
 var (
 	ErrNonceIncorrect        = errors.New("incorrect nonce")
+	ErrSenderNoEOA           = errors.New("sender not an eoa")
 	ErrNotEnoughFundsForGas  = errors.New("not enough funds to cover gas costs")
 	ErrBlockLimitReached     = errors.New("gas limit reached in the pool")
 	ErrIntrinsicGasOverflow  = errors.New("overflow in intrinsic gas calculation")

@@ -326,15 +326,16 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 	}
 
 	return &types.Transaction{
-		From:      t.From,
-		To:        t.To,
-		Nonce:     t.Nonce,
-		Value:     value,
-		Gas:       t.GasLimit[i.Gas],
-		GasPrice:  gasPrice,
-		GasFeeCap: t.MaxFeePerGas,
-		GasTipCap: t.MaxPriorityFeePerGas,
-		Input:     hex.MustDecodeHex(t.Data[i.Data]),
+		From:              t.From,
+		To:                t.To,
+		Nonce:             t.Nonce,
+		Value:             value,
+		Gas:               t.GasLimit[i.Gas],
+		GasPrice:          gasPrice,
+		GasFeeCap:         t.MaxFeePerGas,
+		GasTipCap:         t.MaxPriorityFeePerGas,
+		Input:             hex.MustDecodeHex(t.Data[i.Data]),
+		SkipAccountChecks: false,
 	}, nil
 }
 

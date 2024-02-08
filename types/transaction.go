@@ -62,6 +62,9 @@ type Transaction struct {
 	Hash      Hash
 	From      Address
 
+	// When set, the message nonce is not checked against the account nonce.
+	SkipAccountChecks bool
+
 	Type TxType
 
 	ChainID *big.Int
