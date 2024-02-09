@@ -53,7 +53,7 @@ jobs:
     with:
       environment: nightly
       scenario: EOA
-      setupTimeOut: "220s"
+      timeout: "220s"
       rate: "3000"
       timeUnit: "1s"
       duration: "10m"
@@ -76,7 +76,7 @@ jobs:
     with:
       environment: nightly
       scenario: ERC20
-      setupTimeOut: "220s"
+      timeout: "220s"
       rate: "1500"
       timeUnit: "1s"
       duration: "10m"
