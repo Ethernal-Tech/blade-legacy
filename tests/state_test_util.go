@@ -349,7 +349,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 	}
 
 	txType := types.LegacyTx
-	if isDynamicTransaction {
+	if isDynamiFeeTx {
 		txType = types.DynamicFeeTx
 	}
 
