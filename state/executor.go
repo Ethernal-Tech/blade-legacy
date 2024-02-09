@@ -1117,7 +1117,7 @@ func (t *Transition) GetNonce(addr types.Address) uint64 {
 }
 
 func (t *Transition) Selfdestruct(addr types.Address, beneficiary types.Address) {
-	if !t.state.HasSuicided(addr) {
+	if !t.config.London && !t.state.HasSuicided(addr) {
 		t.state.AddRefund(24000)
 	}
 
