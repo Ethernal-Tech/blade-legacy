@@ -431,7 +431,7 @@ func (t Transition) checkAccount(msg *types.Transaction) bool {
 	// If needed, skip account checks
 	if !msg.SkipAccountChecks {
 		codeHash := t.state.GetCodeHash(msg.From)
-		if codeHash != (types.Hash{}) && codeHash != types.EmptyCodeHash {
+		if codeHash != types.ZeroHash && codeHash != types.EmptyCodeHash {
 			return false
 		}
 	}
