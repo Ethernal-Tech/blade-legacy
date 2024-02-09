@@ -295,7 +295,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 
 	gasPrice := t.GasPrice
 
-	var isDynamicTransaction bool
+	isDynamiFeeTx := false
 	// If baseFee provided, set gasPrice to effectiveGasPrice.
 	if baseFee != nil {
 		if t.MaxFeePerGas == nil {
@@ -305,13 +305,13 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 		if t.MaxFeePerGas == nil {
 			t.MaxFeePerGas = new(big.Int)
 		} else {
-			isDynamicTransaction = true
+			isDynamiFeeTx = true
 		}
 
 		if t.MaxPriorityFeePerGas == nil {
 			t.MaxPriorityFeePerGas = t.MaxFeePerGas
 		} else {
-			isDynamicTransaction = true
+			isDynamiFeeTx = true
 		}
 
 		gasPrice = common.BigMin(new(big.Int).Add(t.MaxPriorityFeePerGas, baseFee), t.MaxFeePerGas)
@@ -334,7 +334,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 	}
 
 	// if tx is not dynamic and accessList is not nil, create an access list transaction
-	if !isDynamicTransaction && accessList != nil {
+	if !isDynamiFeeTx && accessList != nil {
 		return types.NewTx(&types.AccessListTxn{
 			From:       t.From,
 			To:         t.To,
