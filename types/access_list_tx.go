@@ -100,6 +100,7 @@ func (al TxAccessList) marshallRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 		accessTupleVV.Set(storageKeysVV)
 		accessListVV.Set(accessTupleVV)
 	}
+
 	return accessListVV
 }
 
@@ -291,7 +292,9 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 		txAccessList = make(TxAccessList, len(accessListVV))
 	}
 
-	txAccessList.unmarshallRLPFrom(p, accessListVV)
+	if err = txAccessList.unmarshallRLPFrom(p, accessListVV); err != nil {
+		return err
+	}
 
 	tx.setAccessList(txAccessList)
 

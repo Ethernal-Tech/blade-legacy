@@ -192,7 +192,9 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		txAccessList = make(TxAccessList, len(accessListVV))
 	}
 
-	txAccessList.unmarshallRLPFrom(p, accessListVV)
+	if err = txAccessList.unmarshallRLPFrom(p, accessListVV); err != nil {
+		return err
+	}
 
 	tx.setAccessList(txAccessList)
 
