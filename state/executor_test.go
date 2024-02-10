@@ -262,8 +262,9 @@ func Test_Transition_EIP2929(t *testing.T) {
 			transition := NewTransition(enabledForks, state, txn)
 			initialAccessList := runtime.NewAccessList()
 			initialAccessList.PrepareAccessList(transition.ctx.Origin, &addr, transition.precompiles.Addrs, nil)
+			transition.accessList = initialAccessList
 
-			result := transition.Call2(transition.ctx.Origin, addr, nil, big.NewInt(0), uint64(1000000), initialAccessList)
+			result := transition.Call2(transition.ctx.Origin, addr, nil, big.NewInt(0), uint64(1000000))
 			assert.Equal(t, tt.gasConsumed, result.GasUsed, "Gas consumption for %s is inaccurate according to EIP 2929", tt.name)
 		})
 	}

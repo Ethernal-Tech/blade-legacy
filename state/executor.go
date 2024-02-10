@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 
 	"github.com/hashicorp/go-hclog"
 
@@ -88,6 +89,7 @@ func (e *Executor) WriteGenesis(
 		gasPool:     uint64(env.GasLimit),
 		config:      config,
 		precompiles: precompiled.NewPrecompiled(),
+		journal:     &runtime.Journal{},
 	}
 
 	for addr, account := range alloc {
@@ -221,6 +223,7 @@ func (e *Executor) BeginTxn(
 		evm:         evm.NewEVM(),
 		precompiles: precompiled.NewPrecompiled(),
 		PostHook:    e.PostHook,
+		journal:     &runtime.Journal{},
 	}
 
 	// enable contract deployment allow list (if any)
@@ -283,6 +286,12 @@ type Transition struct {
 	txnBlockList        *addresslist.AddressList
 	bridgeAllowList     *addresslist.AddressList
 	bridgeBlockList     *addresslist.AddressList
+
+	// journaling
+	journal          *runtime.Journal
+	journalRevisions []runtime.JournalRevision
+
+	accessList *runtime.AccessList
 }
 
 func NewTransition(config chain.ForksInTime, snap Snapshot, radix *Txn) *Transition {
@@ -292,6 +301,7 @@ func NewTransition(config chain.ForksInTime, snap Snapshot, radix *Txn) *Transit
 		snap:        snap,
 		evm:         evm.NewEVM(),
 		precompiles: precompiled.NewPrecompiled(),
+		journal:     &runtime.Journal{},
 	}
 }
 
@@ -448,11 +458,11 @@ func (t *Transition) Apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 			t.state.GetCodeHash(sender).String())
 	}
 
-	s := t.state.Snapshot()
+	s := t.Snapshot()
 
 	result, err := t.apply(msg)
 	if err != nil {
-		if revertErr := t.state.RevertToSnapshot(s); revertErr != nil {
+		if revertErr := t.RevertToSnapshot(s); revertErr != nil {
 			return nil, revertErr
 		}
 	}
@@ -650,15 +660,17 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 		initialAccessList.PrepareAccessList(msg.From(), msg.To(), t.precompiles.Addrs, msg.AccessList())
 	}
 
+	t.accessList = initialAccessList
+
 	var result *runtime.ExecutionResult
 	if msg.IsContractCreation() {
-		result = t.Create2(msg.From(), msg.Input(), value, gasLeft, initialAccessList)
+		result = t.Create2(msg.From(), msg.Input(), value, gasLeft)
 	} else {
 		if err := t.state.IncrNonce(msg.From()); err != nil {
 			return nil, err
 		}
 
-		result = t.Call2(msg.From(), *(msg.To()), msg.Input(), value, gasLeft, initialAccessList)
+		result = t.Call2(msg.From(), *(msg.To()), msg.Input(), value, gasLeft)
 	}
 
 	refundQuotient := LegacyRefundQuotient
@@ -693,6 +705,8 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	coinbaseFee := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), effectiveTip)
 	t.state.AddBalance(t.ctx.Coinbase, coinbaseFee)
 
+	// nolint:godox
+	// TODO - burning of base fee should not be done in the EVM
 	// Burn some amount if the london hardfork is applied.
 	// Basically, burn amount is just transferred to the current burn contract.
 	// if t.config.London && msg.Type() != types.StateTx {
@@ -711,10 +725,9 @@ func (t *Transition) Create2(
 	code []byte,
 	value *big.Int,
 	gas uint64,
-	initialAccessList *runtime.AccessList,
 ) *runtime.ExecutionResult {
 	address := crypto.CreateAddress(caller, t.state.GetNonce(caller))
-	contract := runtime.NewContractCreation(1, caller, caller, address, value, gas, code, initialAccessList)
+	contract := runtime.NewContractCreation(1, caller, caller, address, value, gas, code)
 
 	return t.applyCreate(contract, t)
 }
@@ -725,9 +738,8 @@ func (t *Transition) Call2(
 	input []byte,
 	value *big.Int,
 	gas uint64,
-	initialAccessList *runtime.AccessList,
 ) *runtime.ExecutionResult {
-	c := runtime.NewContractCall(1, caller, caller, to, value, gas, t.state.GetCode(to), input, initialAccessList)
+	c := runtime.NewContractCall(1, caller, caller, to, value, gas, t.state.GetCode(to), input)
 
 	return t.applyCall(c, runtime.Call, t)
 }
@@ -816,7 +828,7 @@ func (t *Transition) applyCall(
 		}
 	}
 
-	snapshot := t.state.Snapshot()
+	snapshot := t.Snapshot()
 	t.state.TouchAccount(c.Address)
 
 	if callType == runtime.Call {
@@ -835,9 +847,7 @@ func (t *Transition) applyCall(
 
 	result = t.run(c, host)
 	if result.Failed() {
-		c.RevertJournal()
-
-		if err := t.state.RevertToSnapshot(snapshot); err != nil {
+		if err := t.RevertToSnapshot(snapshot); err != nil {
 			return &runtime.ExecutionResult{
 				GasLeft: c.Gas,
 				Err:     err,
@@ -882,8 +892,7 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 	// we add this to the access-list before taking a snapshot. Even if the creation fails,
 	// the access-list change should not be rolled back according to EIP2929 specs
 	if t.config.Berlin {
-		c.AddToJournal(&runtime.AccessListAddAccountChange{Address: c.Address})
-		c.AccessList.AddAddress(c.Address)
+		t.AddAddressToAccessList(c.Address)
 	}
 
 	// Check if there is a collision and the address already exists
@@ -895,7 +904,7 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 	}
 
 	// Take snapshot of the current state
-	snapshot := t.state.Snapshot()
+	snapshot := t.Snapshot()
 
 	if t.config.EIP158 {
 		// Force the creation of the account
@@ -958,9 +967,7 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 
 	result = t.run(c, host)
 	if result.Failed() {
-		c.RevertJournal()
-
-		if err := t.state.RevertToSnapshot(snapshot); err != nil {
+		if err := t.RevertToSnapshot(snapshot); err != nil {
 			return &runtime.ExecutionResult{
 				Err: err,
 			}
@@ -971,7 +978,7 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 
 	if t.config.EIP158 && len(result.ReturnValue) > SpuriousDragonMaxCodeSize {
 		// Contract size exceeds 'SpuriousDragon' size limit
-		if err := t.state.RevertToSnapshot(snapshot); err != nil {
+		if err := t.RevertToSnapshot(snapshot); err != nil {
 			return &runtime.ExecutionResult{
 				Err: err,
 			}
@@ -985,7 +992,7 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 
 	// Reject code starting with 0xEF if EIP-3541 is enabled.
 	if result.Err == nil && len(result.ReturnValue) >= 1 && result.ReturnValue[0] == 0xEF && t.config.London {
-		if err := t.state.RevertToSnapshot(snapshot); err != nil {
+		if err := t.RevertToSnapshot(snapshot); err != nil {
 			return &runtime.ExecutionResult{
 				Err: err,
 			}
@@ -1005,7 +1012,7 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 
 		// Out of gas creating the contract
 		if t.config.Homestead {
-			if err := t.state.RevertToSnapshot(snapshot); err != nil {
+			if err := t.RevertToSnapshot(snapshot); err != nil {
 				return &runtime.ExecutionResult{
 					Err: err,
 				}
@@ -1318,4 +1325,64 @@ func (t *Transition) captureCallEnd(c *runtime.Contract, result *runtime.Executi
 		result.ReturnValue,
 		result.Err,
 	)
+}
+
+func (t *Transition) AddToJournal(j runtime.JournalEntry) {
+	t.journal.Append(j)
+}
+
+func (t *Transition) Snapshot() int {
+	snapshot := t.state.Snapshot()
+	t.journalRevisions = append(t.journalRevisions, runtime.JournalRevision{ID: snapshot, Index: t.journal.Len()})
+
+	return snapshot
+}
+
+func (t *Transition) RevertToSnapshot(snapshot int) error {
+	if err := t.state.RevertToSnapshot(snapshot); err != nil {
+		return err
+	}
+
+	// Find the snapshot in the stack of valid snapshots.
+	idx := sort.Search(len(t.journalRevisions), func(i int) bool {
+		return t.journalRevisions[i].ID >= snapshot
+	})
+
+	if idx == len(t.journalRevisions) || t.journalRevisions[idx].ID != snapshot {
+		panic(fmt.Errorf("journal revision id %v cannot be reverted", snapshot))
+	}
+
+	journalIndex := t.journalRevisions[idx].Index
+
+	// Replay the journal to undo changes and remove invalidated snapshots
+	t.journal.Revert(t, journalIndex)
+	t.journalRevisions = t.journalRevisions[:idx]
+
+	return nil
+}
+
+func (t *Transition) AddSlotToAccessList(addr types.Address, slot types.Hash) {
+	t.journal.Append(&runtime.AccessListAddSlotChange{Address: addr, Slot: slot})
+	t.accessList.AddSlot(addr, slot)
+}
+
+func (t *Transition) AddAddressToAccessList(addr types.Address) {
+	t.journal.Append(&runtime.AccessListAddAccountChange{Address: addr})
+	t.accessList.AddAddress(addr)
+}
+
+func (t *Transition) ContainsAccessListAddress(addr types.Address) bool {
+	return t.accessList.ContainsAddress(addr)
+}
+
+func (t *Transition) ContainsAccessListSlot(addr types.Address, slot types.Hash) (bool, bool) {
+	return t.accessList.Contains(addr, slot)
+}
+
+func (t *Transition) DeleteAccessListAddress(addr types.Address) {
+	t.accessList.DeleteAddress(addr)
+}
+
+func (t *Transition) DeleteAccessListSlot(addr types.Address, slot types.Hash) {
+	t.accessList.DeleteSlot(addr, slot)
 }
