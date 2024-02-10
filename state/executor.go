@@ -90,6 +90,7 @@ func (e *Executor) WriteGenesis(
 		config:      config,
 		precompiles: precompiled.NewPrecompiled(),
 		journal:     &runtime.Journal{},
+		accessList:  runtime.NewAccessList(),
 	}
 
 	for addr, account := range alloc {
@@ -303,6 +304,7 @@ func NewTransition(config chain.ForksInTime, snap Snapshot, radix *Txn) *Transit
 		evm:         evm.NewEVM(),
 		precompiles: precompiled.NewPrecompiled(),
 		journal:     &runtime.Journal{},
+		accessList:  runtime.NewAccessList(),
 	}
 }
 
