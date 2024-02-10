@@ -1487,7 +1487,6 @@ func Test_opSload(t *testing.T) {
 			op:   SLOAD,
 			contract: &runtime.Contract{
 				Address: address1,
-				Journal: &runtime.Journal{},
 			},
 			config: &chain.ForksInTime{
 				Berlin: true,
@@ -1525,6 +1524,9 @@ func Test_opSload(t *testing.T) {
 						key1: val1,
 					},
 				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
+				},
 			},
 		},
 		{
@@ -1532,7 +1534,6 @@ func Test_opSload(t *testing.T) {
 			op:   SLOAD,
 			contract: &runtime.Contract{
 				Address: address1,
-				Journal: &runtime.Journal{},
 			},
 			config: &chain.ForksInTime{
 				Berlin: true,
@@ -1574,6 +1575,9 @@ func Test_opSload(t *testing.T) {
 						key1: val1,
 					},
 				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
+				},
 			},
 		},
 		{
@@ -1581,7 +1585,6 @@ func Test_opSload(t *testing.T) {
 			op:   SLOAD,
 			contract: &runtime.Contract{
 				Address: address1,
-				Journal: &runtime.Journal{},
 			},
 			config: &chain.ForksInTime{
 				Berlin:   false,
@@ -1616,6 +1619,9 @@ func Test_opSload(t *testing.T) {
 						key1: val1,
 					},
 				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
+				},
 			},
 		},
 	}
@@ -1634,8 +1640,8 @@ func Test_opSload(t *testing.T) {
 			s.stack = tt.initState.stack
 			s.memory = tt.initState.memory
 			s.config = tt.config
+			tt.mockHost.accessList = tt.initState.accessList
 			s.host = tt.mockHost
-			tt.contract.AccessList = tt.initState.accessList
 
 			opSload(s)
 
@@ -1643,7 +1649,7 @@ func Test_opSload(t *testing.T) {
 			assert.Equal(t, tt.resultState.sp, s.sp, "sp in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stack, s.stack, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
-			assert.Equal(t, tt.resultState.accessList, tt.contract.AccessList, "accesslist in state after execution is not correct")
+			assert.Equal(t, tt.resultState.accessList, tt.mockHost.accessList, "accesslist in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
 			assert.Equal(t, tt.resultState.err, s.err, "err in state after execution is not correct")
 		})
@@ -1711,6 +1717,9 @@ func TestCreate(t *testing.T) {
 					GasLeft: 500,
 					GasUsed: 500,
 				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
+				},
 			},
 		},
 		{
@@ -1749,7 +1758,11 @@ func TestCreate(t *testing.T) {
 				stop: true,
 				err:  errWriteProtection,
 			},
-			mockHost: &mockHostForInstructions{},
+			mockHost: &mockHostForInstructions{
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
+				},
+			},
 		},
 		{
 			name:     "should throw errOpCodeNotFound when op is CREATE2 and config.Constantinople is disabled",
@@ -1787,7 +1800,11 @@ func TestCreate(t *testing.T) {
 				stop: true,
 				err:  errOpCodeNotFound,
 			},
-			mockHost: &mockHostForInstructions{},
+			mockHost: &mockHostForInstructions{
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
+				},
+			},
 		},
 		{
 			name: "should set zero address if op is CREATE and contract call throws ErrCodeStoreOutOfGas",
@@ -1834,6 +1851,9 @@ func TestCreate(t *testing.T) {
 				callxResult: &runtime.ExecutionResult{
 					GasLeft: 1000,
 					Err:     runtime.ErrCodeStoreOutOfGas,
+				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
 				},
 			},
 		},
@@ -1882,6 +1902,9 @@ func TestCreate(t *testing.T) {
 				callxResult: &runtime.ExecutionResult{
 					GasLeft: 1000,
 					Err:     errRevert,
+				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
 				},
 			},
 		},
@@ -1933,6 +1956,9 @@ func TestCreate(t *testing.T) {
 					// if it is ErrCodeStoreOutOfGas then we set GasLeft to 0
 					GasLeft: 0,
 					Err:     runtime.ErrCodeStoreOutOfGas,
+				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
 				},
 			},
 		},
@@ -2284,9 +2310,7 @@ func Test_opCall(t *testing.T) {
 			name: "should not copy result into memory if outSize is 0",
 			op:   STATICCALL,
 			contract: &runtime.Contract{
-				Static:     true,
-				Journal:    &runtime.Journal{},
-				AccessList: runtime.NewAccessList(),
+				Static: true,
 			},
 			config: allEnabledForks,
 			initState: &state{
@@ -2310,6 +2334,9 @@ func Test_opCall(t *testing.T) {
 			mockHost: &mockHostForInstructions{
 				callxResult: &runtime.ExecutionResult{
 					ReturnValue: []byte{0x03},
+				},
+				mockHost: mockHost{
+					accessList: runtime.NewAccessList(),
 				},
 			},
 		},

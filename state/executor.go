@@ -224,6 +224,7 @@ func (e *Executor) BeginTxn(
 		precompiles: precompiled.NewPrecompiled(),
 		PostHook:    e.PostHook,
 		journal:     &runtime.Journal{},
+		accessList:  runtime.NewAccessList(),
 	}
 
 	// enable contract deployment allow list (if any)

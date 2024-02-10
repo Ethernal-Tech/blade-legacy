@@ -9,7 +9,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/state"
 	itrie "github.com/0xPolygon/polygon-edge/state/immutable-trie"
-	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,7 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 	transition := newTestTransition(t, nil)
 
 	// deploy a contract
-	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000, runtime.NewAccessList())
+	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
 	provider := &stateProvider{
@@ -93,7 +92,7 @@ func TestSystemState_GetEpoch(t *testing.T) {
 	transition := newTestTransition(t, nil)
 
 	// deploy a contract
-	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000, runtime.NewAccessList())
+	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
 	provider := &stateProvider{

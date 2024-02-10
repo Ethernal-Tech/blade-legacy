@@ -138,6 +138,15 @@ func (m *mockHostF) GetRefund() uint64 {
 	return m.refund
 }
 
+func (m *mockHostF) AddSlotToAccessList(addr types.Address, slot types.Hash) {}
+func (m *mockHostF) AddAddressToAccessList(addr types.Address)               {}
+func (m *mockHostF) ContainsAccessListAddress(addr types.Address) bool       { return false }
+func (m *mockHostF) ContainsAccessListSlot(addr types.Address, slot types.Hash) (bool, bool) {
+	return false, false
+}
+func (m *mockHostF) DeleteAccessListAddress(addr types.Address)               {}
+func (m *mockHostF) DeleteAccessListSlot(addr types.Address, slot types.Hash) {}
+
 func FuzzTestEVM(f *testing.F) {
 	seed := []byte{
 		PUSH1, 0x01, PUSH1, 0x02, ADD,

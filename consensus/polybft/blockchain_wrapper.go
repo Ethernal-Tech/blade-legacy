@@ -12,7 +12,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/state"
-	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/contract"
@@ -219,7 +218,6 @@ func (s *stateProvider) Call(addr ethgo.Address, input []byte, opts *contract.Ca
 		input,
 		big.NewInt(0),
 		10000000,
-		runtime.NewAccessList(),
 	)
 	if result.Failed() {
 		return nil, result.Err
