@@ -485,6 +485,14 @@ func (t *Transition) ContextPtr() *runtime.TxContext {
 
 func (t *Transition) subGasLimitPrice(msg *types.Transaction) error {
 	upfrontGasCost := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GetGasPrice(t.ctx.BaseFee.Uint64()))
+	balanceCheck := new(big.Int).Set(upfrontGasCost)
+	if msg.Type() == types.DynamicFeeTx {
+		balanceCheck.Add(balanceCheck, msg.Value())
+	}
+
+	if have, want := t.state.GetBalance(msg.From()), balanceCheck; have.Cmp(want) < 0 {
+		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, msg.From(), have, want)
+	}
 
 	if err := t.state.SubBalance(msg.From(), upfrontGasCost); err != nil {
 		if errors.Is(err, runtime.ErrNotEnoughFunds) {
@@ -564,6 +572,7 @@ var (
 	ErrBlockLimitReached     = errors.New("gas limit reached in the pool")
 	ErrIntrinsicGasOverflow  = errors.New("overflow in intrinsic gas calculation")
 	ErrNotEnoughIntrinsicGas = errors.New("not enough gas supplied for intrinsic gas costs")
+	ErrInsufficientFunds     = errors.New("insufficient funds for gas * price + value")
 
 	// ErrTipAboveFeeCap is a sanity error to ensure no one is able to specify a
 	// transaction with a tip higher than the total fee cap.
