@@ -488,6 +488,9 @@ func (t *Transition) subGasLimitPrice(msg *types.Transaction) error {
 	balanceCheck := new(big.Int).Set(upfrontGasCost)
 	if msg.Type() == types.DynamicFeeTx {
 		balanceCheck.Add(balanceCheck, msg.Value())
+		balanceCheck.SetUint64(msg.Gas())
+		balanceCheck = balanceCheck.Mul(balanceCheck, msg.GasFeeCap())
+		balanceCheck.Add(balanceCheck, msg.Value())
 	}
 
 	if have, want := t.state.GetBalance(msg.From()), balanceCheck; have.Cmp(want) < 0 {

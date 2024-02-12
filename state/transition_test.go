@@ -60,7 +60,7 @@ func TestSubGasLimitPrice(t *testing.T) {
 			gas:      10,
 			gasPrice: 10,
 			// should return ErrNotEnoughFundsForGas when state.SubBalance returns ErrNotEnoughFunds
-			expectedErr: ErrNotEnoughFundsForGas,
+			expectedErr: ErrInsufficientFunds,
 		},
 	}
 
@@ -78,7 +78,12 @@ func TestSubGasLimitPrice(t *testing.T) {
 
 			err := transition.subGasLimitPrice(msg)
 
-			assert.Equal(t, tt.expectedErr, err)
+			if tt.expectedErr != nil {
+				assert.ErrorContains(t, err, tt.expectedErr.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
 			if err == nil {
 				// should reduce cost for gas from balance
 				reducedAmount := new(big.Int).Mul(msg.GasPrice(), big.NewInt(int64(msg.Gas())))
