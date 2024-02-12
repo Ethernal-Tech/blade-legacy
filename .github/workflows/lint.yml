@@ -17,6 +17,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Lint
-        uses: bane/golangci-lint-action@v4.0.0
+        uses: golangci/golangci-lint-action@v4.0.0
         with:
           args: --timeout 10m --verbose
