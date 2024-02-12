@@ -87,7 +87,8 @@ func TestLondonSignerSender(t *testing.T) {
 			}
 
 			chainID := tc.chainID.Uint64()
-			signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID, true))
+			//signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID, true))
+			signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID))
 
 			signedTx, err := signer.SignTx(txn, key)
 			require.NoError(t, err, "unable to sign transaction")
@@ -103,7 +104,9 @@ func TestLondonSignerSender(t *testing.T) {
 func Test_LondonSigner_Sender(t *testing.T) {
 	t.Parallel()
 
-	signer := NewLondonOrBerlinSigner(100, true, NewEIP155Signer(100, true))
+	//signer := NewLondonOrBerlinSigner(100, true, NewEIP155Signer(100, true))
+	signer := NewLondonOrBerlinSigner(100, true, NewEIP155Signer(100))
+
 	to := types.StringToAddress("0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF")
 
 	r, ok := big.NewInt(0).SetString("102623819621514684481463796449525884981685455700611671612296611353030973716382", 10)
