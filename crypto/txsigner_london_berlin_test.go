@@ -87,7 +87,6 @@ func TestLondonSignerSender(t *testing.T) {
 			}
 
 			chainID := tc.chainID.Uint64()
-			//signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID, true))
 			signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID))
 
 			signedTx, err := signer.SignTx(txn, key)

@@ -111,7 +111,7 @@ type result struct {
 func TestAddTxErrors(t *testing.T) {
 	t.Parallel()
 
-	poolSigner := crypto.NewEIP155Signer(100, true)
+	poolSigner := crypto.NewEIP155Signer(100)
 
 	// Generate a private key and address
 	defaultKey, defaultAddr := tests.GenerateKeyAndAddr(t)
@@ -581,7 +581,7 @@ func TestAddGossipTx(t *testing.T) {
 	t.Parallel()
 
 	key, sender := tests.GenerateKeyAndAddr(t)
-	signer := crypto.NewEIP155Signer(100, true)
+	signer := crypto.NewEIP155Signer(100)
 	tx := newTx(types.ZeroAddress, 1, 1)
 
 	t.Run("node is a validator", func(t *testing.T) {
@@ -2132,7 +2132,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 func Test_TxPool_validateTx(t *testing.T) {
 	t.Parallel()
 
-	signer := crypto.NewEIP155Signer(100, true)
+	signer := crypto.NewEIP155Signer(100)
 	// Generate a private key and address
 	defaultKey, defaultAddr := tests.GenerateKeyAndAddr(t)
 
@@ -2377,7 +2377,7 @@ func (e *eoa) signTx(t *testing.T, tx *types.Transaction, signer crypto.TxSigner
 	return signedTx
 }
 
-var signerEIP155 = crypto.NewEIP155Signer(100, true)
+var signerEIP155 = crypto.NewEIP155Signer(100)
 
 func TestResetAccounts_Promoted(t *testing.T) {
 	t.Parallel()
@@ -3531,7 +3531,7 @@ func TestAddTxsInOrder(t *testing.T) {
 	pool, err := newTestPool()
 	require.NoError(t, err)
 
-	signer := crypto.NewEIP155Signer(100, true)
+	signer := crypto.NewEIP155Signer(100)
 
 	pool.SetSigner(signer)
 	pool.Start()
@@ -3634,7 +3634,7 @@ func TestAddTx_TxReplacement(t *testing.T) {
 		secondAccountNonce = 2
 	)
 
-	poolSigner := crypto.NewEIP155Signer(100, true)
+	poolSigner := crypto.NewEIP155Signer(100)
 	firstKey, firstKeyAddr := tests.GenerateKeyAndAddr(t)
 	secondKey, secondKeyAddr := tests.GenerateKeyAndAddr(t)
 
@@ -3748,7 +3748,7 @@ func getDefaultEnabledForks() *chain.Forks {
 
 func BenchmarkAddTxTime(b *testing.B) {
 	b.Run("benchmark add one tx", func(b *testing.B) {
-		signer := crypto.NewEIP155Signer(100, true)
+		signer := crypto.NewEIP155Signer(100)
 
 		key, err := crypto.GenerateECDSAKey()
 		if err != nil {
@@ -3776,7 +3776,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 	})
 
 	b.Run("benchmark fill account", func(b *testing.B) {
-		signer := crypto.NewEIP155Signer(100, true)
+		signer := crypto.NewEIP155Signer(100)
 
 		key, err := crypto.GenerateECDSAKey()
 		if err != nil {
