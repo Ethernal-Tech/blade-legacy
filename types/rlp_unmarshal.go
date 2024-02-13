@@ -386,8 +386,12 @@ func (t *Transaction) UnmarshalRLP(input []byte) error {
 
 type rlpValues []*fastrlp.Value
 
-func (r rlpValues) dequeueValue() *fastrlp.Value {
-	val := r[0]
-	r = r[1:]
+func (r *rlpValues) dequeueValue() *fastrlp.Value {
+	if len(*r) == 0 {
+		return nil
+	}
+	val := (*r)[0]
+	*r = (*r)[1:]
+
 	return val
 }
