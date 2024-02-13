@@ -77,17 +77,19 @@ func TestLondonSignerSender(t *testing.T) {
 					To:       &recipient,
 					Value:    big.NewInt(1),
 					GasPrice: big.NewInt(5),
+					ChainID:  tc.chainID,
 				})
 			case types.DynamicFeeTx, types.LegacyTx, types.StateTx:
 				txn = types.NewTx(&types.MixedTxn{
 					To:       &recipient,
 					Value:    big.NewInt(1),
 					GasPrice: big.NewInt(5),
+					ChainID:  tc.chainID,
 				})
 			}
 
 			chainID := tc.chainID.Uint64()
-			signer := NewLondonOrBerlinSigner(chainID, true, NewEIP155Signer(chainID))
+			signer := NewLondonSigner(chainID)
 
 			signedTx, err := signer.SignTx(txn, key)
 			require.NoError(t, err, "unable to sign transaction")
@@ -103,8 +105,7 @@ func TestLondonSignerSender(t *testing.T) {
 func Test_LondonSigner_Sender(t *testing.T) {
 	t.Parallel()
 
-	//signer := NewLondonOrBerlinSigner(100, true, NewEIP155Signer(100, true))
-	signer := NewLondonOrBerlinSigner(100, true, NewEIP155Signer(100))
+	signer := NewLondonSigner(100)
 
 	to := types.StringToAddress("0xDeaDbeefdEAdbeefdEadbEEFdeadbeEFdEaDbeeF")
 

@@ -74,6 +74,7 @@ func TestEIP155Signer_Sender(t *testing.T) {
 				To:       &toAddress,
 				Value:    big.NewInt(1),
 				GasPrice: big.NewInt(0),
+				ChainID:  testCase.chainID,
 			})
 
 			signer := NewEIP155Signer(
@@ -110,6 +111,7 @@ func TestEIP155Signer_ChainIDMismatch(t *testing.T) {
 			To:       &toAddress,
 			Value:    big.NewInt(1),
 			GasPrice: big.NewInt(0),
+			ChainID:  big.NewInt(int64(chainIDTop)),
 		})
 
 		//signer := NewEIP155Signer(chainIDTop, true)
