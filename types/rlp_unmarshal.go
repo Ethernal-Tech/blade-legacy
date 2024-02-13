@@ -390,6 +390,7 @@ func (r *rlpValues) dequeueValue() *fastrlp.Value {
 	if len(*r) == 0 {
 		return nil
 	}
+
 	val := (*r)[0]
 	*r = (*r)[1:]
 

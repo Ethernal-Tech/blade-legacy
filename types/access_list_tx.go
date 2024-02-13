@@ -204,9 +204,13 @@ func (tx *AccessListTxn) setHash(h Hash) {
 // Use UnmarshalRLP in most cases
 func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	numOfElems := 11
-	var values rlpValues
 
-	values, err := v.GetElems()
+	var (
+		values rlpValues
+		err    error
+	)
+
+	values, err = v.GetElems()
 	if err != nil {
 		return err
 	}
