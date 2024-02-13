@@ -81,17 +81,8 @@ func (e *Executor) WriteGenesis(
 		ChainID: e.config.ChainID,
 	}
 
-	transition := &Transition{
-		logger:      e.logger,
-		ctx:         env,
-		state:       txn,
-		auxState:    e.state,
-		gasPool:     uint64(env.GasLimit),
-		config:      config,
-		precompiles: precompiled.NewPrecompiled(),
-		journal:     &runtime.Journal{},
-		accessList:  runtime.NewAccessList(),
-	}
+	transition := NewTransition(e.logger, config, snap, txn)
+	transition.ctx = env
 
 	for addr, account := range alloc {
 		if account.Balance != nil {
@@ -182,7 +173,7 @@ func (e *Executor) BeginTxn(
 ) (*Transition, error) {
 	forkConfig := e.config.Forks.At(header.Number)
 
-	auxSnap2, err := e.state.NewSnapshotAt(parentRoot)
+	snap, err := e.state.NewSnapshotAt(parentRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +186,7 @@ func (e *Executor) BeginTxn(
 		}
 	}
 
-	newTxn := NewTxn(auxSnap2)
+	newTxn := NewTxn(snap)
 
 	txCtx := runtime.TxContext{
 		Coinbase:     coinbaseReceiver,
@@ -208,62 +199,47 @@ func (e *Executor) BeginTxn(
 		BurnContract: burnContract,
 	}
 
-	txn := &Transition{
-		logger:   e.logger,
-		ctx:      txCtx,
-		state:    newTxn,
-		snap:     auxSnap2,
-		getHash:  e.GetHash(header),
-		auxState: e.state,
-		config:   forkConfig,
-		gasPool:  uint64(txCtx.GasLimit),
-
-		receipts: []*types.Receipt{},
-		totalGas: 0,
-
-		evm:         evm.NewEVM(),
-		precompiles: precompiled.NewPrecompiled(),
-		PostHook:    e.PostHook,
-		journal:     &runtime.Journal{},
-		accessList:  runtime.NewAccessList(),
-	}
+	t := NewTransition(e.logger, forkConfig, snap, newTxn)
+	t.PostHook = e.PostHook
+	t.getHash = e.GetHash(header)
+	t.ctx = txCtx
+	t.gasPool = uint64(txCtx.GasLimit)
 
 	// enable contract deployment allow list (if any)
 	if e.config.ContractDeployerAllowList != nil {
-		txn.deploymentAllowList = addresslist.NewAddressList(txn, contracts.AllowListContractsAddr)
+		t.deploymentAllowList = addresslist.NewAddressList(t, contracts.AllowListContractsAddr)
 	}
 
 	if e.config.ContractDeployerBlockList != nil {
-		txn.deploymentBlockList = addresslist.NewAddressList(txn, contracts.BlockListContractsAddr)
+		t.deploymentBlockList = addresslist.NewAddressList(t, contracts.BlockListContractsAddr)
 	}
 
 	// enable transactions allow list (if any)
 	if e.config.TransactionsAllowList != nil {
-		txn.txnAllowList = addresslist.NewAddressList(txn, contracts.AllowListTransactionsAddr)
+		t.txnAllowList = addresslist.NewAddressList(t, contracts.AllowListTransactionsAddr)
 	}
 
 	if e.config.TransactionsBlockList != nil {
-		txn.txnBlockList = addresslist.NewAddressList(txn, contracts.BlockListTransactionsAddr)
+		t.txnBlockList = addresslist.NewAddressList(t, contracts.BlockListTransactionsAddr)
 	}
 
 	// enable transactions allow list (if any)
 	if e.config.BridgeAllowList != nil {
-		txn.bridgeAllowList = addresslist.NewAddressList(txn, contracts.AllowListBridgeAddr)
+		t.bridgeAllowList = addresslist.NewAddressList(t, contracts.AllowListBridgeAddr)
 	}
 
 	if e.config.BridgeBlockList != nil {
-		txn.bridgeBlockList = addresslist.NewAddressList(txn, contracts.BlockListBridgeAddr)
+		t.bridgeBlockList = addresslist.NewAddressList(t, contracts.BlockListBridgeAddr)
 	}
 
-	return txn, nil
+	return t, nil
 }
 
 type Transition struct {
 	logger hclog.Logger
 
 	// dummy
-	auxState State
-	snap     Snapshot
+	snap Snapshot
 
 	config  chain.ForksInTime
 	state   *Txn
@@ -296,8 +272,9 @@ type Transition struct {
 	accessList *runtime.AccessList
 }
 
-func NewTransition(config chain.ForksInTime, snap Snapshot, radix *Txn) *Transition {
+func NewTransition(logger hclog.Logger, config chain.ForksInTime, snap Snapshot, radix *Txn) *Transition {
 	return &Transition{
+		logger:      logger,
 		config:      config,
 		state:       radix,
 		snap:        snap,
@@ -486,6 +463,7 @@ func (t *Transition) ContextPtr() *runtime.TxContext {
 func (t *Transition) subGasLimitPrice(msg *types.Transaction) error {
 	upfrontGasCost := new(big.Int).Mul(new(big.Int).SetUint64(msg.Gas()), msg.GetGasPrice(t.ctx.BaseFee.Uint64()))
 	balanceCheck := new(big.Int).Set(upfrontGasCost)
+
 	if msg.Type() == types.DynamicFeeTx {
 		balanceCheck.Add(balanceCheck, msg.Value())
 		balanceCheck.SetUint64(msg.Gas())
