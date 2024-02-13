@@ -91,25 +91,19 @@ func (tx *LegacyTx) setHash(h Hash) { tx.Hash = h }
 // Use UnmarshalRLP in most cases
 func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	num := 9
+	var values rlpValues
 
-	elems, err := v.GetElems()
+	values, err := v.GetElems()
 	if err != nil {
 		return err
 	}
 
-	getElem := func() *fastrlp.Value {
-		val := elems[0]
-		elems = elems[1:]
-
-		return val
-	}
-
-	if numElems := len(elems); numElems != num {
+	if numElems := len(values); numElems != num {
 		return fmt.Errorf("legacy incorrect number of transaction elements, expected %d but found %d", num, numElems)
 	}
 
 	// nonce
-	txNonce, err := getElem().GetUint64()
+	txNonce, err := values.dequeueValue().GetUint64()
 	if err != nil {
 		return err
 	}
@@ -118,14 +112,14 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 
 	// gasPrice
 	txGasPrice := new(big.Int)
-	if err = getElem().GetBigInt(txGasPrice); err != nil {
+	if err = values.dequeueValue().GetBigInt(txGasPrice); err != nil {
 		return err
 	}
 
 	tx.setGasPrice(txGasPrice)
 
 	// gas
-	txGas, err := getElem().GetUint64()
+	txGas, err := values.dequeueValue().GetUint64()
 	if err != nil {
 		return err
 	}
@@ -133,7 +127,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 	tx.setGas(txGas)
 
 	// to
-	if vv, _ := getElem().Bytes(); len(vv) == 20 {
+	if vv, _ := values.dequeueValue().Bytes(); len(vv) == 20 {
 		// address
 		addr := BytesToAddress(vv)
 		tx.setTo(&addr)
@@ -144,7 +138,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 
 	// value
 	txValue := new(big.Int)
-	if err = getElem().GetBigInt(txValue); err != nil {
+	if err = values.dequeueValue().GetBigInt(txValue); err != nil {
 		return err
 	}
 
@@ -153,7 +147,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 	// input
 	var txInput []byte
 
-	txInput, err = getElem().GetBytes(txInput)
+	txInput, err = values.dequeueValue().GetBytes(txInput)
 	if err != nil {
 		return err
 	}
@@ -162,19 +156,19 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 
 	// V
 	txV := new(big.Int)
-	if err = getElem().GetBigInt(txV); err != nil {
+	if err = values.dequeueValue().GetBigInt(txV); err != nil {
 		return err
 	}
 
 	// R
 	txR := new(big.Int)
-	if err = getElem().GetBigInt(txR); err != nil {
+	if err = values.dequeueValue().GetBigInt(txR); err != nil {
 		return err
 	}
 
 	// S
 	txS := new(big.Int)
-	if err = getElem().GetBigInt(txS); err != nil {
+	if err = values.dequeueValue().GetBigInt(txS); err != nil {
 		return err
 	}
 

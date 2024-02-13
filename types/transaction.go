@@ -372,10 +372,6 @@ func (t *Transaction) GetGasFeeCap() *big.Int {
 	}
 }
 
-func (t *Transaction) SetTxData(data TxData) {
-	t.Inner = data
-}
-
 // FindTxByHash returns transaction and its index from a slice of transactions
 func FindTxByHash(txs []*Transaction, hash Hash) (*Transaction, int) {
 	for idx, txn := range txs {

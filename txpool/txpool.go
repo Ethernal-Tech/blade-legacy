@@ -671,6 +671,7 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 	}
 
 	if tx.GetGasPrice(baseFee).Cmp(new(big.Int).SetUint64(p.priceLimit)) < 0 {
+		// Make sure that the transaction is not underpriced
 		metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
 
 		return ErrUnderpriced

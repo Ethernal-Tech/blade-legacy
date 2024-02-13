@@ -204,33 +204,27 @@ func (tx *AccessListTxn) setHash(h Hash) {
 // Use UnmarshalRLP in most cases
 func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	numOfElems := 11
+	var values rlpValues
 
-	elems, err := v.GetElems()
+	values, err := v.GetElems()
 	if err != nil {
 		return err
 	}
 
-	getElem := func() *fastrlp.Value {
-		val := elems[0]
-		elems = elems[1:]
-
-		return val
-	}
-
-	if numElems := len(elems); numElems != numOfElems {
+	if numElems := len(values); numElems != numOfElems {
 		return fmt.Errorf("incorrect number of transaction elements, expected %d but found %d", numOfElems, numElems)
 	}
 
 	txChainID := new(big.Int)
 
-	if err = getElem().GetBigInt(txChainID); err != nil {
+	if err = values.dequeueValue().GetBigInt(txChainID); err != nil {
 		return err
 	}
 
 	tx.setChainID(txChainID)
 
 	// nonce
-	txNonce, err := getElem().GetUint64()
+	txNonce, err := values.dequeueValue().GetUint64()
 	if err != nil {
 		return err
 	}
@@ -239,14 +233,14 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	// gasPrice
 	txGasPrice := new(big.Int)
-	if err = getElem().GetBigInt(txGasPrice); err != nil {
+	if err = values.dequeueValue().GetBigInt(txGasPrice); err != nil {
 		return err
 	}
 
 	tx.setGasPrice(txGasPrice)
 
 	// gas
-	txGas, err := getElem().GetUint64()
+	txGas, err := values.dequeueValue().GetUint64()
 	if err != nil {
 		return err
 	}
@@ -254,7 +248,7 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 	tx.setGas(txGas)
 
 	// to
-	if vv, _ := getElem().Bytes(); len(vv) == 20 {
+	if vv, _ := values.dequeueValue().Bytes(); len(vv) == 20 {
 		// address
 		addr := BytesToAddress(vv)
 		tx.setTo(&addr)
@@ -265,7 +259,7 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	// value
 	txValue := new(big.Int)
-	if err = getElem().GetBigInt(txValue); err != nil {
+	if err = values.dequeueValue().GetBigInt(txValue); err != nil {
 		return err
 	}
 
@@ -274,7 +268,7 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 	// input
 	var txInput []byte
 
-	txInput, err = getElem().GetBytes(txInput)
+	txInput, err = values.dequeueValue().GetBytes(txInput)
 	if err != nil {
 		return err
 	}
@@ -282,7 +276,7 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 	tx.setInput(txInput)
 
 	//accessList
-	accessListVV, err := getElem().GetElems()
+	accessListVV, err := values.dequeueValue().GetElems()
 	if err != nil {
 		return err
 	}
@@ -300,19 +294,19 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	// V
 	txV := new(big.Int)
-	if err = getElem().GetBigInt(txV); err != nil {
+	if err = values.dequeueValue().GetBigInt(txV); err != nil {
 		return err
 	}
 
 	// R
 	txR := new(big.Int)
-	if err = getElem().GetBigInt(txR); err != nil {
+	if err = values.dequeueValue().GetBigInt(txR); err != nil {
 		return err
 	}
 
 	// S
 	txS := new(big.Int)
-	if err = getElem().GetBigInt(txS); err != nil {
+	if err = values.dequeueValue().GetBigInt(txS); err != nil {
 		return err
 	}
 

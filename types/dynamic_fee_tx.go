@@ -97,33 +97,27 @@ func (tx *DynamicFeeTx) setHash(h Hash) { tx.Hash = h }
 // Use UnmarshalRLP in most cases
 func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	numOfElems := 12
+	var values rlpValues
 
-	elems, err := v.GetElems()
+	values, err := v.GetElems()
 	if err != nil {
 		return err
 	}
 
-	getElem := func() *fastrlp.Value {
-		val := elems[0]
-		elems = elems[1:]
-
-		return val
-	}
-
-	if numElems := len(elems); numElems != numOfElems {
+	if numElems := len(values); numElems != numOfElems {
 		return fmt.Errorf("incorrect number of transaction elements, expected %d but found %d", numOfElems, numElems)
 	}
 
 	// Load Chain ID
 	txChainID := new(big.Int)
-	if err = getElem().GetBigInt(txChainID); err != nil {
+	if err = values.dequeueValue().GetBigInt(txChainID); err != nil {
 		return err
 	}
 
 	tx.setChainID(txChainID)
 
 	// nonce
-	txNonce, err := getElem().GetUint64()
+	txNonce, err := values.dequeueValue().GetUint64()
 	if err != nil {
 		return err
 	}
@@ -132,7 +126,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 
 	// gasTipCap
 	txGasTipCap := new(big.Int)
-	if err = getElem().GetBigInt(txGasTipCap); err != nil {
+	if err = values.dequeueValue().GetBigInt(txGasTipCap); err != nil {
 		return err
 	}
 
@@ -140,14 +134,14 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 
 	// gasFeeCap
 	txGasFeeCap := new(big.Int)
-	if err = getElem().GetBigInt(txGasFeeCap); err != nil {
+	if err = values.dequeueValue().GetBigInt(txGasFeeCap); err != nil {
 		return err
 	}
 
 	tx.setGasFeeCap(txGasFeeCap)
 
 	// gas
-	txGas, err := getElem().GetUint64()
+	txGas, err := values.dequeueValue().GetUint64()
 	if err != nil {
 		return err
 	}
@@ -155,8 +149,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 	tx.setGas(txGas)
 
 	// to
-	if vv, _ := getElem().Bytes(); len(vv) == 20 {
-		// address
+	if vv, _ := values.dequeueValue().Bytes(); len(vv) == 20 {
 		addr := BytesToAddress(vv)
 		tx.setTo(&addr)
 	} else {
@@ -166,7 +159,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 
 	// value
 	txValue := new(big.Int)
-	if err = getElem().GetBigInt(txValue); err != nil {
+	if err = values.dequeueValue().GetBigInt(txValue); err != nil {
 		return err
 	}
 
@@ -175,14 +168,14 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 	// input
 	var txInput []byte
 
-	txInput, err = getElem().GetBytes(txInput)
+	txInput, err = values.dequeueValue().GetBytes(txInput)
 	if err != nil {
 		return err
 	}
 
 	tx.setInput(txInput)
 
-	accessListVV, err := getElem().GetElems()
+	accessListVV, err := values.dequeueValue().GetElems()
 	if err != nil {
 		return err
 	}
@@ -200,19 +193,19 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 
 	// V
 	txV := new(big.Int)
-	if err = getElem().GetBigInt(txV); err != nil {
+	if err = values.dequeueValue().GetBigInt(txV); err != nil {
 		return err
 	}
 
 	// R
 	txR := new(big.Int)
-	if err = getElem().GetBigInt(txR); err != nil {
+	if err = values.dequeueValue().GetBigInt(txR); err != nil {
 		return err
 	}
 
 	// S
 	txS := new(big.Int)
-	if err = getElem().GetBigInt(txS); err != nil {
+	if err = values.dequeueValue().GetBigInt(txS); err != nil {
 		return err
 	}
 

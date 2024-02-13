@@ -383,3 +383,11 @@ func (t *Transaction) UnmarshalRLP(input []byte) error {
 
 	return nil
 }
+
+type rlpValues []*fastrlp.Value
+
+func (r rlpValues) dequeueValue() *fastrlp.Value {
+	val := r[0]
+	r = r[1:]
+	return val
+}
