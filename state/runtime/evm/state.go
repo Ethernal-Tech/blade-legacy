@@ -76,8 +76,6 @@ type state struct {
 
 	returnData []byte
 	ret        []byte
-
-	accessList *runtime.AccessList
 }
 
 func (c *state) reset() {
@@ -181,6 +179,10 @@ func (c *state) pop() *big.Int {
 
 	o := c.stack[c.sp-1]
 	c.sp--
+
+	if o.Cmp(zero) == 0 {
+		return big.NewInt(0)
+	}
 
 	return o
 }

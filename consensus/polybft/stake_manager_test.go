@@ -6,7 +6,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -52,7 +51,6 @@ func TestStakeManager_PostBlock(t *testing.T) {
 		stakeManager, err := newStakeManager(
 			hclog.NewNullLogger(),
 			state,
-			wallet.NewEcdsaSigner(validators.GetValidator("A").Key()),
 			stakeManagerAddr,
 			bcMock,
 			nil,
@@ -108,7 +106,6 @@ func TestStakeManager_PostBlock(t *testing.T) {
 		stakeManager, err := newStakeManager(
 			hclog.NewNullLogger(),
 			state,
-			wallet.NewEcdsaSigner(validators.GetValidator("A").Key()),
 			types.StringToAddress("0x0001"),
 			bcMock,
 			nil,
@@ -173,7 +170,6 @@ func TestStakeManager_PostBlock(t *testing.T) {
 		stakeManager, err := newStakeManager(
 			hclog.NewNullLogger(),
 			state,
-			wallet.NewEcdsaSigner(validators.GetValidator("A").Key()),
 			types.StringToAddress("0x0001"),
 			bcMock,
 			nil,
@@ -231,7 +227,6 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 	stakeManager, err := newStakeManager(
 		hclog.NewNullLogger(),
 		state,
-		wallet.NewEcdsaSigner(validators.GetValidator("A").Key()),
 		types.StringToAddress("0x0001"),
 		bcMock,
 		nil,
@@ -420,7 +415,6 @@ func TestStakeManager_UpdateOnInit(t *testing.T) {
 	_, err := newStakeManager(
 		hclog.NewNullLogger(),
 		state,
-		wallet.NewEcdsaSigner(validators.GetValidator("A").Key()),
 		stakeManagerAddr,
 		nil,
 		polyBackendMock,

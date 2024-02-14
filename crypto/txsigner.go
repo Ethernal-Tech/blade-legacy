@@ -77,12 +77,16 @@ func encodeSignature(r, s, parity *big.Int, isHomestead bool) ([]byte, error) {
 func recoverAddress(txHash types.Hash, r, s, parity *big.Int, isHomestead bool) (types.Address, error) {
 	signature, err := encodeSignature(r, s, parity, isHomestead)
 	if err != nil {
-		return types.Address{}, err
+		return types.ZeroAddress, err
 	}
 
 	publicKey, err := Ecrecover(txHash.Bytes(), signature)
 	if err != nil {
-		return types.Address{}, err
+		return types.ZeroAddress, err
+	}
+
+	if len(pub) == 0 || pub[0] != 4 {
+		return types.ZeroAddress, errors.New("invalid public key")
 	}
 
 	// First byte of the publicKey indicates that it is serialized in uncompressed form (it has the value 0x04), so we ommit that

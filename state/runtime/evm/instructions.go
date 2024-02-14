@@ -30,11 +30,12 @@ var (
 
 func (c *state) calculateGasForEIP2929(addr types.Address) uint64 {
 	var gas uint64
-	if c.accessList.ContainsAddress(addr) {
+	if c.msg.AccessList.ContainsAddress(addr) {
 		gas = WarmStorageReadCostEIP2929
 	} else {
 		gas = ColdAccountAccessCostEIP2929
-		c.accessList.AddAddress(addr)
+		c.msg.AddToJournal(&runtime.AccessListAddAccountChange{Address: addr})
+		c.msg.AccessList.AddAddress(addr)
 	}
 
 	return gas
@@ -485,10 +486,10 @@ func opSload(c *state) {
 	var gas uint64
 
 	if c.config.Berlin {
-		if _, slotPresent := c.accessList.Contains(c.msg.Address, bigToHash(loc)); !slotPresent {
+		if _, slotPresent := c.msg.AccessList.Contains(c.msg.Address, bigToHash(loc)); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
 
-			c.accessList.AddSlot(c.msg.Address, bigToHash(loc))
+			c.addAccessListSlot(c.msg.Address, bigToHash(loc))
 		} else {
 			gas = WarmStorageReadCostEIP2929
 		}
@@ -531,10 +532,10 @@ func opSStore(c *state) {
 	cost := uint64(0)
 
 	if c.config.Berlin {
-		if _, slotPresent := c.accessList.Contains(c.msg.Address, key); !slotPresent {
+		if _, slotPresent := c.msg.AccessList.Contains(c.msg.Address, key); !slotPresent {
 			cost = ColdStorageReadCostEIP2929
 
-			c.accessList.AddSlot(c.msg.Address, key)
+			c.addAccessListSlot(c.msg.Address, key)
 		}
 	}
 
@@ -544,11 +545,11 @@ func opSStore(c *state) {
 			cost += WarmStorageReadCostEIP2929
 		} else if c.config.Istanbul {
 			// eip-2200
-			cost = 800
+			cost += 800
 		} else if legacyGasMetering {
-			cost = 5000
+			cost += 5000
 		} else {
-			cost = 200
+			cost += 200
 		}
 
 	case runtime.StorageModified:
@@ -562,11 +563,11 @@ func opSStore(c *state) {
 			cost += WarmStorageReadCostEIP2929
 		} else if c.config.Istanbul {
 			// eip-2200
-			cost = 800
+			cost += 800
 		} else if legacyGasMetering {
-			cost = 5000
+			cost += 5000
 		} else {
-			cost = 200
+			cost += 200
 		}
 
 	case runtime.StorageAdded:
@@ -862,41 +863,44 @@ func opReturnDataCopy(c *state) {
 		return
 	}
 
-	memOffset := c.pop()
-	dataOffset := c.pop()
-	length := c.pop()
+	var (
+		memOffset  = c.pop()
+		dataOffset = c.pop()
+		length     = c.pop()
+	)
 
-	if !dataOffset.IsUint64() {
+	// Check if:
+	// 1. the dataOffset is uint64 (overflow check)
+	// 2. the sum of dataOffset and length overflows uint64
+	// 3. the length of return data has enough space to receive offset + length bytes
+	end := new(big.Int).Add(dataOffset, length)
+	endAddress := end.Uint64()
+
+	if !dataOffset.IsUint64() ||
+		!end.IsUint64() ||
+		uint64(len(c.returnData)) < endAddress {
 		c.exit(errReturnDataOutOfBounds)
 
 		return
 	}
 
 	// if length is 0, return immediately since no need for the data copying nor memory allocation
-	if length.Sign() == 0 || !c.allocateMemory(memOffset, length) {
+	if length.Sign() == 0 {
+		return
+	}
+
+	if !c.allocateMemory(memOffset, length) {
+		// Error code is set inside the allocateMemory call
 		return
 	}
 
 	ulength := length.Uint64()
 	if !c.consumeGas(((ulength + 31) / 32) * copyGas) {
+		// Error code is set inside the consumeGas
 		return
 	}
 
-	dataEnd := length.Add(dataOffset, length)
-	if !dataEnd.IsUint64() {
-		c.exit(errReturnDataOutOfBounds)
-
-		return
-	}
-
-	dataEndIndex := dataEnd.Uint64()
-	if uint64(len(c.returnData)) < dataEndIndex {
-		c.exit(errReturnDataOutOfBounds)
-
-		return
-	}
-
-	data := c.returnData[dataOffset.Uint64():dataEndIndex]
+	data := c.returnData[dataOffset.Uint64():endAddress]
 	copy(c.memory[memOffset.Uint64():memOffset.Uint64()+ulength], data)
 }
 
@@ -904,6 +908,10 @@ func opCodeCopy(c *state) {
 	memOffset := c.pop()
 	dataOffset := c.pop()
 	length := c.pop()
+
+	if length.Uint64() <= 0 {
+		return
+	}
 
 	if !c.allocateMemory(memOffset, length) {
 		return
@@ -997,10 +1005,10 @@ func opSelfDestruct(c *state) {
 	}
 
 	// EIP 2929 gas
-	if c.config.Berlin && !c.accessList.ContainsAddress(address) {
+	if c.config.Berlin && !c.msg.AccessList.ContainsAddress(address) {
 		gas += ColdAccountAccessCostEIP2929
 
-		c.accessList.AddAddress(address)
+		c.addAccessListAddress(address)
 	}
 
 	if !c.consumeGas(gas) {
@@ -1371,7 +1379,7 @@ func (c *state) buildCallContract(op OpCode) (*runtime.Contract, uint64, uint64,
 		gas,
 		c.host.GetCode(addr),
 		args,
-		c.accessList,
+		c.msg.AccessList,
 	)
 
 	if op == STATICCALL || parent.msg.Static {
@@ -1471,10 +1479,20 @@ func (c *state) buildCreateContract(op OpCode) (*runtime.Contract, error) {
 		value,
 		gas,
 		input,
-		c.accessList,
+		c.msg.AccessList,
 	)
 
 	return contract, nil
+}
+
+func (c *state) addAccessListSlot(address types.Address, slot types.Hash) {
+	c.msg.AddToJournal(&runtime.AccessListAddSlotChange{Address: address, Slot: slot})
+	c.msg.AccessList.AddSlot(address, slot)
+}
+
+func (c *state) addAccessListAddress(address types.Address) {
+	c.msg.AddToJournal(&runtime.AccessListAddAccountChange{Address: address})
+	c.msg.AccessList.AddAddress(address)
 }
 
 func opHalt(op OpCode) instruction {
