@@ -34,18 +34,18 @@ if (maxVUs == undefined) {
 }
 
 export const options = {
-    setupTimeout: setupTimeout,
-    scenarios: {
-      constant_request_rate: {
-        executor: 'constant-arrival-rate',
-        rate: parseInt(rate),
-        timeUnit: timeUnit,
-        duration: duration,
-        preAllocatedVUs: parseInt(preAllocatedVUs),
-        maxVUs: parseInt(maxVUs),
-      },
+  setupTimeout: setupTimeout,
+  scenarios: {
+    constant_request_rate: {
+      executor: 'constant-arrival-rate',
+      rate: parseInt(rate),
+      timeUnit: timeUnit,
+      duration: duration,
+      preAllocatedVUs: parseInt(preAllocatedVUs),
+      maxVUs: parseInt(maxVUs),
     },
-  };
+  },
+};
 
 // You can use an existing premined account
 const root_address = "0x85da99c8a7c2c95964c8efd687e95e632fc533d6";
