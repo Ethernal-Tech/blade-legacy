@@ -61,11 +61,9 @@ func (signer *BerlinSigner) Hash(tx *types.Transaction) types.Hash {
 
 	// Checking whether the transaction is a smart contract deployment
 	if tx.To() == nil {
-
 		// RLP(chainId, nonce, gasPrice, gas, to, -, -, -)
 		hashPreimage.Set(RLP.NewNull())
 	} else {
-
 		// RLP(chainId, nonce, gasPrice, gas, to, -, -, -)
 		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
 	}
@@ -76,14 +74,13 @@ func (signer *BerlinSigner) Hash(tx *types.Transaction) types.Hash {
 	// RLP(chainId, nonce, gasPrice, gas, to, value, input, -)
 	hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
 
-	// Serialization format of the access list: [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
+	// Serialization format of the access list:
+	// [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
 	accessList := RLP.NewArray()
 
 	if tx.AccessList() != nil {
-
 		// accessTuple contains (address, storageKeys[])
 		for _, accessTuple := range tx.AccessList() {
-
 			accessTupleSerFormat := RLP.NewArray()
 			accessTupleSerFormat.Set(RLP.NewCopyBytes(accessTuple.Address.Bytes()))
 
@@ -152,6 +149,6 @@ func (signer *BerlinSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 // Private method calculateV returns the V value for the EIP-2930 transactions
 //
 // V represents the parity of the Y coordinate
-func (e *BerlinSigner) calculateV(parity byte) []byte {
+func (signer *BerlinSigner) calculateV(parity byte) []byte {
 	return big.NewInt(int64(parity)).Bytes()
 }

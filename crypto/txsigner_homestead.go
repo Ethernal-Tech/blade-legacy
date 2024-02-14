@@ -71,7 +71,8 @@ func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.P
 	r := new(big.Int).SetBytes(signature[:32])
 	s := new(big.Int).SetBytes(signature[32:64])
 
-	// Homestead hard-fork introduced the rule that the S value must be inclusively lower than the half of the secp256k1 curve order
+	// Homestead hard-fork introduced the rule that the S value
+	// must be inclusively lower than the half of the secp256k1 curve order
 	// Specification: https://eips.ethereum.org/EIPS/eip-2#specification (2)
 	if s.Cmp(secp256k1NHalf) > 0 {
 		return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")

@@ -283,7 +283,7 @@ func NewServer(config *Config) (*Server, error) {
 	// compute the genesis root state
 	config.Chain.Genesis.StateRoot = genesisRoot
 
-	var signer crypto.TxSigner = crypto.NewSigner(config.Chain.Params.Forks.At(0), uint64(m.config.Chain.Params.ChainID))
+	signer := crypto.NewSigner(config.Chain.Params.Forks.At(0), uint64(m.config.Chain.Params.ChainID))
 
 	// create storage instance for blockchain
 	var db storage.Storage

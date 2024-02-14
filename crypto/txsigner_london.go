@@ -43,8 +43,6 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 		return signer.BerlinSigner.Hash(tx)
 	}
 
-	var hash []byte
-
 	RLP := arenaPool.Get()
 
 	// RLP(-, -, -, -, -, -, -, -, -)
@@ -67,11 +65,9 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 
 	// Checking whether the transaction is a smart contract deployment
 	if tx.To() == nil {
-
 		// RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, -, -, -)
 		hashPreimage.Set(RLP.NewNull())
 	} else {
-
 		// RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, -, -, -)
 		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
 	}
@@ -82,14 +78,13 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 	// RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, value, input, -)
 	hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
 
-	// Serialization format of the access list: [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
+	// Serialization format of the access list:
+	// [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
 	accessList := RLP.NewArray()
 
 	if tx.AccessList() != nil {
-
 		// accessTuple contains (address, storageKeys[])
 		for _, accessTuple := range tx.AccessList() {
-
 			accessTupleSerFormat := RLP.NewArray()
 			accessTupleSerFormat.Set(RLP.NewCopyBytes(accessTuple.Address.Bytes()))
 
@@ -108,7 +103,7 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 	hashPreimage.Set(accessList)
 
 	// keccak256(0x02 || RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, value, input,accessList)
-	hash = keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, hashPreimage)
+	hash := keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, hashPreimage)
 
 	arenaPool.Put(RLP)
 
@@ -158,6 +153,6 @@ func (signer *LondonSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 // Private method calculateV returns the V value for the EIP-1559 transactions
 //
 // V represents the parity of the Y coordinate
-func (e *LondonSigner) calculateV(parity byte) []byte {
+func (signer *LondonSigner) calculateV(parity byte) []byte {
 	return big.NewInt(int64(parity)).Bytes()
 }

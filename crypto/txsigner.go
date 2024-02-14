@@ -61,7 +61,7 @@ func NewSigner(forks chain.ForksInTime, chainID uint64) TxSigner {
 // the encodeSignature function expects parity of Y coordinate as third input and that is what will be encoded
 func encodeSignature(r, s, parity *big.Int, isHomestead bool) ([]byte, error) {
 	if !ValidateSignatureValues(parity, r, s, isHomestead) {
-		return nil, errors.New("Signature encoding failed: Invalid transaction signature")
+		return nil, errors.New("signature encoding failed: Invalid transaction signature")
 	}
 
 	signature := make([]byte, 65)
@@ -85,11 +85,12 @@ func recoverAddress(txHash types.Hash, r, s, parity *big.Int, isHomestead bool) 
 		return types.ZeroAddress, err
 	}
 
-	if len(pub) == 0 || pub[0] != 4 {
+	if len(publicKey) == 0 || publicKey[0] != 4 {
 		return types.ZeroAddress, errors.New("invalid public key")
 	}
 
-	// First byte of the publicKey indicates that it is serialized in uncompressed form (it has the value 0x04), so we ommit that
+	// First byte of the publicKey indicates that it is serialized in uncompressed form
+	// (it has the value 0x04), so we ommit that
 	hash := Keccak256(publicKey[1:])
 
 	address := hash[12:]

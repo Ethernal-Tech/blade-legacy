@@ -50,11 +50,9 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 
 	// Checking whether the transaction is a smart contract deployment
 	if tx.To() == nil {
-
 		// RLP(nonce, gasPrice, gas, to, -, -)
 		hashPreimage.Set(RLP.NewNull())
 	} else {
-
 		// RLP(nonce, gasPrice, gas, to, -, -)
 		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
 	}
