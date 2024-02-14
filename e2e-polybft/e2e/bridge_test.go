@@ -1307,7 +1307,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
-	checkBalancesFn := func(address types.Address, rootExpected, childExpected *big.Int) {
+	checkBalancesFn := func(address types.Address, rootExpected, childExpected *big.Int, isValidator bool) {
 		t.Log("Checking balance of native ERC20 token on root and child", "Address", address,
 			"Root expected", rootExpected, "Child Expected", childExpected)
 
@@ -1319,20 +1319,24 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		balance, err = childEthEndpoint.GetBalance(ethgo.Address(address), ethgo.Latest)
 		require.NoError(t, err)
 		t.Log("Balance of native ERC20 token on child", balance, "Address", address)
-		require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
+		if isValidator {
+			require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
+		} else {
+			require.True(t, balance.Cmp(childExpected) <= 0)
+		}
 	}
 
 	t.Run("check the balances at the beginning", func(t *testing.T) {
 		// check the balances on root and child at the beginning to see if they are as expected
-		checkBalancesFn(types.Address(nonValidatorKey.Address()), bigZero, command.DefaultPremineBalance)
-		checkBalancesFn(types.Address(rewardWalletKey.Address()), bigZero, command.DefaultPremineBalance)
+		checkBalancesFn(types.Address(nonValidatorKey.Address()), bigZero, command.DefaultPremineBalance, false)
+		checkBalancesFn(types.Address(rewardWalletKey.Address()), bigZero, command.DefaultPremineBalance, true)
 
 		validatorsExpectedBalance := new(big.Int).Sub(command.DefaultPremineBalance, command.DefaultStake)
 		for _, server := range cluster.Servers {
 			validatorAccount, err := validatorHelper.GetAccountFromDir(server.DataDir())
 			require.NoError(t, err)
 
-			checkBalancesFn(validatorAccount.Address(), bigZero, validatorsExpectedBalance)
+			checkBalancesFn(validatorAccount.Address(), bigZero, validatorsExpectedBalance, true)
 		}
 	})
 
@@ -1401,8 +1405,8 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		}))
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
-		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw)
-		checkBalancesFn(types.Address(nonValidatorKey.Address()), tokensToTransfer, nonValidatorBalanceAfterWithdraw)
+		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw, true)
+		checkBalancesFn(types.Address(nonValidatorKey.Address()), tokensToTransfer, nonValidatorBalanceAfterWithdraw, false)
 	})
 
 	t.Run("Do a deposit to some validator and non-validator address", func(t *testing.T) {
