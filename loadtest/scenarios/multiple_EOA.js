@@ -3,9 +3,9 @@ import exec from 'k6/execution';
 import { fundTestAccounts } from '../helpers/init.js';
 import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
-let setupTimeOut = __ENV.SETUP_TIMEOUT;
-if (setupTimeOut == undefined) {
-  setupTimeOut = "220s"
+let setupTimeout = __ENV.SETUP_TIMEOUT;
+if (setupTimeout == undefined) {
+  setupTimeout = "220s"
 }
 
 let rate = __ENV.RATE;
@@ -34,7 +34,7 @@ if (maxVUs == undefined) {
 }
 
 export const options = {
-  setupTimeout: setupTimeOut,
+  setupTimeout: setupTimeout,
   scenarios: {
     constant_request_rate: {
       executor: 'constant-arrival-rate',
