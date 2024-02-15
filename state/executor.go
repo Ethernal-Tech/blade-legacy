@@ -698,7 +698,7 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	coinbaseFee := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), effectiveTip)
 	t.state.AddBalance(t.ctx.Coinbase, coinbaseFee)
 
-	// nolint:godox
+	//nolint:godox
 	// TODO - burning of base fee should not be done in the EVM
 	// Burn some amount if the london hardfork is applied.
 	// Basically, burn amount is just transferred to the current burn contract.
@@ -1342,6 +1342,7 @@ func (t *Transition) RevertToSnapshot(snapshot int) error {
 	})
 
 	if idx == len(t.journalRevisions) || t.journalRevisions[idx].ID != snapshot {
+		//nolint:gocritic
 		panic(fmt.Errorf("journal revision id %v cannot be reverted", snapshot))
 	}
 
