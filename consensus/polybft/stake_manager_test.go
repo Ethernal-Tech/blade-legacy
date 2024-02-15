@@ -76,13 +76,15 @@ func TestStakeManager_PostBlock(t *testing.T) {
 
 		fullValidatorSet, err := state.StakeStore.getFullValidatorSet(nil)
 		require.NoError(t, err)
+
 		var firstValidatorMeta *validator.ValidatorMetadata
-		firstValidatorMeta = nil
+
 		for _, validator := range fullValidatorSet.Validators {
 			if validator.Address.String() == validators.GetValidator(initialSetAliases[firstValidator]).Address().String() {
 				firstValidatorMeta = validator
 			}
 		}
+
 		require.NotNil(t, firstValidatorMeta)
 		require.Equal(t, bigZero, firstValidatorMeta.VotingPower)
 		require.False(t, firstValidatorMeta.IsActive)
@@ -130,13 +132,15 @@ func TestStakeManager_PostBlock(t *testing.T) {
 
 		fullValidatorSet, err := state.StakeStore.getFullValidatorSet(nil)
 		require.NoError(t, err)
+
 		var firstValidator *validator.ValidatorMetadata
-		firstValidator = nil
+
 		for _, validator := range fullValidatorSet.Validators {
 			if validator.Address.String() == validators.GetValidator(initialSetAliases[secondValidator]).Address().String() {
 				firstValidator = validator
 			}
 		}
+
 		require.NotNil(t, firstValidator)
 		require.Equal(t, big.NewInt(251), firstValidator.VotingPower) // 250 + initial 1
 		require.True(t, firstValidator.IsActive)
@@ -146,13 +150,11 @@ func TestStakeManager_PostBlock(t *testing.T) {
 		t.Parallel()
 
 		state := newTestState(t)
-
 		validators := validator.NewTestValidatorsWithAliases(t, allAliases, []uint64{1, 2, 3, 4, 5, 6})
 
 		txRelayerMock := newDummyStakeTxRelayer(t, func() *validator.ValidatorMetadata {
 			return validators.GetValidator("F").ValidatorMetadata()
 		})
-
 		// just mock the call however, the dummy relayer should do its magic
 		txRelayerMock.On("Call", mock.Anything, mock.Anything, mock.Anything).
 			Return(nil, error(nil))
@@ -246,6 +248,7 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 		updateDelta, err := stakeManager.UpdateValidatorSet(epoch, maxValidatorSetSize,
 			validators.GetPublicIdentities())
 		require.NoError(t, err)
+
 		require.Len(t, updateDelta.Added, 0)
 		require.Len(t, updateDelta.Updated, 1)
 		require.Len(t, updateDelta.Removed, 0)
@@ -262,6 +265,7 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 
 		updateDelta, err := stakeManager.UpdateValidatorSet(epoch+1, maxValidatorSetSize,
 			validators.GetPublicIdentities())
+
 		require.NoError(t, err)
 		require.Len(t, updateDelta.Added, 0)
 		require.Len(t, updateDelta.Updated, 0)
@@ -277,6 +281,7 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 
 		updateDelta, err := stakeManager.UpdateValidatorSet(epoch+2, maxValidatorSetSize,
 			validators.GetPublicIdentities(aliases[1:]...))
+
 		require.NoError(t, err)
 		require.Len(t, updateDelta.Added, 1)
 		require.Len(t, updateDelta.Updated, 0)
@@ -288,12 +293,14 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 		fullValidatorSet := validators.GetPublicIdentities().Copy()
 		validatorToUpdate := fullValidatorSet[2]
 		validatorToUpdate.VotingPower = big.NewInt(5)
+
 		require.NoError(t, state.StakeStore.insertFullValidatorSet(validatorSetState{
 			Validators: newValidatorStakeMap(fullValidatorSet),
 		}, nil))
 
 		updateDelta, err := stakeManager.UpdateValidatorSet(epoch+3, maxValidatorSetSize,
 			validators.GetPublicIdentities())
+
 		require.NoError(t, err)
 		require.Len(t, updateDelta.Added, 0)
 		require.Len(t, updateDelta.Updated, 1)
@@ -305,12 +312,14 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 		fullValidatorSet := validators.GetPublicIdentities().Copy()
 		validatorToUpdate := fullValidatorSet[3]
 		validatorToUpdate.VotingPower = bigZero
+
 		require.NoError(t, state.StakeStore.insertFullValidatorSet(validatorSetState{
 			Validators: newValidatorStakeMap(fullValidatorSet),
 		}, nil))
 
 		updateDelta, err := stakeManager.UpdateValidatorSet(epoch+4, maxValidatorSetSize,
 			validators.GetPublicIdentities())
+
 		require.NoError(t, err)
 		require.Len(t, updateDelta.Added, 0)
 		require.Len(t, updateDelta.Updated, 0)
@@ -320,6 +329,7 @@ func TestStakeManager_UpdateValidatorSet(t *testing.T) {
 		fullValidatorSet := validators.GetPublicIdentities().Copy()
 		validatorsToUpdate := fullValidatorSet[4]
 		validatorsToUpdate.VotingPower = bigZero
+
 		require.NoError(t, state.StakeStore.insertFullValidatorSet(validatorSetState{
 			Validators: newValidatorStakeMap(fullValidatorSet),
 		}, nil))
