@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -216,7 +217,11 @@ func TestState(t *testing.T) {
 						fc := &forkConfig{name: fork, forks: forks}
 
 						for idx, postStateEntry := range postState {
+							start := time.Now()
 							err := RunSpecificTest(t, file, tc, fc, idx, postStateEntry)
+
+							t.Logf("'%s' executed. Duration=%v\n", file, time.Since(start))
+
 							require.NoError(t, tc.checkError(fork, idx, err))
 						}
 					}
