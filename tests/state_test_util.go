@@ -484,6 +484,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(0),
 	},
 	"ConstantinopleFix": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -491,9 +492,9 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
-		chain.EIP3607:        chain.NewFork(0),
 	},
 	"Istanbul": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -502,7 +503,6 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
 		chain.Istanbul:       chain.NewFork(0),
-		chain.EIP3607:        chain.NewFork(0),
 	},
 	"FrontierToHomesteadAt5": {
 		chain.EIP3607:   chain.NewFork(0),
@@ -552,6 +552,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Istanbul:       chain.NewFork(5),
 	},
 	"Berlin": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -563,6 +564,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Berlin:         chain.NewFork(0),
 	},
 	"BerlinToLondonAt5": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -613,8 +615,6 @@ func listFolders(paths []string, extensions ...string) ([]string, error) {
 				}
 
 				if len(files) > 0 {
-					fmt.Println("Folder", path)
-
 					folders = append(folders, path)
 				}
 			}
