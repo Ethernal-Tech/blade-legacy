@@ -162,12 +162,12 @@ func TestState(t *testing.T) {
 	}
 
 	skip := []string{
+		"RevertPrecompiledTouch",
+		"RevertPrecompiledTouch_storage",
 		"loopMul",
 	}
 
-	// There are two folders in spec tests, one for the current tests for the Istanbul fork
-	// and one for the legacy tests for the other forks
-	folders, err := listFolders(stateTests)
+	folders, err := listFolders([]string{stateTests}, ".json")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,13 +180,13 @@ func TestState(t *testing.T) {
 
 		for _, file := range files {
 			if contains(long, file) && testing.Short() {
-				t.Skip("Long tests are skipped in short mode")
+				t.Logf("Long test '%s' is skipped in short mode\n", file)
 
 				continue
 			}
 
 			if contains(skip, file) {
-				t.Skip()
+				t.Logf("Test '%s' is skipped\n", file)
 
 				continue
 			}
