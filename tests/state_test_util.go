@@ -621,7 +621,7 @@ func listFolders(tests ...string) ([]string, error) {
 	return folders, nil
 }
 
-func listFiles(folder string) ([]string, error) {
+func listFiles(folder string, extensions ...string) ([]string, error) {
 	var files []string
 
 	err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
@@ -630,7 +630,15 @@ func listFiles(folder string) ([]string, error) {
 		}
 
 		if !info.IsDir() {
-			files = append(files, path)
+			if len(extensions) > 0 {
+				for _, ext := range extensions {
+					if strings.HasSuffix(path, ext) {
+						files = append(files, path)
+					}
+				}
+			} else {
+				files = append(files, path)
+			}
 		}
 
 		return nil
