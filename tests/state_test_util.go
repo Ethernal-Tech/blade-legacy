@@ -326,16 +326,15 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 	}
 
 	return &types.Transaction{
-		From:              t.From,
-		To:                t.To,
-		Nonce:             t.Nonce,
-		Value:             value,
-		Gas:               t.GasLimit[i.Gas],
-		GasPrice:          gasPrice,
-		GasFeeCap:         t.MaxFeePerGas,
-		GasTipCap:         t.MaxPriorityFeePerGas,
-		Input:             hex.MustDecodeHex(t.Data[i.Data]),
-		SkipAccountChecks: false,
+		From:      t.From,
+		To:        t.To,
+		Nonce:     t.Nonce,
+		Value:     value,
+		Gas:       t.GasLimit[i.Gas],
+		GasPrice:  gasPrice,
+		GasFeeCap: t.MaxFeePerGas,
+		GasTipCap: t.MaxPriorityFeePerGas,
+		Input:     hex.MustDecodeHex(t.Data[i.Data]),
 	}, nil
 }
 
@@ -422,21 +421,27 @@ func (t *stTransaction) UnmarshalJSON(input []byte) error {
 
 // forks
 var Forks = map[string]*chain.Forks{
-	"Frontier": {},
+	"Frontier": {
+		chain.EIP3607: chain.NewFork(0),
+	},
 	"Homestead": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(0),
 	},
 	"EIP150": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(0),
 		chain.EIP150:    chain.NewFork(0),
 	},
 	"EIP158": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(0),
 		chain.EIP150:    chain.NewFork(0),
 		chain.EIP155:    chain.NewFork(0),
 		chain.EIP158:    chain.NewFork(0),
 	},
 	"Byzantium": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(0),
 		chain.EIP150:    chain.NewFork(0),
 		chain.EIP155:    chain.NewFork(0),
@@ -444,6 +449,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium: chain.NewFork(0),
 	},
 	"Constantinople": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -459,6 +465,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
+		chain.EIP3607:        chain.NewFork(0),
 	},
 	"Istanbul": {
 		chain.Homestead:      chain.NewFork(0),
@@ -469,18 +476,19 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
 		chain.Istanbul:       chain.NewFork(0),
+		chain.EIP3607:        chain.NewFork(0),
 	},
 	"FrontierToHomesteadAt5": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(5),
 	},
 	"HomesteadToEIP150At5": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(0),
 		chain.EIP150:    chain.NewFork(5),
 	},
-	"HomesteadToDaoAt5": {
-		chain.Homestead: chain.NewFork(0),
-	},
 	"EIP158ToByzantiumAt5": {
+		chain.EIP3607:   chain.NewFork(0),
 		chain.Homestead: chain.NewFork(0),
 		chain.EIP150:    chain.NewFork(0),
 		chain.EIP155:    chain.NewFork(0),
@@ -488,6 +496,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium: chain.NewFork(5),
 	},
 	"ByzantiumToConstantinopleAt5": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -496,6 +505,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(5),
 	},
 	"ByzantiumToConstantinopleFixAt5": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -505,6 +515,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Petersburg:     chain.NewFork(5),
 	},
 	"ConstantinopleFixToIstanbulAt5": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),

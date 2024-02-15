@@ -425,24 +425,21 @@ func (t *Transition) Txn() *Txn {
 	return t.state
 }
 
-// In case account checks should not be skipped, check if code hash is hash for
-// an empty object or empty code hash.
-func (t Transition) checkAccount(msg *types.Transaction) bool {
-	// If needed, skip account checks
-	if !msg.SkipAccountChecks {
-		codeHash := t.state.GetCodeHash(msg.From)
-		if codeHash != types.ZeroHash && codeHash != types.EmptyCodeHash {
-			return false
-		}
+// checkSenderAccount rejects transactions from senders with deployed code.
+// This check is performed only in case EIP 3607 is enabled.
+func (t Transition) checkSenderAccount(msg *types.Transaction) bool {
+	if !t.config.EIP3607 {
+		return true
 	}
 
-	return true
+	codeHash := t.state.GetCodeHash(msg.From)
+
+	return codeHash == types.ZeroHash || codeHash == types.EmptyCodeHash
 }
 
 // Apply applies a new transaction
 func (t *Transition) Apply(msg *types.Transaction) (*runtime.ExecutionResult, error) {
-
-	if !t.checkAccount(msg) {
+	if !t.checkSenderAccount(msg) {
 		return nil, fmt.Errorf("%w: address %v, codehash: %v", ErrSenderNoEOA, msg.From.String(),
 			t.state.GetCodeHash(msg.From).String())
 	}
