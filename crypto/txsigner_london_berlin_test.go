@@ -71,6 +71,7 @@ func TestLondonSignerSender(t *testing.T) {
 			require.NoError(t, err, "unable to generate private key")
 
 			var txn *types.Transaction
+
 			switch tc.txType {
 			case types.AccessListTx:
 				txn = types.NewTx(&types.AccessListTxn{
