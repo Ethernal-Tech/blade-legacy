@@ -169,7 +169,7 @@ func TestState(t *testing.T) {
 		"CALLBlake2f_MaxRounds",
 	}
 
-	folders, err := listFolders([]string{stateTests}, ".json")
+	folders, err := listFolders([]string{stateTests})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -211,7 +211,7 @@ func TestState(t *testing.T) {
 					for fork, postState := range tc.Post {
 						forks, exists := Forks[fork]
 						if !exists {
-							//t.Logf("%s fork is not supported, skipping test case.", fork)
+							t.Logf("%s fork is not supported, skipping test case.", fork)
 							continue
 						}
 

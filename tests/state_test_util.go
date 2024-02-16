@@ -599,7 +599,7 @@ func contains(l []string, name string) bool {
 	return false
 }
 
-func listFolders(paths []string, extensions ...string) ([]string, error) {
+func listFolders(paths []string) ([]string, error) {
 	var folders []string
 
 	for _, rootPath := range paths {
