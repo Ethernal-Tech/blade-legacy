@@ -577,6 +577,7 @@ var Forks = map[string]*chain.Forks{
 		chain.London:         chain.NewFork(5),
 	},
 	// "London": {
+	// 	chain.EIP3607:        chain.NewFork(0),
 	// 	chain.Homestead:      chain.NewFork(0),
 	// 	chain.EIP150:         chain.NewFork(0),
 	// 	chain.EIP155:         chain.NewFork(0),
