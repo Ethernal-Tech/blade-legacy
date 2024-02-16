@@ -166,6 +166,7 @@ func TestState(t *testing.T) {
 		"RevertPrecompiledTouch",
 		"RevertPrecompiledTouch_storage",
 		"loopMul",
+		"CALLBlake2f_MaxRounds",
 	}
 
 	folders, err := listFolders([]string{stateTests}, ".json")
@@ -210,7 +211,7 @@ func TestState(t *testing.T) {
 					for fork, postState := range tc.Post {
 						forks, exists := Forks[fork]
 						if !exists {
-							t.Logf("%s fork is not supported, skipping test case.", fork)
+							//t.Logf("%s fork is not supported, skipping test case.", fork)
 							continue
 						}
 
@@ -220,7 +221,7 @@ func TestState(t *testing.T) {
 							start := time.Now()
 							err := RunSpecificTest(t, file, tc, fc, idx, postStateEntry)
 
-							t.Logf("'%s' executed. Duration=%v\n", file, time.Since(start))
+							t.Logf("'%s' executed. Fork: %s. Case: %d, Duration=%v\n", file, fork, idx, time.Since(start))
 
 							require.NoError(t, tc.checkError(fork, idx, err))
 						}
