@@ -1636,6 +1636,7 @@ func Test_opSload(t *testing.T) {
 			s.config = tt.config
 			s.host = tt.mockHost
 			tt.contract.AccessList = tt.initState.accessList
+
 			opSload(s)
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")

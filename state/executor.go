@@ -648,6 +648,7 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 		if err := t.state.IncrNonce(msg.From()); err != nil {
 			return nil, err
 		}
+
 		result = t.Call2(msg.From(), *(msg.To()), msg.Input(), value, gasLeft, initialAccessList)
 	}
 
