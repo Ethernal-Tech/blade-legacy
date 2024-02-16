@@ -1624,8 +1624,10 @@ func Test_opSload(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
+
 			s, closeFn := getState(tt.config)
 			defer closeFn()
+
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
 			s.sp = tt.initState.sp
@@ -1634,7 +1636,9 @@ func Test_opSload(t *testing.T) {
 			s.config = tt.config
 			s.host = tt.mockHost
 			tt.contract.AccessList = tt.initState.accessList
+
 			opSload(s)
+
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
 			assert.Equal(t, tt.resultState.sp, s.sp, "sp in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stack, s.stack, "stack in state after execution is not correct")
@@ -2383,6 +2387,7 @@ func Test_opCall(t *testing.T) {
 		test := tt
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
+
 			state, closeFn := getState(&test.config)
 			defer closeFn()
 

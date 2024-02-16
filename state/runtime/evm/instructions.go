@@ -34,6 +34,7 @@ func (c *state) calculateGasForEIP2929(addr types.Address) uint64 {
 		gas = WarmStorageReadCostEIP2929
 	} else {
 		gas = ColdAccountAccessCostEIP2929
+
 		c.msg.AddToJournal(&runtime.AccessListAddAccountChange{Address: addr})
 		c.msg.AccessList.AddAddress(addr)
 	}

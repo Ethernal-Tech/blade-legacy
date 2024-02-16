@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -483,6 +484,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(0),
 	},
 	"ConstantinopleFix": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -490,9 +492,9 @@ var Forks = map[string]*chain.Forks{
 		chain.Byzantium:      chain.NewFork(0),
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
-		chain.EIP3607:        chain.NewFork(0),
 	},
 	"Istanbul": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -501,7 +503,6 @@ var Forks = map[string]*chain.Forks{
 		chain.Constantinople: chain.NewFork(0),
 		chain.Petersburg:     chain.NewFork(0),
 		chain.Istanbul:       chain.NewFork(0),
-		chain.EIP3607:        chain.NewFork(0),
 	},
 	"FrontierToHomesteadAt5": {
 		chain.EIP3607:   chain.NewFork(0),
@@ -551,6 +552,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Istanbul:       chain.NewFork(5),
 	},
 	"Berlin": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -562,6 +564,7 @@ var Forks = map[string]*chain.Forks{
 		chain.Berlin:         chain.NewFork(0),
 	},
 	"BerlinToLondonAt5": {
+		chain.EIP3607:        chain.NewFork(0),
 		chain.Homestead:      chain.NewFork(0),
 		chain.EIP150:         chain.NewFork(0),
 		chain.EIP155:         chain.NewFork(0),
@@ -574,6 +577,7 @@ var Forks = map[string]*chain.Forks{
 		chain.London:         chain.NewFork(5),
 	},
 	// "London": {
+	// 	chain.EIP3607:        chain.NewFork(0),
 	// 	chain.Homestead:      chain.NewFork(0),
 	// 	chain.EIP150:         chain.NewFork(0),
 	// 	chain.EIP155:         chain.NewFork(0),
@@ -596,41 +600,57 @@ func contains(l []string, name string) bool {
 	return false
 }
 
-func listFolders(tests ...string) ([]string, error) {
+func listFolders(paths []string) ([]string, error) {
 	var folders []string
 
-	for _, t := range tests {
-		dir, err := os.Open(t)
-		if err != nil {
-			return nil, err
-		}
-		defer dir.Close()
-
-		fileInfos, err := dir.Readdir(-1)
-		if err != nil {
-			return nil, err
-		}
-
-		for _, fileInfo := range fileInfos {
-			if fileInfo.IsDir() && t != "path" {
-				folders = append(folders, filepath.Join(t, fileInfo.Name()))
+	for _, rootPath := range paths {
+		err := filepath.WalkDir(rootPath, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
 			}
+
+			if d.IsDir() {
+				files, err := os.ReadDir(path)
+				if err != nil {
+					return err
+				}
+
+				if len(files) > 0 {
+					folders = append(folders, path)
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	return folders, nil
 }
 
-func listFiles(folder string) ([]string, error) {
+func listFiles(folder string, extensions ...string) ([]string, error) {
 	var files []string
 
-	err := filepath.Walk(folder, func(path string, info os.FileInfo, err error) error {
+	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if !info.IsDir() {
-			files = append(files, path)
+		if !d.IsDir() {
+			if len(extensions) > 0 {
+				// filter files by extensions
+				for _, ext := range extensions {
+					if strings.HasSuffix(path, ext) {
+						files = append(files, path)
+					}
+				}
+			} else {
+				// if no extensions filter is provided, add all files
+				files = append(files, path)
+			}
 		}
 
 		return nil
