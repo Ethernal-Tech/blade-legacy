@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -167,4 +168,81 @@ func Test_SafeAddUint64(t *testing.T) {
 			require.Equal(t, c.overflow, actualOverflow)
 		})
 	}
+}
+
+func TestNewUnsafePool(t *testing.T) {
+	pool := NewUnsafePool[int]()
+
+	if pool == nil {
+		t.Errorf("NewUnsafePool returned nil")
+	}
+
+	if len(pool.stack) != 0 {
+		t.Errorf("Expected empty pool, got %v", pool.stack)
+	}
+}
+
+func TestUnsafePoolGetWhenEmpty(t *testing.T) {
+	pool := NewUnsafePool[int]()
+	newInt := func() int {
+		return 1
+	}
+
+	obj := pool.Get(newInt)
+	if obj != 1 {
+		t.Errorf("Expected 1 from newFunc, got %v", obj)
+	}
+}
+
+func TestUnsafePoolGetPut(t *testing.T) {
+	pool := NewUnsafePool[int]()
+	resetInt := func(i int) int {
+		return 0
+	}
+
+	// Initially put an object into the pool.
+	pool.Put(resetInt, 2)
+
+	// Retrieve the object, which should now be the reset value.
+	obj := pool.Get(func() int { return 3 })
+	if obj != 0 { // Expecting the original object, not the one from newFunc
+		t.Errorf("Expected 2 from the pool, got %v", obj)
+	}
+
+	// Test if Get correctly uses newFunc when pool is empty again.
+	obj = pool.Get(func() int { return 3 })
+	if obj != 3 {
+		t.Errorf("Expected 3 from newFunc, got %v", obj)
+	}
+}
+
+func TestUnsafePoolPutWithReset(t *testing.T) {
+	pool := NewUnsafePool[int]()
+	resetInt := func(i int) int {
+		return 0
+	}
+
+	// Put an object into the pool with a reset function.
+	pool.Put(resetInt, 5)
+
+	// Directly check if the object was reset.
+	if pool.stack[0] != 0 {
+		t.Errorf("Expected object to be reset to 0, got %v", pool.stack[0])
+	}
+}
+
+func TestUnsafePoolClear(t *testing.T) {
+	pool := NewUnsafePool[int]()
+	resetInt := func(i int) int {
+		return 0
+	}
+
+	// Put an object into the pool with a reset function.
+	pool.Put(resetInt, 1)
+
+	assert.Len(t, pool.stack, 1, "Expected pool stack 1")
+
+	pool.Clear()
+
+	assert.Len(t, pool.stack, 0, "Expected pool stack 0")
 }

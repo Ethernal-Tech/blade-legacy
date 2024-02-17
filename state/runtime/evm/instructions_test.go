@@ -2,6 +2,7 @@ package evm
 
 import (
 	"math/big"
+	"reflect"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -37,9 +38,9 @@ func testLogicalOperation(t *testing.T, f instruction, test OperandsLogical, s *
 	f(s)
 
 	if test.expectedResult {
-		assert.Equal(t, one, s.pop())
+		assert.Equal(t, one.Uint64(), s.pop().Uint64())
 	} else {
-		assert.Equal(t, zero, s.pop())
+		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 	}
 }
 
@@ -57,7 +58,7 @@ func testArithmeticOperation(t *testing.T, f instruction, test OperandsArithmeti
 
 	f(s)
 
-	assert.Equal(t, test.expectedResult, s.pop())
+	assert.Equal(t, test.expectedResult.Uint64(), s.pop().Uint64())
 }
 
 func TestAdd(t *testing.T) {
@@ -355,7 +356,7 @@ func TestPush0(t *testing.T) {
 		defer closeFn()
 
 		opPush0(s)
-		require.Equal(t, zero, s.pop())
+		require.Equal(t, zero.Uint64(), s.pop().Uint64())
 	})
 
 	t.Run("single push0 (EIP-3855 disabled)", func(t *testing.T) {
@@ -879,7 +880,7 @@ func TestCallDataLoad(t *testing.T) {
 		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
 		opCallDataLoad(s)
-		assert.Equal(t, zero, s.pop())
+		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 	})
 	t.Run("ZeroOffset", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
@@ -890,7 +891,7 @@ func TestCallDataLoad(t *testing.T) {
 		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
 		opCallDataLoad(s)
-		assert.NotEqual(t, zero, s.pop())
+		assert.NotEqual(t, zero.Uint64(), s.pop().Uint64())
 	})
 }
 
@@ -1013,7 +1014,7 @@ func TestExtCodeHash(t *testing.T) {
 		opExtCodeHash(s)
 
 		assert.Equal(t, s.gas, gasLeft)
-		assert.Equal(t, one, s.pop())
+		assert.Equal(t, one.Uint64(), s.pop().Uint64())
 	})
 
 	t.Run("NonIstanbul", func(t *testing.T) {
@@ -1032,7 +1033,7 @@ func TestExtCodeHash(t *testing.T) {
 
 		opExtCodeHash(s)
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, zero, s.pop())
+		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 	})
 
 	t.Run("NoForks", func(t *testing.T) {
@@ -2288,9 +2289,37 @@ func Test_opReturnDataCopy(t *testing.T) {
 
 			opReturnDataCopy(state)
 
-			assert.Equal(t, test.resultState, state)
+			assert.True(t, CompareStates(test.resultState, state))
 		})
 	}
+}
+
+// Since the state is complex structure, here is the specialized comparison
+// function that checks significant fields. This function should be updated
+// to suite future needs.
+func CompareStates(a *state, b *state) bool {
+
+	// Compare simple fields
+	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.sp != b.sp || a.err != b.err || a.stop != b.stop || a.gas != b.gas {
+		return false
+	}
+
+	// Deep compare slices
+	if !reflect.DeepEqual(a.code, b.code) || !reflect.DeepEqual(a.tmp, b.tmp) || !reflect.DeepEqual(a.returnData, b.returnData) || !reflect.DeepEqual(a.memory, b.memory) {
+		return false
+	}
+
+	// Deep comparison of stacks
+	if len(a.stack) != len(b.stack) {
+		return false
+	}
+	for i := range a.stack {
+		if a.stack[i].Cmp(b.stack[i]) != 0 {
+			return false
+		}
+	}
+
+	return true
 }
 
 func Test_opCall(t *testing.T) {
