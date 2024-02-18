@@ -33,7 +33,7 @@ func NewEIP155Signer(chainID uint64) *EIP155Signer {
 //
 // Specification: https://eips.ethereum.org/EIPS/eip-155#specification
 func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
-	if tx.ChainID().Cmp(big.NewInt(0)) == 0 {
+	if tx.ChainID() == nil || tx.ChainID().Cmp(big.NewInt(0)) == 0 {
 		return signer.HomesteadSigner.Hash(tx)
 	}
 
@@ -87,7 +87,7 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.ChainID().Cmp(big.NewInt(0)) == 0 {
+	if tx.ChainID() == nil || tx.ChainID().Cmp(big.NewInt(0)) == 0 {
 		return signer.HomesteadSigner.Sender(tx)
 	}
 
@@ -119,7 +119,7 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.ChainID().Cmp(big.NewInt(0)) == 0 {
+	if tx.ChainID() == nil || tx.ChainID().Cmp(big.NewInt(0)) == 0 {
 		return signer.HomesteadSigner.SignTx(tx, privateKey)
 	}
 
