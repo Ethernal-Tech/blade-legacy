@@ -114,6 +114,11 @@ func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error)
 
 	v, r, s := tx.RawSignatureValues()
 
+	// Checking one of the values is enought since they are inseparable
+	if v == nil {
+		return types.Address{}, errors.New("Sender method: Unknown signature")
+	}
+
 	return recoverAddress(signer.Hash(tx), r, s, v, true)
 }
 

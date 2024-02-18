@@ -43,6 +43,11 @@ func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, err
 
 	v, r, s := tx.RawSignatureValues()
 
+	// Checking one of the values is enought since they are inseparable
+	if v == nil {
+		return types.Address{}, errors.New("Sender method: Unknown signature")
+	}
+
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = {0, 1} + 27 -> {0, 1} = v - 27
 

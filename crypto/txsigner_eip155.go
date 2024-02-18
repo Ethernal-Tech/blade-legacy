@@ -93,6 +93,11 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	v, r, s := tx.RawSignatureValues()
 
+	// Checking one of the values is enought since they are inseparable
+	if v == nil {
+		return types.Address{}, errors.New("Sender method: Unknown signature")
+	}
+
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = CHAIN_ID * 2 + 35 + {0, 1} -> {0, 1} = v - 35 - CHAIN_ID * 2
 
