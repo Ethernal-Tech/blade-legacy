@@ -1,6 +1,7 @@
 package evm
 
 import (
+	"errors"
 	"math/big"
 	"reflect"
 	"testing"
@@ -858,7 +859,7 @@ func TestCallValue(t *testing.T) {
 		s.msg.Value = value
 
 		opCallValue(s)
-		assert.Equal(t, value, s.pop())
+		assert.Equal(t, value.Uint64(), s.pop().Uint64())
 	})
 
 	t.Run("Msg Value nil", func(t *testing.T) {
@@ -866,7 +867,7 @@ func TestCallValue(t *testing.T) {
 		defer cancelFn()
 
 		opCallValue(s)
-		assert.Equal(t, zero, s.pop())
+		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 	})
 }
 
@@ -2298,9 +2299,8 @@ func Test_opReturnDataCopy(t *testing.T) {
 // function that checks significant fields. This function should be updated
 // to suite future needs.
 func CompareStates(a *state, b *state) bool {
-
 	// Compare simple fields
-	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.sp != b.sp || a.err != b.err || a.stop != b.stop || a.gas != b.gas {
+	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.sp != b.sp || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
 		return false
 	}
 
@@ -2313,6 +2313,7 @@ func CompareStates(a *state, b *state) bool {
 	if len(a.stack) != len(b.stack) {
 		return false
 	}
+
 	for i := range a.stack {
 		if a.stack[i].Cmp(b.stack[i]) != 0 {
 			return false
