@@ -403,6 +403,7 @@ func init() {
 		"TestRewardToken":                 TestRewardToken,
 		"ZexCoinERC20":                    ZexCoinERC20,
 		"ZexNFT":                          ZexNFT,
+		"EntryPoint":                      EntryPoint,
 	}
 }
 
