@@ -80,6 +80,12 @@ type Host interface {
 	Transfer(from types.Address, to types.Address, amount *big.Int) error
 	GetTracer() VMTracer
 	GetRefund() uint64
+	AddSlotToAccessList(addr types.Address, slot types.Hash)
+	AddAddressToAccessList(addr types.Address)
+	ContainsAccessListAddress(addr types.Address) bool
+	ContainsAccessListSlot(addr types.Address, slot types.Hash) (bool, bool)
+	DeleteAccessListAddress(addr types.Address)
+	DeleteAccessListSlot(addr types.Address, slot types.Hash)
 }
 
 type VMTracer interface {
@@ -119,11 +125,11 @@ func (r *ExecutionResult) Succeeded() bool { return r.Err == nil }
 func (r *ExecutionResult) Failed() bool    { return r.Err != nil }
 func (r *ExecutionResult) Reverted() bool  { return errors.Is(r.Err, ErrExecutionReverted) }
 
-func (r *ExecutionResult) UpdateGasUsed(gasLimit uint64, refund uint64) {
+func (r *ExecutionResult) UpdateGasUsed(gasLimit uint64, refund, refundQuotient uint64) {
 	r.GasUsed = gasLimit - r.GasLeft
 
 	// Refund can go up to half the gas used
-	if maxRefund := r.GasUsed / 2; refund > maxRefund {
+	if maxRefund := r.GasUsed / refundQuotient; refund > maxRefund {
 		refund = maxRefund
 	}
 
@@ -143,6 +149,7 @@ var (
 	ErrUnauthorizedCaller       = errors.New("unauthorized caller")
 	ErrInvalidInputData         = errors.New("invalid input data")
 	ErrNotAuth                  = errors.New("not in allow list")
+	ErrInvalidCode              = errors.New("invalid code: must not begin with 0xef")
 )
 
 // StackUnderflowError wraps an evm error when the items on the stack less
@@ -198,9 +205,6 @@ type Contract struct {
 	Input       []byte
 	Gas         uint64
 	Static      bool
-	AccessList  *AccessList
-
-	Journal *Journal
 }
 
 func NewContract(
@@ -211,7 +215,6 @@ func NewContract(
 	value *big.Int,
 	gas uint64,
 	code []byte,
-	accessList *AccessList,
 ) *Contract {
 	f := &Contract{
 		Caller:      from,
@@ -222,8 +225,6 @@ func NewContract(
 		Value:       value,
 		Code:        code,
 		Depth:       depth,
-		AccessList:  accessList,
-		Journal:     &Journal{},
 	}
 
 	return f
@@ -237,9 +238,8 @@ func NewContractCreation(
 	value *big.Int,
 	gas uint64,
 	code []byte,
-	accessList *AccessList,
 ) *Contract {
-	c := NewContract(depth, origin, from, to, value, gas, code, accessList)
+	c := NewContract(depth, origin, from, to, value, gas, code)
 
 	return c
 }
@@ -253,18 +253,9 @@ func NewContractCall(
 	gas uint64,
 	code []byte,
 	input []byte,
-	accessList *AccessList,
 ) *Contract {
-	c := NewContract(depth, origin, from, to, value, gas, code, accessList)
+	c := NewContract(depth, origin, from, to, value, gas, code)
 	c.Input = input
 
 	return c
-}
-
-func (c *Contract) RevertJournal() {
-	c.Journal.Revert(c)
-}
-
-func (c *Contract) AddToJournal(e JournalEntry) {
-	c.Journal.Append(e)
 }

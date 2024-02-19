@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/umbracle/ethgo/abi"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -61,14 +62,13 @@ func getPredeployAccount(address types.Address, input []byte,
 		big.NewInt(0),
 		math.MaxInt64,
 		input,
-		runtime.NewAccessList(),
 	)
 
 	// Enable all forks
 	config := chain.AllForksEnabled.At(0)
 
 	// Create a transition
-	transition := state.NewTransition(config, snapshot, radix)
+	transition := state.NewTransition(hclog.NewNullLogger(), config, snapshot, radix)
 	transition.ContextPtr().ChainID = chainID
 
 	// Run the transition through the EVM

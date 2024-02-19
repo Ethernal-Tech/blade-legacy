@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -36,7 +37,7 @@ func TestOverride(t *testing.T) {
 	balance := big.NewInt(2)
 	code := []byte{0x1}
 
-	tt := NewTransition(chain.ForksInTime{}, state, newTxn(state))
+	tt := NewTransition(hclog.NewNullLogger(), chain.ForksInTime{}, state, newTxn(state))
 
 	require.Empty(t, tt.state.GetCode(types.ZeroAddress))
 
@@ -259,11 +260,12 @@ func Test_Transition_EIP2929(t *testing.T) {
 			txn.SetCode(addr, tt.code)
 
 			enabledForks := chain.AllForksEnabled.At(0)
-			transition := NewTransition(enabledForks, state, txn)
+			transition := NewTransition(hclog.NewNullLogger(), enabledForks, state, txn)
 			initialAccessList := runtime.NewAccessList()
 			initialAccessList.PrepareAccessList(transition.ctx.Origin, &addr, transition.precompiles.Addrs, nil)
+			transition.accessList = initialAccessList
 
-			result := transition.Call2(transition.ctx.Origin, addr, nil, big.NewInt(0), uint64(1000000), initialAccessList)
+			result := transition.Call2(transition.ctx.Origin, addr, nil, big.NewInt(0), uint64(1000000))
 			assert.Equal(t, tt.gasConsumed, result.GasUsed, "Gas consumption for %s is inaccurate according to EIP 2929", tt.name)
 		})
 	}

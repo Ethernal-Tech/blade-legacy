@@ -30,13 +30,12 @@ var (
 
 func (c *state) calculateGasForEIP2929(addr types.Address) uint64 {
 	var gas uint64
-	if c.msg.AccessList.ContainsAddress(addr) {
+	if c.host.ContainsAccessListAddress(addr) {
 		gas = WarmStorageReadCostEIP2929
 	} else {
 		gas = ColdAccountAccessCostEIP2929
 
-		c.msg.AddToJournal(&runtime.AccessListAddAccountChange{Address: addr})
-		c.msg.AccessList.AddAddress(addr)
+		c.host.AddAddressToAccessList(addr)
 	}
 
 	return gas
@@ -487,10 +486,10 @@ func opSload(c *state) {
 	var gas uint64
 
 	if c.config.Berlin {
-		if _, slotPresent := c.msg.AccessList.Contains(c.msg.Address, bigToHash(loc)); !slotPresent {
+		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, bigToHash(loc)); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
 
-			c.addAccessListSlot(c.msg.Address, bigToHash(loc))
+			c.host.AddSlotToAccessList(c.msg.Address, bigToHash(loc))
 		} else {
 			gas = WarmStorageReadCostEIP2929
 		}
@@ -533,10 +532,10 @@ func opSStore(c *state) {
 	cost := uint64(0)
 
 	if c.config.Berlin {
-		if _, slotPresent := c.msg.AccessList.Contains(c.msg.Address, key); !slotPresent {
+		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, key); !slotPresent {
 			cost = ColdStorageReadCostEIP2929
 
-			c.addAccessListSlot(c.msg.Address, key)
+			c.host.AddSlotToAccessList(c.msg.Address, key)
 		}
 	}
 
@@ -1006,10 +1005,10 @@ func opSelfDestruct(c *state) {
 	}
 
 	// EIP 2929 gas
-	if c.config.Berlin && !c.msg.AccessList.ContainsAddress(address) {
+	if c.config.Berlin && !c.host.ContainsAccessListAddress(address) {
 		gas += ColdAccountAccessCostEIP2929
 
-		c.addAccessListAddress(address)
+		c.host.AddAddressToAccessList(address)
 	}
 
 	if !c.consumeGas(gas) {
@@ -1380,7 +1379,6 @@ func (c *state) buildCallContract(op OpCode) (*runtime.Contract, uint64, uint64,
 		gas,
 		c.host.GetCode(addr),
 		args,
-		c.msg.AccessList,
 	)
 
 	if op == STATICCALL || parent.msg.Static {
@@ -1420,9 +1418,6 @@ func (c *state) buildCreateContract(op OpCode) (*runtime.Contract, error) {
 
 	// Calculate and consume gas cost
 
-	// var overflow bool
-	var gasCost uint64
-
 	// Both CREATE and CREATE2 use memory
 	var input []byte
 
@@ -1433,22 +1428,17 @@ func (c *state) buildCreateContract(op OpCode) (*runtime.Contract, error) {
 		return nil, nil
 	}
 
-	// Consume memory resize gas (TODO, change with get2) (to be fixed in EVM-528) //nolint:godox
-	if !c.consumeGas(gasCost) {
-		return nil, nil
-	}
-
-	if hasTransfer {
-		if c.host.GetBalance(c.msg.Address).Cmp(value) < 0 {
-			return nil, types.ErrInsufficientFunds
-		}
-	}
-
 	if op == CREATE2 {
 		// Consume sha3 gas cost
 		size := length.Uint64()
 		if !c.consumeGas(((size + 31) / 32) * sha3WordGas) {
 			return nil, nil
+		}
+	}
+
+	if hasTransfer {
+		if c.host.GetBalance(c.msg.Address).Cmp(value) < 0 {
+			return nil, types.ErrInsufficientFunds
 		}
 	}
 
@@ -1480,20 +1470,9 @@ func (c *state) buildCreateContract(op OpCode) (*runtime.Contract, error) {
 		value,
 		gas,
 		input,
-		c.msg.AccessList,
 	)
 
 	return contract, nil
-}
-
-func (c *state) addAccessListSlot(address types.Address, slot types.Hash) {
-	c.msg.AddToJournal(&runtime.AccessListAddSlotChange{Address: address, Slot: slot})
-	c.msg.AccessList.AddSlot(address, slot)
-}
-
-func (c *state) addAccessListAddress(address types.Address) {
-	c.msg.AddToJournal(&runtime.AccessListAddAccountChange{Address: address})
-	c.msg.AccessList.AddAddress(address)
 }
 
 func opHalt(op OpCode) instruction {
