@@ -174,7 +174,7 @@ func TestNewUnsafePool(t *testing.T) {
 
 	require.NotNilf(t, pool, "NewUnsafePool returned nil")
 
-	require.Empty(t, "Expected empty pool, got %v", pool.stack)
+	require.Empty(t, pool.stack, "Expected empty pool.")
 }
 
 func TestUnsafePoolGetWhenEmpty(t *testing.T) {
