@@ -1418,9 +1418,6 @@ func (c *state) buildCreateContract(op OpCode) (*runtime.Contract, error) {
 
 	// Calculate and consume gas cost
 
-	// var overflow bool
-	var gasCost uint64
-
 	// Both CREATE and CREATE2 use memory
 	var input []byte
 
@@ -1431,22 +1428,17 @@ func (c *state) buildCreateContract(op OpCode) (*runtime.Contract, error) {
 		return nil, nil
 	}
 
-	// Consume memory resize gas (TODO, change with get2) (to be fixed in EVM-528) //nolint:godox
-	if !c.consumeGas(gasCost) {
-		return nil, nil
-	}
-
-	if hasTransfer {
-		if c.host.GetBalance(c.msg.Address).Cmp(value) < 0 {
-			return nil, types.ErrInsufficientFunds
-		}
-	}
-
 	if op == CREATE2 {
 		// Consume sha3 gas cost
 		size := length.Uint64()
 		if !c.consumeGas(((size + 31) / 32) * sha3WordGas) {
 			return nil, nil
+		}
+	}
+
+	if hasTransfer {
+		if c.host.GetBalance(c.msg.Address).Cmp(value) < 0 {
+			return nil, types.ErrInsufficientFunds
 		}
 	}
 

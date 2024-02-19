@@ -48,7 +48,7 @@ func TestSubGasLimitPrice(t *testing.T) {
 			expectedErr: nil,
 		},
 		{
-			name: "should fail by ErrNotEnoughFunds",
+			name: "should fail by ErrInsufficientFunds",
 			preState: map[types.Address]*PreState{
 				addr1: {
 					Nonce:   0,
@@ -59,7 +59,7 @@ func TestSubGasLimitPrice(t *testing.T) {
 			from:     addr1,
 			gas:      10,
 			gasPrice: 10,
-			// should return ErrNotEnoughFundsForGas when state.SubBalance returns ErrNotEnoughFunds
+			// should return ErrInsufficientFunds when state.SubBalance returns ErrNotEnoughFunds
 			expectedErr: ErrInsufficientFunds,
 		},
 	}
