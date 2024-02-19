@@ -1342,7 +1342,7 @@ func (t *Transition) RevertToSnapshot(snapshot int) error {
 	})
 
 	if idx == len(t.journalRevisions) || t.journalRevisions[idx].ID != snapshot {
-		return fmt.Errorf("journal revision id %v cannot be reverted", snapshot)
+		return fmt.Errorf("journal revision id %d cannot be reverted", snapshot)
 	}
 
 	journalIndex := t.journalRevisions[idx].Index
