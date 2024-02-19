@@ -136,6 +136,7 @@ func TestMustDecodeHex(t *testing.T) {
 		t.Parallel()
 
 		str := "0x12345q"
+
 		require.PanicsWithError(t, "could not decode hex: encoding/hex: invalid byte: U+0071 'q'", func() {
 			MustDecodeHex(str)
 		})
