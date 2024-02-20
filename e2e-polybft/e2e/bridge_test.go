@@ -1308,6 +1308,8 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	require.NoError(t, err)
 
 	checkBalancesFn := func(address types.Address, rootExpected, childExpected *big.Int, isValidator bool) {
+		offset := big.NewInt(100)
+
 		t.Log("Checking balance of native ERC20 token on root and child", "Address", address,
 			"Root expected", rootExpected, "Child Expected", childExpected)
 
@@ -1323,7 +1325,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		if isValidator {
 			require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
 		} else {
-			require.True(t, balance.Cmp(childExpected) <= 0)
+			require.True(t, balance.Cmp(childExpected.Sub(childExpected, offset)) >= 0)
 		}
 	}
 
