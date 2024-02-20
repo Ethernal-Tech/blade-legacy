@@ -7,6 +7,11 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/client"
+	"github.com/umbracle/ethgo"
+	"github.com/umbracle/ethgo/wallet"
+
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -16,10 +21,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
-	dockertypes "github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 //nolint:gosec
@@ -90,7 +91,7 @@ func GetRootchainID() (string, error) {
 		return "", fmt.Errorf("rootchain id error: %w", err)
 	}
 
-	containers, err := cli.ContainerList(context.Background(), dockertypes.ContainerListOptions{})
+	containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("rootchain id error: %w", err)
 	}
