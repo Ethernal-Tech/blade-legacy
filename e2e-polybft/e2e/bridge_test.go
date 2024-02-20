@@ -1319,6 +1319,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		balance, err = childEthEndpoint.GetBalance(ethgo.Address(address), ethgo.Latest)
 		require.NoError(t, err)
 		t.Log("Balance of native ERC20 token on child", balance, "Address", address)
+
 		if isValidator {
 			require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
 		} else {
