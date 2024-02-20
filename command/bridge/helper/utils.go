@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/docker/docker/api/types/container"
+	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/wallet"
@@ -91,7 +91,7 @@ func GetRootchainID() (string, error) {
 		return "", fmt.Errorf("rootchain id error: %w", err)
 	}
 
-	containers, err := cli.ContainerList(context.Background(), container.ListOptions{})
+	containers, err := cli.ContainerList(context.Background(), dockertypes.ContainerListOptions{})
 	if err != nil {
 		return "", fmt.Errorf("rootchain id error: %w", err)
 	}
