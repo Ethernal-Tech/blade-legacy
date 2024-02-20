@@ -380,7 +380,7 @@ func TestPush0(t *testing.T) {
 		}
 
 		for i := 0; i < stackSize; i++ {
-			require.Equal(t, zero, s.pop())
+			require.Equal(t, zero.Uint64(), s.pop().Uint64())
 		}
 	})
 }
