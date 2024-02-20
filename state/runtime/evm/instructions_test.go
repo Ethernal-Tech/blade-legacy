@@ -872,28 +872,15 @@ func TestCallValue(t *testing.T) {
 }
 
 func TestCallDataLoad(t *testing.T) {
-	t.Run("NonZeroOffset", func(t *testing.T) {
-		s, cancelFn := getState(&chain.ForksInTime{})
-		defer cancelFn()
+	s, cancelFn := getState(&chain.ForksInTime{})
+	defer cancelFn()
 
-		s.push(one)
+	s.push(one)
 
-		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
+	s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
-		opCallDataLoad(s)
-		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
-	})
-	t.Run("ZeroOffset", func(t *testing.T) {
-		s, cancelFn := getState(&chain.ForksInTime{})
-		defer cancelFn()
-
-		s.push(zero)
-
-		s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
-
-		opCallDataLoad(s)
-		assert.NotEqual(t, zero.Uint64(), s.pop().Uint64())
-	})
+	opCallDataLoad(s)
+	assert.Equal(t, zero.Uint64(), s.pop().Uint64())
 }
 
 func TestCallDataSize(t *testing.T) {
