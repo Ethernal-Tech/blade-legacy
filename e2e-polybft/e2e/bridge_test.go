@@ -1325,6 +1325,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		if isValidator {
 			require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
 		} else {
+			//this check is implemented because non-validators incur fees, potentially resulting in a balance lower than anticipated
 			require.True(t, balance.Cmp(childExpected.Sub(childExpected, offset)) >= 0)
 		}
 	}
