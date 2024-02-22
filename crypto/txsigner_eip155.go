@@ -2,9 +2,11 @@ package crypto
 
 import (
 	"crypto/ecdsa"
+	"errors"
 	"math/big"
 	"math/bits"
 
+	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -39,54 +41,52 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 		return signer.FrontierSigner.Hash(tx)
 	}
 
-	// var hash []byte
+	var hash []byte
 
-	// RLP := arenaPool.Get()
+	RLP := arenaPool.Get()
 
-	// // RLP(-, -, -, -, -, -, -, -, -)
-	// hashPreimage := RLP.NewArray()
+	// RLP(-, -, -, -, -, -, -, -, -)
+	hashPreimage := RLP.NewArray()
 
-	// // RLP(nonce, -, -, -, -, -, -, -, -)
-	// hashPreimage.Set(RLP.NewUint(tx.Nonce()))
+	// RLP(nonce, -, -, -, -, -, -, -, -)
+	hashPreimage.Set(RLP.NewUint(tx.Nonce()))
 
-	// // RLP(nonce, gasPrice, -, -, -, -, -, -, -)
-	// hashPreimage.Set(RLP.NewBigInt(tx.GasPrice()))
+	// RLP(nonce, gasPrice, -, -, -, -, -, -, -)
+	hashPreimage.Set(RLP.NewBigInt(tx.GasPrice()))
 
-	// // RLP(nonce, gasPrice, gas, -, -, -, -, -, -)
-	// hashPreimage.Set(RLP.NewUint(tx.Gas()))
+	// RLP(nonce, gasPrice, gas, -, -, -, -, -, -)
+	hashPreimage.Set(RLP.NewUint(tx.Gas()))
 
-	// // Checking whether the transaction is a smart contract deployment
-	// if tx.To() == nil {
-	// 	// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
-	// 	hashPreimage.Set(RLP.NewNull())
-	// } else {
-	// 	// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
-	// 	hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
-	// }
+	// Checking whether the transaction is a smart contract deployment
+	if tx.To() == nil {
+		// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
+		hashPreimage.Set(RLP.NewNull())
+	} else {
+		// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
+		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
+	}
 
-	// // RLP(nonce, gasPrice, gas, to, value, -, -, -, -)
-	// hashPreimage.Set(RLP.NewBigInt(tx.Value()))
+	// RLP(nonce, gasPrice, gas, to, value, -, -, -, -)
+	hashPreimage.Set(RLP.NewBigInt(tx.Value()))
 
-	// // RLP(nonce, gasPrice, gas, to, value, input, -, -, -)
-	// hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
+	// RLP(nonce, gasPrice, gas, to, value, input, -, -, -)
+	hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
 
-	// // RLP(nonce, gasPrice, gas, to, value, input, chainId, -, -)
-	// hashPreimage.Set(RLP.NewUint(signer.chainID))
+	// RLP(nonce, gasPrice, gas, to, value, input, chainId, -, -)
+	hashPreimage.Set(RLP.NewUint(signer.chainID))
 
-	// // RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, -)
-	// hashPreimage.Set(RLP.NewUint(0))
+	// RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, -)
+	hashPreimage.Set(RLP.NewUint(0))
 
-	// // RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, 0)
-	// hashPreimage.Set(RLP.NewUint(0))
+	// RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, 0)
+	hashPreimage.Set(RLP.NewUint(0))
 
-	// // keccak256(RLP(nonce, gasPrice, gas, to, value, input))
-	// hash = keccak.Keccak256Rlp(nil, hashPreimage)
+	// keccak256(RLP(nonce, gasPrice, gas, to, value, input))
+	hash = keccak.Keccak256Rlp(nil, hashPreimage)
 
-	// arenaPool.Put(RLP)
+	arenaPool.Put(RLP)
 
-	// return types.BytesToHash(hash)
-
-	return calcTxHash(tx, signer.chainID)
+	return types.BytesToHash(hash)
 }
 
 // Sender returns the sender of the transaction
@@ -97,48 +97,40 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	protected := true
 
-	bigV := big.NewInt(0)
-
 	v, r, s := tx.RawSignatureValues()
 
 	// Checking one of the values is enought since they are inseparable
-	// if v == nil {
-	// 	return types.Address{}, errors.New("Sender method: Unknown signature")
-	// }
-
-	if v != nil {
-		bigV.SetBytes(v.Bytes())
+	if v == nil {
+		return types.Address{}, errors.New("Sender method: Unknown signature")
 	}
+
+	bigV := big.NewInt(0).SetBytes(v.Bytes())
 
 	if vv := bigV.Uint64(); bits.Len(uint(vv)) <= 8 {
 		protected = vv != 27 && vv != 28
 	}
 
 	if !protected {
-		return signer.FrontierSigner.Sender(tx)
+		return signer.HomesteadSigner.Sender(tx)
 	}
 
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = CHAIN_ID * 2 + 35 + {0, 1} -> {0, 1} = v - 35 - CHAIN_ID * 2
 
-	// a := big.NewInt(0)
-	// b := big.NewInt(0)
-	// parity := big.NewInt(0)
+	a := big.NewInt(0)
+	b := big.NewInt(0)
+	parity := big.NewInt(0)
 
-	// // a = v - 35
-	// a.Sub(v, big35)
+	// a = v - 35
+	a.Sub(v, big35)
 
-	// // b = CHAIN_ID * 2
-	// b.Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+	// b = CHAIN_ID * 2
+	b.Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
 
-	// // parity = a - b
-	// parity.Sub(a, b)
+	// parity = a - b
+	parity.Sub(a, b)
 
-	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
-	bigV.Sub(bigV, mulOperand)
-	bigV.Sub(bigV, big35)
-
-	return recoverAddress(signer.Hash(tx), r, s, bigV, true)
+	return recoverAddress(signer.Hash(tx), r, s, parity, true)
 }
 
 // SingTx takes the original transaction as input and returns its signed version
@@ -159,9 +151,9 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 	r := new(big.Int).SetBytes(signature[:32])
 	s := new(big.Int).SetBytes(signature[32:64])
 
-	// if s.Cmp(secp256k1NHalf) > 0 {
-	// 	return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")
-	// }
+	if s.Cmp(secp256k1NHalf) > 0 {
+		return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")
+	}
 
 	v := new(big.Int).SetBytes(signer.calculateV(signature[64]))
 
@@ -173,27 +165,19 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 // Private method calculateV returns the V value for the EIP-155 transactions
 //
 // V is calculated by the formula: {0, 1} + CHAIN_ID * 2 + 35 where {0, 1} denotes the parity of the Y coordinate
-// func (signer *EIP155Signer) calculateV(parity byte) []byte {
-// 	a := big.NewInt(0)
-// 	b := big.NewInt(0)
-// 	result := big.NewInt(0)
-
-// 	// a = {0, 1} + 35
-// 	a.Add(big.NewInt(int64(parity)), big35)
-
-// 	// b = CHAIN_ID * 2
-// 	b.Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
-
-// 	// result = a + b
-// 	result.Add(a, b)
-
-// 	return result.Bytes()
-// }
-
 func (signer *EIP155Signer) calculateV(parity byte) []byte {
-	reference := big.NewInt(int64(parity))
-	reference.Add(reference, big35)
-	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
-	reference.Add(reference, mulOperand)
-	return reference.Bytes()
+	a := big.NewInt(0)
+	b := big.NewInt(0)
+	result := big.NewInt(0)
+
+	// a = {0, 1} + 35
+	a.Add(big.NewInt(int64(parity)), big35)
+
+	// b = CHAIN_ID * 2
+	b.Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+
+	// result = a + b
+	result.Add(a, b)
+
+	return result.Bytes()
 }
