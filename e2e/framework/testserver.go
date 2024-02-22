@@ -528,7 +528,6 @@ func (t *TestServer) SendRawTx(
 		Value:    tx.Value,
 		Input:    tx.Input,
 		Nonce:    nextNonce,
-		ChainID:  big.NewInt(0),
 	}), signerKey)
 	if err != nil {
 		return nil, err

@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/ecdsa"
-	"errors"
 	"math/big"
 	"math/bits"
 
@@ -97,14 +96,18 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	protected := true
 
+	bigV := big.NewInt(0)
+
 	v, r, s := tx.RawSignatureValues()
 
 	// Checking one of the values is enought since they are inseparable
-	if v == nil {
-		return types.Address{}, errors.New("Sender method: Unknown signature")
-	}
+	// if v == nil {
+	// 	return types.Address{}, errors.New("Sender method: Unknown signature")
+	// }
 
-	bigV := big.NewInt(0).SetBytes(v.Bytes())
+	if v != nil {
+		bigV.SetBytes(v.Bytes())
+	}
 
 	if vv := bigV.Uint64(); bits.Len(uint(vv)) <= 8 {
 		protected = vv != 27 && vv != 28
@@ -186,10 +189,10 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 // 	return result.Bytes()
 // }
 
-func (e *EIP155Signer) calculateV(parity byte) []byte {
+func (signer *EIP155Signer) calculateV(parity byte) []byte {
 	reference := big.NewInt(int64(parity))
 	reference.Add(reference, big35)
-	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(e.chainID)), big.NewInt(2))
+	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
 	reference.Add(reference, mulOperand)
 	return reference.Bytes()
 }
