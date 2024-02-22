@@ -122,7 +122,6 @@ func TestAddTxErrors(t *testing.T) {
 	t.Parallel()
 
 	poolSigner := crypto.NewLondonSigner(100)
-	stateSigner := crypto.NewStateSigner()
 
 	// Generate a private key and address
 	defaultKey, defaultAddr := tests.GenerateKeyAndAddr(t)
@@ -144,11 +143,7 @@ func TestAddTxErrors(t *testing.T) {
 		var signedTx *types.Transaction
 		var signErr error
 
-		if transaction.Type() == types.StateTx {
-			signedTx, signErr = stateSigner.SignTx(transaction, defaultKey)
-		} else {
-			signedTx, signErr = poolSigner.SignTx(transaction, defaultKey)
-		}
+		signedTx, signErr = poolSigner.SignTx(transaction, defaultKey)
 		if signErr != nil {
 			t.Fatalf("Unable to sign transaction, %v", signErr)
 		}
