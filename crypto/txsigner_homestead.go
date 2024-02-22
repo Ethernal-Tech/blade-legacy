@@ -37,6 +37,10 @@ func (signer *HomesteadSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, error) {
+	if tx.Type() == types.StateTx {
+		return signer.FrontierSigner.Sender(tx)
+	}
+
 	if tx.Type() != types.LegacyTx {
 		return types.Address{}, errors.New("Sender method: Unknown transaction type")
 	}
@@ -60,6 +64,10 @@ func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, err
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	if tx.Type() == types.StateTx {
+		return signer.FrontierSigner.SignTx(tx, privateKey)
+	}
+
 	if tx.Type() != types.LegacyTx {
 		return nil, errors.New("SignTx method: Unknown transaction type")
 	}

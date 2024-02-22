@@ -25,8 +25,10 @@ func NewLondonSigner(chainID uint64) *LondonSigner {
 	return &LondonSigner{
 		BerlinSigner: BerlinSigner{
 			EIP155Signer: EIP155Signer{
-				chainID:         chainID,
-				HomesteadSigner: HomesteadSigner{},
+				chainID: chainID,
+				HomesteadSigner: HomesteadSigner{
+					FrontierSigner: FrontierSigner{},
+				},
 			},
 		},
 	}

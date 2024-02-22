@@ -605,31 +605,31 @@ func TestAddGossipTx(t *testing.T) {
 	tx := newTx(types.ZeroAddress, 1, 1, types.LegacyTxType)
 
 	// Problem with this test is in RLP serialization (for some reason ChainID is not serialized in a good way)
-	// t.Run("node is a validator", func(t *testing.T) {
-	// 	t.Parallel()
+	t.Run("node is a validator", func(t *testing.T) {
+		t.Parallel()
 
-	// 	pool, err := newTestPool()
-	// 	assert.NoError(t, err)
-	// 	pool.SetSigner(signer)
+		pool, err := newTestPool()
+		assert.NoError(t, err)
+		pool.SetSigner(signer)
 
-	// 	pool.SetSealing(true)
+		pool.SetSealing(true)
 
-	// 	signedTx, err := signer.SignTx(tx, key)
-	// 	if err != nil {
-	// 		t.Fatalf("cannot sign transaction - err: %v", err)
-	// 	}
+		signedTx, err := signer.SignTx(tx, key)
+		if err != nil {
+			t.Fatalf("cannot sign transaction - err: %v", err)
+		}
 
-	// 	// send tx
-	// 	protoTx := &proto.Txn{
-	// 		Raw: &any.Any{
-	// 			Value: signedTx.MarshalRLP(),
-	// 		},
-	// 	}
+		// send tx
+		protoTx := &proto.Txn{
+			Raw: &any.Any{
+				Value: signedTx.MarshalRLP(),
+			},
+		}
 
-	// 	pool.addGossipTx(protoTx, "")
+		pool.addGossipTx(protoTx, "")
 
-	// 	assert.Equal(t, uint64(1), pool.accounts.get(sender).enqueued.length())
-	// })
+		assert.Equal(t, uint64(1), pool.accounts.get(sender).enqueued.length())
+	})
 
 	t.Run("node is a non validator", func(t *testing.T) {
 		t.Parallel()

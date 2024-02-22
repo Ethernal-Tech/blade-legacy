@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
+	"math/bits"
 
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -23,6 +24,9 @@ type EIP155Signer struct {
 func NewEIP155Signer(chainID uint64) *EIP155Signer {
 	return &EIP155Signer{
 		chainID: chainID,
+		HomesteadSigner: HomesteadSigner{
+			FrontierSigner: FrontierSigner{},
+		},
 	}
 }
 
@@ -33,8 +37,8 @@ func NewEIP155Signer(chainID uint64) *EIP155Signer {
 //
 // Specification: https://eips.ethereum.org/EIPS/eip-155#specification
 func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
-	if tx.ChainID() == nil || tx.ChainID().Cmp(big.NewInt(0)) == 0 {
-		return signer.HomesteadSigner.Hash(tx)
+	if tx.Type() == types.StateTx {
+		return signer.FrontierSigner.Hash(tx)
 	}
 
 	var hash []byte
@@ -87,15 +91,27 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.ChainID() == nil || tx.ChainID().Cmp(big.NewInt(0)) == 0 {
-		return signer.HomesteadSigner.Sender(tx)
+	if tx.Type() == types.StateTx {
+		return signer.FrontierSigner.Sender(tx)
 	}
+
+	protected := true
 
 	v, r, s := tx.RawSignatureValues()
 
 	// Checking one of the values is enought since they are inseparable
 	if v == nil {
 		return types.Address{}, errors.New("Sender method: Unknown signature")
+	}
+
+	bigV := big.NewInt(0).SetBytes(v.Bytes())
+
+	if vv := bigV.Uint64(); bits.Len(uint(vv)) <= 8 {
+		protected = vv != 27 && vv != 28
+	}
+
+	if !protected {
+		return signer.HomesteadSigner.Sender(tx)
 	}
 
 	// Reverse the V calculation to find the parity of the Y coordinate
@@ -119,8 +135,8 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.ChainID() == nil || tx.ChainID().Cmp(big.NewInt(0)) == 0 {
-		return signer.HomesteadSigner.SignTx(tx, privateKey)
+	if tx.Type() == types.StateTx {
+		return signer.FrontierSigner.SignTx(tx, privateKey)
 	}
 
 	tx = tx.Copy()

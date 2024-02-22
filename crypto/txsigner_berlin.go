@@ -23,8 +23,10 @@ type BerlinSigner struct {
 func NewBerlinSigner(chainID uint64) *BerlinSigner {
 	return &BerlinSigner{
 		EIP155Signer: EIP155Signer{
-			chainID:         chainID,
-			HomesteadSigner: HomesteadSigner{},
+			chainID: chainID,
+			HomesteadSigner: HomesteadSigner{
+				FrontierSigner: FrontierSigner{},
+			},
 		},
 	}
 }
