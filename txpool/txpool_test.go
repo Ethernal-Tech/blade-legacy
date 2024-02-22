@@ -140,10 +140,8 @@ func TestAddTxErrors(t *testing.T) {
 	signTx := func(transaction *types.Transaction) *types.Transaction {
 		transaction.SetChainID(big.NewInt(0))
 
-		var signedTx *types.Transaction
-		var signErr error
+		signedTx, signErr := poolSigner.SignTx(transaction, defaultKey)
 
-		signedTx, signErr = poolSigner.SignTx(transaction, defaultKey)
 		if signErr != nil {
 			t.Fatalf("Unable to sign transaction, %v", signErr)
 		}
