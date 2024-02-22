@@ -370,7 +370,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 				Nonce:    t.Nonce,
 				Value:    value,
 				Gas:      t.GasLimit[i.Gas],
-				GasPrice: t.GasPrice,
+				GasPrice: gasPrice,
 				Input:    hex.MustDecodeHex(t.Data[i.Data]),
 			}
 		}

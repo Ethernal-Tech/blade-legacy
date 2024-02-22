@@ -27,7 +27,7 @@ func (tx *DynamicFeeTx) transactionType() TxType { return DynamicFeeTxType }
 func (tx *DynamicFeeTx) chainID() *big.Int       { return tx.ChainID }
 func (tx *DynamicFeeTx) input() []byte           { return tx.Input }
 func (tx *DynamicFeeTx) gas() uint64             { return tx.Gas }
-func (tx *DynamicFeeTx) gasPrice() *big.Int      { return tx.GasFeeCap }
+func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
 func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
 func (tx *DynamicFeeTx) value() *big.Int         { return tx.Value }
