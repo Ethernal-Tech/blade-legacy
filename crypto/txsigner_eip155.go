@@ -5,7 +5,6 @@ import (
 	"math/big"
 	"math/bits"
 
-	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -40,52 +39,54 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 		return signer.FrontierSigner.Hash(tx)
 	}
 
-	var hash []byte
+	// var hash []byte
 
-	RLP := arenaPool.Get()
+	// RLP := arenaPool.Get()
 
-	// RLP(-, -, -, -, -, -, -, -, -)
-	hashPreimage := RLP.NewArray()
+	// // RLP(-, -, -, -, -, -, -, -, -)
+	// hashPreimage := RLP.NewArray()
 
-	// RLP(nonce, -, -, -, -, -, -, -, -)
-	hashPreimage.Set(RLP.NewUint(tx.Nonce()))
+	// // RLP(nonce, -, -, -, -, -, -, -, -)
+	// hashPreimage.Set(RLP.NewUint(tx.Nonce()))
 
-	// RLP(nonce, gasPrice, -, -, -, -, -, -, -)
-	hashPreimage.Set(RLP.NewBigInt(tx.GasPrice()))
+	// // RLP(nonce, gasPrice, -, -, -, -, -, -, -)
+	// hashPreimage.Set(RLP.NewBigInt(tx.GasPrice()))
 
-	// RLP(nonce, gasPrice, gas, -, -, -, -, -, -)
-	hashPreimage.Set(RLP.NewUint(tx.Gas()))
+	// // RLP(nonce, gasPrice, gas, -, -, -, -, -, -)
+	// hashPreimage.Set(RLP.NewUint(tx.Gas()))
 
-	// Checking whether the transaction is a smart contract deployment
-	if tx.To() == nil {
-		// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
-		hashPreimage.Set(RLP.NewNull())
-	} else {
-		// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
-		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
-	}
+	// // Checking whether the transaction is a smart contract deployment
+	// if tx.To() == nil {
+	// 	// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
+	// 	hashPreimage.Set(RLP.NewNull())
+	// } else {
+	// 	// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
+	// 	hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
+	// }
 
-	// RLP(nonce, gasPrice, gas, to, value, -, -, -, -)
-	hashPreimage.Set(RLP.NewBigInt(tx.Value()))
+	// // RLP(nonce, gasPrice, gas, to, value, -, -, -, -)
+	// hashPreimage.Set(RLP.NewBigInt(tx.Value()))
 
-	// RLP(nonce, gasPrice, gas, to, value, input, -, -, -)
-	hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
+	// // RLP(nonce, gasPrice, gas, to, value, input, -, -, -)
+	// hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
 
-	// RLP(nonce, gasPrice, gas, to, value, input, chainId, -, -)
-	hashPreimage.Set(RLP.NewUint(signer.chainID))
+	// // RLP(nonce, gasPrice, gas, to, value, input, chainId, -, -)
+	// hashPreimage.Set(RLP.NewUint(signer.chainID))
 
-	// RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, -)
-	hashPreimage.Set(RLP.NewUint(0))
+	// // RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, -)
+	// hashPreimage.Set(RLP.NewUint(0))
 
-	// RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, 0)
-	hashPreimage.Set(RLP.NewUint(0))
+	// // RLP(nonce, gasPrice, gas, to, value, input, chainId, 0, 0)
+	// hashPreimage.Set(RLP.NewUint(0))
 
-	// keccak256(RLP(nonce, gasPrice, gas, to, value, input))
-	hash = keccak.Keccak256Rlp(nil, hashPreimage)
+	// // keccak256(RLP(nonce, gasPrice, gas, to, value, input))
+	// hash = keccak.Keccak256Rlp(nil, hashPreimage)
 
-	arenaPool.Put(RLP)
+	// arenaPool.Put(RLP)
 
-	return types.BytesToHash(hash)
+	// return types.BytesToHash(hash)
+
+	return calcTxHash(tx, signer.chainID)
 }
 
 // Sender returns the sender of the transaction
@@ -114,7 +115,7 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 	}
 
 	if !protected {
-		return signer.HomesteadSigner.Sender(tx)
+		return signer.FrontierSigner.Sender(tx)
 	}
 
 	// Reverse the V calculation to find the parity of the Y coordinate

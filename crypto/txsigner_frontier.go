@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -32,43 +31,45 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 		return types.ZeroHash
 	}
 
-	var hash []byte
+	// var hash []byte
 
-	RLP := arenaPool.Get()
+	// RLP := arenaPool.Get()
 
-	// RLP(-, -, -, -, -, -)
-	hashPreimage := RLP.NewArray()
+	// // RLP(-, -, -, -, -, -)
+	// hashPreimage := RLP.NewArray()
 
-	// RLP(nonce, -, -, -, -, -)
-	hashPreimage.Set(RLP.NewUint(tx.Nonce()))
+	// // RLP(nonce, -, -, -, -, -)
+	// hashPreimage.Set(RLP.NewUint(tx.Nonce()))
 
-	// RLP(nonce, gasPrice, -, -, -, -)
-	hashPreimage.Set(RLP.NewBigInt(tx.GasPrice()))
+	// // RLP(nonce, gasPrice, -, -, -, -)
+	// hashPreimage.Set(RLP.NewBigInt(tx.GasPrice()))
 
-	// RLP(nonce, gasPrice, gas, -, -, -)
-	hashPreimage.Set(RLP.NewUint(tx.Gas()))
+	// // RLP(nonce, gasPrice, gas, -, -, -)
+	// hashPreimage.Set(RLP.NewUint(tx.Gas()))
 
-	// Checking whether the transaction is a smart contract deployment
-	if tx.To() == nil {
-		// RLP(nonce, gasPrice, gas, to, -, -)
-		hashPreimage.Set(RLP.NewNull())
-	} else {
-		// RLP(nonce, gasPrice, gas, to, -, -)
-		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
-	}
+	// // Checking whether the transaction is a smart contract deployment
+	// if tx.To() == nil {
+	// 	// RLP(nonce, gasPrice, gas, to, -, -)
+	// 	hashPreimage.Set(RLP.NewNull())
+	// } else {
+	// 	// RLP(nonce, gasPrice, gas, to, -, -)
+	// 	hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
+	// }
 
-	// RLP(nonce, gasPrice, gas, to, value, -)
-	hashPreimage.Set(RLP.NewBigInt(tx.Value()))
+	// // RLP(nonce, gasPrice, gas, to, value, -)
+	// hashPreimage.Set(RLP.NewBigInt(tx.Value()))
 
-	// RLP(nonce, gasPrice, gas, to, value, input)
-	hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
+	// // RLP(nonce, gasPrice, gas, to, value, input)
+	// hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
 
-	// keccak256(RLP(nonce, gasPrice, gas, to, value, input))
-	hash = keccak.Keccak256Rlp(nil, hashPreimage)
+	// // keccak256(RLP(nonce, gasPrice, gas, to, value, input))
+	// hash = keccak.Keccak256Rlp(nil, hashPreimage)
 
-	arenaPool.Put(RLP)
+	// arenaPool.Put(RLP)
 
-	return types.BytesToHash(hash)
+	// return types.BytesToHash(hash)
+
+	return calcTxHash(tx, 0)
 }
 
 // Sender returns the sender of the transaction
@@ -77,19 +78,30 @@ func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, erro
 		return types.Address{}, errors.New("Sender method: Unknown transaction type")
 	}
 
+	// v, r, s := tx.RawSignatureValues()
+
+	// // Checking one of the values is enought since they are inseparable
+	// // if v == nil {
+	// // 	return types.Address{}, errors.New("Sender method: Unknown signature")
+	// // }
+
+	// // Reverse the V calculation to find the parity of the Y coordinate
+	// // v = {0, 1} + 27 -> {0, 1} = v - 27
+
+	// parity := big.NewInt(0).Sub(v, big27)
+
+	// return recoverAddress(signer.Hash(tx), r, s, parity, false)
+
+	refV := big.NewInt(0)
+
 	v, r, s := tx.RawSignatureValues()
+	if v != nil {
+		refV.SetBytes(v.Bytes())
+	}
 
-	// Checking one of the values is enought since they are inseparable
-	// if v == nil {
-	// 	return types.Address{}, errors.New("Sender method: Unknown signature")
-	// }
+	refV.Sub(refV, big27)
 
-	// Reverse the V calculation to find the parity of the Y coordinate
-	// v = {0, 1} + 27 -> {0, 1} = v - 27
-
-	parity := big.NewInt(0).Sub(v, big27)
-
-	return recoverAddress(signer.Hash(tx), r, s, parity, false)
+	return recoverAddress(signer.Hash(tx), r, s, refV, false)
 }
 
 // SingTx takes the original transaction as input and returns its signed version
@@ -119,11 +131,18 @@ func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Pr
 // Private method calculateV returns the V value for the pre-EIP-155 transactions
 //
 // V is calculated by the formula: {0, 1} + 27 where {0, 1} denotes the parity of the Y coordinate
+// func (signer *FrontierSigner) calculateV(parity byte) []byte {
+// 	result := big.NewInt(0)
+
+// 	// result = {0, 1} + 27
+// 	result.Add(big.NewInt(int64(parity)), big27)
+
+// 	return result.Bytes()
+// }
+
 func (signer *FrontierSigner) calculateV(parity byte) []byte {
-	result := big.NewInt(0)
+	reference := big.NewInt(int64(parity))
+	reference.Add(reference, big27)
 
-	// result = {0, 1} + 27
-	result.Add(big.NewInt(int64(parity)), big27)
-
-	return result.Bytes()
+	return reference.Bytes()
 }

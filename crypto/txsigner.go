@@ -6,6 +6,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/chain"
+	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/umbracle/fastrlp"
 )
@@ -95,4 +96,124 @@ func recoverAddress(txHash types.Hash, r, s, parity *big.Int, isHomestead bool) 
 	address := hash[12:]
 
 	return types.BytesToAddress(address), nil
+}
+
+func calcTxHash(tx *types.Transaction, chainID uint64) types.Hash {
+	var hash []byte
+
+	switch tx.Type() {
+	case types.AccessListTx:
+		a := arenaPool.Get()
+		v := a.NewArray()
+
+		v.Set(a.NewUint(chainID))
+		v.Set(a.NewUint(tx.Nonce()))
+		v.Set(a.NewBigInt(tx.GasPrice()))
+		v.Set(a.NewUint(tx.Gas()))
+
+		if tx.To() == nil {
+			v.Set(a.NewNull())
+		} else {
+			v.Set(a.NewCopyBytes((*(tx.To())).Bytes()))
+		}
+
+		v.Set(a.NewBigInt(tx.Value()))
+		v.Set(a.NewCopyBytes(tx.Input()))
+
+		// add accessList
+		accessListVV := a.NewArray()
+
+		if tx.AccessList() != nil {
+			for _, accessTuple := range tx.AccessList() {
+				accessTupleVV := a.NewArray()
+				accessTupleVV.Set(a.NewCopyBytes(accessTuple.Address.Bytes()))
+
+				storageKeysVV := a.NewArray()
+				for _, storageKey := range accessTuple.StorageKeys {
+					storageKeysVV.Set(a.NewCopyBytes(storageKey.Bytes()))
+				}
+
+				accessTupleVV.Set(storageKeysVV)
+				accessListVV.Set(accessTupleVV)
+			}
+		}
+
+		v.Set(accessListVV)
+
+		hash = keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, v)
+
+		arenaPool.Put(a)
+
+		return types.BytesToHash(hash)
+
+	case types.DynamicFeeTx, types.LegacyTx, types.StateTx:
+		a := arenaPool.Get()
+		isDynamicFeeTx := tx.Type() == types.DynamicFeeTx
+
+		v := a.NewArray()
+
+		if isDynamicFeeTx {
+			v.Set(a.NewUint(chainID))
+		}
+
+		v.Set(a.NewUint(tx.Nonce()))
+
+		if isDynamicFeeTx {
+			v.Set(a.NewBigInt(tx.GasTipCap()))
+			v.Set(a.NewBigInt(tx.GasFeeCap()))
+		} else {
+			v.Set(a.NewBigInt(tx.GasPrice()))
+		}
+
+		v.Set(a.NewUint(tx.Gas()))
+
+		if tx.To() == nil {
+			v.Set(a.NewNull())
+		} else {
+			v.Set(a.NewCopyBytes((*(tx.To())).Bytes()))
+		}
+
+		v.Set(a.NewBigInt(tx.Value()))
+
+		v.Set(a.NewCopyBytes(tx.Input()))
+
+		if isDynamicFeeTx {
+			// Convert TxAccessList to RLP format and add it to the vv array.
+			accessListVV := a.NewArray()
+
+			if tx.AccessList() != nil {
+				for _, accessTuple := range tx.AccessList() {
+					accessTupleVV := a.NewArray()
+					accessTupleVV.Set(a.NewCopyBytes(accessTuple.Address.Bytes()))
+
+					storageKeysVV := a.NewArray()
+					for _, storageKey := range accessTuple.StorageKeys {
+						storageKeysVV.Set(a.NewCopyBytes(storageKey.Bytes()))
+					}
+
+					accessTupleVV.Set(storageKeysVV)
+					accessListVV.Set(accessTupleVV)
+				}
+			}
+
+			v.Set(accessListVV)
+		} else {
+			// EIP155
+			if chainID != 0 {
+				v.Set(a.NewUint(chainID))
+				v.Set(a.NewUint(0))
+				v.Set(a.NewUint(0))
+			}
+		}
+
+		if isDynamicFeeTx {
+			hash = keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, v)
+		} else {
+			hash = keccak.Keccak256Rlp(nil, v)
+		}
+
+		arenaPool.Put(a)
+	}
+
+	return types.BytesToHash(hash)
 }
