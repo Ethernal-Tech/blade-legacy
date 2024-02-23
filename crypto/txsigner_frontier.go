@@ -28,13 +28,8 @@ func NewFrontierSigner() *FrontierSigner {
 //
 // Specification: https://eips.ethereum.org/EIPS/eip-155#specification
 func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
-		return types.ZeroHash
-	}
-
-	var hash []byte
-
 	RLP := arenaPool.Get()
+	defer arenaPool.Put(RLP)
 
 	// RLP(-, -, -, -, -, -)
 	hashPreimage := RLP.NewArray()
@@ -64,9 +59,7 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 	hashPreimage.Set(RLP.NewCopyBytes(tx.Input()))
 
 	// keccak256(RLP(nonce, gasPrice, gas, to, value, input))
-	hash = keccak.Keccak256Rlp(nil, hashPreimage)
-
-	arenaPool.Put(RLP)
+	hash := keccak.Keccak256Rlp(nil, hashPreimage)
 
 	return types.BytesToHash(hash)
 }
@@ -74,7 +67,7 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 // Sender returns the sender of the transaction
 func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, error) {
 	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
-		return types.Address{}, errors.New("Sender method: Unknown transaction type")
+		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
 	v, r, s := tx.RawSignatureValues()
@@ -86,7 +79,6 @@ func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, erro
 
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = {0, 1} + 27 -> {0, 1} = v - 27
-
 	parity := big.NewInt(0).Sub(v, big27)
 
 	return recoverAddress(signer.Hash(tx), r, s, parity, false)
@@ -95,7 +87,7 @@ func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, erro
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
-		return nil, errors.New("SignTx method: Unknown transaction type")
+		return nil, types.ErrTxTypeNotSupported
 	}
 
 	tx = tx.Copy()
@@ -107,8 +99,8 @@ func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Pr
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:32])
-	s := new(big.Int).SetBytes(signature[32:64])
+	r := new(big.Int).SetBytes(signature[:types.HashLength])
+	s := new(big.Int).SetBytes(signature[types.HashLength : 2*types.HashLength])
 	v := new(big.Int).SetBytes(signer.calculateV(signature[64]))
 
 	tx.SetSignatureValues(v, r, s)

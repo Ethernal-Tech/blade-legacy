@@ -11,7 +11,7 @@ import (
 
 // BerlinSigner may be used for signing legacy (pre-EIP-155 and EIP-155) and EIP-2930 transactions
 type BerlinSigner struct {
-	EIP155Signer
+	*EIP155Signer
 }
 
 // NewBerlinSigner returns new BerlinSinger object (constructor)
@@ -21,14 +21,7 @@ type BerlinSigner struct {
 //   - EIP-155 replay protected transactions, and
 //   - pre-EIP-155 legacy transactions
 func NewBerlinSigner(chainID uint64) *BerlinSigner {
-	return &BerlinSigner{
-		EIP155Signer: EIP155Signer{
-			chainID: chainID,
-			HomesteadSigner: HomesteadSigner{
-				FrontierSigner: FrontierSigner{},
-			},
-		},
-	}
+	return &BerlinSigner{EIP155Signer: NewEIP155Signer(chainID)}
 }
 
 // Hash returns the keccak256 hash of the transaction
@@ -42,9 +35,8 @@ func (signer *BerlinSigner) Hash(tx *types.Transaction) types.Hash {
 		return signer.EIP155Signer.Hash(tx)
 	}
 
-	var hash []byte
-
 	RLP := arenaPool.Get()
+	defer arenaPool.Put(RLP)
 
 	// RLP(-, -, -, -, -, -, -, -)
 	hashPreimage := RLP.NewArray()
@@ -78,38 +70,28 @@ func (signer *BerlinSigner) Hash(tx *types.Transaction) types.Hash {
 
 	// Serialization format of the access list:
 	// [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
-	accessList := RLP.NewArray()
+	rlpAccessList := RLP.NewArray()
 
-	if tx.AccessList() != nil {
-		// accessTuple contains (address, storageKeys[])
-		for _, accessTuple := range tx.AccessList() {
-			accessTupleSerFormat := RLP.NewArray()
-			accessTupleSerFormat.Set(RLP.NewCopyBytes(accessTuple.Address.Bytes()))
-
-			storageKeysSerFormat := RLP.NewArray()
-
-			for _, storageKey := range accessTuple.StorageKeys {
-				storageKeysSerFormat.Set(RLP.NewCopyBytes(storageKey.Bytes()))
-			}
-
-			accessTupleSerFormat.Set(storageKeysSerFormat)
-			accessList.Set(accessTupleSerFormat)
-		}
+	accessList := tx.AccessList()
+	if accessList != nil {
+		rlpAccessList = accessList.MarshalRLPWith(RLP)
 	}
 
 	// RLP(chainId, nonce, gasPrice, gas, to, value, input, accessList)
-	hashPreimage.Set(accessList)
+	hashPreimage.Set(rlpAccessList)
 
 	// keccak256(0x01 || RLP(chainId, nonce, gasPrice, gas, to, value, input, accessList)
-	hash = keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, hashPreimage)
-
-	arenaPool.Put(RLP)
+	hash := keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, hashPreimage)
 
 	return types.BytesToHash(hash)
 }
 
 // Sender returns the sender of the transaction
 func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error) {
+	if tx.Type() == types.DynamicFeeTx {
+		return types.ZeroAddress, types.ErrTxTypeNotSupported
+	}
+
 	if tx.Type() != types.AccessListTx {
 		return signer.EIP155Signer.Sender(tx)
 	}
@@ -126,6 +108,10 @@ func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error)
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *BerlinSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	if tx.Type() == types.DynamicFeeTx {
+		return nil, types.ErrTxTypeNotSupported
+	}
+
 	if tx.Type() != types.AccessListTx {
 		return signer.EIP155Signer.SignTx(tx, privateKey)
 	}

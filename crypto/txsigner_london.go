@@ -11,7 +11,7 @@ import (
 
 // LondonSigner may be used for signing legacy (pre-EIP-155 and EIP-155), EIP-2930 and EIP-1559 transactions
 type LondonSigner struct {
-	BerlinSigner
+	*BerlinSigner
 }
 
 // NewLondonSigner returns new LondonSinger object (constructor)
@@ -23,14 +23,7 @@ type LondonSigner struct {
 //   - pre-EIP-155 legacy transactions
 func NewLondonSigner(chainID uint64) *LondonSigner {
 	return &LondonSigner{
-		BerlinSigner: BerlinSigner{
-			EIP155Signer: EIP155Signer{
-				chainID: chainID,
-				HomesteadSigner: HomesteadSigner{
-					FrontierSigner: FrontierSigner{},
-				},
-			},
-		},
+		BerlinSigner: NewBerlinSigner(chainID),
 	}
 }
 
@@ -46,6 +39,7 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 	}
 
 	RLP := arenaPool.Get()
+	defer arenaPool.Put(RLP)
 
 	// RLP(-, -, -, -, -, -, -, -, -)
 	hashPreimage := RLP.NewArray()
@@ -82,32 +76,18 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 
 	// Serialization format of the access list:
 	// [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
-	accessList := RLP.NewArray()
+	rlpAccessList := RLP.NewArray()
 
-	if tx.AccessList() != nil {
-		// accessTuple contains (address, storageKeys[])
-		for _, accessTuple := range tx.AccessList() {
-			accessTupleSerFormat := RLP.NewArray()
-			accessTupleSerFormat.Set(RLP.NewCopyBytes(accessTuple.Address.Bytes()))
-
-			storageKeysSerFormat := RLP.NewArray()
-
-			for _, storageKey := range accessTuple.StorageKeys {
-				storageKeysSerFormat.Set(RLP.NewCopyBytes(storageKey.Bytes()))
-			}
-
-			accessTupleSerFormat.Set(storageKeysSerFormat)
-			accessList.Set(accessTupleSerFormat)
-		}
+	accessList := tx.AccessList()
+	if accessList != nil {
+		rlpAccessList = accessList.MarshalRLPWith(RLP)
 	}
 
 	// RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, value, input,accessList)
-	hashPreimage.Set(accessList)
+	hashPreimage.Set(rlpAccessList)
 
 	// keccak256(0x02 || RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, value, input,accessList)
 	hash := keccak.PrefixedKeccak256Rlp([]byte{byte(tx.Type())}, nil, hashPreimage)
-
-	arenaPool.Put(RLP)
 
 	return types.BytesToHash(hash)
 }

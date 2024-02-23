@@ -12,7 +12,7 @@ import (
 
 // EIP155Signer may be used for signing legacy (pre-EIP-155 and EIP-155) transactions
 type EIP155Signer struct {
-	HomesteadSigner
+	*HomesteadSigner
 	chainID uint64
 }
 
@@ -23,10 +23,8 @@ type EIP155Signer struct {
 //   - pre-EIP-155 legacy transactions
 func NewEIP155Signer(chainID uint64) *EIP155Signer {
 	return &EIP155Signer{
-		chainID: chainID,
-		HomesteadSigner: HomesteadSigner{
-			FrontierSigner: FrontierSigner{},
-		},
+		chainID:         chainID,
+		HomesteadSigner: NewHomesteadSigner(),
 	}
 }
 
@@ -37,13 +35,8 @@ func NewEIP155Signer(chainID uint64) *EIP155Signer {
 //
 // Specification: https://eips.ethereum.org/EIPS/eip-155#specification
 func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
-	if tx.Type() == types.StateTx {
-		return signer.FrontierSigner.Hash(tx)
-	}
-
-	var hash []byte
-
 	RLP := arenaPool.Get()
+	defer arenaPool.Put(RLP)
 
 	// RLP(-, -, -, -, -, -, -, -, -)
 	hashPreimage := RLP.NewArray()
@@ -82,17 +75,15 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 	hashPreimage.Set(RLP.NewUint(0))
 
 	// keccak256(RLP(nonce, gasPrice, gas, to, value, input))
-	hash = keccak.Keccak256Rlp(nil, hashPreimage)
-
-	arenaPool.Put(RLP)
+	hash := keccak.Keccak256Rlp(nil, hashPreimage)
 
 	return types.BytesToHash(hash)
 }
 
 // Sender returns the sender of the transaction
 func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() == types.StateTx {
-		return signer.FrontierSigner.Sender(tx)
+	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
 	protected := true
@@ -135,8 +126,8 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.Type() == types.StateTx {
-		return signer.FrontierSigner.SignTx(tx, privateKey)
+	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+		return nil, types.ErrTxTypeNotSupported
 	}
 
 	tx = tx.Copy()
@@ -148,8 +139,8 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:32])
-	s := new(big.Int).SetBytes(signature[32:64])
+	r := new(big.Int).SetBytes(signature[:types.HashLength])
+	s := new(big.Int).SetBytes(signature[types.HashLength : 2*types.HashLength])
 
 	if s.Cmp(secp256k1NHalf) > 0 {
 		return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")
@@ -166,18 +157,14 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 //
 // V is calculated by the formula: {0, 1} + CHAIN_ID * 2 + 35 where {0, 1} denotes the parity of the Y coordinate
 func (signer *EIP155Signer) calculateV(parity byte) []byte {
-	a := big.NewInt(0)
-	b := big.NewInt(0)
-	result := big.NewInt(0)
-
 	// a = {0, 1} + 35
-	a.Add(big.NewInt(int64(parity)), big35)
+	a := big.NewInt(int64(parity))
+	a.Add(a, big35)
 
 	// b = CHAIN_ID * 2
-	b.Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+	b := new(big.Int).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
 
-	// result = a + b
-	result.Add(a, b)
+	a.Add(a, b)
 
-	return result.Bytes()
+	return a.Bytes()
 }

@@ -10,7 +10,7 @@ import (
 
 // HomesteadSigner may be used for signing pre-EIP155 transactions
 type HomesteadSigner struct {
-	FrontierSigner
+	*FrontierSigner
 }
 
 // NewHomesteadSigner returns new FrontierSigner object (constructor)
@@ -19,7 +19,7 @@ type HomesteadSigner struct {
 //   - pre-EIP-155 transactions
 func NewHomesteadSigner() *HomesteadSigner {
 	return &HomesteadSigner{
-		FrontierSigner: FrontierSigner{},
+		FrontierSigner: NewFrontierSigner(),
 	}
 }
 
@@ -37,12 +37,12 @@ func (signer *HomesteadSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() == types.StateTx {
-		return signer.FrontierSigner.Sender(tx)
+	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
 	if tx.Type() != types.LegacyTx {
-		return types.Address{}, errors.New("Sender method: Unknown transaction type")
+		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
 	v, r, s := tx.RawSignatureValues()
@@ -54,7 +54,6 @@ func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, err
 
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = {0, 1} + 27 -> {0, 1} = v - 27
-
 	parity := big.NewInt(0).Sub(v, big27)
 
 	// The only difference compared to FrontierSinger.Sender() method is that the `isHomestead` flag is set to true
@@ -64,12 +63,8 @@ func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, err
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.Type() == types.StateTx {
-		return signer.FrontierSigner.SignTx(tx, privateKey)
-	}
-
-	if tx.Type() != types.LegacyTx {
-		return nil, errors.New("SignTx method: Unknown transaction type")
+	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+		return nil, types.ErrTxTypeNotSupported
 	}
 
 	tx = tx.Copy()
@@ -81,8 +76,8 @@ func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.P
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:32])
-	s := new(big.Int).SetBytes(signature[32:64])
+	r := new(big.Int).SetBytes(signature[:types.HashLength])
+	s := new(big.Int).SetBytes(signature[types.HashLength : 2*types.HashLength])
 
 	// Homestead hard-fork introduced the rule that the S value
 	// must be inclusively lower than the half of the secp256k1 curve order
