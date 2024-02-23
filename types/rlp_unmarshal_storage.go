@@ -95,9 +95,9 @@ func (t *Transaction) unmarshalStoreRLPFrom(p *fastrlp.Parser, v *fastrlp.Value)
 			return err
 		}
 
-		elems = elems[1:]
-
 		t.InitInnerData(tType)
+
+		elems = elems[1:]
 	}
 
 	// consensus part

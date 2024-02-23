@@ -153,7 +153,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 	tx.setGas(txGas)
 
 	// to
-	if vv, _ := values.dequeueValue().Bytes(); len(vv) == 20 {
+	if vv, _ := values.dequeueValue().Bytes(); len(vv) == AddressLength {
 		addr := BytesToAddress(vv)
 		tx.setTo(&addr)
 	} else {
