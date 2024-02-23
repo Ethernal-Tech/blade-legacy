@@ -91,6 +91,11 @@ func (signer *FrontierSigner) sender(tx *types.Transaction, isHomestead bool) (t
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+	return signer.signTx(tx, privateKey, nil)
+}
+
+// SingTx takes the original transaction as input and returns its signed version
+func (signer *FrontierSigner) signTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey, validateFn func(v, r, s *big.Int) error) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
@@ -107,6 +112,12 @@ func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Pr
 	r := new(big.Int).SetBytes(signature[:32])
 	s := new(big.Int).SetBytes(signature[32:64])
 	v := new(big.Int).SetBytes(signer.calculateV(signature[64]))
+
+	if validateFn != nil {
+		if err := validateFn(v, r, s); err != nil {
+			return nil, err
+		}
+	}
 
 	tx.SetSignatureValues(v, r, s)
 
