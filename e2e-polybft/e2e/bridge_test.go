@@ -1309,6 +1309,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 	checkBalancesFn := func(address types.Address, rootExpected, childExpected *big.Int, isValidator bool) {
 		offset := ethgo.Gwei(10)
+		expectedValue := new(big.Int)
 
 		t.Log("Checking balance of native ERC20 token on root and child", "Address", address,
 			"Root expected", rootExpected, "Child Expected", childExpected)
@@ -1326,7 +1327,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
 		} else {
 			//this check is implemented because non-validators incur fees, potentially resulting in a balance lower than anticipated
-			require.True(t, balance.Cmp(childExpected.Sub(childExpected, offset)) >= 0)
+			require.True(t, balance.Cmp(expectedValue.Sub(childExpected, offset)) >= 0)
 		}
 	}
 
