@@ -97,7 +97,7 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	bigV := big.NewInt(0).SetBytes(v.Bytes())
 
-	if vv := bigV.Uint64(); bits.Len(uint(vv)) <= 8 {
+	if vv := v.Uint64(); bits.Len(uint(vv)) <= 8 {
 		protected = vv != 27 && vv != 28
 	}
 
@@ -107,21 +107,11 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = CHAIN_ID * 2 + 35 + {0, 1} -> {0, 1} = v - 35 - CHAIN_ID * 2
+	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+	bigV.Sub(bigV, mulOperand)
+	bigV.Sub(bigV, big35)
 
-	a := big.NewInt(0)
-	b := big.NewInt(0)
-	parity := big.NewInt(0)
-
-	// a = v - 35
-	a.Sub(v, big35)
-
-	// b = CHAIN_ID * 2
-	b.Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
-
-	// parity = a - b
-	parity.Sub(a, b)
-
-	return recoverAddress(signer.Hash(tx), r, s, parity, true)
+	return recoverAddress(signer.Hash(tx), r, s, bigV, true)
 }
 
 // SingTx takes the original transaction as input and returns its signed version
@@ -139,8 +129,8 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:types.HashLength])
-	s := new(big.Int).SetBytes(signature[types.HashLength : 2*types.HashLength])
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:64])
 
 	if s.Cmp(secp256k1NHalf) > 0 {
 		return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")
@@ -162,7 +152,7 @@ func (signer *EIP155Signer) calculateV(parity byte) []byte {
 	a.Add(a, big35)
 
 	// b = CHAIN_ID * 2
-	b := new(big.Int).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+	b := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
 
 	a.Add(a, b)
 

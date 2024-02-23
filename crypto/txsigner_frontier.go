@@ -66,6 +66,11 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, error) {
+	return signer.sender(tx, false)
+}
+
+// sender returns the sender of the transaction
+func (signer *FrontierSigner) sender(tx *types.Transaction, isHomestead bool) (types.Address, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
@@ -81,7 +86,7 @@ func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, erro
 	// v = {0, 1} + 27 -> {0, 1} = v - 27
 	parity := big.NewInt(0).Sub(v, big27)
 
-	return recoverAddress(signer.Hash(tx), r, s, parity, false)
+	return recoverAddress(signer.Hash(tx), r, s, parity, isHomestead)
 }
 
 // SingTx takes the original transaction as input and returns its signed version
@@ -99,8 +104,8 @@ func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Pr
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:types.HashLength])
-	s := new(big.Int).SetBytes(signature[types.HashLength : 2*types.HashLength])
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:64])
 	v := new(big.Int).SetBytes(signer.calculateV(signature[64]))
 
 	tx.SetSignatureValues(v, r, s)

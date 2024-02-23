@@ -37,28 +37,7 @@ func (signer *HomesteadSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
-		return types.ZeroAddress, types.ErrTxTypeNotSupported
-	}
-
-	if tx.Type() != types.LegacyTxType {
-		return types.ZeroAddress, types.ErrTxTypeNotSupported
-	}
-
-	v, r, s := tx.RawSignatureValues()
-
-	// Checking one of the values is enought since they are inseparable
-	if v == nil {
-		return types.Address{}, errors.New("Sender method: Unknown signature")
-	}
-
-	// Reverse the V calculation to find the parity of the Y coordinate
-	// v = {0, 1} + 27 -> {0, 1} = v - 27
-	parity := big.NewInt(0).Sub(v, big27)
-
-	// The only difference compared to FrontierSinger.Sender() method is that the `isHomestead` flag is set to true
-	// `isHomestead` flag denotes that the S value must be inclusively lower than the half of the secp256k1 curve order
-	return recoverAddress(signer.Hash(tx), r, s, parity, true)
+	return signer.sender(tx, true)
 }
 
 // SingTx takes the original transaction as input and returns its signed version
@@ -76,8 +55,8 @@ func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.P
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:types.HashLength])
-	s := new(big.Int).SetBytes(signature[types.HashLength : 2*types.HashLength])
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:64])
 
 	// Homestead hard-fork introduced the rule that the S value
 	// must be inclusively lower than the half of the secp256k1 curve order
@@ -91,16 +70,4 @@ func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.P
 	tx.SetSignatureValues(v, r, s)
 
 	return tx, nil
-}
-
-// Private method calculateV returns the V value for the pre-EIP-155 transactions
-//
-// V is calculated by the formula: {0, 1} + 27 where {0, 1} denotes the parity of the Y coordinate
-func (signer *HomesteadSigner) calculateV(parity byte) []byte {
-	result := big.NewInt(0)
-
-	// result = {0, 1} + 27
-	result.Add(big.NewInt(int64(parity)), big27)
-
-	return result.Bytes()
 }

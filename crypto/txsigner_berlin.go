@@ -101,7 +101,7 @@ func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error)
 
 	v, r, s := tx.RawSignatureValues()
 
-	// Checking one of the values is enought since they are inseparable
+	// Checking one of the values is enough since they are inseparable
 	if v == nil {
 		return types.Address{}, errors.New("Sender method: Unknown signature")
 	}

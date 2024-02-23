@@ -139,10 +139,3 @@ func (signer *LondonSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 
 	return tx, nil
 }
-
-// Private method calculateV returns the V value for the EIP-1559 transactions
-//
-// V represents the parity of the Y coordinate
-func (signer *LondonSigner) calculateV(parity byte) []byte {
-	return big.NewInt(int64(parity)).Bytes()
-}
