@@ -85,7 +85,6 @@ func TestLondonSignerSender(t *testing.T) {
 					To:       &recipient,
 					Value:    big.NewInt(1),
 					GasPrice: big.NewInt(5),
-					ChainID:  tc.chainID,
 				})
 			case types.StateTxType:
 				txn = types.NewTx(&types.StateTx{
@@ -95,8 +94,9 @@ func TestLondonSignerSender(t *testing.T) {
 				})
 			case types.DynamicFeeTxType:
 				txn = types.NewTx(&types.DynamicFeeTx{
-					To:    &recipient,
-					Value: big.NewInt(1),
+					To:      &recipient,
+					Value:   big.NewInt(1),
+					ChainID: tc.chainID,
 				})
 			}
 

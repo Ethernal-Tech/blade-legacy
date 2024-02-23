@@ -82,7 +82,7 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
@@ -126,7 +126,7 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
 

@@ -247,7 +247,6 @@ func TestTxPool_RecoverableError(t *testing.T) {
 			Gas:      22000,
 			To:       &receiverAddress,
 			Value:    oneEth,
-			ChainID:  big.NewInt(0),
 			V:        big.NewInt(27),
 			From:     senderAddress,
 		}),
@@ -257,7 +256,6 @@ func TestTxPool_RecoverableError(t *testing.T) {
 			Gas:      22000,
 			To:       &receiverAddress,
 			Value:    oneEth,
-			ChainID:  big.NewInt(0),
 			V:        big.NewInt(27),
 		}),
 		types.NewTx(&types.DynamicFeeTx{
@@ -357,7 +355,6 @@ func TestTxPool_GetPendingTx(t *testing.T) {
 		Gas:      framework.DefaultGasLimit - 1,
 		To:       &receiverAddress,
 		Value:    oneEth,
-		ChainID:  big.NewInt(0),
 		V:        big.NewInt(1),
 		From:     types.ZeroAddress,
 	}), senderKey)

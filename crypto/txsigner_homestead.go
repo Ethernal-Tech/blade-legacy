@@ -37,11 +37,11 @@ func (signer *HomesteadSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
-	if tx.Type() != types.LegacyTx {
+	if tx.Type() != types.LegacyTxType {
 		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
@@ -63,7 +63,7 @@ func (signer *HomesteadSigner) Sender(tx *types.Transaction) (types.Address, err
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *HomesteadSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
 

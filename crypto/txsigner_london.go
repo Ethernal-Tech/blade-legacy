@@ -7,6 +7,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/umbracle/fastrlp"
 )
 
 // LondonSigner may be used for signing legacy (pre-EIP-155 and EIP-155), EIP-2930 and EIP-1559 transactions
@@ -34,7 +35,7 @@ func NewLondonSigner(chainID uint64) *LondonSigner {
 //
 // Specification: https://eips.ethereum.org/EIPS/eip-1559#specification
 func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
-	if tx.Type() != types.DynamicFeeTx {
+	if tx.Type() != types.DynamicFeeTxType {
 		return signer.BerlinSigner.Hash(tx)
 	}
 
@@ -76,11 +77,13 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 
 	// Serialization format of the access list:
 	// [[{20-bytes address}, [{32-bytes key}, ...]], ...] where `...` denotes zero or more items
-	rlpAccessList := RLP.NewArray()
+	var rlpAccessList *fastrlp.Value
 
 	accessList := tx.AccessList()
 	if accessList != nil {
-		rlpAccessList = accessList.MarshalRLPWith(RLP)
+		rlpAccessList = accessList.MarshallRLPWith(RLP)
+	} else {
+		rlpAccessList = RLP.NewArray()
 	}
 
 	// RLP(chainId, nonce, gasTipCap, gasFeeCap, gas, to, value, input,accessList)
@@ -94,7 +97,7 @@ func (signer *LondonSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *LondonSigner) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() != types.DynamicFeeTx {
+	if tx.Type() != types.DynamicFeeTxType {
 		return signer.BerlinSigner.Sender(tx)
 	}
 
@@ -110,7 +113,7 @@ func (signer *LondonSigner) Sender(tx *types.Transaction) (types.Address, error)
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *LondonSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.Type() != types.DynamicFeeTx {
+	if tx.Type() != types.DynamicFeeTxType {
 		return signer.BerlinSigner.SignTx(tx, privateKey)
 	}
 

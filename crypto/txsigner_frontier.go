@@ -66,7 +66,7 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 
 // Sender returns the sender of the transaction
 func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, error) {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return types.ZeroAddress, types.ErrTxTypeNotSupported
 	}
 
@@ -86,7 +86,7 @@ func (signer *FrontierSigner) Sender(tx *types.Transaction) (types.Address, erro
 
 // SingTx takes the original transaction as input and returns its signed version
 func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	if tx.Type() != types.LegacyTx && tx.Type() != types.StateTx {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
 
