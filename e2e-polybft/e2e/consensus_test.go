@@ -52,8 +52,6 @@ func TestE2E_Consensus_Basic(t *testing.T) {
 
 	// check if initial total supply of native ERC20 token is the same as expected
 	totalSupply := queryNativeERC20Metadata(t, "totalSupply", uint256ABIType, relayer)
-	t.Log("Initial total supply", initialTotalSupply)
-	t.Log("Total supply", totalSupply)
 	require.True(t, initialTotalSupply.Cmp(totalSupply.(*big.Int)) == 0)
 
 	t.Run("consensus protocol", func(t *testing.T) {
@@ -418,8 +416,6 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	uint8ABIType := abi.MustNewType("tuple(uint8)")
 
 	totalSupply := queryNativeERC20Metadata(t, "totalSupply", uint256ABIType, relayer)
-	t.Log("Initial total supply", initialTotalSupply)
-	t.Log("Total supply", totalSupply)
 	require.True(t, initialTotalSupply.Cmp(totalSupply.(*big.Int)) == 0)
 
 	// check if initial total supply of native ERC20 token is the same as expected
