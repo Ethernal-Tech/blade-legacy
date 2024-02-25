@@ -25,8 +25,9 @@ import (
 )
 
 var (
-	oneEth = framework.EthToWei(1)
-	signer = crypto.NewSigner(chain.AllForksEnabled.At(0), 100)
+	oneEth         = framework.EthToWei(1)
+	defaultChainID = uint64(100)
+	signer         = crypto.NewSigner(chain.AllForksEnabled.At(0), defaultChainID)
 )
 
 type generateTxReqParams struct {
@@ -58,7 +59,7 @@ func generateTx(params generateTxReqParams) *types.Transaction {
 			To:      &params.toAddress,
 			Gas:     1000000,
 			Value:   params.value,
-			ChainID: big.NewInt(100),
+			ChainID: new(big.Int).SetUint64(defaultChainID),
 		})
 		unsignedTx.SetGasFeeCap(params.gasFeeCap)
 		unsignedTx.SetGasTipCap(params.gasTipCap)
@@ -264,7 +265,7 @@ func TestTxPool_RecoverableError(t *testing.T) {
 			Gas:       22000,
 			To:        &receiverAddress,
 			Value:     oneEth,
-			ChainID:   big.NewInt(0),
+			ChainID:   new(big.Int).SetUint64(defaultChainID),
 			V:         big.NewInt(27),
 		}),
 	}
