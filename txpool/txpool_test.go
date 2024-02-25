@@ -597,7 +597,6 @@ func TestAddGossipTx(t *testing.T) {
 	signer := crypto.NewEIP155Signer(100)
 	tx := newTx(types.ZeroAddress, 1, 1, types.LegacyTxType)
 
-	// Problem with this test is in RLP serialization (for some reason ChainID is not serialized in a good way)
 	t.Run("node is a validator", func(t *testing.T) {
 		t.Parallel()
 
