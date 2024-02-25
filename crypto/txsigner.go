@@ -103,7 +103,7 @@ func validateTxChainID(tx *types.Transaction, chainID uint64) error {
 	txChainID := tx.ChainID()
 
 	if txChainID == nil || txChainID.Uint64() != chainID {
-		return fmt.Errorf("%w: have %d want %d", errInvalidChainId, tx.ChainID(), chainID)
+		return fmt.Errorf("%w: have %d want %d", errInvalidChainID, tx.ChainID(), chainID)
 	}
 
 	return nil
