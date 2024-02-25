@@ -5,6 +5,8 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"math/big"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -23,6 +25,20 @@ import (
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	wd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	parent := filepath.Dir(wd)
+	wd = filepath.Join(parent, "artifacts/polygon-edge")
+	os.Setenv("EDGE_BINARY", wd)
+	os.Setenv("E2E_TESTS", "true")
+	os.Setenv("E2E_LOGS", "true")
+	os.Setenv("E2E_LOG_LEVEL", "debug")
+}
 
 var (
 	oneEth = framework.EthToWei(1)
@@ -50,16 +66,15 @@ func generateTx(params generateTxReqParams) *types.Transaction {
 			To:    &params.toAddress,
 			Gas:   1000000,
 			Value: params.value,
-			V:     big.NewInt(27), // it is necessary to encode in rlp
 		})
 		unsignedTx.SetGasPrice(params.gasPrice)
 	} else {
 		unsignedTx = types.NewTx(&types.DynamicFeeTx{
-			Nonce: params.nonce,
-			To:    &params.toAddress,
-			Gas:   1000000,
-			Value: params.value,
-			V:     big.NewInt(27), // it is necessary to encode in rlp
+			Nonce:   params.nonce,
+			To:      &params.toAddress,
+			Gas:     1000000,
+			Value:   params.value,
+			ChainID: big.NewInt(100),
 		})
 		unsignedTx.SetGasFeeCap(params.gasFeeCap)
 		unsignedTx.SetGasTipCap(params.gasTipCap)
