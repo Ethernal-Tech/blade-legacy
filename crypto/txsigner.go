@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -95,4 +96,15 @@ func recoverAddress(txHash types.Hash, r, s, parity *big.Int, isHomestead bool) 
 	address := hash[12:]
 
 	return types.BytesToAddress(address), nil
+}
+
+// validateTxChainID checks if the transaction chain ID matches the expected chain ID
+func validateTxChainID(tx *types.Transaction, chainID uint64) error {
+	txChainID := tx.ChainID()
+
+	if txChainID == nil || txChainID.Uint64() != chainID {
+		return fmt.Errorf("%w: have %d want %d", errInvalidChainId, tx.ChainID(), chainID)
+	}
+
+	return nil
 }

@@ -143,6 +143,7 @@ func Test_LondonSigner_Sender(t *testing.T) {
 				V:         big.NewInt(0),
 				R:         r,
 				S:         s,
+				ChainID:   big.NewInt(100),
 			}),
 			sender: types.StringToAddress("0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6"),
 		},

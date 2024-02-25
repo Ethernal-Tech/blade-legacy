@@ -30,6 +30,7 @@ var (
 	ErrInvalidBLSSignature = errors.New("invalid BLS Signature")
 	errHashOfInvalidLength = errors.New("message hash of invalid length")
 	errInvalidSignature    = errors.New("invalid signature")
+	errInvalidChainId      = errors.New("invalid chain id for signer")
 )
 
 type KeyType string

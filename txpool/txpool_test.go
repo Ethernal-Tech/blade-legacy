@@ -138,7 +138,7 @@ func TestAddTxErrors(t *testing.T) {
 	}
 
 	signTx := func(transaction *types.Transaction) *types.Transaction {
-		transaction.SetChainID(big.NewInt(0))
+		transaction.SetChainID(big.NewInt(100))
 
 		signedTx, signErr := poolSigner.SignTx(transaction, defaultKey)
 
@@ -173,7 +173,6 @@ func TestAddTxErrors(t *testing.T) {
 		pool.forks.RemoveFork(chain.London)
 
 		tx := newTx(defaultAddr, 0, 1, types.DynamicFeeTxType)
-
 		err := pool.addTx(local, signTx(tx))
 
 		assert.ErrorContains(t,
@@ -2169,7 +2168,7 @@ func Test_TxPool_validateTx(t *testing.T) {
 	}
 
 	signTx := func(transaction *types.Transaction) *types.Transaction {
-		transaction.SetChainID(big.NewInt(0))
+		transaction.SetChainID(big.NewInt(100))
 
 		signedTx, signErr := signer.SignTx(transaction, defaultKey)
 
@@ -3662,6 +3661,7 @@ func TestAddTx_TxReplacement(t *testing.T) {
 		tx.SetGasPrice(nil)
 		tx.SetGasTipCap(new(big.Int).SetUint64(gasTipCap))
 		tx.SetGasFeeCap(new(big.Int).SetUint64(gasFeeCap))
+		tx.SetChainID(big.NewInt(100))
 
 		singedTx, err := poolSigner.SignTx(tx, key)
 		require.NoError(t, err)
@@ -3689,6 +3689,7 @@ func TestAddTx_TxReplacement(t *testing.T) {
 	}
 
 	pool, err := newTestPool()
+	pool.chainID = big.NewInt(100)
 	require.NoError(t, err)
 
 	pool.baseFee = 100

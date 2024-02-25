@@ -105,6 +105,10 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 		return signer.HomesteadSigner.Sender(tx)
 	}
 
+	if err := validateTxChainID(tx, signer.chainID); err != nil {
+		return types.ZeroAddress, err
+	}
+
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = CHAIN_ID * 2 + 35 + {0, 1} -> {0, 1} = v - 35 - CHAIN_ID * 2
 	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))

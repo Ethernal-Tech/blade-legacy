@@ -106,6 +106,10 @@ func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error)
 		return types.Address{}, errors.New("Sender method: Unknown signature")
 	}
 
+	if err := validateTxChainID(tx, signer.chainID); err != nil {
+		return types.ZeroAddress, err
+	}
+
 	return recoverAddress(signer.Hash(tx), r, s, v, true)
 }
 
