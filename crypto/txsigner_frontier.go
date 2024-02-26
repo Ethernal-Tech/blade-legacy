@@ -79,7 +79,7 @@ func (signer *FrontierSigner) sender(tx *types.Transaction, isHomestead bool) (t
 
 	// Checking one of the values is enought since they are inseparable
 	if v == nil {
-		return types.Address{}, errors.New("Sender method: Unknown signature")
+		return types.Address{}, errors.New("failed to recover sender, because signature is unknown")
 	}
 
 	// Reverse the V calculation to find the parity of the Y coordinate

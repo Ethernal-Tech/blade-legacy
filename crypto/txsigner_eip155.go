@@ -92,7 +92,7 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	// Checking one of the values is enought since they are inseparable
 	if v == nil {
-		return types.Address{}, errors.New("Sender method: Unknown signature")
+		return types.Address{}, errors.New("failed to recover sender, because signature is unknown")
 	}
 
 	bigV := big.NewInt(0).SetBytes(v.Bytes())

@@ -103,7 +103,7 @@ func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error)
 
 	// Checking one of the values is enough since they are inseparable
 	if v == nil {
-		return types.Address{}, errors.New("Sender method: Unknown signature")
+		return types.Address{}, errors.New("failed to recover sender, because signature is unknown")
 	}
 
 	if err := validateTxChainID(tx, signer.chainID); err != nil {
