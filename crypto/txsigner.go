@@ -35,21 +35,23 @@ type TxSigner interface {
 
 // NewSigner creates a new signer based on currently supported forks
 func NewSigner(forks chain.ForksInTime, chainID uint64) TxSigner {
-	var signer TxSigner
-
 	if forks.London {
-		signer = NewLondonSigner(chainID)
-	} else if forks.Berlin {
-		signer = NewBerlinSigner(chainID)
-	} else if forks.EIP155 {
-		signer = NewEIP155Signer(chainID)
-	} else if forks.Homestead {
-		signer = NewHomesteadSigner()
-	} else {
-		signer = NewFrontierSigner()
+		return NewLondonSigner(chainID)
 	}
 
-	return signer
+	if forks.Berlin {
+		return NewBerlinSigner(chainID)
+	}
+
+	if forks.EIP155 {
+		return NewEIP155Signer(chainID)
+	}
+
+	if forks.Homestead {
+		return NewHomesteadSigner()
+	}
+
+	return NewFrontierSigner()
 }
 
 // encodeSignature generates a signature based on the R, S and parity values
@@ -61,7 +63,7 @@ func NewSigner(forks chain.ForksInTime, chainID uint64) TxSigner {
 // the encodeSignature function expects parity of Y coordinate as third input and that is what will be encoded
 func encodeSignature(r, s, parity *big.Int, isHomestead bool) ([]byte, error) {
 	if !ValidateSignatureValues(parity, r, s, isHomestead) {
-		return nil, errors.New("signature encoding failed: Invalid transaction signature")
+		return nil, errors.New("signature encoding failed, because transaction signature is invalid")
 	}
 
 	signature := make([]byte, 65)
