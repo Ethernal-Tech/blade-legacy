@@ -74,13 +74,13 @@ func NewTx(inner TxData) *Transaction {
 func (t *Transaction) InitInnerData(txType TxType) {
 	switch txType {
 	case AccessListTxType:
-		t.Inner = &AccessListTxn{}
+		t.Inner = &AccessListTxn{BaseTx: &BaseTx{}}
 	case StateTxType:
-		t.Inner = &StateTx{}
+		t.Inner = &StateTx{BaseTx: &BaseTx{}}
 	case LegacyTxType:
-		t.Inner = &LegacyTx{}
+		t.Inner = &LegacyTx{BaseTx: &BaseTx{}}
 	default:
-		t.Inner = &DynamicFeeTx{}
+		t.Inner = &DynamicFeeTx{BaseTx: &BaseTx{}}
 	}
 }
 
@@ -99,6 +99,7 @@ type TxData interface {
 	from() Address
 	hash() Hash
 	rawSignatureValues() (v, r, s *big.Int)
+	baseTx() *BaseTx
 
 	//methods to set transactions fields
 	setSignatureValues(v, r, s *big.Int)
@@ -114,6 +115,7 @@ type TxData interface {
 	setNonce(uint64)
 	setAccessList(TxAccessList)
 	setHash(Hash)
+	setBaseTx(*BaseTx)
 	unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error
 	marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value
 	copy() TxData
