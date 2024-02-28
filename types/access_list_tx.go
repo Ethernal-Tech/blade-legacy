@@ -114,21 +114,21 @@ type AccessListTxn struct {
 
 func (tx *AccessListTxn) transactionType() TxType { return AccessListTxType }
 func (tx *AccessListTxn) chainID() *big.Int       { return tx.ChainID }
-func (tx *AccessListTxn) input() []byte           { return tx.BaseTx.input() }
-func (tx *AccessListTxn) gas() uint64             { return tx.BaseTx.gas() }
+func (tx *AccessListTxn) input() []byte           { return tx.baseTx().input() }
+func (tx *AccessListTxn) gas() uint64             { return tx.baseTx().gas() }
 func (tx *AccessListTxn) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *AccessListTxn) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *AccessListTxn) gasFeeCap() *big.Int     { return tx.GasPrice }
-func (tx *AccessListTxn) value() *big.Int         { return tx.BaseTx.value() }
-func (tx *AccessListTxn) nonce() uint64           { return tx.BaseTx.nonce() }
-func (tx *AccessListTxn) to() *Address            { return tx.BaseTx.to() }
-func (tx *AccessListTxn) from() Address           { return tx.BaseTx.from() }
+func (tx *AccessListTxn) value() *big.Int         { return tx.baseTx().value() }
+func (tx *AccessListTxn) nonce() uint64           { return tx.baseTx().nonce() }
+func (tx *AccessListTxn) to() *Address            { return tx.baseTx().to() }
+func (tx *AccessListTxn) from() Address           { return tx.baseTx().from() }
 func (tx *AccessListTxn) baseTx() *BaseTx         { return tx.BaseTx }
 
 func (tx *AccessListTxn) hash() Hash { return tx.BaseTx.hash() }
 
 func (tx *AccessListTxn) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.BaseTx.rawSignatureValues()
+	return tx.baseTx().rawSignatureValues()
 }
 
 func (tx *AccessListTxn) accessList() TxAccessList {
@@ -137,15 +137,15 @@ func (tx *AccessListTxn) accessList() TxAccessList {
 
 // set methods for transaction fields
 func (tx *AccessListTxn) setSignatureValues(v, r, s *big.Int) {
-	tx.BaseTx.setSignatureValues(v, r, s)
+	tx.baseTx().setSignatureValues(v, r, s)
 }
 
 func (tx *AccessListTxn) setFrom(addr Address) {
-	tx.BaseTx.setFrom(addr)
+	tx.baseTx().setFrom(addr)
 }
 
 func (tx *AccessListTxn) setGas(gas uint64) {
-	tx.BaseTx.setGas(gas)
+	tx.baseTx().setGas(gas)
 }
 
 func (tx *AccessListTxn) setChainID(id *big.Int) {
@@ -169,19 +169,19 @@ func (tx *AccessListTxn) setTransactionType(t TxType) {
 }
 
 func (tx *AccessListTxn) setValue(value *big.Int) {
-	tx.BaseTx.setValue(value)
+	tx.baseTx().setValue(value)
 }
 
 func (tx *AccessListTxn) setInput(input []byte) {
-	tx.BaseTx.setInput(input)
+	tx.baseTx().setInput(input)
 }
 
 func (tx *AccessListTxn) setTo(address *Address) {
-	tx.setTo(address)
+	tx.baseTx().setTo(address)
 }
 
 func (tx *AccessListTxn) setNonce(nonce uint64) {
-	tx.BaseTx.setNonce(nonce)
+	tx.baseTx().setNonce(nonce)
 }
 
 func (tx *AccessListTxn) setAccessList(accessList TxAccessList) {
@@ -189,7 +189,7 @@ func (tx *AccessListTxn) setAccessList(accessList TxAccessList) {
 }
 
 func (tx *AccessListTxn) setHash(h Hash) {
-	tx.setHash(h)
+	tx.baseTx().setHash(h)
 }
 
 func (tx *AccessListTxn) setBaseTx(base *BaseTx) {
@@ -225,6 +225,14 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	tx.setChainID(txChainID)
 
+	// nonce
+	txNonce, err := values.dequeueValue().GetUint64()
+	if err != nil {
+		return err
+	}
+
+	tx.setNonce(txNonce)
+
 	// gasPrice
 	txGasPrice := new(big.Int)
 	if err = values.dequeueValue().GetBigInt(txGasPrice); err != nil {
@@ -233,12 +241,41 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	tx.setGasPrice(txGasPrice)
 
-	baseTx := new(BaseTx)
-	if err = baseTx.unmarshalRLPFrom(values); err != nil {
+	// gas
+	txGas, err := values.dequeueValue().GetUint64()
+	if err != nil {
 		return err
 	}
 
-	tx.setBaseTx(baseTx)
+	tx.setGas(txGas)
+
+	// to
+	if vv, _ := values.dequeueValue().Bytes(); len(vv) == 20 {
+		// address
+		addr := BytesToAddress(vv)
+		tx.setTo(&addr)
+	} else {
+		// reset To
+		tx.setTo(nil)
+	}
+
+	// value
+	txValue := new(big.Int)
+	if err = values.dequeueValue().GetBigInt(txValue); err != nil {
+		return err
+	}
+
+	tx.setValue(txValue)
+
+	// input
+	var txInput []byte
+
+	txInput, err = values.dequeueValue().GetBytes(txInput)
+	if err != nil {
+		return err
+	}
+
+	tx.setInput(txInput)
 
 	//accessList
 	accessListVV, err := values.dequeueValue().GetElems()
@@ -257,6 +294,26 @@ func (tx *AccessListTxn) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) e
 
 	tx.setAccessList(txAccessList)
 
+	// V
+	txV := new(big.Int)
+	if err = values.dequeueValue().GetBigInt(txV); err != nil {
+		return err
+	}
+
+	// R
+	txR := new(big.Int)
+	if err = values.dequeueValue().GetBigInt(txR); err != nil {
+		return err
+	}
+
+	// S
+	txS := new(big.Int)
+	if err = values.dequeueValue().GetBigInt(txS); err != nil {
+		return err
+	}
+
+	tx.setSignatureValues(txV, txR, txS)
+
 	return nil
 }
 
@@ -267,12 +324,27 @@ func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv := arena.NewArray()
 
 	vv.Set(arena.NewBigInt(tx.chainID()))
+	vv.Set(arena.NewUint(tx.nonce()))
 	vv.Set(arena.NewBigInt(tx.gasPrice()))
+	vv.Set(arena.NewUint(tx.gas()))
 
-	vv.Set(tx.BaseTx.marshalRLPWith(arena))
+	// Address may be empty
+	if tx.to() != nil {
+		vv.Set(arena.NewCopyBytes(tx.to().Bytes()))
+	} else {
+		vv.Set(arena.NewNull())
+	}
+
+	vv.Set(arena.NewBigInt(tx.value()))
+	vv.Set(arena.NewCopyBytes(tx.input()))
 
 	// Convert TxAccessList to RLP format and add it to the vv array.
 	vv.Set(tx.accessList().MarshallRLPWith(arena))
+
+	v, r, s := tx.rawSignatureValues()
+	vv.Set(arena.NewBigInt(v))
+	vv.Set(arena.NewBigInt(r))
+	vv.Set(arena.NewBigInt(s))
 
 	return vv
 }

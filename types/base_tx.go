@@ -2,8 +2,6 @@ package types
 
 import (
 	"math/big"
-
-	"github.com/umbracle/fastrlp"
 )
 
 type BaseTx struct {
@@ -60,100 +58,8 @@ func (tx *BaseTx) setFrom(address Address) {
 	tx.From = address
 }
 
-func (tx *BaseTx) unmarshalRLPFrom(values rlpValues) error {
-	// nonce
-	txNonce, err := values.dequeueValue().GetUint64()
-	if err != nil {
-		return err
-	}
-
-	tx.setNonce(txNonce)
-
-	// gas
-	txGas, err := values.dequeueValue().GetUint64()
-	if err != nil {
-		return err
-	}
-
-	tx.setGas(txGas)
-
-	// to
-	if vv, _ := values.dequeueValue().Bytes(); len(vv) == AddressLength {
-		addr := BytesToAddress(vv)
-		tx.setTo(&addr)
-	} else {
-		// reset To
-		tx.setTo(nil)
-	}
-
-	// value
-	txValue := new(big.Int)
-	if err = values.dequeueValue().GetBigInt(txValue); err != nil {
-		return err
-	}
-
-	tx.setValue(txValue)
-
-	// input
-	var txInput []byte
-
-	txInput, err = values.dequeueValue().GetBytes(txInput)
-	if err != nil {
-		return err
-	}
-
-	tx.setInput(txInput)
-
-	// V
-	txV := new(big.Int)
-	if err = values.dequeueValue().GetBigInt(txV); err != nil {
-		return err
-	}
-
-	// R
-	txR := new(big.Int)
-	if err = values.dequeueValue().GetBigInt(txR); err != nil {
-		return err
-	}
-
-	// S
-	txS := new(big.Int)
-	if err = values.dequeueValue().GetBigInt(txS); err != nil {
-		return err
-	}
-
-	tx.setSignatureValues(txV, txR, txS)
-
-	return nil
-}
-
-func (tx *BaseTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
-	vv := arena.NewArray()
-
-	vv.Set(arena.NewUint(tx.nonce()))
-	vv.Set(arena.NewUint(tx.gas()))
-
-	// Address may be empty
-	if tx.to() != nil {
-		vv.Set(arena.NewCopyBytes(tx.to().Bytes()))
-	} else {
-		vv.Set(arena.NewNull())
-	}
-
-	vv.Set(arena.NewBigInt(tx.value()))
-	vv.Set(arena.NewCopyBytes(tx.input()))
-
-	// signature values
-	v, r, s := tx.rawSignatureValues()
-	vv.Set(arena.NewBigInt(v))
-	vv.Set(arena.NewBigInt(r))
-	vv.Set(arena.NewBigInt(s))
-
-	return vv
-}
-
 func (tx *BaseTx) copy() *BaseTx {
-	cpy := &BaseTx{}
+	cpy := new(BaseTx)
 
 	cpy.setNonce(tx.nonce())
 
