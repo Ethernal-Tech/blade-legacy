@@ -87,34 +87,19 @@ func (t *Transaction) InitInnerData(txType TxType) {
 type TxData interface {
 	transactionType() TxType
 	chainID() *big.Int
-	nonce() uint64
 	gasPrice() *big.Int
 	gasTipCap() *big.Int
 	gasFeeCap() *big.Int
-	gas() uint64
-	to() *Address
-	value() *big.Int
-	input() []byte
 	accessList() TxAccessList
-	from() Address
-	hash() Hash
-	rawSignatureValues() (v, r, s *big.Int)
 	baseTx() *BaseTx
 
 	//methods to set transactions fields
-	setSignatureValues(v, r, s *big.Int)
-	setFrom(Address)
-	setGas(uint64)
+
 	setChainID(*big.Int)
 	setGasPrice(*big.Int)
 	setGasFeeCap(*big.Int)
 	setGasTipCap(*big.Int)
-	setValue(*big.Int)
-	setInput([]byte)
-	setTo(address *Address)
-	setNonce(uint64)
 	setAccessList(TxAccessList)
-	setHash(Hash)
 	setBaseTx(*BaseTx)
 	unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error
 	marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value
@@ -130,7 +115,7 @@ func (t *Transaction) ChainID() *big.Int {
 }
 
 func (t *Transaction) Nonce() uint64 {
-	return t.Inner.nonce()
+	return t.Inner.baseTx().nonce()
 }
 
 func (t *Transaction) GasPrice() *big.Int {
@@ -146,19 +131,19 @@ func (t *Transaction) GasFeeCap() *big.Int {
 }
 
 func (t *Transaction) Gas() uint64 {
-	return t.Inner.gas()
+	return t.Inner.baseTx().gas()
 }
 
 func (t *Transaction) To() *Address {
-	return t.Inner.to()
+	return t.Inner.baseTx().to()
 }
 
 func (t *Transaction) Value() *big.Int {
-	return t.Inner.value()
+	return t.Inner.baseTx().value()
 }
 
 func (t *Transaction) Input() []byte {
-	return t.Inner.input()
+	return t.Inner.baseTx().input()
 }
 
 func (t *Transaction) AccessList() TxAccessList {
@@ -166,28 +151,28 @@ func (t *Transaction) AccessList() TxAccessList {
 }
 
 func (t *Transaction) From() Address {
-	return t.Inner.from()
+	return t.Inner.baseTx().from()
 }
 
 func (t *Transaction) Hash() Hash {
-	return t.Inner.hash()
+	return t.Inner.baseTx().hash()
 }
 
 func (t *Transaction) RawSignatureValues() (v, r, s *big.Int) {
-	return t.Inner.rawSignatureValues()
+	return t.Inner.baseTx().rawSignatureValues()
 }
 
 // set methods for transaction fields
 func (t *Transaction) SetSignatureValues(v, r, s *big.Int) {
-	t.Inner.setSignatureValues(v, r, s)
+	t.Inner.baseTx().setSignatureValues(v, r, s)
 }
 
 func (t *Transaction) SetFrom(addr Address) {
-	t.Inner.setFrom(addr)
+	t.Inner.baseTx().setFrom(addr)
 }
 
 func (t *Transaction) SetGas(gas uint64) {
-	t.Inner.setGas(gas)
+	t.Inner.baseTx().setGas(gas)
 }
 
 func (t *Transaction) SetChainID(id *big.Int) {
@@ -207,19 +192,19 @@ func (t *Transaction) SetGasTipCap(gas *big.Int) {
 }
 
 func (t *Transaction) SetValue(value *big.Int) {
-	t.Inner.setValue(value)
+	t.Inner.baseTx().setValue(value)
 }
 
 func (t *Transaction) SetInput(input []byte) {
-	t.Inner.setInput(input)
+	t.Inner.baseTx().setInput(input)
 }
 
 func (t *Transaction) SetTo(address *Address) {
-	t.Inner.setTo(address)
+	t.Inner.baseTx().setTo(address)
 }
 
 func (t *Transaction) SetNonce(nonce uint64) {
-	t.Inner.setNonce(nonce)
+	t.Inner.baseTx().setNonce(nonce)
 }
 
 func (t *Transaction) SetAccessList(accessList TxAccessList) {
@@ -227,7 +212,7 @@ func (t *Transaction) SetAccessList(accessList TxAccessList) {
 }
 
 func (t *Transaction) SetHash(h Hash) {
-	t.Inner.setHash(h)
+	t.Inner.baseTx().setHash(h)
 }
 
 func (t *Transaction) MarshalRLPWith(a *fastrlp.Arena) *fastrlp.Value {

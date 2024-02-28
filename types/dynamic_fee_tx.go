@@ -18,34 +18,12 @@ type DynamicFeeTx struct {
 
 func (tx *DynamicFeeTx) transactionType() TxType { return DynamicFeeTxType }
 func (tx *DynamicFeeTx) chainID() *big.Int       { return tx.ChainID }
-func (tx *DynamicFeeTx) input() []byte           { return tx.baseTx().input() }
-func (tx *DynamicFeeTx) gas() uint64             { return tx.baseTx().gas() }
 func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
 func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
-func (tx *DynamicFeeTx) value() *big.Int         { return tx.baseTx().value() }
-func (tx *DynamicFeeTx) nonce() uint64           { return tx.baseTx().nonce() }
-func (tx *DynamicFeeTx) to() *Address            { return tx.baseTx().to() }
-func (tx *DynamicFeeTx) from() Address           { return tx.baseTx().from() }
 func (tx *DynamicFeeTx) baseTx() *BaseTx         { return tx.BaseTx }
 
-func (tx *DynamicFeeTx) hash() Hash { return tx.baseTx().hash() }
-
-func (tx *DynamicFeeTx) rawSignatureValues() (v, r, s *big.Int) {
-	return tx.baseTx().rawSignatureValues()
-}
-
 func (tx *DynamicFeeTx) accessList() TxAccessList { return tx.AccessList }
-
-func (tx *DynamicFeeTx) setSignatureValues(v, r, s *big.Int) {
-	tx.baseTx().setSignatureValues(v, r, s)
-}
-
-func (tx *DynamicFeeTx) setFrom(addr Address) { tx.baseTx().setFrom(addr) }
-
-func (tx *DynamicFeeTx) setGas(gas uint64) {
-	tx.baseTx().setGas(gas)
-}
 
 func (tx *DynamicFeeTx) setChainID(id *big.Int) {
 	tx.ChainID = id
@@ -63,27 +41,9 @@ func (tx *DynamicFeeTx) setGasTipCap(gas *big.Int) {
 	tx.GasTipCap = gas
 }
 
-func (tx *DynamicFeeTx) setValue(value *big.Int) {
-	tx.baseTx().setValue(value)
-}
-
-func (tx *DynamicFeeTx) setInput(input []byte) {
-	tx.baseTx().setInput(input)
-}
-
-func (tx *DynamicFeeTx) setTo(address *Address) {
-	tx.baseTx().setTo(address)
-}
-
-func (tx *DynamicFeeTx) setNonce(nonce uint64) {
-	tx.baseTx().setNonce(nonce)
-}
-
 func (tx *DynamicFeeTx) setAccessList(accessList TxAccessList) {
 	tx.AccessList = accessList
 }
-
-func (tx *DynamicFeeTx) setHash(h Hash) { tx.baseTx().setHash(h) }
 
 func (tx *DynamicFeeTx) setBaseTx(base *BaseTx) {
 	tx.BaseTx = base
@@ -124,7 +84,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		return err
 	}
 
-	tx.setNonce(txNonce)
+	tx.baseTx().setNonce(txNonce)
 
 	// gasTipCap
 	txGasTipCap := new(big.Int)
@@ -148,15 +108,15 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		return err
 	}
 
-	tx.setGas(txGas)
+	tx.baseTx().setGas(txGas)
 
 	// to
 	if vv, _ := values.dequeueValue().Bytes(); len(vv) == AddressLength {
 		addr := BytesToAddress(vv)
-		tx.setTo(&addr)
+		tx.baseTx().setTo(&addr)
 	} else {
 		// reset To
-		tx.setTo(nil)
+		tx.baseTx().setTo(nil)
 	}
 
 	// value
@@ -165,7 +125,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		return err
 	}
 
-	tx.setValue(txValue)
+	tx.baseTx().setValue(txValue)
 
 	// input
 	var txInput []byte
@@ -175,7 +135,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		return err
 	}
 
-	tx.setInput(txInput)
+	tx.baseTx().setInput(txInput)
 
 	accessListVV, err := values.dequeueValue().GetElems()
 	if err != nil {
@@ -211,7 +171,7 @@ func (tx *DynamicFeeTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) er
 		return err
 	}
 
-	tx.setSignatureValues(txV, txR, txS)
+	tx.baseTx().setSignatureValues(txV, txR, txS)
 
 	return nil
 }
@@ -223,28 +183,28 @@ func (tx *DynamicFeeTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv := arena.NewArray()
 
 	vv.Set(arena.NewBigInt(tx.chainID()))
-	vv.Set(arena.NewUint(tx.nonce()))
+	vv.Set(arena.NewUint(tx.baseTx().nonce()))
 	// Add EIP-1559 related fields.
 	// For non-dynamic-fee-tx gas price is used.
 	vv.Set(arena.NewBigInt(tx.gasTipCap()))
 	vv.Set(arena.NewBigInt(tx.gasFeeCap()))
-	vv.Set(arena.NewUint(tx.gas()))
+	vv.Set(arena.NewUint(tx.baseTx().gas()))
 
 	// Address may be empty
-	if tx.to() != nil {
-		vv.Set(arena.NewCopyBytes(tx.to().Bytes()))
+	if tx.baseTx().to() != nil {
+		vv.Set(arena.NewCopyBytes(tx.baseTx().to().Bytes()))
 	} else {
 		vv.Set(arena.NewNull())
 	}
 
-	vv.Set(arena.NewBigInt(tx.value()))
-	vv.Set(arena.NewCopyBytes(tx.input()))
+	vv.Set(arena.NewBigInt(tx.baseTx().value()))
+	vv.Set(arena.NewCopyBytes(tx.baseTx().input()))
 
 	// Convert TxAccessList to RLP format and add it to the vv array.
 	vv.Set(tx.accessList().MarshallRLPWith(arena))
 
 	// signature values
-	v, r, s := tx.rawSignatureValues()
+	v, r, s := tx.baseTx().rawSignatureValues()
 	vv.Set(arena.NewBigInt(v))
 	vv.Set(arena.NewBigInt(r))
 	vv.Set(arena.NewBigInt(s))
