@@ -25,6 +25,7 @@ func (tx *BaseTx) rawSignatureValues() (v, r, s *big.Int) {
 }
 func (tx *BaseTx) hash() Hash    { return tx.Hash }
 func (tx *BaseTx) from() Address { return tx.From }
+func (tx *BaseTx) v() *big.Int   { return tx.V }
 
 func (tx *BaseTx) setNonce(nonce uint64) {
 	tx.Nonce = nonce

@@ -13,7 +13,7 @@ type LegacyTx struct {
 }
 
 func (tx *LegacyTx) transactionType() TxType { return LegacyTxType }
-func (tx *LegacyTx) chainID() *big.Int       { return deriveChainID(tx.baseTx().V) }
+func (tx *LegacyTx) chainID() *big.Int       { return deriveChainID(tx.baseTx().v()) }
 func (tx *LegacyTx) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *LegacyTx) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *LegacyTx) gasFeeCap() *big.Int     { return tx.GasPrice }
