@@ -17,15 +17,16 @@ builds:
       - CC=o64-clang
       - CXX=o64-clang++
     ldflags:
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
+      -s -w
+      -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
+      -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
+      -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
+      -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
 
   - id: darwin-arm64
-     main: ./main.go
-     binary: blade
-     goos:
+    main: ./main.go
+    binary: blade
+    goos:
       - darwin
     goarch:
       - arm64
@@ -33,10 +34,11 @@ builds:
       - CC=oa64-clang
       - CXX=oa64-clang++
     ldflags:
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
-      -s -w -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
+      -s-w
+      -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
+      -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
+      -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
+      -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
 
   - id: linux-amd64
     main: ./main.go
@@ -50,10 +52,11 @@ builds:
       - CXX=g++
     ldflags:
       # We need to build a static binary because we are building in a glibc based system and running in a musl container
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
+      -s -w 
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
     tags:
       - netgo
       - osusergo
@@ -70,10 +73,11 @@ builds:
       - CXX=aarch64-linux-gnu-g++
     ldflags:
       # We need to build a static binary because we are building in a glibc based system and running in a musl container
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
-      -s -w -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
+      -s -w
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Version=v{{ .Version }}'
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Commit={{ .Commit }}'
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.Branch={{ .Branch }}'
+      -linkmode external -extldflags "-static" -X 'github.com/0xPolygon/polygon-edge/versioning.BuildTime={{ .Date }}'
     tags:
       - netgo
       - osusergo
@@ -122,3 +126,4 @@ docker_manifests:
       - DOCKERHUB_ORGANIZATION/{{ .ProjectName }}:{{ .Version }}-amd64
       - DOCKERHUB_ORGANIZATION/{{ .ProjectName }}:{{ .Version }}-arm64
     skip_push: auto
+    
