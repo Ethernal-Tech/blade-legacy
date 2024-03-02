@@ -10,7 +10,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/aws/aws-sdk-go v1.50.8
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
-	github.com/docker/docker v24.0.9+incompatible
+	github.com/docker/docker v25.0.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/golang/protobuf v1.5.3
@@ -51,7 +51,7 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
-require github.com/docker/distribution v2.8.3+incompatible // indirect
+require github.com/containerd/log v0.1.0 // indirect
 
 require (
 	cloud.google.com/go/compute v1.23.3 // indirect
