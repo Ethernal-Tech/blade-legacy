@@ -689,3 +689,15 @@ func rlpHashLogs(logs []*types.Log) (res types.Hash) {
 func vmTestBlockHash(n uint64) types.Hash {
 	return types.BytesToHash(crypto.Keccak256([]byte(big.NewInt(int64(n)).String())))
 }
+
+// getTestName extracts test name from the test file path
+func getTestName(testFile string) string {
+	testName := filepath.Base(testFile)
+
+	return strings.TrimSuffix(testName, ".json")
+}
+
+type forkConfig struct {
+	name  string
+	forks *chain.Forks
+}
