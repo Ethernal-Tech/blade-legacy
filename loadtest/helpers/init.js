@@ -9,10 +9,11 @@ export function fundTestAccounts(client, root_address) {
 
     // fund the VUs accounts
     for (let i = 0; i < exec.instance.vusInitialized; i++) {
-        var tacc = wallet.generateKey();
+        var tacc = wallet.generateKey();        
         accounts[i] = {
             private_key: tacc.private_key,
             address: tacc.address,
+            nonce: 0,
         };
 
         // fund each account with some coins

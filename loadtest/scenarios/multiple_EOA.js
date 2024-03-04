@@ -64,30 +64,32 @@ export function setup() {
   return { accounts: fundTestAccounts(client, root_address) };
 }
 
-var nonce = 0;
-var client;
+var clients = [];
 
 // VU client
 export default function (data) {
+  var client = clients[exec.vu.idInInstance - 1];
   if (client == null) {
     client = new eth.Client({
       url: rpc_url,
       privateKey: data.accounts[exec.vu.idInInstance - 1].private_key
     });
+
+    clients[exec.vu.idInInstance - 1] = client;
   }
 
-  console.log(`nonce => ${nonce}`);
+  const userData = data.accounts[exec.vu.idInInstance - 1]
 
   const tx = {
     to: "0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
     value: Number(0.00000001 * 1e18),
     gas_price: client.gasPrice(),
-    nonce: nonce,
+    nonce: userData.nonce,
   };
 
   const txh = client.sendRawTransaction(tx);
-  console.log("tx hash => " + txh);
-  nonce++;
+  console.log("sender => " + userData.address + " tx hash => " + txh + " nonce => " + userData.nonce);
+  userData.nonce++;
 
   // client.waitForTransactionReceipt(txh).then((receipt) => {
   //   console.log("tx block hash => " + receipt.block_hash);

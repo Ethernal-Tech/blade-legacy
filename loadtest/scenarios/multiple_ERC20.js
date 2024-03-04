@@ -73,26 +73,28 @@ export function setup() {
     };
 }
 
-let nonce = 0;
-let client;
+var clients = [];
 
 // VU client
 export default function (data) {
-    let acc = data.accounts[exec.vu.idInInstance - 1];
-
+    var client = clients[exec.vu.idInInstance - 1];
     if (client == null) {
-        client = new eth.Client({
-            url: rpc_url,
-            privateKey: acc.private_key
-        });
+      client = new eth.Client({
+        url: rpc_url,
+        privateKey: data.accounts[exec.vu.idInInstance - 1].private_key
+      });
+  
+      clients[exec.vu.idInInstance - 1] = client;
     }
+
+    let acc = data.accounts[exec.vu.idInInstance - 1];
 
     console.log(acc.address);
     const con = client.newContract(data.contract_address, JSON.stringify(ZexCoin.abi));
-    const res = con.txn("transfer", { gas_limit: 100000, nonce: nonce }, acc.address, 1);
+    const res = con.txn("transfer", { gas_limit: 100000, nonce: acc.nonce }, acc.address, 1);
     console.log(`txn hash => ${res}`);
 
-    nonce++;
+    acc.nonce++;
     // console.log(JSON.stringify(con.call("balanceOf", acc.address)));
 }
 
