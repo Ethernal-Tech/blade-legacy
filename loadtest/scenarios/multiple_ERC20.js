@@ -91,7 +91,7 @@ export default function (data) {
 
     console.log(acc.address);
     const con = client.newContract(data.contract_address, JSON.stringify(ZexCoin.abi));
-    const res = con.txn("transfer", { gas_limit: 100000, nonce: acc.nonce, gas_price: client.gasPrice()*1.8 }, acc.address, 1);
+    const res = con.txn("transfer", { gas_limit: 100000, nonce: acc.nonce, gas_price: client.gasPrice()*1.3 }, acc.address, 1);
     console.log("sender => " + acc.address + " tx hash => " + res + " nonce => " + acc.nonce);
 
     acc.nonce++;
