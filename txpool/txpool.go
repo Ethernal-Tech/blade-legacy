@@ -925,12 +925,7 @@ func (p *TxPool) handlePromoteRequest(req promoteRequest) {
 // addGossipTx handles receiving transactions
 // gossiped by the network.
 func (p *TxPool) addGossipTx(obj interface{}, peerID peer.ID) {
-	if !p.sealing.Load() {
-		return
-	}
-
-	// ignore txs gossiped by the node itself
-	if p.localPeerID == peerID {
+	if !p.sealing.Load() || p.localPeerID == peerID {
 		return
 	}
 
