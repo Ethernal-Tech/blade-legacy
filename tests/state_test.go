@@ -23,8 +23,6 @@ import (
 
 const (
 	stateTestsDir = "tests/GeneralStateTests"
-
-	testGenesisBaseFee = 0xa
 )
 
 var (
