@@ -37,9 +37,9 @@ on: # yamllint disable-line rule:truthy
         type: boolean
         default: true
       benchmark-test:
-          description: Benchmark Tests
-          type: boolean
-          default: true
+        description: Benchmark Tests
+        type: boolean
+        default: true
   workflow_call:
     inputs:
       build-blade:
@@ -70,9 +70,9 @@ on: # yamllint disable-line rule:truthy
         type: boolean
         required: true
       benchmark-test:
-          description: Benchmark Tests
-          type: boolean
-          default: true
+        description: Benchmark Tests
+        type: boolean
+        default: true
     outputs:
       build-blade:
         description: Build Blade output
