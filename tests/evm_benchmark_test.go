@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	benchmarksDir = "tests/evm-benchmarks/benchmarks"
+	benchmarksDir = "evm-benchmarks/benchmarks"
 	chainID       = 10
 )
 
