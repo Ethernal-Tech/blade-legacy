@@ -2,7 +2,7 @@ import eth from 'k6/x/ethereum';
 import exec from 'k6/execution';
 import wallet from 'k6/x/ethereum/wallet';
 
-export function fundTestAccounts(client, root_address) {
+export async function fundTestAccounts(client, root_address) {
     var accounts = [];
     var nonce = client.getNonce(root_address);
     console.log(`nonce => ${nonce}`);
@@ -19,7 +19,7 @@ export function fundTestAccounts(client, root_address) {
         // fund each account with some coins
         var tx = {
             to: tacc.address,
-            value: Number(10000 * 1e18),
+            value: Number(10 * 1e18),
             gas_price: client.gasPrice(),
             nonce: nonce,
         };
@@ -27,9 +27,9 @@ export function fundTestAccounts(client, root_address) {
         console.log(JSON.stringify(tx));
         var txh = client.sendRawTransaction(tx)
         console.log(`txn hash => ${txh}`);
-        client.waitForTransactionReceipt(txh).then((receipt) => {
-            console.log(`account funded => ${JSON.stringify(receipt)}`);
-        });
+
+        var receipt = await client.waitForTransactionReceipt(txh);
+        console.log(`account funded => ${JSON.stringify(receipt)}`);
 
         nonce++;
     }

@@ -55,13 +55,15 @@ if (rpc_url == undefined) {
   rpc_url = "http://localhost:10002"
 }
 
-export function setup() {
+export async function setup() {
   const client = new eth.Client({
     url: rpc_url,
     mnemonic: mnemonic,
   });
 
-  return { accounts: fundTestAccounts(client, root_address) };
+  var accounts = await fundTestAccounts(client, root_address);
+
+  return { accounts: accounts };
 }
 
 var clients = [];

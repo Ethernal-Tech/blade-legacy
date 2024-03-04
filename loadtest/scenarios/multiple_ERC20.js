@@ -57,7 +57,7 @@ if (rpc_url == undefined) {
 
 const ZexCoin = JSON.parse(open("../contracts/ZexCoinERC20.json"));
 
-export function setup() {
+export async function setup() {
     let data = {};
 
     const client = new eth.Client({
@@ -67,8 +67,10 @@ export function setup() {
 
     const receipt = client.deployContract(JSON.stringify(ZexCoin.abi), ZexCoin.bytecode.substring(2), 500000000000, "ZexCoin", "ZEX")
 
+    var accounts = await fundTestAccounts(client, root_address);
+
     return {
-        accounts: fundTestAccounts(client, root_address),
+        accounts: accounts,
         contract_address: data.contract_address
     };
 }
