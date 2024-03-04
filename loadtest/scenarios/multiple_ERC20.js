@@ -5,7 +5,7 @@ import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.2/index.js';
 
 let setupTimeout = __ENV.SETUP_TIMEOUT;
 if (setupTimeout == undefined) {
-  setupTimeout = "220s"
+  setupTimeout = "1800s"
 }
 
 let rate = __ENV.RATE;
