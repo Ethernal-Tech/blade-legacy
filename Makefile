@@ -62,7 +62,7 @@ unit-test: check-go
 
 .PHONY: benchmark-test
 benchmark-test: check-go
-	go test -v -run=^$ -bench=^Benchmark -timeout 20m `go list ./... | grep -v e2e`
+	go test -bench=. -run=^$ `go list ./... | grep -v /e2e`
 
 .PHONY: fuzz-test
 fuzz-test: check-go
