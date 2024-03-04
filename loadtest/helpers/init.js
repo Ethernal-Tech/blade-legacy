@@ -19,7 +19,7 @@ export function fundTestAccounts(client, root_address) {
         // fund each account with some coins
         var tx = {
             to: tacc.address,
-            value: Number(0.05 * 1e18),
+            value: Number(1000 * 1e18),
             gas_price: client.gasPrice(),
             nonce: nonce,
         };
