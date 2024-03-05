@@ -210,7 +210,6 @@ func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index argU
 	}
 
 	block, ok := e.store.GetBlockByNumber(num, true)
-
 	if !ok {
 		return nil, nil
 	}
