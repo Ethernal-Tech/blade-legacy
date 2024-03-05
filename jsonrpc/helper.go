@@ -45,6 +45,23 @@ func GetNumericBlockNumber(number BlockNumber, store latestHeaderGetter) (uint64
 	}
 }
 
+// GetTransactionByBlockAndIndex returns the transaction for the given block and index.
+func GetTransactionByBlockAndIndex(block *types.Block, index argUint64) (interface{}, error) {
+	idx := int(index)
+	size := len(block.Transactions)
+
+	if size == 0 || size < idx {
+		return nil, ErrIndexOutOfRange
+	}
+
+	return toTransaction(
+		block.Transactions[index],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&idx,
+	), nil
+}
+
 type headerGetter interface {
 	Header() *types.Header
 	GetHeaderByNumber(uint64) (*types.Header, bool)

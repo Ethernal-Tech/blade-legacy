@@ -209,41 +209,17 @@ func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index argU
 		return nil, nil
 	}
 
-	idx := int(index)
-	size := len(block.Transactions)
-
-	if size == 0 || size < idx {
-		return nil, ErrIndexOutOfRange
-	}
-
-	return toTransaction(
-		block.Transactions[index],
-		argUintPtr(block.Number()),
-		argHashPtr(block.Hash()),
-		&idx,
-	), nil
+	return GetTransactionByBlockAndIndex(block, index)
 }
 
-// GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
+// GetTransactionByBlockHashAndIndex returns the transaction for the given block hash and index.
 func (e *Eth) GetTransactionByBlockHashAndIndex(blockHash types.Hash, index argUint64) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(blockHash, true)
 	if !ok {
 		return nil, nil
 	}
 
-	idx := int(index)
-	size := len(block.Transactions)
-
-	if size == 0 || size < idx {
-		return nil, ErrIndexOutOfRange
-	}
-
-	return toTransaction(
-		block.Transactions[index],
-		argUintPtr(block.Number()),
-		argHashPtr(block.Hash()),
-		&idx,
-	), nil
+	return GetTransactionByBlockAndIndex(block, index)
 }
 
 // BlockNumber returns current block number
