@@ -124,6 +124,10 @@ func runBenchmarkTest(b *testing.B, c testCase, fc *forkConfig, p postEntry) err
 		return err
 	}
 
+	if currentForks.Berlin {
+		transition.PopulateAccessList(msg.From(), msg.To(), msg.AccessList())
+	}
+
 	var (
 		gasUsed uint64
 		elapsed uint64
@@ -133,9 +137,6 @@ func runBenchmarkTest(b *testing.B, c testCase, fc *forkConfig, p postEntry) err
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
 		snapshotID := transition.Snapshot()
-		if currentForks.Berlin {
-			transition.PopulateAccessList(msg.From(), msg.To(), msg.AccessList())
-		}
 
 		b.StartTimer()
 		start := time.Now()

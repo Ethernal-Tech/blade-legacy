@@ -1184,11 +1184,6 @@ func (t *Transition) GetRefund() uint64 {
 	return t.state.GetRefund()
 }
 
-// ActivePrecompiles returns addresses of precompile contracts
-func (t *Transition) ActivePrecompiles() []types.Address {
-	return t.precompiles.Addrs
-}
-
 func TransactionGasCost(msg *types.Transaction, isHomestead, isIstanbul bool) (uint64, error) {
 	cost := uint64(0)
 
@@ -1362,19 +1357,7 @@ func (t *Transition) RevertToSnapshot(snapshot int) error {
 
 // PopulateAccessList populates access list based on the provided access list
 func (t *Transition) PopulateAccessList(from types.Address, to *types.Address, acl types.TxAccessList) {
-	t.AddAddressToAccessList(from)
-
-	if to != nil {
-		t.AddAddressToAccessList(*to)
-	}
-
-	for _, accessInfo := range acl {
-		t.AddAddressToAccessList(accessInfo.Address)
-
-		for _, storageKey := range accessInfo.StorageKeys {
-			t.AddSlotToAccessList(accessInfo.Address, storageKey)
-		}
-	}
+	t.accessList.PrepareAccessList(from, to, t.precompiles.Addrs, acl)
 }
 
 func (t *Transition) AddSlotToAccessList(addr types.Address, slot types.Hash) {
