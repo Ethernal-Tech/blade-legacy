@@ -123,21 +123,28 @@ func TestEth_Block_GetBlockTransactionCountByNumber(t *testing.T) {
 
 func TestEth_Block_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 	store := &mockBlockStore{}
+	eth := newTestEthEndpoint(store)
 	block := newTestBlock(1, hash1)
 
 	for i := 0; i < 10; i++ {
-		block.Transactions = append(block.Transactions, []*types.Transaction{
-			types.NewTx(&types.LegacyTx{Nonce: 0, From: addr0})}...)
+		txn := newTestTransaction(uint64(i), addr0)
+		block.Transactions = append(block.Transactions, txn)
 	}
 	store.add(block)
 
-	eth := newTestEthEndpoint(store)
+	testIndex := 5
+	res, err := eth.GetTransactionByBlockNumberAndIndex(BlockNumber(block.Header.Number), argUint64(testIndex))
 
-	res, err := eth.GetTransactionByBlockNumberAndIndex(BlockNumber(block.Header.Number), 3)
+	transaction := toTransaction(
+		block.Transactions[testIndex],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&testIndex,
+	)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, res, "expected to return transaction, but got nil")
-	assert.Equal(t, block.Transactions[3], res)
+	assert.Equal(t, transaction, res)
 }
 
 func TestEth_Block_GetTransactionByBlockHashAndIndex(t *testing.T) {
@@ -145,18 +152,25 @@ func TestEth_Block_GetTransactionByBlockHashAndIndex(t *testing.T) {
 	block := newTestBlock(1, hash1)
 
 	for i := 0; i < 10; i++ {
-		block.Transactions = append(block.Transactions, []*types.Transaction{
-			types.NewTx(&types.LegacyTx{Nonce: 0, From: addr0})}...)
+		txn := newTestTransaction(uint64(i), addr0)
+		block.Transactions = append(block.Transactions, txn)
 	}
 	store.add(block)
 
 	eth := newTestEthEndpoint(store)
+	testIndex := 5
+	res, err := eth.GetTransactionByBlockHashAndIndex(types.Hash(block.Header.Hash), argUint64(testIndex))
 
-	res, err := eth.GetTransactionByBlockHashAndIndex(types.Hash(block.Header.Hash), 3)
+	transaction := toTransaction(
+		block.Transactions[testIndex],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&testIndex,
+	)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, res, "expected to return transaction, but got nil")
-	assert.Equal(t, block.Transactions[3], res)
+	assert.Equal(t, transaction, res)
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {

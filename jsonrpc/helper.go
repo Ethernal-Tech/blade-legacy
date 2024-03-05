@@ -14,6 +14,7 @@ var (
 	ErrNegativeBlockNumber      = errors.New("invalid argument 0: block number must not be negative")
 	ErrFailedFetchGenesis       = errors.New("error fetching genesis block header")
 	ErrNoDataInContractCreation = errors.New("contract creation without data provided")
+	ErrIndexOutOfRange          = errors.New("the index is invalid, it is out of range of expected values")
 )
 
 type latestHeaderGetter interface {

@@ -203,7 +203,7 @@ func (e *Eth) GetBlockTransactionCountByNumber(number BlockNumber) (interface{},
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index uint64) (interface{}, error) {
+func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index argUint64) (interface{}, error) {
 	num, err := GetNumericBlockNumber(number, e.store)
 	if err != nil {
 		return nil, err
@@ -215,30 +215,42 @@ func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index uint
 		return nil, nil
 	}
 
-	size := uint64(len(block.Transactions))
+	idx := int(index)
+	size := len(block.Transactions)
 
-	if size == 0 || size < index {
-		return nil, nil
+	if size == 0 || size < idx {
+		return nil, ErrIndexOutOfRange
 	}
 
-	return block.Transactions[index], nil
+	return toTransaction(
+		block.Transactions[index],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&idx,
+	), nil
 }
 
 // GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
-func (e *Eth) GetTransactionByBlockHashAndIndex(blockHash types.Hash, index uint64) (interface{}, error) {
+func (e *Eth) GetTransactionByBlockHashAndIndex(blockHash types.Hash, index argUint64) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(blockHash, true)
 	if !ok {
 		// Block receipts not found in storage
 		return nil, nil
 	}
 
-	size := uint64(len(block.Transactions))
+	idx := int(index)
+	size := len(block.Transactions)
 
-	if size == 0 || size < index {
-		return nil, nil
+	if size == 0 || size < idx {
+		return nil, ErrIndexOutOfRange
 	}
 
-	return block.Transactions[index], nil
+	return toTransaction(
+		block.Transactions[index],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&idx,
+	), nil
 }
 
 // BlockNumber returns current block number
