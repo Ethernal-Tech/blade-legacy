@@ -58,7 +58,7 @@ generate-bsd-licenses: check-git
 
 .PHONY: unit-test
 unit-test: check-go
-	go test -race -shuffle=on -coverprofile coverage.out -v -timeout 20m `go list ./... | grep -v e2e`
+	go test -race -shuffle=on -coverprofile coverage.out -timeout 20m `go list ./... | grep -v e2e`
 
 .PHONY: benchmark-test
 benchmark-test: check-go
