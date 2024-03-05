@@ -100,10 +100,6 @@ type Eth struct {
 	priceLimit    uint64
 }
 
-var (
-	ErrInsufficientFunds = errors.New("insufficient funds for execution")
-)
-
 // ChainId returns the chain id of the client
 //
 //nolint:stylecheck
@@ -180,7 +176,6 @@ func (e *Eth) filterExtra(block *types.Block) error {
 func (e *Eth) GetBlockTransactionCountByHash(blockHash types.Hash) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(blockHash, true)
 	if !ok {
-		// Block receipts not found in storage
 		return nil, nil
 	}
 
@@ -233,7 +228,6 @@ func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index argU
 func (e *Eth) GetTransactionByBlockHashAndIndex(blockHash types.Hash, index argUint64) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(blockHash, true)
 	if !ok {
-		// Block receipts not found in storage
 		return nil, nil
 	}
 

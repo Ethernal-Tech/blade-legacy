@@ -15,6 +15,7 @@ var (
 	ErrFailedFetchGenesis       = errors.New("error fetching genesis block header")
 	ErrNoDataInContractCreation = errors.New("contract creation without data provided")
 	ErrIndexOutOfRange          = errors.New("the index is invalid, it is out of range of expected values")
+	ErrInsufficientFunds        = errors.New("insufficient funds for execution")
 )
 
 type latestHeaderGetter interface {
