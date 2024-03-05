@@ -95,7 +95,7 @@ func TestEth_Block_GetBlockTransactionCountByHash(t *testing.T) {
 
 	eth := newTestEthEndpoint(store)
 
-	res, err := eth.GetBlockTransactionCountByHash(types.Hash(block.Header.Hash))
+	res, err := eth.GetBlockTransactionCountByHash(block.Header.Hash)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, res, "expected to return block, but got nil")
@@ -159,7 +159,7 @@ func TestEth_Block_GetTransactionByBlockHashAndIndex(t *testing.T) {
 
 	eth := newTestEthEndpoint(store)
 	testIndex := 5
-	res, err := eth.GetTransactionByBlockHashAndIndex(types.Hash(block.Header.Hash), argUint64(testIndex))
+	res, err := eth.GetTransactionByBlockHashAndIndex(block.Header.Hash, argUint64(testIndex))
 
 	transaction := toTransaction(
 		block.Transactions[testIndex],
