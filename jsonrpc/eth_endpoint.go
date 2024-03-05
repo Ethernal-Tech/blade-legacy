@@ -177,11 +177,11 @@ func (e *Eth) filterExtra(block *types.Block) error {
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
-func (e *Eth) GetBlockTransactionCountByHash(hash types.Hash) (interface{}, error) {	
+func (e *Eth) GetBlockTransactionCountByHash(blockHash types.Hash) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(blockHash, true)
 	if !ok {
 		// Block receipts not found in storage
-		return nil
+		return nil, nil
 	}
 
 	return *common.EncodeUint64(uint64(len(block.Transactions))), nil
@@ -200,6 +200,28 @@ func (e *Eth) GetBlockTransactionCountByNumber(number BlockNumber) (interface{},
 	}
 
 	return *common.EncodeUint64(uint64(len(block.Transactions))), nil
+}
+
+// GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
+func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index uint64) (interface{}, error) {
+	num, err := GetNumericBlockNumber(number, e.store)
+	if err != nil {
+		return nil, err
+	}
+
+	block, ok := e.store.GetBlockByNumber(num, true)
+
+	if !ok {
+		return nil, nil
+	}
+
+	size := uint64(len(block.Transactions))
+
+	if size == 0 || size < index {
+		return nil, nil
+	}
+
+	return block.Transactions[index], nil
 }
 
 // BlockNumber returns current block number
