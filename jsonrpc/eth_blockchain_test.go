@@ -83,6 +83,25 @@ func TestEth_Block_BlockNumber(t *testing.T) {
 	assert.Equal(t, argUintPtr(10), num)
 }
 
+func TestEth_Block_GetBlockTransactionCountByHash(t *testing.T) {
+	store := &mockBlockStore{}
+	block := newTestBlock(1, hash1)
+
+	for i := 0; i < 10; i++ {
+		block.Transactions = append(block.Transactions, []*types.Transaction{
+			types.NewTx(&types.LegacyTx{Nonce: 0, From: addr0})}...)
+	}
+	store.add(block)
+
+	eth := newTestEthEndpoint(store)
+
+	res, err := eth.GetBlockTransactionCountByHash(types.Hash(block.Header.Hash))
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res, "expected to return block, but got nil")
+	assert.Equal(t, "0xa", res)
+}
+
 func TestEth_Block_GetBlockTransactionCountByNumber(t *testing.T) {
 	store := &mockBlockStore{}
 	block := newTestBlock(1, hash1)

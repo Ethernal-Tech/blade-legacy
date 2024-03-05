@@ -176,6 +176,17 @@ func (e *Eth) filterExtra(block *types.Block) error {
 	return nil
 }
 
+// GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
+func (e *Eth) GetBlockTransactionCountByHash(hash types.Hash) (interface{}, error) {	
+	block, ok := e.store.GetBlockByHash(blockHash, true)
+	if !ok {
+		// Block receipts not found in storage
+		return nil
+	}
+
+	return *common.EncodeUint64(uint64(len(block.Transactions))), nil
+}
+
 func (e *Eth) GetBlockTransactionCountByNumber(number BlockNumber) (interface{}, error) {
 	num, err := GetNumericBlockNumber(number, e.store)
 	if err != nil {
