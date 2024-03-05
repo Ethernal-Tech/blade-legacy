@@ -1361,7 +1361,13 @@ func (t *Transition) RevertToSnapshot(snapshot int) error {
 }
 
 // PopulateAccessList populates access list based on the provided access list
-func (t *Transition) PopulateAccessList(acl types.TxAccessList) {
+func (t *Transition) PopulateAccessList(from types.Address, to *types.Address, acl types.TxAccessList) {
+	t.AddAddressToAccessList(from)
+
+	if to != nil {
+		t.AddAddressToAccessList(*to)
+	}
+
 	for _, accessInfo := range acl {
 		t.AddAddressToAccessList(accessInfo.Address)
 

@@ -54,7 +54,7 @@ func BenchmarkEVM(b *testing.B) {
 
 						for idx, postStateEntry := range postState {
 							err := runBenchmarkTest(b, tc, fc, postStateEntry)
-							require.NoError(b, err, fmt.Sprintf("test %s (case#%d) execution failed", getTestName(file), idx))
+							require.NoError(b, err, fmt.Sprintf("test %s (case#%d) execution failed", name, idx))
 						}
 					}
 				}
@@ -134,11 +134,7 @@ func runBenchmarkTest(b *testing.B, c testCase, fc *forkConfig, p postEntry) err
 	for n := 0; n < b.N; n++ {
 		snapshotID := transition.Snapshot()
 		if currentForks.Berlin {
-			transition.PopulateAccessList(msg.AccessList())
-			transition.AddAddressToAccessList(msg.From())
-			if msg.To() != nil {
-				transition.AddAddressToAccessList(*msg.To())
-			}
+			transition.PopulateAccessList(msg.From(), msg.To(), msg.AccessList())
 		}
 
 		b.StartTimer()
