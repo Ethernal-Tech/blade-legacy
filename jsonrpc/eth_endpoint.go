@@ -224,6 +224,23 @@ func (e *Eth) GetTransactionByBlockNumberAndIndex(number BlockNumber, index uint
 	return block.Transactions[index], nil
 }
 
+// GetTransactionByBlockNumberAndIndex returns the transaction for the given block number and index.
+func (e *Eth) GetTransactionByBlockHashAndIndex(blockHash types.Hash, index uint64) (interface{}, error) {
+	block, ok := e.store.GetBlockByHash(blockHash, true)
+	if !ok {
+		// Block receipts not found in storage
+		return nil, nil
+	}
+
+	size := uint64(len(block.Transactions))
+
+	if size == 0 || size < index {
+		return nil, nil
+	}
+
+	return block.Transactions[index], nil
+}
+
 // BlockNumber returns current block number
 func (e *Eth) BlockNumber() (interface{}, error) {
 	h := e.store.Header()
