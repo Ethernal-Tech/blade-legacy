@@ -132,7 +132,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Instances Type: *${{ vars.AWS_INSTANCE_TYPE }}"
+                      "text": "Instances Type: *${{ vars.AWS_INSTANCE_TYPE }}*"
                     }
                   ]
                 },
