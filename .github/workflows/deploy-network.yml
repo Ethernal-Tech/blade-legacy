@@ -210,7 +210,7 @@ jobs:
     name: Deploy Notification
     needs: [check_network, deploy_network]
     uses: ./.github/workflows/notification-deploy-network.yml
-    if: (always() && inputs.notification)
+    if: ((success() || failure()) && inputs.notification)
     with:
       environment: ${{ inputs.environment }}
       block_gas_limit: ${{ inputs.block_gas_limit }}
