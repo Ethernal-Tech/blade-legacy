@@ -103,7 +103,7 @@ jobs:
                         "text": "Workflow Run"
                       },
                       "style": "${{ env.succeed_bnt }}",
-                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}""
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ]
                 },
