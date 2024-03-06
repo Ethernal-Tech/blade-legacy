@@ -4,15 +4,17 @@ import (
 	"math/big"
 )
 
+// BaseTx represents a base abstract transaction in the blockchain,
+// that is inhereted by all other concrete tx types (legacy, dynamic, acl, state).
 type BaseTx struct {
-	Nonce   uint64
-	Gas     uint64
-	To      *Address
-	Value   *big.Int
-	Input   []byte
-	V, R, S *big.Int
-	Hash    Hash
-	From    Address
+	Nonce   uint64   // Nonce is the transaction nonce.
+	Gas     uint64   // Gas is the amount of gas for the transaction.
+	To      *Address // To is the recipient address of the transaction.
+	Value   *big.Int // Value is the amount of value to be transferred.
+	Input   []byte   // Input is the transaction input data.
+	V, R, S *big.Int // V, R, S are the signature values of the transaction.
+	Hash    Hash     // Hash is the hash of the transaction.
+	From    Address  // From is the sender address of the transaction.
 }
 
 func (tx *BaseTx) nonce() uint64   { return tx.Nonce }
@@ -63,9 +65,7 @@ func (tx *BaseTx) copy() *BaseTx {
 	cpy := new(BaseTx)
 
 	cpy.setNonce(tx.nonce())
-
 	cpy.setGas(tx.gas())
-
 	cpy.setTo(tx.to())
 
 	if tx.value() != nil {
@@ -100,9 +100,7 @@ func (tx *BaseTx) copy() *BaseTx {
 	}
 
 	cpy.setSignatureValues(vCopy, rCopy, sCopy)
-
 	cpy.setHash(tx.hash())
-
 	cpy.setFrom(tx.from())
 
 	return cpy

@@ -8,16 +8,15 @@ import (
 )
 
 type LegacyTx struct {
+	*BaseTx
 	GasPrice *big.Int
-	BaseTx   *BaseTx
 }
 
 func (tx *LegacyTx) transactionType() TxType { return LegacyTxType }
-func (tx *LegacyTx) chainID() *big.Int       { return deriveChainID(tx.baseTx().v()) }
+func (tx *LegacyTx) chainID() *big.Int       { return deriveChainID(tx.v()) }
 func (tx *LegacyTx) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *LegacyTx) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *LegacyTx) gasFeeCap() *big.Int     { return tx.GasPrice }
-func (tx *LegacyTx) baseTx() *BaseTx         { return tx.BaseTx }
 
 func (tx *LegacyTx) accessList() TxAccessList { return nil }
 
@@ -28,18 +27,11 @@ func (tx *LegacyTx) setGasPrice(gas *big.Int) {
 	tx.GasPrice = gas
 }
 
-func (tx *LegacyTx) setGasFeeCap(gas *big.Int) {
-}
+func (tx *LegacyTx) setGasFeeCap(gas *big.Int) {}
 
-func (tx *LegacyTx) setGasTipCap(gas *big.Int) {
-
-}
+func (tx *LegacyTx) setGasTipCap(gas *big.Int) {}
 
 func (tx *LegacyTx) setAccessList(accessList TxAccessList) {}
-
-func (tx *LegacyTx) setBaseTx(base *BaseTx) {
-	tx.BaseTx = base
-}
 
 // unmarshalRLPFrom unmarshals a Transaction in RLP format
 // Be careful! This function does not de-serialize tx type, it assumes that t.Type is already set
@@ -68,7 +60,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 		return err
 	}
 
-	tx.baseTx().setNonce(txNonce)
+	tx.setNonce(txNonce)
 
 	// gasPrice
 	txGasPrice := new(big.Int)
@@ -84,16 +76,16 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 		return err
 	}
 
-	tx.baseTx().setGas(txGas)
+	tx.setGas(txGas)
 
 	// to
 	if vv, _ := values.dequeueValue().Bytes(); len(vv) == 20 {
 		// address
 		addr := BytesToAddress(vv)
-		tx.baseTx().setTo(&addr)
+		tx.setTo(&addr)
 	} else {
 		// reset To
-		tx.baseTx().setTo(nil)
+		tx.setTo(nil)
 	}
 
 	// value
@@ -102,7 +94,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 		return err
 	}
 
-	tx.baseTx().setValue(txValue)
+	tx.setValue(txValue)
 
 	// input
 	var txInput []byte
@@ -112,7 +104,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 		return err
 	}
 
-	tx.baseTx().setInput(txInput)
+	tx.setInput(txInput)
 
 	// V
 	txV := new(big.Int)
@@ -132,7 +124,7 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 		return err
 	}
 
-	tx.baseTx().setSignatureValues(txV, txR, txS)
+	tx.setSignatureValues(txV, txR, txS)
 
 	return nil
 }
@@ -143,22 +135,22 @@ func (tx *LegacyTx) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error 
 func (tx *LegacyTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	vv := arena.NewArray()
 
-	vv.Set(arena.NewUint(tx.baseTx().nonce()))
+	vv.Set(arena.NewUint(tx.nonce()))
 	vv.Set(arena.NewBigInt(tx.gasPrice()))
-	vv.Set(arena.NewUint(tx.baseTx().gas()))
+	vv.Set(arena.NewUint(tx.gas()))
 
 	// Address may be empty
-	if tx.baseTx().to() != nil {
-		vv.Set(arena.NewCopyBytes(tx.baseTx().to().Bytes()))
+	if tx.to() != nil {
+		vv.Set(arena.NewCopyBytes(tx.to().Bytes()))
 	} else {
 		vv.Set(arena.NewNull())
 	}
 
-	vv.Set(arena.NewBigInt(tx.baseTx().value()))
-	vv.Set(arena.NewCopyBytes(tx.baseTx().input()))
+	vv.Set(arena.NewBigInt(tx.value()))
+	vv.Set(arena.NewCopyBytes(tx.input()))
 
 	// signature values
-	v, r, s := tx.baseTx().rawSignatureValues()
+	v, r, s := tx.rawSignatureValues()
 	vv.Set(arena.NewBigInt(v))
 	vv.Set(arena.NewBigInt(r))
 	vv.Set(arena.NewBigInt(s))
@@ -176,9 +168,7 @@ func (tx *LegacyTx) copy() TxData { //nolint:dupl
 		cpy.setGasPrice(gasPrice)
 	}
 
-	if tx.baseTx() != nil {
-		cpy.setBaseTx(tx.baseTx().copy())
-	}
+	cpy.BaseTx = tx.BaseTx.copy()
 
 	return cpy
 }
