@@ -76,11 +76,11 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Triggered by: *user*"
+                      "text": "Triggered by: *${{ github.triggering_actor }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Environment: *dev*"
+                      "text": "Environment: *${{ inputs.environment }}*"
                     }
                   ]
                 }
