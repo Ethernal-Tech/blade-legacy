@@ -198,7 +198,7 @@ jobs:
       - name: Run Ansible (Restore data)
         if: contains(steps.previous_data.outputs.previous_data_output, 'download')
         working-directory: ansible
-        run: ansible-playbook site.yml --extra-vars "clean_deploy_title=${{ inputs.environment }} s3_bucket=${{ secrets.AWS_S3_BLADE_BUCKET }} restore_data=true"
+        run: ansible-playbook site.yml --extra-vars "clean_deploy_title=${{ inputs.environment }} blade_repository=${{ github.repository }} s3_bucket=${{ secrets.AWS_S3_BLADE_BUCKET }} restore_data=true"
       - name: Ansible Failed
         if: failure()
         id: ansible_failure
