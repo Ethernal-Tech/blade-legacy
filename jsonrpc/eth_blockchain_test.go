@@ -68,6 +68,59 @@ func TestEth_Block_GetBlockByHash(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestEth_Block_GetHeaderByNumber(t *testing.T) {
+	store := &mockBlockStore{}
+	for i := 0; i < 10; i++ {
+		store.add(newTestBlock(uint64(i), hash1))
+	}
+
+	eth := newTestEthEndpoint(store)
+
+	cases := []struct {
+		description string
+		blockNum    BlockNumber
+		isNotNil    bool
+		err         bool
+	}{
+		{"should be able to get the latest block number", LatestBlockNumber, true, false},
+		{"should be able to get the earliest block number", EarliestBlockNumber, true, false},
+		{"should not be able to get block with negative number", BlockNumber(-50), false, true},
+		{"should be able to get block with number 0", BlockNumber(0), true, false},
+		{"should be able to get block with number 2", BlockNumber(2), true, false},
+		{"should be able to get block with number greater than latest block", BlockNumber(50), false, false},
+	}
+	for _, c := range cases {
+		res, err := eth.GetHeadarByNumber(c.blockNum)
+
+		if c.isNotNil {
+			assert.NotNil(t, res, "expected to return block, but got nil")
+		} else {
+			assert.Nil(t, res, "expected to return nil, but got data")
+		}
+
+		if c.err {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+}
+
+func TestEth_Block_GetHeaderByHash(t *testing.T) {
+	store := &mockBlockStore{}
+	store.add(newTestBlock(1, hash1))
+
+	eth := newTestEthEndpoint(store)
+
+	res, err := eth.GetHeadarByHash(hash1)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+
+	res, err = eth.GetHeadarByHash(hash2)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+}
+
 func TestEth_Block_BlockNumber(t *testing.T) {
 	store := &mockBlockStore{}
 	store.add(&types.Block{

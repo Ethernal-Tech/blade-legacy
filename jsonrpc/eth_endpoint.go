@@ -155,6 +155,41 @@ func (e *Eth) GetBlockByHash(hash types.Hash, fullTx bool) (interface{}, error) 
 	return toBlock(block, fullTx), nil
 }
 
+// GetHeaderByNumber returns the requested canonical block header.
+// * When blockNr is -1 the chain head is returned.
+// * When blockNr is -2 the pending chain head is returned.
+func (e *Eth) GetHeadarByNumber(number BlockNumber) (interface{}, error) {
+	num, err := GetNumericBlockNumber(number, e.store)
+	if err != nil {
+		return nil, err
+	}
+
+	block, ok := e.store.GetBlockByNumber(num, true)
+	if !ok {
+		return nil, nil
+	}
+
+	if err := e.filterExtra(block); err != nil {
+		return nil, err
+	}
+
+	return toHeader(block.Header), nil
+}
+
+// GetHeaderByHash returns the requested header by hash.
+func (e *Eth) GetHeadarByHash(hash types.Hash) (interface{}, error) {
+	block, ok := e.store.GetBlockByHash(hash, true)
+	if !ok {
+		return nil, nil
+	}
+
+	if err := e.filterExtra(block); err != nil {
+		return nil, err
+	}
+
+	return toHeader(block.Header), nil
+}
+
 func (e *Eth) filterExtra(block *types.Block) error {
 	// we need to copy it because the store returns header from storage directly
 	// and not a copy, so changing it, actually changes it in storage as well
