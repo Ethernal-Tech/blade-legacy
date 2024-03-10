@@ -454,14 +454,14 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 	}
 
 	blockHash := block.Hash()
-	receipts, err := e.store.GetReceiptsByHash(blockHash)
-	if err != nil {
+	receipts, errR := e.store.GetReceiptsByHash(blockHash)
+	if errR != nil {
 		// block receipts not found
 		e.logger.Warn(
 			fmt.Sprintf("Receipts for block with hash [%s] not found", blockHash.String()),
 		)
 
-		return nil, nil
+		return nil, errR
 	}
 
 	numberOfReceipts := len(receipts)
@@ -476,7 +476,7 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 
 	if len(block.Transactions) == 0 {
 		e.logger.Warn(
-			fmt.Sprintf("No transations found for block with hash [%s]", blockHash.String()),
+			fmt.Sprintf("No transactions found for block with hash [%s]", blockHash.String()),
 		)
 
 		return nil, nil
@@ -486,15 +486,15 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 		numberOfReceipts = len(block.Transactions)
 	}
 
-	var resReceipts []*receipt = make([]*receipt, numberOfReceipts)
+	resReceipts := make([]*receipt, numberOfReceipts)
 	logIndex := 0
-	for txIndex, txn := range block.Transactions {
-		raw := receipts[txIndex]
+	for i, transaction := range block.Transactions {
+		raw := receipts[i]
 		// accumulate receipt logs indexes from block transactions
 		// that are before the desired transaction
-		logIndex += len(receipts[txIndex].Logs)
-		logs := toLogs(raw.Logs, uint64(logIndex), uint64(txIndex), block.Header, raw.TxHash)
-		resReceipts[txIndex] = toReceipt(raw, txn, uint64(txIndex), block.Header, logs)
+		logIndex += len(receipts[i].Logs)
+		logs := toLogs(raw.Logs, uint64(logIndex), uint64(i), block.Header, raw.TxHash)
+		resReceipts[i] = toReceipt(raw, transaction, uint64(i), block.Header, logs)
 	}
 
 	return resReceipts, nil
