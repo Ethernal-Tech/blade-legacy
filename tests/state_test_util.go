@@ -654,18 +654,20 @@ func listFiles(folder string, extensions ...string) ([]string, error) {
 			return err
 		}
 
-		if !d.IsDir() {
-			if len(extensions) > 0 {
-				// filter files by extensions
-				for _, ext := range extensions {
-					if strings.HasSuffix(path, ext) {
-						files = append(files, path)
-					}
+		if d.IsDir() {
+			return nil
+		}
+
+		if len(extensions) > 0 {
+			// filter files by extensions
+			for _, ext := range extensions {
+				if fileExt := filepath.Ext(path); fileExt == ext {
+					files = append(files, path)
 				}
-			} else {
-				// if no extensions filter is provided, add all files
-				files = append(files, path)
 			}
+		} else {
+			// if no extensions filter is provided, add all files
+			files = append(files, path)
 		}
 
 		return nil

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/big"
 	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -18,8 +20,9 @@ import (
 )
 
 const (
-	benchmarksDir = "evm-benchmarks/benchmarks"
-	chainID       = 10
+	benchmarksDir  = "evm-benchmarks"
+	testsExtension = ".json"
+	chainID        = 10
 )
 
 func BenchmarkEVM(b *testing.B) {
@@ -27,11 +30,11 @@ func BenchmarkEVM(b *testing.B) {
 	require.NoError(b, err)
 
 	for _, folder := range folders {
-		files, err := listFiles(folder, ".json")
+		files, err := listFiles(folder, testsExtension)
 		require.NoError(b, err)
 
 		for _, file := range files {
-			name := getTestName(file)
+			name := filepath.ToSlash(strings.TrimPrefix(strings.TrimSuffix(file, testsExtension), folder+string(filepath.Separator)))
 
 			b.Run(name, func(b *testing.B) {
 				data, err := os.ReadFile(file)
@@ -53,8 +56,11 @@ func BenchmarkEVM(b *testing.B) {
 						fc := &forkConfig{name: fork, forks: forks}
 
 						for idx, postStateEntry := range postState {
-							err := runBenchmarkTest(b, tc, fc, postStateEntry)
-							require.NoError(b, err, fmt.Sprintf("test %s (case#%d) execution failed", name, idx))
+							key := fmt.Sprintf("%s/%d", fork, idx)
+							b.Run(key, func(b *testing.B) {
+								err := runBenchmarkTest(b, tc, fc, postStateEntry)
+								require.NoError(b, err, fmt.Sprintf("test %s (case#%d) execution failed", name, idx))
+							})
 						}
 					}
 				}
