@@ -129,6 +129,11 @@ type header struct {
 	BaseFee         argUint64   `json:"baseFeePerGas,omitempty"`
 }
 
+type accessListResult struct {
+	Accesslist types.TxAccessList `json:"accessList"`
+	GasUsed    argUint64          `json:"gasUsed"`
+}
+
 type block struct {
 	ParentHash      types.Hash          `json:"parentHash"`
 	Sha3Uncles      types.Hash          `json:"sha3Uncles"`

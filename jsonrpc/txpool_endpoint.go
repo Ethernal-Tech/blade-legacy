@@ -29,6 +29,11 @@ type ContentResponse struct {
 	Queued  map[types.Address]map[uint64]*transaction `json:"queued"`
 }
 
+type ContentAddressResponse struct {
+	Pending map[uint64]*transaction `json:"pending"`
+	Queued  map[uint64]*transaction `json:"queued"`
+}
+
 type InspectResponse struct {
 	Pending         map[string]map[string]string `json:"pending"`
 	Queued          map[string]map[string]string `json:"queued"`
@@ -39,6 +44,37 @@ type InspectResponse struct {
 type StatusResponse struct {
 	Pending uint64 `json:"pending"`
 	Queued  uint64 `json:"queued"`
+}
+
+// ContentFrom returns the transactions contained within the transaction pool.
+func (t *TxPool) ContentFrom(addr types.Address) (interface{}, error) {
+	convertTxMap := func(txMap []*types.Transaction) map[uint64]*transaction {
+		result := make(map[uint64]*transaction, len(txMap))
+		for key, tx := range txMap {
+			result[uint64(key)] = toTransaction(tx, nil, &types.ZeroHash, nil)
+		}
+
+		return result
+	}
+
+	pendingTxs, queuedTxs := t.store.GetTxs(true)
+
+	pTxs, ok := pendingTxs[addr]
+	if !ok {
+		return nil, nil
+	}
+
+	qTxs, ok := queuedTxs[addr]
+	if !ok {
+		return nil, nil
+	}
+
+	resp := ContentAddressResponse{
+		Pending: convertTxMap(pTxs),
+		Queued:  convertTxMap(qTxs),
+	}
+
+	return resp, nil
 }
 
 // Create response for txpool_content request.

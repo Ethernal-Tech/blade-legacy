@@ -207,6 +207,37 @@ func (e *Eth) filterExtra(block *types.Block) error {
 	return nil
 }
 
+// CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
+// Reexec and BlockNrOrHash can be specified to create the accessList on top of a certain state.
+func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interface{}, error) {
+	header, err := GetHeaderFromBlockNumberOrHash(filter, e.store)
+	if err != nil {
+		return nil, err
+	}
+
+	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &accessListResult{
+		Accesslist: transaction.AccessList(),
+		GasUsed:    argUint64(header.GasUsed),
+	}
+
+	return res, nil
+}
+
+// Returns the client coinbase address.
+func (e *Eth) Coinbase() (interface{}, error) {
+	h := e.store.Header()
+	if h == nil {
+		return nil, fmt.Errorf("header has a nil value")
+	}
+
+	return types.BytesToAddress(h.Miner), nil
+}
+
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
 func (e *Eth) GetBlockTransactionCountByHash(blockHash types.Hash) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(blockHash, true)
@@ -408,6 +439,65 @@ func (e *Eth) GetTransactionReceipt(hash types.Hash) (interface{}, error) {
 	logs := toLogs(raw.Logs, uint64(logIndex), uint64(txIndex), block.Header, hash)
 
 	return toReceipt(raw, txn, uint64(txIndex), block.Header, logs), nil
+}
+
+// GetBlockReceipts returns all transaction receipts for a given block.
+func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
+	num, err := GetNumericBlockNumber(number, e.store)
+	if err != nil {
+		return nil, err
+	}
+
+	block, ok := e.store.GetBlockByNumber(num, true)
+	if !ok {
+		return nil, nil
+	}
+
+	blockHash := block.Hash()
+	receipts, err := e.store.GetReceiptsByHash(blockHash)
+	if err != nil {
+		// block receipts not found
+		e.logger.Warn(
+			fmt.Sprintf("Receipts for block with hash [%s] not found", blockHash.String()),
+		)
+
+		return nil, nil
+	}
+
+	numberOfReceipts := len(receipts)
+	if numberOfReceipts == 0 {
+		// Receipts not written yet on the db
+		e.logger.Warn(
+			fmt.Sprintf("No receipts found for block with hash [%s]", blockHash.String()),
+		)
+
+		return nil, nil
+	}
+
+	if len(block.Transactions) == 0 {
+		e.logger.Warn(
+			fmt.Sprintf("No transations found for block with hash [%s]", blockHash.String()),
+		)
+
+		return nil, nil
+	}
+
+	if numberOfReceipts > len(block.Transactions) {
+		numberOfReceipts = len(block.Transactions)
+	}
+
+	var resReceipts []*receipt = make([]*receipt, numberOfReceipts)
+	logIndex := 0
+	for txIndex, txn := range block.Transactions {
+		raw := receipts[txIndex]
+		// accumulate receipt logs indexes from block transactions
+		// that are before the desired transaction
+		logIndex += len(receipts[txIndex].Logs)
+		logs := toLogs(raw.Logs, uint64(logIndex), uint64(txIndex), block.Header, raw.TxHash)
+		resReceipts[txIndex] = toReceipt(raw, txn, uint64(txIndex), block.Header, logs)
+	}
+
+	return resReceipts, nil
 }
 
 // GetStorageAt returns the contract storage at the index position
