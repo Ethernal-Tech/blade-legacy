@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/hashicorp/go-hclog"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -600,6 +601,7 @@ func TestAddGossipTx(t *testing.T) {
 		t.Parallel()
 
 		pool, err := newTestPool()
+		pool.localPeerID = peer.ID("test")
 		assert.NoError(t, err)
 		pool.SetSigner(signer)
 
@@ -2110,26 +2112,34 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		accountMap := pool.accounts.initOnce(addr1, storeNonce)
 		accountMap.enqueued.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce + 2,
-				Hash:  types.StringToHash("0xffa"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce + 2,
+					Hash:  types.StringToHash("0xffa"),
+				},
 			},
 		})
 		accountMap.enqueued.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce + 4,
-				Hash:  types.StringToHash("0xff1"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce + 4,
+					Hash:  types.StringToHash("0xff1"),
+				},
 			},
 		})
 		accountMap.promoted.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce,
-				Hash:  types.StringToHash("0xff2"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce,
+					Hash:  types.StringToHash("0xff2"),
+				},
 			},
 		})
 		accountMap.promoted.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce + 1,
-				Hash:  types.StringToHash("0xff3"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce + 1,
+					Hash:  types.StringToHash("0xff3"),
+				},
 			},
 		})
 		accountMap.setNonce(storeNonce + 3)
