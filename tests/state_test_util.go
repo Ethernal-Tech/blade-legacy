@@ -649,12 +649,12 @@ func listFolders(paths []string) ([]string, error) {
 func listFiles(folder string, extensions ...string) ([]string, error) {
 	var files []string
 
-	err := filepath.WalkDir(folder, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.Walk(folder, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if d.IsDir() {
+		if info.IsDir() {
 			return nil
 		}
 
