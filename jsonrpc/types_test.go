@@ -165,10 +165,13 @@ func TestToTransaction_EIP1559(t *testing.T) {
 }
 
 func TestBlock_Copy(t *testing.T) {
-	b := &block{
+	bHeader := &header{
 		ExtraData: []byte{0x1},
 		Miner:     []byte{0x2},
-		Uncles:    []types.Hash{{0x0, 0x1}},
+	}
+	b := &block{
+		BlockHeader: bHeader,
+		Uncles:      []types.Hash{{0x0, 0x1}},
 	}
 
 	bb := b.Copy()
@@ -180,7 +183,7 @@ var testsuite embed.FS
 
 func TestBlock_Encoding(t *testing.T) {
 	getBlock := func() block {
-		return block{
+		bHeader := &header{
 			ParentHash:   types.Hash{0x1},
 			Sha3Uncles:   types.Hash{0x2},
 			Miner:        types.Address{0x1}.Bytes(),
@@ -199,6 +202,8 @@ func TestBlock_Encoding(t *testing.T) {
 			Hash:         types.Hash{0x8},
 			BaseFee:      15,
 		}
+
+		return block{BlockHeader: bHeader}
 	}
 
 	testBlock := func(name string, b block) {
@@ -215,7 +220,7 @@ func TestBlock_Encoding(t *testing.T) {
 
 	t.Run("block with no base fee", func(t *testing.T) {
 		b := getBlock()
-		b.BaseFee = 0
+		b.BlockHeader.BaseFee = 0
 		testBlock("testsuite/block-with-no-basefee.json", b)
 	})
 

@@ -232,7 +232,7 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 func (e *Eth) Coinbase() (interface{}, error) {
 	h := e.store.Header()
 	if h == nil {
-		return nil, fmt.Errorf("header has a nil value")
+		return nil, ErrHeaderNotFound
 	}
 
 	return types.BytesToAddress(h.Miner), nil
@@ -292,7 +292,7 @@ func (e *Eth) GetTransactionByBlockHashAndIndex(blockHash types.Hash, index argU
 func (e *Eth) BlockNumber() (interface{}, error) {
 	h := e.store.Header()
 	if h == nil {
-		return nil, fmt.Errorf("header has a nil value")
+		return nil, ErrHeaderNotFound
 	}
 
 	return argUintPtr(h.Number), nil
@@ -454,6 +454,14 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 	}
 
 	blockHash := block.Hash()
+	if len(block.Transactions) == 0 {
+		e.logger.Warn(
+			fmt.Sprintf("No transactions found for block with hash [%s]", blockHash.String()),
+		)
+
+		return nil, nil
+	}
+
 	receipts, errR := e.store.GetReceiptsByHash(blockHash)
 	if errR != nil {
 		// block receipts not found
@@ -474,20 +482,9 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 		return nil, nil
 	}
 
-	if len(block.Transactions) == 0 {
-		e.logger.Warn(
-			fmt.Sprintf("No transactions found for block with hash [%s]", blockHash.String()),
-		)
-
-		return nil, nil
-	}
-
-	if numberOfReceipts > len(block.Transactions) {
-		numberOfReceipts = len(block.Transactions)
-	}
-
 	resReceipts := make([]*receipt, numberOfReceipts)
 	logIndex := 0
+
 	for i, transaction := range block.Transactions {
 		raw := receipts[i]
 		// accumulate receipt logs indexes from block transactions

@@ -661,19 +661,23 @@ func newMockWsConnWithMsgCh() (*mockWsConn, <-chan []byte) {
 func TestHeadStream_Basic(t *testing.T) {
 	t.Parallel()
 
-	b := newBlockStream(&block{Hash: types.StringToHash("1")})
-	b.push(&block{Hash: types.StringToHash("2")})
+	blockHeader1 := &header{Hash: types.StringToHash("1")}
+	blockHeader2 := &header{Hash: types.StringToHash("2")}
+	blockHeader3 := &header{Hash: types.StringToHash("3")}
+	blockHeader4 := &header{Hash: types.StringToHash("4")}
+	b := newBlockStream(&block{BlockHeader: blockHeader1})
 
+	b.push(&block{BlockHeader: blockHeader2})
 	cur := b.getHead()
 
-	b.push(&block{Hash: types.StringToHash("3")})
-	b.push(&block{Hash: types.StringToHash("4")})
+	b.push(&block{BlockHeader: blockHeader3})
+	b.push(&block{BlockHeader: blockHeader4})
 
 	// get the updates, there are two new entries
 	updates, next := cur.getUpdates()
 
-	assert.Equal(t, updates[0].Hash.String(), types.StringToHash("3").String())
-	assert.Equal(t, updates[1].Hash.String(), types.StringToHash("4").String())
+	assert.Equal(t, updates[0].BlockHeader.Hash.String(), types.StringToHash("3").String())
+	assert.Equal(t, updates[1].BlockHeader.Hash.String(), types.StringToHash("4").String())
 
 	// there are no new entries
 	updates, _ = next.getUpdates()
@@ -686,7 +690,8 @@ func TestHeadStream_Concurrent(t *testing.T) {
 	nReaders := 20
 	nMessages := 10
 
-	b := newBlockStream(&block{Number: 0})
+	blockHeader := &header{Number: 0}
+	b := newBlockStream(&block{BlockHeader: blockHeader})
 
 	// Write co-routine with jitter
 	go func() {
@@ -696,7 +701,8 @@ func TestHeadStream_Concurrent(t *testing.T) {
 		z := rand.NewZipf(rand.New(rand.NewSource(seed)), 1.5, 1.5, 50)
 
 		for i := 0; i < nMessages; i++ {
-			b.push(&block{Number: argUint64(i)})
+			bHeader := &header{Number: argUint64(i)}
+			b.push(&block{BlockHeader: bHeader})
 
 			wait := time.Duration(z.Uint64()) * time.Millisecond
 			time.Sleep(wait)
@@ -718,7 +724,7 @@ func TestHeadStream_Concurrent(t *testing.T) {
 				blocks, next := item.getUpdates()
 
 				for _, block := range blocks {
-					if num := uint64(block.Number); num != expect {
+					if num := uint64(block.BlockHeader.Number); num != expect {
 						errCh <- fmt.Errorf("subscriber %05d bad event want=%d, got=%d", i, num, expect)
 
 						return
