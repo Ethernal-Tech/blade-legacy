@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"math/big"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -613,37 +612,6 @@ func contains(l []string, name string) bool {
 	}
 
 	return false
-}
-
-func listFolders(paths []string) ([]string, error) {
-	var folders []string
-
-	for _, rootPath := range paths {
-		err := filepath.WalkDir(rootPath, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if d.IsDir() {
-				files, err := os.ReadDir(path)
-				if err != nil {
-					return err
-				}
-
-				if len(files) > 0 {
-					folders = append(folders, path)
-				}
-			}
-
-			return nil
-		})
-
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return folders, nil
 }
 
 func listFiles(folder string, extensions ...string) ([]string, error) {
