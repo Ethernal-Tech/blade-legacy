@@ -7,10 +7,6 @@ on: # yamllint disable-line rule:truthy
         description: The environment to run against
         type: string
         required: true
-      logs:
-        description: Upload Logs
-        type: string
-        required: true
       build_blade_output:
         description: Build Blade output
         type: string
@@ -43,30 +39,6 @@ on: # yamllint disable-line rule:truthy
         description: Benchmark Tests output
         type: string
         required: true
-      deploy_network_terraform_output:
-        description: Deploy Network - Terraform output
-        type: string
-        required: true
-      deploy_network_ansible_output:
-        description: Deploy Network - Ansible output
-        type: string
-        required: true
-      load_test_multiple_eoa_output:
-        description: Load Test multiple_EOA output
-        type: string
-        required: true
-      load_test_multiple_erc20_output:
-        description: Load Test multiple_ERC20 output
-        type: string
-        required: true
-      destroy_network_logs_output:
-        description: Deploy Network - Logs output
-        type: string
-        required: true
-      destroy_network_terraform_output:
-        description: Destroy Network - Terraform output
-        type: string
-        required: true
     secrets:
       AWS_S3_BLADE_BUCKET:
         required: true
@@ -95,7 +67,7 @@ jobs:
             {
               "attachments": [
                 {
-                  "color": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_multiple_eoa_output == 'true' && inputs.load_test_multiple_erc20_output == 'true' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.green_color || env.red_color }}",
+                  "color": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && env.green_color || env.red_color }}",
                   "blocks": [
                     {
                       "type": "header",
@@ -141,15 +113,6 @@ jobs:
                             "text": "Workflow Run"
                           },
                           "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                        },
-                        {
-                          "type": "button",
-                          "text": {
-                            "type": "plain_text",
-                            "text": "${{ inputs.logs == 'true' && inputs.destroy_network_logs_output == '' && 'Logs' || 'No Logs' }}"
-                          },
-                          "style": "${{ inputs.logs == 'true' && inputs.destroy_network_logs_output == '' && env.succeed_bnt || env.failed_bnt }}",
-                          "url": "https://s3.console.aws.amazon.com/s3/buckets/${{ secrets.AWS_S3_BLADE_BUCKET }}?region=${{ vars.AWS_REGION }}&prefix=logs/${{ github.run_id }}/"
                         }
                       ]
                     }
@@ -163,42 +126,6 @@ jobs:
                       "text": {
                         "type": "mrkdwn",
                         "text": "*CI*\n${{ inputs.build_blade_output == '' && 'Build' || '~Build~' }}, ${{ inputs.lint_output == '' && 'Lint' || '~Lint~' }}, ${{ inputs.unit_test_output == '' && 'Unit Tests' || '~Unit Tests~' }},\n${{ inputs.fuzz_test_output == '' && 'Fuzz Tests' || '~Fuzz Tests~' }}, ${{ inputs.e2e_legacy_test_output == '' && 'E2E Legacy Tests' || '~E2E Legacy Tests~' }},\n${{ inputs.e2e_polybft_test_output == '' && 'E2E PolyBFT Tests' || '~E2E PolyBFT Tests~' }}, ${{ inputs.property_polybft_test_output == '' && 'Property PolyBFT Tests' || '~Property PolyBFT Tests~' }},\n${{ inputs.benchmark_test_output == '' && 'Benchmark Tests' || '~Benchmark Tests~' }}"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "color": "${{ inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && env.green_color || env.red_color }}",
-                  "blocks": [
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": "*Deploy Network*"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "color": "${{ inputs.load_test_multiple_eoa_output == 'true' && inputs.load_test_multiple_erc20_output == 'true' && env.green_color || env.red_color }}",
-                  "blocks": [
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": "*Load Tests*\n${{ inputs.load_test_multiple_eoa_output == 'true' && 'EOA' || '~EOA~' }},\n${{ inputs.load_test_multiple_erc20_output == 'true' && 'ERC20' || '~ERC20~' }}"
-                      }
-                    }
-                  ]
-                },
-                {
-                  "color": "${{ inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.green_color || env.red_color }}",
-                  "blocks": [
-                    {
-                      "type": "section",
-                      "text": {
-                        "type": "mrkdwn",
-                        "text": "*Destroy Network*"
                       }
                     }
                   ]
