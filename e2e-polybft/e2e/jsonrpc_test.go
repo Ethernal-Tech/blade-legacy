@@ -190,11 +190,13 @@ func TestE2E_JsonRPC(t *testing.T) {
 			Value: newBalance,
 		})
 		require.NoError(t, err)
+
 		txPrice := gasPrice * estimatedGas
 		// subtract gasPrice * estimatedGas from the balance and transfer the rest to the other account
 		// in order to leave no funds on the account
 		amountToSend := new(big.Int).Sub(newBalance, big.NewInt(int64(txPrice)))
 		targetAddr := acct.Address()
+
 		txn = cluster.SendTxn(t, key1, &ethgo.Transaction{
 			To:    &targetAddr,
 			Value: amountToSend,

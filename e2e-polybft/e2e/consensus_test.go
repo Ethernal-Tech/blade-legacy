@@ -398,6 +398,7 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 				config.Premine = append(config.Premine, fmt.Sprintf("%s:%d", addr, initValidatorsBalance))
 				config.StakeAmounts = append(config.StakeAmounts, new(big.Int).Set(initValidatorsBalance))
 				validatorsAddrs[i] = addr
+
 				initialTotalSupply.Add(initialTotalSupply, initValidatorsBalance)
 			}
 		}))
@@ -536,7 +537,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 
 	client := cluster.Servers[0].JSONRPC().Eth()
 
-	waitUntilBalancesChanged := func(acct ethgo.Address, initialBalance *big.Int) error {
+	waitUntilBalancesChanged := func(initialBalance *big.Int) error {
 		err := cluster.WaitUntil(30*time.Second, 1*time.Second, func() bool {
 			balance, err := client.GetBalance(recipient, ethgo.Latest)
 			if err != nil {
@@ -587,7 +588,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 		require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
 		// wait for recipient's balance to increase
-		err = waitUntilBalancesChanged(recipient, receiverInitialBalance)
+		err = waitUntilBalancesChanged(receiverInitialBalance)
 		require.NoError(t, err)
 
 		block, _ := client.GetBlockByHash(receipt.BlockHash, true)

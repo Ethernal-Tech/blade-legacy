@@ -660,6 +660,7 @@ func newMockWsConnWithMsgCh() (*mockWsConn, <-chan []byte) {
 
 func TestHeadStream_Basic(t *testing.T) {
 	t.Parallel()
+
 	b := newBlockStream(&block{header: header{Hash: types.StringToHash("1")}})
 
 	b.push(&block{header: header{Hash: types.StringToHash("2")}})
@@ -722,6 +723,7 @@ func TestHeadStream_Concurrent(t *testing.T) {
 
 						return
 					}
+
 					expect++
 
 					if expect == uint64(nMessages) {
