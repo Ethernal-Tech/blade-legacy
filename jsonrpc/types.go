@@ -135,7 +135,7 @@ type accessListResult struct {
 }
 
 type block struct {
-	BlockHeader  *header
+	header
 	Size         argUint64           `json:"size"`
 	Transactions []transactionOrHash `json:"transactions"`
 	Uncles       []types.Hash        `json:"uncles"`
@@ -145,18 +145,18 @@ func (b *block) Copy() *block {
 	bb := new(block)
 	*bb = *b
 
-	bb.BlockHeader.Miner = make([]byte, len(b.BlockHeader.Miner))
-	copy(bb.BlockHeader.Miner[:], b.BlockHeader.Miner[:])
+	bb.Miner = make([]byte, len(b.Miner))
+	copy(bb.Miner[:], b.Miner[:])
 
-	bb.BlockHeader.ExtraData = make([]byte, len(b.BlockHeader.ExtraData))
-	copy(bb.BlockHeader.ExtraData[:], b.BlockHeader.ExtraData[:])
+	bb.ExtraData = make([]byte, len(b.ExtraData))
+	copy(bb.ExtraData[:], b.ExtraData[:])
 
 	return bb
 }
 
 func toBlock(b *types.Block, fullTx bool) *block {
 	h := b.Header
-	resHeader := &header{
+	resHeader := header{
 		ParentHash:      h.ParentHash,
 		Sha3Uncles:      h.Sha3Uncles,
 		Miner:           argBytes(h.Miner),
@@ -178,7 +178,7 @@ func toBlock(b *types.Block, fullTx bool) *block {
 	}
 
 	res := &block{
-		BlockHeader:  resHeader,
+		header:       resHeader,
 		Size:         argUint64(b.Size()),
 		Transactions: []transactionOrHash{},
 		Uncles:       []types.Hash{},

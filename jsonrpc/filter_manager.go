@@ -152,7 +152,7 @@ func (f *blockFilter) getUpdates() (interface{}, error) {
 
 	updates := make([]string, len(headers))
 	for index, header := range headers {
-		updates[index] = header.BlockHeader.Hash.String()
+		updates[index] = header.Hash.String()
 	}
 
 	return updates, nil
@@ -772,7 +772,7 @@ func (f *FilterManager) processBlockEvent(evnt *blockchain.Event) {
 
 // appendLogsToFilters makes each LogFilters append logs in the header
 func (f *FilterManager) appendLogsToFilters(header *block) error {
-	receipts, err := f.store.GetReceiptsByHash(header.BlockHeader.Hash)
+	receipts, err := f.store.GetReceiptsByHash(header.Hash)
 	if err != nil {
 		return err
 	}
@@ -790,9 +790,9 @@ func (f *FilterManager) appendLogsToFilters(header *block) error {
 		return nil
 	}
 
-	block, ok := f.store.GetBlockByHash(header.BlockHeader.Hash, true)
+	block, ok := f.store.GetBlockByHash(header.Hash, true)
 	if !ok {
-		f.logger.Error("could not find block in store", "hash", header.BlockHeader.Hash.String())
+		f.logger.Error("could not find block in store", "hash", header.Hash.String())
 
 		return nil
 	}

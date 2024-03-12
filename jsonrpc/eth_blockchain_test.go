@@ -90,7 +90,7 @@ func TestEth_Block_GetHeaderByNumber(t *testing.T) {
 		{"should be able to get block with number greater than latest block", BlockNumber(50), false, false},
 	}
 	for _, c := range cases {
-		res, err := eth.GetHeadarByNumber(c.blockNum)
+		res, err := eth.GetHeaderByNumber(c.blockNum)
 
 		if c.isNotNil {
 			assert.NotNil(t, res, "expected to return block, but got nil")
@@ -112,11 +112,11 @@ func TestEth_Block_GetHeaderByHash(t *testing.T) {
 
 	eth := newTestEthEndpoint(store)
 
-	res, err := eth.GetHeadarByHash(hash1)
+	res, err := eth.GetHeaderByHash(hash1)
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
 
-	res, err = eth.GetHeadarByHash(hash2)
+	res, err = eth.GetHeaderByHash(hash2)
 	assert.NoError(t, err)
 	assert.Nil(t, res)
 }

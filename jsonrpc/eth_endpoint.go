@@ -158,7 +158,7 @@ func (e *Eth) GetBlockByHash(hash types.Hash, fullTx bool) (interface{}, error) 
 // GetHeaderByNumber returns the requested canonical block header.
 // * When blockNr is -1 the chain head is returned.
 // * When blockNr is -2 the pending chain head is returned.
-func (e *Eth) GetHeadarByNumber(number BlockNumber) (interface{}, error) {
+func (e *Eth) GetHeaderByNumber(number BlockNumber) (interface{}, error) {
 	num, err := GetNumericBlockNumber(number, e.store)
 	if err != nil {
 		return nil, err
@@ -177,7 +177,7 @@ func (e *Eth) GetHeadarByNumber(number BlockNumber) (interface{}, error) {
 }
 
 // GetHeaderByHash returns the requested header by hash.
-func (e *Eth) GetHeadarByHash(hash types.Hash) (interface{}, error) {
+func (e *Eth) GetHeaderByHash(hash types.Hash) (interface{}, error) {
 	block, ok := e.store.GetBlockByHash(hash, true)
 	if !ok {
 		return nil, nil
@@ -226,16 +226,6 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 	}
 
 	return res, nil
-}
-
-// Returns the client coinbase address.
-func (e *Eth) Coinbase() (interface{}, error) {
-	h := e.store.Header()
-	if h == nil {
-		return nil, ErrHeaderNotFound
-	}
-
-	return types.BytesToAddress(h.Miner), nil
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
@@ -657,7 +647,7 @@ func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *stateOve
 
 // EstimateGas estimates the gas needed to execute a transaction
 func (e *Eth) EstimateGas(arg *txnArgs, rawNum *BlockNumber) (interface{}, error) {
-	number := LatestBlockNumber
+	number := LatestBlockNumber /*  */
 	if rawNum != nil {
 		number = *rawNum
 	}
