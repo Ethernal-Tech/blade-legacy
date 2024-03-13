@@ -10,6 +10,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -33,15 +34,17 @@ func testLogicalOperation(t *testing.T, f instruction, test OperandsLogical, s *
 	t.Helper()
 
 	for _, operand := range test.operands {
-		s.push(operand)
+		op, _ := uint256.FromBig(operand)
+		s.push(*op)
 	}
 
 	f(s)
 
+	r := s.pop()
 	if test.expectedResult {
-		assert.Equal(t, one.Uint64(), s.pop().Uint64())
+		assert.Equal(t, one.Uint64(), r.Uint64())
 	} else {
-		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
+		assert.Equal(t, zero.Uint64(), r.Uint64())
 	}
 }
 
@@ -54,12 +57,14 @@ func testArithmeticOperation(t *testing.T, f instruction, test OperandsArithmeti
 	t.Helper()
 
 	for _, operand := range test.operands {
-		s.push(operand)
+		op, _ := uint256.FromBig(operand)
+		s.push(*op)
 	}
 
 	f(s)
 
-	assert.Equal(t, test.expectedResult.Uint64(), s.pop().Uint64())
+	r := s.pop()
+	assert.Equal(t, test.expectedResult.Uint64(), r.Uint64())
 }
 
 func TestAdd(t *testing.T) {
@@ -357,7 +362,8 @@ func TestPush0(t *testing.T) {
 		defer closeFn()
 
 		opPush0(s)
-		require.Equal(t, zero.Uint64(), s.pop().Uint64())
+		v := s.pop()
+		require.Equal(t, zero.Uint64(), v.Uint64())
 	})
 
 	t.Run("single push0 (EIP-3855 disabled)", func(t *testing.T) {
@@ -380,7 +386,8 @@ func TestPush0(t *testing.T) {
 		}
 
 		for i := 0; i < stackSize; i++ {
-			require.Equal(t, zero.Uint64(), s.pop().Uint64())
+			v := s.pop()
+			require.Equal(t, zero.Uint64(), v.Uint64())
 		}
 	})
 }
@@ -531,40 +538,42 @@ func TestIsZero(t *testing.T) {
 }
 
 func TestMStore(t *testing.T) {
-	offset := big.NewInt(62)
+	offset := uint256.NewInt(62)
 
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(one)    // value
-	s.push(offset) // offset
+	s.push(*uint256.NewInt(1)) // value
+	s.push(*offset)            // offset
 
 	opMStore(s)
 
-	s.push(offset)
+	s.push(*offset)
 
 	opMLoad(s)
 
-	assert.Equal(t, one, s.pop())
+	v := s.pop()
+	assert.Equal(t, one, v.ToBig())
 }
 
 func TestMStore8(t *testing.T) {
-	offsetStore := big.NewInt(62)
-	offsetLoad := big.NewInt(31)
+	offsetStore := uint256.NewInt(62)
+	offsetLoad := uint256.NewInt(31)
 
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(one)         //value
-	s.push(offsetStore) //offset
+	s.push(*uint256.NewInt(1)) //value
+	s.push(*offsetStore)       //offset
 
 	opMStore8(s)
 
-	s.push(offsetLoad)
+	s.push(*offsetLoad)
 
 	opMLoad(s)
 
-	assert.Equal(t, one, s.pop())
+	v := s.pop()
+	assert.Equal(t, one, v.ToBig())
 }
 
 func TestSload(t *testing.T) {
@@ -576,11 +585,12 @@ func TestSload(t *testing.T) {
 		mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once()
 		s.host = mockHost
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		opSload(s)
 		assert.Equal(t, uint64(200), s.gas)
-		assert.Equal(t, bigToHash(one), bigToHash(s.pop()))
+		v := s.pop()
+		assert.Equal(t, bigToHash(one), bigToHash(v.ToBig()))
 	})
 
 	t.Run("EIP150", func(t *testing.T) {
@@ -591,11 +601,12 @@ func TestSload(t *testing.T) {
 		mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once()
 		s.host = mockHost
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		opSload(s)
 		assert.Equal(t, uint64(800), s.gas)
-		assert.Equal(t, bigToHash(one), bigToHash(s.pop()))
+		v := s.pop()
+		assert.Equal(t, bigToHash(one), bigToHash(v.ToBig()))
 	})
 
 	t.Run("NoForks", func(t *testing.T) {
@@ -606,11 +617,12 @@ func TestSload(t *testing.T) {
 		mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once()
 		s.host = mockHost
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		opSload(s)
 		assert.Equal(t, uint64(950), s.gas)
-		assert.Equal(t, bigToHash(one), bigToHash(s.pop()))
+		v := s.pop()
+		assert.Equal(t, bigToHash(one), bigToHash(v.ToBig()))
 	})
 }
 
@@ -621,7 +633,7 @@ func TestSStore(t *testing.T) {
 		})
 		defer closeFn()
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		opSStore(s)
 		assert.True(t, s.stop)
@@ -641,8 +653,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once()
 		s.host = mockHost
 
-		s.push(one)
-		s.push(zero)
+		s.push(*uint256.NewInt(1))
+		s.push(*uint256.NewInt(0))
 
 		opSStore(s)
 		assert.Equal(t, uint64(9200), s.gas)
@@ -661,8 +673,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once()
 		s.host = mockHost
 
-		s.push(one)
-		s.push(zero)
+		s.push(*uint256.NewInt(1))
+		s.push(*uint256.NewInt(0))
 
 		opSStore(s)
 		assert.Equal(t, uint64(5000), s.gas)
@@ -678,8 +690,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once()
 		s.host = mockHost
 
-		s.push(one)
-		s.push(zero)
+		s.push(*uint256.NewInt(1))
+		s.push(*uint256.NewInt(0))
 
 		opSStore(s)
 		assert.Equal(t, uint64(5000), s.gas)
@@ -698,8 +710,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageDeleted).Once()
 		s.host = mockHost
 
-		s.push(one)
-		s.push(zero)
+		s.push(*uint256.NewInt(1))
+		s.push(*uint256.NewInt(0))
 
 		opSStore(s)
 		assert.Equal(t, uint64(5000), s.gas)
@@ -726,7 +738,8 @@ func TestBalance(t *testing.T) {
 
 		opBalance(s)
 
-		assert.Equal(t, balance, s.pop())
+		v := s.pop()
+		assert.Equal(t, balance, v.ToBig())
 		assert.Equal(t, gasLeft, s.gas)
 	})
 
@@ -740,7 +753,8 @@ func TestBalance(t *testing.T) {
 
 		opBalance(s)
 
-		assert.Equal(t, big.NewInt(100), s.pop())
+		v := s.pop()
+		assert.Equal(t, big.NewInt(100), v.ToBig())
 		assert.Equal(t, gasLeft, s.gas)
 	})
 
@@ -754,7 +768,8 @@ func TestBalance(t *testing.T) {
 
 		opBalance(s)
 
-		assert.Equal(t, balance, s.pop())
+		v := s.pop()
+		assert.Equal(t, balance, v.ToBig())
 		assert.Equal(t, gasLeft, s.gas)
 	})
 }
@@ -772,7 +787,8 @@ func TestSelfBalance(t *testing.T) {
 
 		opSelfBalance(s)
 
-		assert.Equal(t, big.NewInt(100), s.pop())
+		v := s.pop()
+		assert.Equal(t, big.NewInt(100), v.ToBig())
 	})
 
 	t.Run("NoForkErrorExpected", func(t *testing.T) {
@@ -803,7 +819,8 @@ func TestChainID(t *testing.T) {
 
 		opChainID(s)
 
-		assert.Equal(t, big.NewInt(chainID), s.pop())
+		v := s.pop()
+		assert.Equal(t, big.NewInt(chainID), v.ToBig())
 	})
 	t.Run("NoForksErrorExpected", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
@@ -859,7 +876,8 @@ func TestCallValue(t *testing.T) {
 		s.msg.Value = value
 
 		opCallValue(s)
-		assert.Equal(t, value.Uint64(), s.pop().Uint64())
+		v := s.pop()
+		assert.Equal(t, value.Uint64(), v.Uint64())
 	})
 
 	t.Run("Msg Value nil", func(t *testing.T) {
@@ -867,7 +885,8 @@ func TestCallValue(t *testing.T) {
 		defer cancelFn()
 
 		opCallValue(s)
-		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
+		v := s.pop()
+		assert.Equal(t, zero.Uint64(), v.Uint64())
 	})
 }
 
@@ -875,12 +894,13 @@ func TestCallDataLoad(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.push(one)
+	s.push(*uint256.NewInt(1))
 
 	s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
 	opCallDataLoad(s)
-	assert.Equal(t, zero.Uint64(), s.pop().Uint64())
+	v := s.pop()
+	assert.Equal(t, zero.Uint64(), v.Uint64())
 }
 
 func TestCallDataSize(t *testing.T) {
@@ -890,7 +910,8 @@ func TestCallDataSize(t *testing.T) {
 	s.msg.Input = make([]byte, 10)
 
 	opCallDataSize(s)
-	assert.Equal(t, big.NewInt(10), s.pop())
+	v := s.pop()
+	assert.Equal(t, big.NewInt(10), v.ToBig())
 }
 
 func TestCodeSize(t *testing.T) {
@@ -900,7 +921,8 @@ func TestCodeSize(t *testing.T) {
 	s.code = make([]byte, 10)
 
 	opCodeSize(s)
-	assert.Equal(t, big.NewInt(10), s.pop())
+	v := s.pop()
+	assert.Equal(t, big.NewInt(10), v.ToBig())
 }
 
 func TestExtCodeSize(t *testing.T) {
@@ -911,7 +933,7 @@ func TestExtCodeSize(t *testing.T) {
 
 		s, cancelFn := getState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		mockHost := &mockHost{}
 		mockHost.On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once()
@@ -920,7 +942,8 @@ func TestExtCodeSize(t *testing.T) {
 		opExtCodeSize(s)
 
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, big.NewInt(int64(codeSize)), s.pop())
+		v := s.pop()
+		assert.Equal(t, big.NewInt(int64(codeSize)), v.ToBig())
 	})
 	t.Run("NoForks", func(t *testing.T) {
 		gasLeft := uint64(980)
@@ -928,7 +951,7 @@ func TestExtCodeSize(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		mockHost := &mockHost{}
 		mockHost.On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once()
@@ -937,7 +960,8 @@ func TestExtCodeSize(t *testing.T) {
 		opExtCodeSize(s)
 
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, big.NewInt(int64(codeSize)), s.pop())
+		v := s.pop()
+		assert.Equal(t, big.NewInt(int64(codeSize)), v.ToBig())
 	})
 }
 
@@ -967,7 +991,8 @@ func TestReturnDataSize(t *testing.T) {
 
 		opReturnDataSize(s)
 
-		assert.Equal(t, big.NewInt(dataSize), s.pop())
+		v := s.pop()
+		assert.Equal(t, big.NewInt(dataSize), v.ToBig())
 	})
 	t.Run("NoForks", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
@@ -992,7 +1017,7 @@ func TestExtCodeHash(t *testing.T) {
 		})
 		defer cancelFn()
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		mockHost := &mockHost{}
 		mockHost.On("Empty", types.StringToAddress("0x1")).Return(false).Once()
@@ -1002,7 +1027,8 @@ func TestExtCodeHash(t *testing.T) {
 		opExtCodeHash(s)
 
 		assert.Equal(t, s.gas, gasLeft)
-		assert.Equal(t, one.Uint64(), s.pop().Uint64())
+		v := s.pop()
+		assert.Equal(t, one.Uint64(), v.Uint64())
 	})
 
 	t.Run("NonIstanbul", func(t *testing.T) {
@@ -1013,7 +1039,7 @@ func TestExtCodeHash(t *testing.T) {
 		})
 		defer cancelFn()
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		mockHost := &mockHost{}
 		mockHost.On("Empty", mock.Anything).Return(true).Once()
@@ -1021,14 +1047,15 @@ func TestExtCodeHash(t *testing.T) {
 
 		opExtCodeHash(s)
 		assert.Equal(t, gasLeft, s.gas)
-		assert.Equal(t, zero.Uint64(), s.pop().Uint64())
+		v := s.pop()
+		assert.Equal(t, zero.Uint64(), v.Uint64())
 	})
 
 	t.Run("NoForks", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.push(one)
+		s.push(*uint256.NewInt(1))
 
 		mockHost := &mockHost{}
 		mockHost.On("Empty", mock.Anything).Return(true).Once()
@@ -1051,7 +1078,8 @@ func TestPCMSizeGas(t *testing.T) {
 		s.ip = 1
 		opPC(s)
 
-		assert.Equal(t, one, s.pop())
+		v := s.pop()
+		assert.Equal(t, one, v.ToBig())
 	})
 
 	t.Run("MSize", func(t *testing.T) {
@@ -1059,13 +1087,15 @@ func TestPCMSizeGas(t *testing.T) {
 
 		opMSize(s)
 
-		assert.Equal(t, new(big.Int).SetUint64(memorySize), s.pop())
+		v := s.pop()
+		assert.Equal(t, new(big.Int).SetUint64(memorySize), v.ToBig())
 	})
 
 	t.Run("Gas", func(t *testing.T) {
 		opGas(s)
 
-		assert.Equal(t, new(big.Int).SetUint64(gasLeft), s.pop())
+		v := s.pop()
+		assert.Equal(t, new(big.Int).SetUint64(gasLeft), v.ToBig())
 	})
 }
 
@@ -1080,10 +1110,10 @@ func TestExtCodeCopy(t *testing.T) {
 		mockHost.On("GetCode", mock.Anything).Return("0x1").Once()
 		s.host = mockHost
 
-		s.push(one)
-		s.push(zero)
-		s.push(big.NewInt(31))
-		s.push(big.NewInt(32))
+		s.push(*uint256.NewInt(1))
+		s.push(*uint256.NewInt(0))
+		s.push(*uint256.NewInt(31))
+		s.push(*uint256.NewInt(32))
 
 		opExtCodeCopy(s)
 
@@ -1100,10 +1130,10 @@ func TestExtCodeCopy(t *testing.T) {
 		mockHost.On("GetCode", mock.Anything).Return("0x1").Once()
 		s.host = mockHost
 
-		s.push(one)
-		s.push(zero)
-		s.push(big.NewInt(31))
-		s.push(big.NewInt(32))
+		s.push(*uint256.NewInt(1))
+		s.push(*uint256.NewInt(0))
+		s.push(*uint256.NewInt(31))
+		s.push(*uint256.NewInt(32))
 
 		opExtCodeCopy(s)
 
@@ -1120,9 +1150,9 @@ func TestCallDataCopy(t *testing.T) {
 
 	s.msg.Input = one.Bytes()
 
-	s.push(big.NewInt(1))
-	s.push(zero)
-	s.push(big.NewInt(31))
+	s.push(*uint256.NewInt(1))
+	s.push(*uint256.NewInt(0))
+	s.push(*uint256.NewInt(31))
 
 	opCallDataCopy(s)
 
@@ -1136,9 +1166,9 @@ func TestCodeCopyLenZero(t *testing.T) {
 
 	var expectedGas = s.gas
 
-	s.push(big.NewInt(0)) //length
-	s.push(big.NewInt(0)) //dataOffset
-	s.push(big.NewInt(0)) //memOffset
+	s.push(*uint256.NewInt(0)) //length
+	s.push(*uint256.NewInt(0)) //dataOffset
+	s.push(*uint256.NewInt(0)) //memOffset
 
 	opCodeCopy(s)
 
@@ -1151,9 +1181,9 @@ func TestCodeCopy(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.push(big.NewInt(1))  //length
-	s.push(zero)           //dataOffset
-	s.push(big.NewInt(31)) //memOffset
+	s.push(*uint256.NewInt(1))  //length
+	s.push(*uint256.NewInt(0))  //dataOffset
+	s.push(*uint256.NewInt(31)) //memOffset
 
 	s.code = one.Bytes()
 
@@ -1165,7 +1195,7 @@ func TestBlockHash(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.push(three)
+	s.push(*uint256.NewInt(3))
 
 	mockHost := &mockHost{}
 	mockHost.On("GetTxContext").Return(runtime.TxContext{Number: 5}).Once()
@@ -1174,7 +1204,8 @@ func TestBlockHash(t *testing.T) {
 
 	opBlockHash(s)
 
-	assert.Equal(t, bigToHash(three), bigToHash(s.pop()))
+	v := s.pop()
+	assert.Equal(t, bigToHash(three), bigToHash(v.ToBig()))
 }
 
 func TestCoinBase(t *testing.T) {
@@ -1187,7 +1218,10 @@ func TestCoinBase(t *testing.T) {
 
 	opCoinbase(s)
 
-	assert.Equal(t, types.StringToAddress("0x1").Bytes(), s.pop().FillBytes(make([]byte, 20)))
+	v := s.pop()
+	b := v.ToBig().FillBytes(make([]byte, 20))
+	a := types.StringToAddress("0x1").Bytes()
+	assert.Equal(t, a, b)
 }
 
 func TestTimeStamp(t *testing.T) {
@@ -1200,7 +1234,8 @@ func TestTimeStamp(t *testing.T) {
 
 	opTimestamp(s)
 
-	assert.Equal(t, big.NewInt(335), s.pop())
+	v := s.pop()
+	assert.Equal(t, big.NewInt(335), v.ToBig())
 }
 
 func TestNumber(t *testing.T) {
@@ -1213,7 +1248,8 @@ func TestNumber(t *testing.T) {
 
 	opNumber(s)
 
-	assert.Equal(t, five, s.pop())
+	v := s.pop()
+	assert.Equal(t, five, v.ToBig())
 }
 
 func TestDifficulty(t *testing.T) {
@@ -1226,7 +1262,8 @@ func TestDifficulty(t *testing.T) {
 
 	opDifficulty(s)
 
-	assert.Equal(t, bigToHash(five), bigToHash(s.pop()))
+	v := s.pop()
+	assert.Equal(t, bigToHash(five), bigToHash(v.ToBig()))
 }
 
 func TestGasLimit(t *testing.T) {
@@ -1254,7 +1291,8 @@ func TestGasLimit(t *testing.T) {
 
 		opBaseFee(s)
 
-		assert.Equal(t, new(big.Int).SetUint64(baseFee), s.pop())
+		v := s.pop()
+		assert.Equal(t, new(big.Int).SetUint64(baseFee), v.ToBig())
 	})
 }
 
@@ -1269,7 +1307,7 @@ func TestSelfDestruct(t *testing.T) {
 	s.msg.Address = types.StringToAddress("0x2")
 
 	s.gas = 100000
-	s.push(one)
+	s.push(*uint256.NewInt(1))
 
 	mockHost := &mockHost{}
 	mockHost.On("Empty", addr).Return(true).Once()
@@ -1289,7 +1327,7 @@ func TestJump(t *testing.T) {
 
 	s.code = make([]byte, 10)
 	s.bitmap = bitmap{big.NewInt(255).Bytes()}
-	s.push(five)
+	s.push(*uint256.NewInt(5))
 
 	opJump(s)
 
@@ -1302,8 +1340,8 @@ func TestJumpI(t *testing.T) {
 
 	s.code = make([]byte, 10)
 	s.bitmap = bitmap{big.NewInt(255).Bytes()}
-	s.push(one)
-	s.push(five)
+	s.push(*uint256.NewInt(1))
+	s.push(*uint256.NewInt(5))
 
 	opJumpi(s)
 
@@ -1314,33 +1352,30 @@ func TestDup(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.sp = 6
-
 	for i := 0; i < 10; i++ {
-		s.stack = append(s.stack, big.NewInt(int64(i)))
+		s.push(*uint256.NewInt(uint64(i)))
 	}
 
 	instr := opDup(4)
 	instr(s)
 
-	assert.Equal(t, two, s.pop())
+	v := s.pop()
+	assert.Equal(t, big.NewInt(6), v.ToBig())
 }
 
 func TestSwap(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.sp = 6
-
 	for i := 0; i < 10; i++ {
-		s.stack = append(s.stack, big.NewInt(int64(i)))
+		s.push(*uint256.NewInt(uint64(i)))
 	}
 
 	instr := opSwap(4)
 	instr(s)
 
-	assert.Equal(t, five, s.stack[1])
-	assert.Equal(t, one, s.stack[6-1])
+	assert.Equal(t, *uint256.NewInt(5), s.stack.data[9])
+	assert.Equal(t, *uint256.NewInt(9), s.stack.data[5])
 }
 
 func TestLog(t *testing.T) {
@@ -1349,13 +1384,13 @@ func TestLog(t *testing.T) {
 		defer cancelFn()
 
 		s.msg.Static = true
-		s.sp = 1
+		s.stack.sp = 1
 
-		s.push(big.NewInt(3))
-		s.push(big.NewInt(20))
+		s.push(*uint256.NewInt(3))
+		s.push(*uint256.NewInt(20))
 
 		for i := 0; i < 20; i++ {
-			s.push(big.NewInt(int64(i)))
+			s.push(*uint256.NewInt(uint64(i)))
 		}
 
 		instr := opLog(10)
@@ -1368,13 +1403,13 @@ func TestLog(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.sp = 1
+		s.stack.sp = 1
 
-		s.push(big.NewInt(3))
-		s.push(big.NewInt(20))
+		s.push(*uint256.NewInt(3))
+		s.push(*uint256.NewInt(20))
 
 		for i := 0; i < 20; i++ {
-			s.push(big.NewInt(int64(i)))
+			s.push(*uint256.NewInt(uint64(i)))
 		}
 
 		instr := opLog(35)
@@ -1389,15 +1424,15 @@ func TestLog(t *testing.T) {
 
 		s.gas = 25000
 
-		s.push(big.NewInt(3))
-		s.push(big.NewInt(20))
+		s.push(*uint256.NewInt(3))
+		s.push(*uint256.NewInt(20))
 
 		mockHost := &mockHost{}
 		mockHost.On("EmitLog", mock.Anything, mock.Anything, mock.Anything).Once()
 		s.host = mockHost
 
 		for i := 0; i < 20; i++ {
-			s.push(big.NewInt(int64(i)))
+			s.push(*uint256.NewInt(uint64(i)))
 		}
 
 		instr := opLog(10)
@@ -1445,6 +1480,25 @@ func (m *mockHostForInstructions) GetStorage(addr types.Address, key types.Hash)
 var (
 	addr1 = types.StringToAddress("1")
 )
+
+func convertBigIntSliceToUint256(bigInts []*big.Int) []uint256.Int {
+	var uint256s = make([]uint256.Int, 0, len(bigInts))
+
+	for _, bi := range bigInts {
+		if bi.Sign() < 0 {
+			return nil
+		}
+
+		ui, overflow := uint256.FromBig(bi)
+		if overflow {
+			return nil
+		}
+
+		uint256s = append(uint256s, *ui)
+	}
+
+	return uint256s
+}
 
 func Test_opSload(t *testing.T) {
 	t.Parallel()
@@ -1618,15 +1672,15 @@ func Test_opSload(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 
 			s, closeFn := getState(tt.config)
 			defer closeFn()
 
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
-			s.sp = tt.initState.sp
-			s.stack = tt.initState.stack
+			s.stack.sp = tt.initState.sp
+			s.stack.data = convertBigIntSliceToUint256(tt.initState.stack)
 			s.memory = tt.initState.memory
 			s.config = tt.config
 			tt.mockHost.accessList = tt.initState.accessList
@@ -1635,8 +1689,8 @@ func Test_opSload(t *testing.T) {
 			opSload(s)
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
-			assert.Equal(t, tt.resultState.sp, s.sp, "sp in state after execution is not correct")
-			assert.Equal(t, tt.resultState.stack, s.stack, "stack in state after execution is not correct")
+			assert.Equal(t, tt.resultState.sp, s.stack.sp, "sp in state after execution is not correct")
+			assert.Equal(t, convertBigIntSliceToUint256(tt.resultState.stack), s.stack.data, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
 			assert.Equal(t, tt.resultState.accessList, tt.mockHost.accessList, "accesslist in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
@@ -1693,8 +1747,6 @@ func TestCreate(t *testing.T) {
 				sp:  1,
 				stack: []*big.Int{
 					addressToBigInt(crypto.CreateAddress(addr1, 0)), // contract address
-					big.NewInt(0x00),
-					big.NewInt(0x00),
 				},
 				memory: []byte{
 					byte(REVERT),
@@ -1825,8 +1877,6 @@ func TestCreate(t *testing.T) {
 				sp:  1,
 				stack: []*big.Int{
 					// need to init with 0x01 to add abs field in big.Int
-					big.NewInt(0x01).SetInt64(0x00),
-					big.NewInt(0x00),
 					big.NewInt(0x00),
 				},
 				memory: []byte{
@@ -1877,8 +1927,6 @@ func TestCreate(t *testing.T) {
 				stack: []*big.Int{
 					// need to init with 0x01 to add abs field in big.Int
 					big.NewInt(0x01).SetInt64(0x00),
-					big.NewInt(0x00),
-					big.NewInt(0x00),
 				},
 				memory: []byte{
 					byte(REVERT),
@@ -1928,10 +1976,7 @@ func TestCreate(t *testing.T) {
 				gas: 15,
 				sp:  1,
 				stack: []*big.Int{
-					big.NewInt(0x01).SetInt64(0x00),
-					big.NewInt(0x01),
-					big.NewInt(0x00),
-					big.NewInt(0x00),
+					big.NewInt(0x0),
 				},
 				memory: []byte{
 					byte(REVERT),
@@ -1960,8 +2005,8 @@ func TestCreate(t *testing.T) {
 
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
-			s.sp = tt.initState.sp
-			s.stack = tt.initState.stack
+			s.stack.sp = tt.initState.sp
+			s.stack.data = convertBigIntSliceToUint256(tt.initState.stack)
 			s.memory = tt.initState.memory
 			s.config = tt.config
 			s.host = tt.mockHost
@@ -1969,8 +2014,8 @@ func TestCreate(t *testing.T) {
 			opCreate(tt.op)(s)
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
-			assert.Equal(t, tt.resultState.sp, s.sp, "sp in state after execution is not correct")
-			assert.Equal(t, tt.resultState.stack, s.stack, "stack in state after execution is not correct")
+			assert.Equal(t, tt.resultState.sp, s.stack.sp, "sp in state after execution is not correct")
+			assert.Equal(t, convertBigIntSliceToUint256(tt.resultState.stack), s.stack.data, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
 			assert.Equal(t, tt.resultState.err, s.err, "err in state after execution is not correct")
@@ -2012,102 +2057,27 @@ func Test_opReturnDataCopy(t *testing.T) {
 			},
 		},
 		{
-			name:   "should return error if memOffset is negative",
-			config: &allEnabledForks,
-			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(1),  // length
-					big.NewInt(0),  // dataOffset
-					big.NewInt(-1), // memOffset
-				},
-				sp:         3,
-				returnData: []byte{0xff},
-			},
-			resultState: &state{
-				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(1),
-					big.NewInt(0),
-					big.NewInt(-1),
-				},
-				sp:         0,
-				returnData: []byte{0xff},
-				stop:       true,
-				err:        errReturnDataOutOfBounds,
-			},
-		},
-		{
-			name:   "should return error if dataOffset is negative",
-			config: &allEnabledForks,
-			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(1),  // length
-					big.NewInt(-1), // dataOffset
-					big.NewInt(0),  // memOffset
-				},
-				sp:     3,
-				memory: make([]byte, 1),
-			},
-			resultState: &state{
-				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(1),
-					big.NewInt(-1),
-					big.NewInt(0),
-				},
-				sp:     0,
-				memory: make([]byte, 1),
-				stop:   true,
-				err:    errReturnDataOutOfBounds,
-			},
-		},
-		{
-			name:   "should return error if length is negative",
-			config: &allEnabledForks,
-			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(-1), // length
-					big.NewInt(2),  // dataOffset
-					big.NewInt(0),  // memOffset
-				},
-				sp:         3,
-				returnData: []byte{0xff},
-			},
-			resultState: &state{
-				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(-1),
-					big.NewInt(2),
-					big.NewInt(0),
-				},
-				sp:         0,
-				returnData: []byte{0xff},
-				stop:       true,
-				err:        errReturnDataOutOfBounds,
-			},
-		},
-		{
 			name:   "should copy data from returnData to memory",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(1), // length
-					big.NewInt(0), // dataOffset
-					big.NewInt(0), // memOffset
+				stack: OptimizedStack{
+					data: []uint256.Int{
+						*uint256.NewInt(1), // length
+						*uint256.NewInt(0), // dataOffset
+						*uint256.NewInt(0), // memOffset
+					},
+					sp: 3,
 				},
-				sp:         3,
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 				gas:        10,
 			},
 			resultState: &state{
 				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(1),
-					big.NewInt(0),
-					big.NewInt(0),
+				stack: OptimizedStack{
+					data: []uint256.Int{},
+					sp:   0,
 				},
-				sp:                 0,
 				returnData:         []byte{0xff},
 				memory:             []byte{0xff},
 				gas:                7,
@@ -2122,23 +2092,23 @@ func Test_opReturnDataCopy(t *testing.T) {
 			name:   "should not copy data if length is zero",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(0), // length
-					big.NewInt(0), // dataOffset
-					big.NewInt(4), // memOffset
+				stack: OptimizedStack{
+					data: []uint256.Int{
+						*uint256.NewInt(0), // length
+						*uint256.NewInt(0), // dataOffset
+						*uint256.NewInt(4), // memOffset
+					},
+					sp: 3,
 				},
-				sp:         3,
 				returnData: []byte{0x01},
 				memory:     []byte{0x02},
 			},
 			resultState: &state{
 				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(0),
-					big.NewInt(0),
-					big.NewInt(4),
+				stack: OptimizedStack{
+					data: []uint256.Int{},
+					sp:   0,
 				},
-				sp:         0,
 				returnData: []byte{0x01},
 				memory:     []byte{0x02},
 				stop:       false,
@@ -2146,72 +2116,26 @@ func Test_opReturnDataCopy(t *testing.T) {
 			},
 		},
 		{
-			name:   "should return error if data offset overflows uint64",
-			config: &allEnabledForks,
-			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(1),  // length
-					bigIntValue,    // dataOffset
-					big.NewInt(-1), // memOffset
-				},
-				sp: 3,
-			},
-			resultState: &state{
-				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(1),
-					bigIntValue,
-					big.NewInt(-1),
-				},
-				sp:   0,
-				stop: true,
-				err:  errReturnDataOutOfBounds,
-			},
-		},
-		{
-			name:   "should return error if sum of data offset and length overflows uint64",
-			config: &allEnabledForks,
-			initState: &state{
-				stack: []*big.Int{
-					bigIntValue2,   // length
-					bigIntValue2,   // dataOffset
-					big.NewInt(-1), // memOffset
-				},
-				sp: 3,
-			},
-			resultState: &state{
-				config: &allEnabledForks,
-				stack: []*big.Int{
-					bigIntValue2,
-					bigIntValue2,
-					big.NewInt(-1),
-				},
-				sp:   0,
-				stop: true,
-				err:  errReturnDataOutOfBounds,
-			},
-		},
-		{
 			name:   "should return error if the length of return data does not have enough space to receive offset + length bytes",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(2), // length
-					big.NewInt(0), // dataOffset
-					big.NewInt(0), // memOffset
+				stack: OptimizedStack{
+					data: []uint256.Int{
+						*uint256.NewInt(2), // length
+						*uint256.NewInt(0), // dataOffset
+						*uint256.NewInt(0), // memOffset
+					},
+					sp: 3,
 				},
-				sp:         3,
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 			},
 			resultState: &state{
 				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(2),
-					big.NewInt(0),
-					big.NewInt(0),
+				stack: OptimizedStack{
+					data: []uint256.Int{},
+					sp:   0,
 				},
-				sp:         0,
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 				stop:       true,
@@ -2222,24 +2146,24 @@ func Test_opReturnDataCopy(t *testing.T) {
 			name:   "should return error if there is no gas",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: []*big.Int{
-					big.NewInt(1), // length
-					big.NewInt(0), // dataOffset
-					big.NewInt(0), // memOffset
+				stack: OptimizedStack{
+					data: []uint256.Int{
+						*uint256.NewInt(1), // length
+						*uint256.NewInt(0), // dataOffset
+						*uint256.NewInt(0), // memOffset
+					},
+					sp: 3,
 				},
-				sp:         3,
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 				gas:        0,
 			},
 			resultState: &state{
 				config: &allEnabledForks,
-				stack: []*big.Int{
-					big.NewInt(1),
-					big.NewInt(0),
-					big.NewInt(0),
+				stack: OptimizedStack{
+					data: []uint256.Int{},
+					sp:   0,
 				},
-				sp:                 0,
 				returnData:         []byte{0xff},
 				memory:             []byte{0x0},
 				gas:                0,
@@ -2260,7 +2184,7 @@ func Test_opReturnDataCopy(t *testing.T) {
 			defer closeFn()
 
 			state.gas = test.initState.gas
-			state.sp = test.initState.sp
+			state.stack.sp = test.initState.stack.sp
 			state.stack = test.initState.stack
 			state.memory = test.initState.memory
 			state.returnData = test.initState.returnData
@@ -2287,7 +2211,7 @@ func Test_opReturnDataCopy(t *testing.T) {
 // to suite future needs.
 func CompareStates(a *state, b *state) bool {
 	// Compare simple fields
-	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.sp != b.sp || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
+	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.stack.sp != b.stack.sp || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
 		return false
 	}
 
@@ -2297,12 +2221,12 @@ func CompareStates(a *state, b *state) bool {
 	}
 
 	// Deep comparison of stacks
-	if len(a.stack) != len(b.stack) {
+	if len(a.stack.data) != len(b.stack.data) {
 		return false
 	}
 
-	for i := range a.stack {
-		if a.stack[i].Cmp(b.stack[i]) != 0 {
+	for i := range a.stack.data {
+		if a.stack.data[i] != b.stack.data[i] {
 			return false
 		}
 	}
@@ -2332,15 +2256,16 @@ func Test_opCall(t *testing.T) {
 			config: allEnabledForks,
 			initState: &state{
 				gas: 2600,
-				sp:  6,
-				stack: []*big.Int{
-					big.NewInt(0x00), // outSize
-					big.NewInt(0x02), // outOffset
-					big.NewInt(0x00), // inSize
-					big.NewInt(0x00), // inOffset
-					big.NewInt(0x00), // address
-					big.NewInt(0x00), // initialGas
-				},
+				stack: OptimizedStack{
+					data: []uint256.Int{
+						*uint256.NewInt(0x00), // outSize
+						*uint256.NewInt(0x02), // outOffset
+						*uint256.NewInt(0x00), // inSize
+						*uint256.NewInt(0x00), // inOffset
+						*uint256.NewInt(0x00), // address
+						*uint256.NewInt(0x00), // initialGas
+					},
+					sp: 6},
 				memory: []byte{0x01},
 			},
 			resultState: &state{
@@ -2357,74 +2282,6 @@ func Test_opCall(t *testing.T) {
 				},
 			},
 		},
-		// {
-		// 	name: "call cost overflow (EIP150 fork disabled)",
-		// 	op:   CALLCODE,
-		// 	contract: &runtime.Contract{
-		// 		Static: false,
-		// 	},
-		// 	config: chain.AllForksEnabled.RemoveFork(chain.EIP150).At(0),
-		// 	initState: &state{
-		// 		gas: 6640,
-		// 		sp:  7,
-		// 		stack: []*big.Int{
-		// 			big.NewInt(0x00),                        // outSize
-		// 			big.NewInt(0x00),                        // outOffset
-		// 			big.NewInt(0x00),                        // inSize
-		// 			big.NewInt(0x00),                        // inOffset
-		// 			big.NewInt(0x01),                        // value
-		// 			big.NewInt(0x03),                        // address
-		// 			big.NewInt(0).SetUint64(math.MaxUint64), // initialGas
-		// 		},
-		// 		memory:     []byte{0x01},
-		// 		accessList: runtime.NewAccessList(),
-		// 	},
-		// 	resultState: &state{
-		// 		memory: []byte{0x01},
-		// 		stop:   true,
-		// 		err:    errGasUintOverflow,
-		// 		gas:    6640,
-		// 	},
-		// 	mockHost: &mockHostForInstructions{
-		// 		callxResult: &runtime.ExecutionResult{
-		// 			ReturnValue: []byte{0x03},
-		// 		},
-		// 	},
-		// },
-		// {
-		// 	name: "available gas underflow",
-		// 	op:   CALLCODE,
-		// 	contract: &runtime.Contract{
-		// 		Static: false,
-		// 	},
-		// 	config: allEnabledForks,
-		// 	initState: &state{
-		// 		gas: 6640,
-		// 		sp:  7,
-		// 		stack: []*big.Int{
-		// 			big.NewInt(0x00),                        // outSize
-		// 			big.NewInt(0x00),                        // outOffset
-		// 			big.NewInt(0x00),                        // inSize
-		// 			big.NewInt(0x00),                        // inOffset
-		// 			big.NewInt(0x01),                        // value
-		// 			big.NewInt(0x03),                        // address
-		// 			big.NewInt(0).SetUint64(math.MaxUint64), // initialGas
-		// 		},
-		// 		memory:     []byte{0x01},
-		// 		accessList: runtime.NewAccessList(),
-		// 	},
-		// 	resultState: &state{
-		// 		memory: []byte{0x01},
-		// 		stop:   true,
-		// 		err:    errOutOfGas,
-		// 		gas:    6640,
-		// 	},
-		// 	mockHost: &mockHostForInstructions{
-		// 		callxResult: &runtime.ExecutionResult{
-		// 			ReturnValue: []byte{0x03},
-		// 		},
-		// 	},
-		// },
 	}
 
 	for _, tt := range tests {
@@ -2437,7 +2294,7 @@ func Test_opCall(t *testing.T) {
 
 			state.gas = test.initState.gas
 			state.msg = test.contract
-			state.sp = test.initState.sp
+			state.stack.sp = test.initState.stack.sp
 			state.stack = test.initState.stack
 			state.memory = test.initState.memory
 			state.config = &test.config

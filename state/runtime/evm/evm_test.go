@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/holiman/uint256"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -422,7 +423,7 @@ func TestRunWithTracer(t *testing.T) {
 			state.config = config
 
 			// make sure stack, memory, and returnData are empty
-			state.stack = make([]*big.Int, 0)
+			state.stack.data = make([]uint256.Int, 0)
 			state.memory = make([]byte, 0)
 			state.returnData = make([]byte, 0)
 

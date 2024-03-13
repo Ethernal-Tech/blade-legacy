@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
+	"github.com/holiman/uint256"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -47,10 +48,10 @@ func TestStackTop(t *testing.T) {
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(one)
-	s.push(two)
+	s.push(*uint256.NewInt(1))
+	s.push(*uint256.NewInt(2))
 
-	assert.Equal(t, two, s.top())
+	assert.Equal(t, *uint256.NewInt(2), *s.top())
 	assert.Equal(t, s.stackSize(), 2)
 }
 
