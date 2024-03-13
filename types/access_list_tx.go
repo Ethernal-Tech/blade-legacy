@@ -112,8 +112,14 @@ type AccessListTxn struct {
 	AccessList TxAccessList
 }
 
-func NewAccessListTx() *AccessListTxn {
-	return &AccessListTxn{BaseTx: &BaseTx{}}
+func NewAccessListTx(options ...Option) *AccessListTxn {
+	accessListTx := &AccessListTxn{BaseTx: &BaseTx{}}
+
+	for _, opt := range options {
+		opt(accessListTx)
+	}
+
+	return accessListTx
 }
 
 func (tx *AccessListTxn) transactionType() TxType { return AccessListTxType }

@@ -83,13 +83,11 @@ func TestLondonSignerSender(t *testing.T) {
 					},
 				})
 			case types.LegacyTxType:
-				txn = types.NewTx(&types.LegacyTx{
-					GasPrice: big.NewInt(5),
-					BaseTx: &types.BaseTx{
-						To:    &recipient,
-						Value: big.NewInt(1),
-					},
-				})
+				txn = types.NewTx(types.NewLegacyTx(
+					types.WithGasPrice(big.NewInt(5)),
+					types.WithTo(&recipient),
+					types.WithValue(big.NewInt(1)),
+				))
 			case types.StateTxType:
 				txn = types.NewTx(&types.StateTx{
 					GasPrice: big.NewInt(5),

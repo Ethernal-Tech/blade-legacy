@@ -16,8 +16,14 @@ type DynamicFeeTx struct {
 	AccessList TxAccessList
 }
 
-func NewDynamicFeeTx() *DynamicFeeTx {
-	return &DynamicFeeTx{BaseTx: &BaseTx{}}
+func NewDynamicFeeTx(options ...Option) *DynamicFeeTx {
+	dynamicTx := &DynamicFeeTx{BaseTx: &BaseTx{}}
+
+	for _, opt := range options {
+		opt(dynamicTx)
+	}
+
+	return dynamicTx
 }
 
 func (tx *DynamicFeeTx) transactionType() TxType { return DynamicFeeTxType }

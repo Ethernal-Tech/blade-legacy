@@ -358,17 +358,15 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 				},
 			}
 		} else {
-			txData = &types.LegacyTx{
-				GasPrice: gasPrice,
-				BaseTx: &types.BaseTx{
-					From:  t.From,
-					To:    t.To,
-					Nonce: t.Nonce,
-					Value: value,
-					Gas:   t.GasLimit[i.Gas],
-					Input: hex.MustDecodeHex(t.Data[i.Data]),
-				},
-			}
+			txData = types.NewLegacyTx(
+				types.WithGasPrice(gasPrice),
+				types.WithFrom(t.From),
+				types.WithTo(t.To),
+				types.WithNonce(t.Nonce),
+				types.WithValue(value),
+				types.WithGas(t.GasLimit[i.Gas]),
+				types.WithInput(hex.MustDecodeHex(t.Data[i.Data])),
+			)
 		}
 	}
 

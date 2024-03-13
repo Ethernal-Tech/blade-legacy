@@ -270,31 +270,27 @@ func testBody(t *testing.T, m PlaceholderStorage) {
 	require.NoError(t, batch.WriteBatch())
 
 	addr1 := types.StringToAddress("11")
-	t0 := types.NewTx(&types.LegacyTx{
-		GasPrice: big.NewInt(11),
-		BaseTx: &types.BaseTx{
-			Nonce: 0,
-			To:    &addr1,
-			Value: big.NewInt(1),
-			Gas:   11,
-			Input: []byte{1, 2},
-			V:     big.NewInt(1),
-		},
-	})
+	t0 := types.NewTx(types.NewLegacyTx(
+		types.WithGasPrice(big.NewInt(11)),
+		types.WithNonce(0),
+		types.WithTo(&addr1),
+		types.WithValue(big.NewInt(1)),
+		types.WithGas(11),
+		types.WithInput([]byte{1, 2}),
+		types.WithSignatureValues(big.NewInt(1), nil, nil),
+	))
 	t0.ComputeHash()
 
 	addr2 := types.StringToAddress("22")
-	t1 := types.NewTx(&types.LegacyTx{
-		GasPrice: big.NewInt(11),
-		BaseTx: &types.BaseTx{
-			Nonce: 0,
-			To:    &addr2,
-			Value: big.NewInt(1),
-			Gas:   22,
-			Input: []byte{4, 5},
-			V:     big.NewInt(2),
-		},
-	})
+	t1 := types.NewTx(types.NewLegacyTx(
+		types.WithGasPrice(big.NewInt(11)),
+		types.WithNonce(0),
+		types.WithTo(&addr2),
+		types.WithValue(big.NewInt(1)),
+		types.WithGas(22),
+		types.WithInput([]byte{4, 5}),
+		types.WithSignatureValues(big.NewInt(2), nil, nil),
+	))
 	t1.ComputeHash()
 
 	block := types.Block{

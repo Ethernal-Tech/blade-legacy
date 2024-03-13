@@ -12,8 +12,14 @@ type StateTx struct {
 	GasPrice *big.Int
 }
 
-func NewStateTx() *StateTx {
-	return &StateTx{BaseTx: &BaseTx{}}
+func NewStateTx(options ...Option) *StateTx {
+	stateTx := &StateTx{BaseTx: &BaseTx{}}
+
+	for _, opt := range options {
+		opt(stateTx)
+	}
+
+	return stateTx
 }
 
 func (tx *StateTx) transactionType() TxType { return StateTxType }

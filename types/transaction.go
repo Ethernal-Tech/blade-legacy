@@ -391,3 +391,83 @@ func NewTxWithType(txType TxType) *Transaction {
 
 	return tx
 }
+
+type Option func(TxData)
+
+func WithGasPrice(gasPrice *big.Int) Option {
+	return func(td TxData) {
+		td.setGasPrice(gasPrice)
+	}
+}
+
+func WithNonce(nonce uint64) Option {
+	return func(td TxData) {
+		td.setNonce(nonce)
+	}
+}
+
+func WithGas(gas uint64) Option {
+	return func(td TxData) {
+		td.setGas(gas)
+	}
+}
+
+func WithTo(to *Address) Option {
+	return func(td TxData) {
+		td.setTo(to)
+	}
+}
+
+func WithValue(value *big.Int) Option {
+	return func(td TxData) {
+		td.setValue(value)
+	}
+}
+
+func WithInput(input []byte) Option {
+	return func(td TxData) {
+		td.setInput(input)
+	}
+}
+
+func WithSignatureValues(v, r, s *big.Int) Option {
+	return func(td TxData) {
+		td.setSignatureValues(v, r, s)
+	}
+}
+
+func WithHash(hash Hash) Option {
+	return func(td TxData) {
+		td.setHash(hash)
+	}
+}
+
+func WithFrom(from Address) Option {
+	return func(td TxData) {
+		td.setFrom(from)
+	}
+}
+
+func WithGasTipCap(gasTipCap *big.Int) Option {
+	return func(td TxData) {
+		td.setGasTipCap(gasTipCap)
+	}
+}
+
+func WithGasFeeCap(gasFeeCap *big.Int) Option {
+	return func(td TxData) {
+		td.setGasFeeCap(gasFeeCap)
+	}
+}
+
+func WithChainID(chainID *big.Int) Option {
+	return func(td TxData) {
+		td.setChainID(chainID)
+	}
+}
+
+func WithAccessList(accessList TxAccessList) Option {
+	return func(td TxData) {
+		td.setAccessList(accessList)
+	}
+}
