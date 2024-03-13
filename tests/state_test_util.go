@@ -346,6 +346,7 @@ func (t *stTransaction) At(i indexes, baseFee *big.Int) (*types.Transaction, err
 				types.NewDynamicFeeTx(
 					types.WithGasFeeCap(t.MaxFeePerGas),
 					types.WithGasTipCap(t.MaxPriorityFeePerGas),
+					types.WithAccessList(accessList),
 					types.WithFrom(t.From),
 					types.WithTo(t.To),
 					types.WithNonce(t.Nonce),
