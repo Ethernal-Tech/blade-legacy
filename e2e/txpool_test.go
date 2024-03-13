@@ -55,6 +55,7 @@ func generateTx(params generateTxReqParams) *types.Transaction {
 		unsignedTx.SetGasPrice(params.gasPrice)
 	} else {
 		unsignedTx = types.NewTx(types.NewDynamicFeeTx(
+			types.WithChainID(new(big.Int).SetUint64(defaultChainID)),
 			types.WithNonce(params.nonce),
 			types.WithTo(&params.toAddress),
 			types.WithGas(1000000),
