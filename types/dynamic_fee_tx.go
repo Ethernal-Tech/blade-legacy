@@ -16,7 +16,7 @@ type DynamicFeeTx struct {
 	AccessList TxAccessList
 }
 
-func NewDynamicFeeTx(options ...Option) *DynamicFeeTx {
+func NewDynamicFeeTx(options ...TxOption) *DynamicFeeTx {
 	dynamicTx := &DynamicFeeTx{BaseTx: &BaseTx{}}
 
 	for _, opt := range options {

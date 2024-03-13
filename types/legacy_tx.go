@@ -12,7 +12,7 @@ type LegacyTx struct {
 	GasPrice *big.Int
 }
 
-func NewLegacyTx(options ...Option) *LegacyTx {
+func NewLegacyTx(options ...TxOption) *LegacyTx {
 	legacyTx := &LegacyTx{BaseTx: &BaseTx{}}
 
 	for _, opt := range options {

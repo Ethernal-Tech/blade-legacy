@@ -12,7 +12,7 @@ type StateTx struct {
 	GasPrice *big.Int
 }
 
-func NewStateTx(options ...Option) *StateTx {
+func NewStateTx(options ...TxOption) *StateTx {
 	stateTx := &StateTx{BaseTx: &BaseTx{}}
 
 	for _, opt := range options {

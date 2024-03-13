@@ -392,81 +392,81 @@ func NewTxWithType(txType TxType) *Transaction {
 	return tx
 }
 
-type Option func(TxData)
+type TxOption func(TxData)
 
-func WithGasPrice(gasPrice *big.Int) Option {
+func WithGasPrice(gasPrice *big.Int) TxOption {
 	return func(td TxData) {
 		td.setGasPrice(gasPrice)
 	}
 }
 
-func WithNonce(nonce uint64) Option {
+func WithNonce(nonce uint64) TxOption {
 	return func(td TxData) {
 		td.setNonce(nonce)
 	}
 }
 
-func WithGas(gas uint64) Option {
+func WithGas(gas uint64) TxOption {
 	return func(td TxData) {
 		td.setGas(gas)
 	}
 }
 
-func WithTo(to *Address) Option {
+func WithTo(to *Address) TxOption {
 	return func(td TxData) {
 		td.setTo(to)
 	}
 }
 
-func WithValue(value *big.Int) Option {
+func WithValue(value *big.Int) TxOption {
 	return func(td TxData) {
 		td.setValue(value)
 	}
 }
 
-func WithInput(input []byte) Option {
+func WithInput(input []byte) TxOption {
 	return func(td TxData) {
 		td.setInput(input)
 	}
 }
 
-func WithSignatureValues(v, r, s *big.Int) Option {
+func WithSignatureValues(v, r, s *big.Int) TxOption {
 	return func(td TxData) {
 		td.setSignatureValues(v, r, s)
 	}
 }
 
-func WithHash(hash Hash) Option {
+func WithHash(hash Hash) TxOption {
 	return func(td TxData) {
 		td.setHash(hash)
 	}
 }
 
-func WithFrom(from Address) Option {
+func WithFrom(from Address) TxOption {
 	return func(td TxData) {
 		td.setFrom(from)
 	}
 }
 
-func WithGasTipCap(gasTipCap *big.Int) Option {
+func WithGasTipCap(gasTipCap *big.Int) TxOption {
 	return func(td TxData) {
 		td.setGasTipCap(gasTipCap)
 	}
 }
 
-func WithGasFeeCap(gasFeeCap *big.Int) Option {
+func WithGasFeeCap(gasFeeCap *big.Int) TxOption {
 	return func(td TxData) {
 		td.setGasFeeCap(gasFeeCap)
 	}
 }
 
-func WithChainID(chainID *big.Int) Option {
+func WithChainID(chainID *big.Int) TxOption {
 	return func(td TxData) {
 		td.setChainID(chainID)
 	}
 }
 
-func WithAccessList(accessList TxAccessList) Option {
+func WithAccessList(accessList TxAccessList) TxOption {
 	return func(td TxData) {
 		td.setAccessList(accessList)
 	}
