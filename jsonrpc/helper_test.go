@@ -706,18 +706,16 @@ func TestDecodeTxn(t *testing.T) {
 				Type:      toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.DynamicFeeTx{
-				GasTipCap: new(big.Int).SetBytes([]byte(gasTipCap)),
-				GasFeeCap: new(big.Int).SetBytes([]byte(gasFeeCap)),
-				BaseTx: &types.BaseTx{
-					Value: new(big.Int).SetBytes([]byte(value)),
-					Input: input,
-					Nonce: uint64(nonce),
-					From:  from,
-					To:    &to,
-					Gas:   uint64(gas),
-				},
-			}),
+			expected: types.NewTx(types.NewDynamicFeeTx(
+				types.WithGasTipCap(new(big.Int).SetBytes([]byte(gasTipCap))),
+				types.WithGasFeeCap(new(big.Int).SetBytes([]byte(gasFeeCap))),
+				types.WithValue(new(big.Int).SetBytes([]byte(value))),
+				types.WithInput(input),
+				types.WithNonce(uint64(nonce)),
+				types.WithFrom(from),
+				types.WithTo(&to),
+				types.WithGas(uint64(gas)),
+			)),
 			err: false,
 		},
 		{

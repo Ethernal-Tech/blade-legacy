@@ -338,14 +338,12 @@ func testReceipts(t *testing.T, m PlaceholderStorage) {
 
 	body := &types.Body{
 		Transactions: []*types.Transaction{
-			types.NewTx(&types.StateTx{
-				GasPrice: new(big.Int).SetUint64(100),
-				BaseTx: &types.BaseTx{
-					Nonce: 1000,
-					Gas:   50,
-					V:     big.NewInt(11),
-				},
-			}),
+			types.NewTx(types.NewStateTx(
+				types.WithGasPrice(new(big.Int).SetUint64(100)),
+				types.WithNonce(1000),
+				types.WithGas(50),
+				types.WithSignatureValues(big.NewInt(11), nil, nil),
+			)),
 		},
 	}
 	receipts := []*types.Receipt{
