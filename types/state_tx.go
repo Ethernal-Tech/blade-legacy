@@ -12,6 +12,10 @@ type StateTx struct {
 	GasPrice *big.Int
 }
 
+func NewStateTx() *StateTx {
+	return &StateTx{BaseTx: &BaseTx{}}
+}
+
 func (tx *StateTx) transactionType() TxType { return StateTxType }
 func (tx *StateTx) chainID() *big.Int       { return deriveChainID(tx.v()) }
 func (tx *StateTx) gasPrice() *big.Int      { return tx.GasPrice }
@@ -175,7 +179,7 @@ func (tx *StateTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 }
 
 func (tx *StateTx) copy() TxData { //nolint:dupl
-	cpy := &StateTx{}
+	cpy := NewStateTx()
 
 	if tx.gasPrice() != nil {
 		gasPrice := new(big.Int)

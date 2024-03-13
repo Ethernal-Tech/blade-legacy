@@ -112,6 +112,10 @@ type AccessListTxn struct {
 	AccessList TxAccessList
 }
 
+func NewAccessListTx() *AccessListTxn {
+	return &AccessListTxn{BaseTx: &BaseTx{}}
+}
+
 func (tx *AccessListTxn) transactionType() TxType { return AccessListTxType }
 func (tx *AccessListTxn) chainID() *big.Int       { return tx.ChainID }
 func (tx *AccessListTxn) gasPrice() *big.Int      { return tx.GasPrice }
@@ -297,7 +301,7 @@ func (tx *AccessListTxn) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 }
 
 func (tx *AccessListTxn) copy() TxData {
-	cpy := &AccessListTxn{}
+	cpy := NewAccessListTx()
 
 	if tx.chainID() != nil {
 		chainID := new(big.Int)

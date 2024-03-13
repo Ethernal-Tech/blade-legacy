@@ -74,13 +74,13 @@ func NewTx(inner TxData) *Transaction {
 func (t *Transaction) InitInnerData(txType TxType) {
 	switch txType {
 	case AccessListTxType:
-		t.Inner = &AccessListTxn{BaseTx: &BaseTx{}}
+		t.Inner = NewAccessListTx()
 	case StateTxType:
-		t.Inner = &StateTx{BaseTx: &BaseTx{}}
+		t.Inner = NewStateTx()
 	case LegacyTxType:
-		t.Inner = &LegacyTx{BaseTx: &BaseTx{}}
+		t.Inner = NewLegacyTx()
 	default:
-		t.Inner = &DynamicFeeTx{BaseTx: &BaseTx{}}
+		t.Inner = NewDynamicFeeTx()
 	}
 }
 
