@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"errors"
 	"math/big"
+	"strconv"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/blockchain"
@@ -371,6 +372,68 @@ func TestEth_GetTransactionReceipt(t *testing.T) {
 	})
 }
 
+func TestEth_GetBlockReceipts(t *testing.T) {
+	store := newMockBlockStore()
+	eth := newTestEthEndpoint(store)
+	block := newTestBlock(1, hash4)
+	store.add(block)
+
+	txn0 := newTestTransaction(uint64(0), addr0)
+	txn1 := newTestTransaction(uint64(1), addr1)
+
+	block.Transactions = []*types.Transaction{txn0, txn1}
+	receipt1 := &types.Receipt{
+		Logs: []*types.Log{
+			{
+				// log 0
+				Topics: []types.Hash{
+					hash1,
+				},
+			},
+			{
+				// log 1
+				Topics: []types.Hash{
+					hash2,
+				},
+			},
+			{
+				// log 2
+				Topics: []types.Hash{
+					hash3,
+				},
+			},
+		},
+	}
+	receipt1.SetStatus(types.ReceiptSuccess)
+
+	receipt2 := &types.Receipt{
+		Logs: []*types.Log{
+			{
+				// log 3
+				Topics: []types.Hash{
+					hash4,
+				},
+			},
+		},
+	}
+	receipt2.SetStatus(types.ReceiptSuccess)
+	store.receipts[hash4] = []*types.Receipt{receipt1, receipt2}
+
+	res, err := eth.GetBlockReceipts(1)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+
+	response := res.([]*receipt)
+	assert.Equal(t, txn1.Hash(), response[1].TxHash)
+	assert.Equal(t, 2, len(response))
+	assert.Equal(t, block.Hash(), response[1].BlockHash)
+	assert.NotNil(t, response[1].Logs)
+	assert.Len(t, response[1].Logs, 1)
+	assert.Equal(t, uint64(4), uint64(response[1].Logs[0].LogIndex))
+	assert.Equal(t, uint64(1), uint64(response[1].Logs[0].TxIndex))
+}
+
 func TestEth_Syncing(t *testing.T) {
 	store := newMockBlockStore()
 	eth := newTestEthEndpoint(store)
@@ -564,6 +627,88 @@ func TestEth_Call(t *testing.T) {
 	})
 }
 
+func TestEth_CreateAccessList(t *testing.T) {
+	store := newMockBlockStore()
+	hashs := make([]types.Hash, 10)
+	latest := LatestBlockNumber
+	blockNum1 := BlockNumber(1)
+	blockNum2 := BlockNumber(2)
+
+	for i := 0; i < 10; i++ {
+		hashs[i] = types.StringToHash(strconv.Itoa(i))
+		block := newTestBlock(uint64(i), hashs[i])
+		block.Header.GasUsed = uint64(i * 10)
+		store.add(block)
+	}
+
+	eth := newTestEthEndpoint(store)
+
+	txn := &txnArgs{
+		From:     &addr0,
+		To:       &addr1,
+		Gas:      argUintPtr(100000),
+		GasPrice: argBytesPtr([]byte{0x64}),
+		Value:    argBytesPtr([]byte{0x64}),
+		Data:     nil,
+		Nonce:    argUintPtr(0),
+	}
+
+	cases := []struct {
+		filter BlockNumberOrHash
+		gas    uint64
+		err    bool
+	}{
+		{
+			// both fields are empty
+			BlockNumberOrHash{},
+			90,
+			true,
+		},
+		{
+			// return the latest block number
+			BlockNumberOrHash{BlockNumber: &latest},
+			90,
+			true,
+		},
+		{
+			// specific real block number
+			BlockNumberOrHash{BlockNumber: &blockNum1},
+			10,
+			true,
+		},
+		{
+			// specific block number (not found)
+			BlockNumberOrHash{BlockNumber: &blockNum2},
+			20,
+			true,
+		},
+		{
+			// specific block by hash (found). By default all blocks in the mock have hash zero
+			BlockNumberOrHash{BlockHash: &types.ZeroHash},
+			0,
+			false,
+		},
+		{
+			// specific block by hash (not found)
+			BlockNumberOrHash{BlockHash: &hashs[8]},
+			80,
+			true,
+		},
+	}
+
+	for _, c := range cases {
+		res, err := eth.CreateAccessList(txn, c.filter)
+		if c.err {
+			assert.NoError(t, err)
+			assert.NotNil(t, res)
+			bres := res.(*accessListResult)
+			assert.Equal(t, argUint64(c.gas), bres.GasUsed)
+		} else {
+			assert.Nil(t, err)
+		}
+	}
+}
+
 type testStore interface {
 	ethStore
 }
@@ -612,6 +757,15 @@ func (m *mockBlockStore) appendBlocksToStore(blocks []*types.Block) {
 
 		m.blocks = append(m.blocks, block)
 	}
+}
+
+func (m *mockBlockStore) GetHeaderByNumber(num uint64) (*types.Header, bool) {
+	block, ok := m.GetBlockByNumber(num, true)
+	if !ok {
+		return nil, false
+	}
+
+	return block.Header, block.Header != nil
 }
 
 func (m *mockBlockStore) setupLogs() {

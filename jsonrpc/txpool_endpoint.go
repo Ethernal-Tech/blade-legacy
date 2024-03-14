@@ -48,10 +48,10 @@ type StatusResponse struct {
 
 // ContentFrom returns the transactions contained within the transaction pool.
 func (t *TxPool) ContentFrom(addr types.Address) (interface{}, error) {
-	convertTxMap := func(txMap []*types.Transaction) map[uint64]*transaction {
-		result := make(map[uint64]*transaction, len(txMap))
-		for key, tx := range txMap {
-			result[uint64(key)] = toTransaction(tx, nil, &types.ZeroHash, nil)
+	convertTxMap := func(txs []*types.Transaction) map[uint64]*transaction {
+		result := make(map[uint64]*transaction, len(txs))
+		for _, tx := range txs {
+			result[tx.Nonce()] = toTransaction(tx, nil, &types.ZeroHash, nil)
 		}
 
 		return result
@@ -61,12 +61,12 @@ func (t *TxPool) ContentFrom(addr types.Address) (interface{}, error) {
 
 	pTxs, ok := pendingTxs[addr]
 	if !ok {
-		return nil, nil
+		pTxs = make([]*types.Transaction, 0)
 	}
 
 	qTxs, ok := queuedTxs[addr]
 	if !ok {
-		return nil, nil
+		qTxs = make([]*types.Transaction, 0)
 	}
 
 	resp := ContentAddressResponse{

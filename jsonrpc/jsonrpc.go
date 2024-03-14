@@ -150,6 +150,7 @@ func (j *JSONRPC) setupHTTP() error {
 	}
 
 	j.logger.Info("http server started", "addr", j.config.Addr.String())
+
 	return nil
 }
 
