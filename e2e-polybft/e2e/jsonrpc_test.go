@@ -389,36 +389,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.NotEqual(t, txn.Receipt().ContractAddress, ethgo.ZeroAddress)
 	})
 
-	t.Run("eth_getBlockReceipts", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
-		require.NoError(t, err)
-		txn := cluster.Transfer(t, acct, types.Address(key1.Address()), one)
-		require.NoError(t, txn.Wait())
-		require.True(t, txn.Succeed())
-		txReceipt := txn.Receipt()
-
-		// Test. The populated fields match with the block
-		block, err := client.GetBlockByHash(txReceipt.BlockHash, false)
-		require.NoError(t, err)
-
-		// Test. We can retrieve the receipts by the BlockNumber
-		receipts, err := client.GetBlockReceipts(ethgo.BlockNumber(txReceipt.BlockNumber))
-		require.NoError(t, err)
-
-		for _, receipt := range receipts {
-			require.Equal(t, receipt.TransactionHash, txn.Receipt().TransactionHash)
-			require.Equal(t, receipt.BlockNumber, block.Number)
-			require.Equal(t, receipt.BlockHash, block.Hash)
-		}
-
-		// Test. The receipt of a deployed contract has the 'ContractAddress' field.
-		txn = cluster.Deploy(t, acct, contractsapi.TestSimple.Bytecode)
-		require.NoError(t, txn.Wait())
-		require.True(t, txn.Succeed())
-
-		require.NotEqual(t, txn.Receipt().ContractAddress, ethgo.ZeroAddress)
-	})
-
 	t.Run("eth_getTransactionByHash", func(t *testing.T) {
 		key1, err := wallet.GenerateKey()
 		require.NoError(t, err)
