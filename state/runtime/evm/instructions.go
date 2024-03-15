@@ -327,7 +327,6 @@ func opSar(c *state) {
 // memory operations
 func opMLoad(c *state) {
 	v := c.top()
-	//offset := v.ToBig()
 
 	var ok bool
 	c.tmp, ok = c.get2(c.tmp[:0], *v, *wordSize256)
@@ -392,7 +391,7 @@ func opSload(c *state) {
 		return
 	}
 
-	val := c.host.GetStorage(c.msg.Address, bigToHash(loc.ToBig()))
+	val := c.host.GetStorage(c.msg.Address, uint256ToHash(loc))
 	loc.SetBytes(val.Bytes())
 }
 
@@ -928,7 +927,8 @@ func opSelfDestruct(c *state) {
 }
 
 func opJump(c *state) {
-	if dest := c.pop(); c.validJumpdest(dest.ToBig()) {
+	dest := c.pop()
+	if c.validJumpdest(dest) {
 		c.ip = int(dest.Uint64() - 1)
 	} else {
 		c.exit(errInvalidJump)
@@ -940,7 +940,7 @@ func opJumpi(c *state) {
 	cond := c.pop()
 
 	if cond.Sign() != 0 {
-		if c.validJumpdest(dest.ToBig()) {
+		if c.validJumpdest(dest) {
 			c.ip = int(dest.Uint64() - 1)
 		} else {
 			c.exit(errInvalidJump)

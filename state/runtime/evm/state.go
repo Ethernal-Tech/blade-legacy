@@ -100,9 +100,10 @@ func (c *state) reset() {
 	c.memory = c.memory[:0]
 }
 
-func (c *state) validJumpdest(dest *big.Int) bool {
-	udest := dest.Uint64()
-	if dest.BitLen() >= 63 || udest >= uint64(len(c.code)) {
+func (c *state) validJumpdest(dest uint256.Int) bool {
+	udest, overflow := dest.Uint64WithOverflow()
+
+	if overflow || udest >= uint64(len(c.code)) {
 		return false
 	}
 
@@ -264,6 +265,10 @@ func (c *state) Run() ([]byte, error) {
 
 func (c *state) inStaticCall() bool {
 	return c.msg.Static
+}
+
+func uint256ToHash(b *uint256.Int) types.Hash {
+	return types.BytesToHash(b.Bytes())
 }
 
 func bigToHash(b *big.Int) types.Hash {
