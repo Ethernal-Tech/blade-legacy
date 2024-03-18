@@ -281,11 +281,16 @@ func (t *TxRelayerImpl) waitForReceipt(hash ethgo.Hash) (*ethgo.Receipt, error) 
 
 // ConvertTxnToCallMsg converts txn instance to call message
 func ConvertTxnToCallMsg(txn *types.Transaction) *ethgo.CallMsg {
+	gasPrice := uint64(0)
+	if txn.GasPrice() != nil {
+		gasPrice = txn.GasPrice().Uint64()
+	}
+
 	return &ethgo.CallMsg{
 		From:     ethgo.Address(txn.From()),
 		To:       (*ethgo.Address)(txn.To()),
 		Data:     txn.Input(),
-		GasPrice: txn.GasPrice().Uint64(),
+		GasPrice: gasPrice,
 		Value:    txn.Value(),
 		Gas:      new(big.Int).SetUint64(txn.Gas()),
 	}
@@ -295,6 +300,10 @@ func ConvertTxnToCallMsg(txn *types.Transaction) *ethgo.CallMsg {
 func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 	v, r, s := tx.RawSignatureValues()
 	accessList := make(ethgo.AccessList, 0)
+	gasPrice := uint64(0)
+	if tx.GasPrice() != nil {
+		gasPrice = tx.GasPrice().Uint64()
+	}
 
 	for _, e := range tx.AccessList() {
 		storageKeys := make([]ethgo.Hash, 0)
@@ -315,7 +324,7 @@ func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 		From:                 ethgo.Address(tx.From()),
 		To:                   (*ethgo.Address)(tx.To()),
 		Input:                tx.Input(),
-		GasPrice:             tx.GasPrice().Uint64(),
+		GasPrice:             gasPrice,
 		Gas:                  tx.Gas(),
 		Value:                tx.Value(),
 		Nonce:                tx.Nonce(),
