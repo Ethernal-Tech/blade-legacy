@@ -1122,7 +1122,8 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 	chainID, err := client.Eth().ChainID()
 	require.NoError(t, err)
 
-	signer := crypto.NewEIP155Signer(chainID.Uint64(), true)
+	signer := crypto.NewLondonOrBerlinSigner(chainID.Uint64(), true,
+		crypto.NewEIP155Signer(chainID.Uint64(), true))
 	signedTxn, err := signer.SignTxWithCallback(txn,
 		func(hash types.Hash) (sig []byte, err error) {
 			return sender.Sign(hash.Bytes())
