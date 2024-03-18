@@ -151,3 +151,22 @@ func (signer *BerlinSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 func (signer *BerlinSigner) calculateV(parity byte) []byte {
 	return big.NewInt(int64(parity)).Bytes()
 }
+
+func (signer *BerlinSigner) SignTxWithCallBack(tx *types.Transaction,
+	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
+	if tx.Type() != types.AccessListTxType {
+		return signer.EIP155Signer.SignTxWithCallback(tx, signFn)
+	}
+
+	tx = tx.Copy()
+	h := signer.Hash(tx)
+
+	signature, err := signFn(h)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.SplitToRawSignatureValues(signature, signer.calculateV(signature[64]))
+
+	return tx, nil
+}

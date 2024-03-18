@@ -142,3 +142,22 @@ func (signer *LondonSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 
 	return tx, nil
 }
+
+func (signer *LondonSigner) SignTxWithCallback(tx *types.Transaction,
+	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
+	if tx.Type() != types.DynamicFeeTxType {
+		return signer.BerlinSigner.SignTxWithCallback(tx, signFn)
+	}
+
+	tx = tx.Copy()
+	h := signer.Hash(tx)
+
+	signature, err := signFn(h)
+	if err != nil {
+		return nil, err
+	}
+
+	tx.SplitToRawSignatureValues(signature, signer.calculateV(signature[64]))
+
+	return tx, nil
+}
