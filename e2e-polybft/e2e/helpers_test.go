@@ -19,6 +19,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -30,9 +31,9 @@ import (
 const nativeTokenNonMintableConfig = "Blade:BLD:18:false"
 
 // getCheckpointManagerValidators queries rootchain validator set on CheckpointManager contract
-func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManagerAddr ethgo.Address) ([]*polybft.ValidatorInfo, error) {
+func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManagerAddr types.Address) ([]*polybft.ValidatorInfo, error) {
 	validatorsCountRaw, err := ABICall(relayer, contractsapi.CheckpointManager,
-		checkpointManagerAddr, ethgo.ZeroAddress, "currentValidatorSetLength")
+		checkpointManagerAddr, types.ZeroAddress, "currentValidatorSetLength")
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManag
 
 	for i := 0; i < int(validatorsCount); i++ {
 		validatorRaw, err := ABICall(relayer, contractsapi.CheckpointManager,
-			checkpointManagerAddr, ethgo.ZeroAddress, "currentValidatorSet", i)
+			checkpointManagerAddr, types.ZeroAddress, "currentValidatorSet", i)
 		if err != nil {
 			return nil, err
 		}
@@ -68,7 +69,7 @@ func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManag
 		}
 
 		validators[i] = &polybft.ValidatorInfo{
-			Address: results["_address"].(ethgo.Address),
+			Address: types.Address(results["_address"].(ethgo.Address)),
 			Stake:   results["votingPower"].(*big.Int),
 		}
 	}
@@ -76,7 +77,7 @@ func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManag
 	return validators, nil
 }
 
-func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contractAddress ethgo.Address, senderAddr ethgo.Address, method string, params ...interface{}) (string, error) {
+func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contractAddress types.Address, senderAddr types.Address, method string, params ...interface{}) (string, error) {
 	input, err := artifact.Abi.GetMethod(method).Encode(params)
 	if err != nil {
 		return "", err
@@ -85,16 +86,18 @@ func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contract
 	return relayer.Call(senderAddr, contractAddress, input)
 }
 
-func ABITransaction(relayer txrelayer.TxRelayer, key ethgo.Key, artifact *contracts.Artifact, contractAddress ethgo.Address, method string, params ...interface{}) (*ethgo.Receipt, error) {
+func ABITransaction(relayer txrelayer.TxRelayer, key crypto.Key, artifact *contracts.Artifact, contractAddress types.Address, method string, params ...interface{}) (*ethgo.Receipt, error) {
 	input, err := artifact.Abi.GetMethod(method).Encode(params)
 	if err != nil {
 		return nil, err
 	}
 
-	return relayer.SendTransaction(&ethgo.Transaction{
+	tx := types.NewTx(&types.MixedTxn{
 		To:    &contractAddress,
 		Input: input,
-	}, key)
+	})
+
+	return relayer.SendTransaction(tx, key)
 }
 
 func getExitProof(rpcAddress string, exitID uint64) (types.Proof, error) {
@@ -160,9 +163,9 @@ func checkStateSyncResultLogs(
 }
 
 // getCheckpointBlockNumber gets current checkpoint block number from checkpoint manager smart contract
-func getCheckpointBlockNumber(l1Relayer txrelayer.TxRelayer, checkpointManagerAddr ethgo.Address) (uint64, error) {
+func getCheckpointBlockNumber(l1Relayer txrelayer.TxRelayer, checkpointManagerAddr types.Address) (uint64, error) {
 	checkpointBlockNumRaw, err := ABICall(l1Relayer, contractsapi.CheckpointManager,
-		checkpointManagerAddr, ethgo.ZeroAddress, "currentCheckpointBlockNumber")
+		checkpointManagerAddr, types.ZeroAddress, "currentCheckpointBlockNumber")
 	if err != nil {
 		return 0, err
 	}
@@ -192,7 +195,7 @@ func waitForRootchainEpoch(targetEpoch uint64, timeout time.Duration,
 		}
 
 		rootchainEpochRaw, err := ABICall(rootchainTxRelayer, contractsapi.CheckpointManager,
-			ethgo.Address(checkpointManager), ethgo.ZeroAddress, "currentEpoch")
+			checkpointManager, types.ZeroAddress, "currentEpoch")
 		if err != nil {
 			return err
 		}
@@ -210,7 +213,7 @@ func waitForRootchainEpoch(targetEpoch uint64, timeout time.Duration,
 
 // setAccessListRole sets access list role to appropriate access list precompile
 func setAccessListRole(t *testing.T, cluster *framework.TestCluster, precompile, account types.Address,
-	role addresslist.Role, aclAdmin ethgo.Key) {
+	role addresslist.Role, aclAdmin *crypto.ECDSAKey) {
 	t.Helper()
 
 	var updateRoleFn *abi.Method
@@ -270,7 +273,7 @@ func erc20BalanceOf(t *testing.T, account types.Address, tokenAddr types.Address
 	balanceOfInput, err := balanceOfFn.EncodeAbi()
 	require.NoError(t, err)
 
-	balanceRaw, err := relayer.Call(ethgo.ZeroAddress, ethgo.Address(tokenAddr), balanceOfInput)
+	balanceRaw, err := relayer.Call(types.ZeroAddress, tokenAddr, balanceOfInput)
 	require.NoError(t, err)
 	balance, err := common.ParseUint256orHex(&balanceRaw)
 	require.NoError(t, err)
@@ -286,7 +289,7 @@ func erc721OwnerOf(t *testing.T, tokenID *big.Int, tokenAddr types.Address, rela
 	ownerOfInput, err := ownerOfFn.EncodeAbi()
 	require.NoError(t, err)
 
-	ownerRaw, err := relayer.Call(ethgo.ZeroAddress, ethgo.Address(tokenAddr), ownerOfInput)
+	ownerRaw, err := relayer.Call(types.ZeroAddress, tokenAddr, ownerOfInput)
 	require.NoError(t, err)
 
 	return types.StringToAddress(ownerRaw)
@@ -297,8 +300,8 @@ func queryNativeERC20Metadata(t *testing.T, funcName string, abiType *abi.Type, 
 	t.Helper()
 
 	valueHex, err := ABICall(relayer, contractsapi.NativeERC20Mintable,
-		ethgo.Address(contracts.NativeERC20TokenContract),
-		ethgo.ZeroAddress, funcName)
+		contracts.NativeERC20TokenContract,
+		types.ZeroAddress, funcName)
 	require.NoError(t, err)
 
 	valueRaw, err := hex.DecodeHex(valueHex)
@@ -323,7 +326,7 @@ func getChildToken(t *testing.T, predicateABI *abi.ABI, predicateAddr types.Addr
 	input, err := rootToChildTokenFn.Encode([]interface{}{rootToken})
 	require.NoError(t, err)
 
-	childTokenRaw, err := relayer.Call(ethgo.ZeroAddress, ethgo.Address(predicateAddr), input)
+	childTokenRaw, err := relayer.Call(types.ZeroAddress, predicateAddr, input)
 	require.NoError(t, err)
 
 	return types.StringToAddress(childTokenRaw)
@@ -337,7 +340,7 @@ func getLastExitEventID(t *testing.T, relayer txrelayer.TxRelayer) uint64 {
 	input, err := exitEventsCounterFn.Encode([]interface{}{})
 	require.NoError(t, err)
 
-	exitEventIDRaw, err := relayer.Call(ethgo.ZeroAddress, ethgo.Address(contracts.L2StateSenderContract), input)
+	exitEventIDRaw, err := relayer.Call(types.ZeroAddress, contracts.L2StateSenderContract, input)
 	require.NoError(t, err)
 
 	exitEventID, err := common.ParseUint64orHex(&exitEventIDRaw)
@@ -355,7 +358,7 @@ func isExitEventProcessed(t *testing.T, exitHelperAddr types.Address,
 	input, err := processedExitsFn.Encode([]interface{}{exitEventID})
 	require.NoError(t, err)
 
-	isProcessedRaw, err := relayer.Call(ethgo.ZeroAddress, ethgo.Address(exitHelperAddr), input)
+	isProcessedRaw, err := relayer.Call(types.ZeroAddress, exitHelperAddr, input)
 	require.NoError(t, err)
 
 	isProcessedAsNumber, err := common.ParseUint64orHex(&isProcessedRaw)

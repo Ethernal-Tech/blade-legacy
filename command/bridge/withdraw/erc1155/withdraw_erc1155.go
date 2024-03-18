@@ -7,14 +7,13 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/wallet"
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
 	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	helperCommon "github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -85,7 +84,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	senderAccount, err := wallet.NewWalletFromPrivKey(senderKeyRaw)
+	senderAccount, err := crypto.NewECDSAKeyFromRawPrivECDSA(senderKeyRaw)
 	if err != nil {
 		outputter.SetError(err)
 
@@ -173,7 +172,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // createWithdrawTxn encodes parameters for withdraw function on child chain predicate contract
-func createWithdrawTxn(receivers []types.Address, amounts, TokenIDs []*big.Int) (*ethgo.Transaction, error) {
+func createWithdrawTxn(receivers []types.Address, amounts, TokenIDs []*big.Int) (*types.Transaction, error) {
 	withdrawFn := &contractsapi.WithdrawBatchChildERC1155PredicateFn{
 		ChildToken: types.StringToAddress(wp.TokenAddr),
 		Receivers:  receivers,
@@ -186,8 +185,8 @@ func createWithdrawTxn(receivers []types.Address, amounts, TokenIDs []*big.Int) 
 		return nil, fmt.Errorf("failed to encode provided parameters: %w", err)
 	}
 
-	addr := ethgo.Address(types.StringToAddress(wp.PredicateAddr))
+	addr := types.StringToAddress(wp.PredicateAddr)
 
-	return helper.CreateTransaction(ethgo.ZeroAddress, &addr, input,
+	return helper.CreateTransaction(types.ZeroAddress, &addr, input,
 		nil, wp.ChildChainMintable), nil
 }

@@ -133,16 +133,22 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:32])
-	s := new(big.Int).SetBytes(signature[32:64])
+	tx.SplitToRawSignatureValues(sig, e.calculateV(sig[64]))
 
-	if s.Cmp(secp256k1NHalf) > 0 {
-		return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")
+	return tx, nil
+}
+
+func (e *EIP155Signer) SignTxWithCallback(tx *types.Transaction,
+	signFn func(hash []byte) (sig []byte, err error)) (*types.Transaction, error) {
+	tx = tx.Copy()
+	h := e.Hash(tx)
+
+	signature, err := signFn(h.Bytes())
+	if err != nil {
+		return nil, err
 	}
 
-	v := new(big.Int).SetBytes(signer.calculateV(signature[64]))
-
-	tx.SetSignatureValues(v, r, s)
+	tx.SplitToRawSignatureValues(signature, e.calculateV(signature[64]))
 
 	return tx, nil
 }

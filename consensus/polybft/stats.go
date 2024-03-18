@@ -162,7 +162,7 @@ func (s *State) startStatsReleasing() {
 // publishRootchainMetrics publishes rootchain related metrics
 func (p *Polybft) publishRootchainMetrics(logger hclog.Logger) {
 	interval := p.config.MetricsInterval
-	validatorAddr := p.key.Address()
+	validatorAddr := ethgo.Address(p.key.Address())
 	bridgeCfg := p.genesisClientConfig.Bridge
 
 	// zero means metrics are disabled
@@ -188,7 +188,7 @@ func (p *Polybft) publishRootchainMetrics(logger hclog.Logger) {
 			return
 		case <-ticker.C:
 			// rootchain validator balance
-			balance, err := relayer.Client().Eth().GetBalance(p.key.Address(), ethgo.Latest)
+			balance, err := relayer.Client().Eth().GetBalance(validatorAddr, ethgo.Latest)
 			if err != nil {
 				logger.Error("failed to query eth_getBalance", "err", err)
 			} else {

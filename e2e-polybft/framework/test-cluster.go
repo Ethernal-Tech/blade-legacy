@@ -21,6 +21,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -28,7 +29,6 @@ import (
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/abi"
 	"github.com/umbracle/ethgo/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 const (
@@ -1042,30 +1042,43 @@ func (c *TestCluster) Call(t *testing.T, to types.Address, method *abi.Method,
 	return output
 }
 
-func (c *TestCluster) Deploy(t *testing.T, sender ethgo.Key, bytecode []byte) *TestTxn {
+func (c *TestCluster) Deploy(t *testing.T, sender *crypto.ECDSAKey, bytecode []byte) *TestTxn {
 	t.Helper()
 
-	return c.SendTxn(t, sender, &ethgo.Transaction{From: sender.Address(), Input: bytecode})
+	tx := types.NewTx(&types.MixedTxn{
+		From:  sender.Address(),
+		Input: bytecode,
+	})
+
+	return c.SendTxn(t, sender, tx)
 }
 
-func (c *TestCluster) Transfer(t *testing.T, sender ethgo.Key, target types.Address, value *big.Int) *TestTxn {
+func (c *TestCluster) Transfer(t *testing.T, sender *crypto.ECDSAKey, target types.Address, value *big.Int) *TestTxn {
 	t.Helper()
 
-	targetAddr := ethgo.Address(target)
+	tx := types.NewTx(&types.MixedTxn{
+		From:  sender.Address(),
+		Value: value,
+		To:    &target,
+	})
 
-	return c.SendTxn(t, sender, &ethgo.Transaction{From: sender.Address(), To: &targetAddr, Value: value})
+	return c.SendTxn(t, sender, tx)
 }
 
-func (c *TestCluster) MethodTxn(t *testing.T, sender ethgo.Key, target types.Address, input []byte) *TestTxn {
+func (c *TestCluster) MethodTxn(t *testing.T, sender *crypto.ECDSAKey, target types.Address, input []byte) *TestTxn {
 	t.Helper()
 
-	targetAddr := ethgo.Address(target)
+	tx := types.NewTx(&types.MixedTxn{
+		From:  sender.Address(),
+		Input: input,
+		To:    &target,
+	})
 
-	return c.SendTxn(t, sender, &ethgo.Transaction{From: sender.Address(), To: &targetAddr, Input: input})
+	return c.SendTxn(t, sender, tx)
 }
 
 // SendTxn sends a transaction
-func (c *TestCluster) SendTxn(t *testing.T, sender ethgo.Key, txn *ethgo.Transaction) *TestTxn {
+func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.Transaction) *TestTxn {
 	t.Helper()
 
 	// since we might use get nonce to query the latest nonce and that value is only
@@ -1079,42 +1092,44 @@ func (c *TestCluster) SendTxn(t *testing.T, sender ethgo.Key, txn *ethgo.Transac
 	require.NoError(t, err)
 
 	// initialize transaction values if not set
-	if txn.Nonce == 0 {
-		nonce, err := client.Eth().GetNonce(sender.Address(), ethgo.Latest)
+	if txn.Nonce() == 0 {
+		nonce, err := client.Eth().GetNonce(ethgo.Address(sender.Address()), ethgo.Latest)
 		require.NoError(t, err)
 
-		txn.Nonce = nonce
+		txn.SetNonce(nonce)
 	}
 
-	if txn.GasPrice == 0 {
+	if txn.GasPrice() == big.NewInt(0) {
 		gasPrice, err := client.Eth().GasPrice()
 		require.NoError(t, err)
 
-		txn.GasPrice = gasPrice
+		txn.SetGasPrice(new(big.Int).SetUint64(gasPrice))
 	}
 
-	if txn.Gas == 0 {
+	if txn.Gas() == 0 {
 		callMsg := txrelayer.ConvertTxnToCallMsg(txn)
 
 		gasLimit, err := client.Eth().EstimateGas(callMsg)
 		if err != nil {
 			// gas estimation can fail in case an account is not allow-listed
 			// (fallback it to default gas limit in that case)
-			txn.Gas = txrelayer.DefaultGasLimit
+			txn.SetGas(txrelayer.DefaultGasLimit)
 		} else {
-			txn.Gas = gasLimit
+			txn.SetGas(gasLimit)
 		}
 	}
 
 	chainID, err := client.Eth().ChainID()
 	require.NoError(t, err)
 
-	signer := wallet.NewEIP155Signer(chainID.Uint64())
-	signedTxn, err := signer.SignTx(txn, sender)
+	signer := crypto.NewEIP155Signer(chainID.Uint64(), true)
+	signedTxn, err := signer.SignTxWithCallback(txn,
+		func(hash []byte) (sig []byte, err error) {
+			return sender.Sign(hash)
+		})
 	require.NoError(t, err)
 
-	txnRaw, err := signedTxn.MarshalRLPTo(nil)
-	require.NoError(t, err)
+	txnRaw := signedTxn.MarshalRLPTo(nil)
 
 	hash, err := client.Eth().SendRawTransaction(txnRaw)
 	require.NoError(t, err)
@@ -1129,12 +1144,12 @@ func (c *TestCluster) SendTxn(t *testing.T, sender ethgo.Key, txn *ethgo.Transac
 type TestTxn struct {
 	client  *jsonrpc.Eth
 	hash    ethgo.Hash
-	txn     *ethgo.Transaction
+	txn     *types.Transaction
 	receipt *ethgo.Receipt
 }
 
 // Txn returns the raw transaction that was sent
-func (t *TestTxn) Txn() *ethgo.Transaction {
+func (t *TestTxn) Txn() *types.Transaction {
 	return t.txn
 }
 
@@ -1156,7 +1171,7 @@ func (t *TestTxn) Failed() bool {
 // Reverted returns whether the transaction failed and was reverted consuming
 // all the gas from the call
 func (t *TestTxn) Reverted() bool {
-	return t.receipt.Status == uint64(types.ReceiptFailed) && t.txn.Gas == t.receipt.GasUsed
+	return t.receipt.Status == uint64(types.ReceiptFailed) && t.txn.Gas() == t.receipt.GasUsed
 }
 
 // Wait waits for the transaction to be executed

@@ -14,6 +14,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -185,7 +186,7 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 }
 
 func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
-	sidechainKey, err := wallet.GenerateKey()
+	sidechainKey, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 4,
@@ -198,11 +199,13 @@ func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Servers[0].JSONRPCAddr()))
 	require.NoError(t, err)
 
-	receipt, err := relayer.SendTransaction(&ethgo.Transaction{Input: contractsapi.TestWriteBlockMetadata.Bytecode}, sidechainKey)
+	tx := types.NewTx(&types.MixedTxn{Input: contractsapi.TestRewardToken.Bytecode})
+
+	receipt, err := relayer.SendTransaction(tx, sidechainKey)
 	require.NoError(t, err)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
-	receipt, err = ABITransaction(relayer, sidechainKey, contractsapi.TestWriteBlockMetadata, receipt.ContractAddress, "init", []interface{}{})
+	receipt, err = ABITransaction(relayer, sidechainKey, contractsapi.TestWriteBlockMetadata, types.Address(receipt.ContractAddress), "init", []interface{}{})
 	require.NoError(t, err)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 

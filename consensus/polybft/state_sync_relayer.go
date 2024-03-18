@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -60,7 +61,7 @@ type stateSyncRelayerImpl struct {
 	*relayerEventsProcessor
 
 	txRelayer      txrelayer.TxRelayer
-	key            ethgo.Key
+	key            crypto.Key
 	proofRetriever StateSyncProofRetriever
 	logger         hclog.Logger
 
@@ -73,7 +74,7 @@ func newStateSyncRelayer(
 	state *StateSyncStore,
 	store StateSyncProofRetriever,
 	blockchain blockchainBackend,
-	key ethgo.Key,
+	key crypto.Key,
 	config *relayerConfig,
 	logger hclog.Logger,
 ) *stateSyncRelayerImpl {
@@ -160,13 +161,15 @@ func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 		return err
 	}
 
-	// send batchExecute state sync
-	_, err = ssr.txRelayer.SendTransaction(&ethgo.Transaction{
+	txn := types.NewTx(&types.MixedTxn{
 		From:  ssr.key.Address(),
-		To:    (*ethgo.Address)(&ssr.config.eventExecutionAddr),
+		To:    &ssr.config.eventExecutionAddr,
 		Gas:   types.StateTransactionGasLimit,
 		Input: input,
-	}, ssr.key)
+	})
+
+	// send batchExecute state sync
+	_, err = ssr.txRelayer.SendTransaction(txn, ssr.key)
 
 	return err
 }

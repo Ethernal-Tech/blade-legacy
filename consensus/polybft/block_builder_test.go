@@ -37,7 +37,7 @@ func TestBlockBuilder_BuildBlockTxOneFailedTxAndOneTakesTooMuchGas(t *testing.T)
 	accounts := [6]*account{}
 
 	for i := range accounts {
-		ecdsaKey, err := crypto.GenerateECDSAKey()
+		ecdsaKey, err := crypto.GenerateECDSAPrivateKey()
 		require.NoError(t, err)
 
 		accounts[i] = &account{

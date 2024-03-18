@@ -102,25 +102,30 @@ func (signer *FrontierSigner) signTx(tx *types.Transaction, privateKey *ecdsa.Pr
 	}
 
 	tx = tx.Copy()
-
-	hash := signer.Hash(tx)
+	h := f.Hash(tx)
 
 	signature, err := Sign(privateKey, hash[:])
 	if err != nil {
 		return nil, err
 	}
 
-	r := new(big.Int).SetBytes(signature[:32])
-	s := new(big.Int).SetBytes(signature[32:64])
-	v := new(big.Int).SetBytes(signer.calculateV(signature[64]))
+	tx.SplitToRawSignatureValues(sig, f.calculateV(sig[64]))
 
-	if validateFn != nil {
-		if err := validateFn(v, r, s); err != nil {
-			return nil, err
-		}
+	return tx, nil
+}
+
+func (f *FrontierSigner) SignTxWithCallback(
+	tx *types.Transaction,
+	signFn func(hash []byte) (sig []byte, err error)) (*types.Transaction, error) {
+	tx = tx.Copy()
+	h := f.Hash(tx)
+
+	signature, err := signFn(h.Bytes())
+	if err != nil {
+		return nil, err
 	}
 
-	tx.SetSignatureValues(v, r, s)
+	tx.SplitToRawSignatureValues(signature, f.calculateV(signature[64]))
 
 	return tx, nil
 }

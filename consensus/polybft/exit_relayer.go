@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -43,7 +44,7 @@ var _ ExitRelayer = (*exitRelayer)(nil)
 type exitRelayer struct {
 	*relayerEventsProcessor
 
-	key            ethgo.Key
+	key            crypto.Key
 	proofRetriever ExitEventProofRetriever
 	txRelayer      txrelayer.TxRelayer
 	logger         hclog.Logger
@@ -56,7 +57,7 @@ type exitRelayer struct {
 // newExitRelayer creates a new instance of exitRelayer
 func newExitRelayer(
 	txRelayer txrelayer.TxRelayer,
-	key ethgo.Key,
+	key crypto.Key,
 	proofRetriever ExitEventProofRetriever,
 	blockchain blockchainBackend,
 	exitStore *ExitStore,
@@ -226,12 +227,14 @@ func (e *exitRelayer) sendTx(events []*RelayerEventMetaData) error {
 		return err
 	}
 
-	// send batchExecute exit events
-	_, err = e.txRelayer.SendTransaction(&ethgo.Transaction{
+	exitTxn := types.NewTx(&types.MixedTxn{
 		From:  e.key.Address(),
-		To:    (*ethgo.Address)(&e.config.eventExecutionAddr),
+		To:    &e.config.eventExecutionAddr,
 		Input: input,
-	}, e.key)
+	})
+
+	// send batchExecute exit events
+	_, err = e.txRelayer.SendTransaction(exitTxn, e.key)
 
 	return err
 }
