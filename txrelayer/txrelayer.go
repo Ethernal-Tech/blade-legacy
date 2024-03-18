@@ -190,10 +190,11 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 		txn.SetGas(gasLimit + (gasLimit * gasLimitIncreasePercentage / 100))
 	}
 
-	signer := crypto.NewEIP155Signer(chainID.Uint64(), true)
+	signer := crypto.NewLondonOrBerlinSigner(
+		chainID.Uint64(), true, crypto.NewEIP155Signer(chainID.Uint64(), true))
 	signedTxn, err := signer.SignTxWithCallback(txn,
-		func(hash []byte) (sig []byte, err error) {
-			return key.Sign(hash)
+		func(hash types.Hash) (sig []byte, err error) {
+			return key.Sign(hash.Bytes())
 		})
 	if err != nil {
 		return ethgo.ZeroHash, err
