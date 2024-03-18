@@ -5,8 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/umbracle/ethgo/wallet"
-
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/secrets"
@@ -117,7 +115,7 @@ func (a *Account) GetEcdsaPrivateKey() (*ecdsa.PrivateKey, error) {
 		return nil, err
 	}
 
-	return wallet.ParsePrivateKey(ecdsaRaw)
+	return crypto.ParseECDSAPrivateKey(ecdsaRaw)
 }
 
 func (a Account) Address() types.Address {
