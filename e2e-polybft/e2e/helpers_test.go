@@ -92,7 +92,7 @@ func ABITransaction(relayer txrelayer.TxRelayer, key crypto.Key, artifact *contr
 		return nil, err
 	}
 
-	tx := types.NewTx(&types.MixedTxn{
+	tx := types.NewTx(&types.LegacyTx{
 		To:    &contractAddress,
 		Input: input,
 	})

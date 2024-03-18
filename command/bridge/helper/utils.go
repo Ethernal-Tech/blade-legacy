@@ -274,18 +274,24 @@ func SendTransaction(txRelayer txrelayer.TxRelayer, addr types.Address, input []
 // CreateTransaction is a helper function that creates either dynamic fee or legacy transaction based on provided flag
 func CreateTransaction(sender types.Address, receiver *types.Address,
 	input []byte, value *big.Int, isDynamicFeeTx bool) *types.Transaction {
-	txType := types.LegacyTx
+	var txData types.TxData
 	if isDynamicFeeTx {
-		txType = types.DynamicFeeTx
+		txData = &types.DynamicFeeTx{
+			From:  sender,
+			To:    receiver,
+			Value: value,
+			Input: input,
+		}
+	} else {
+		txData = &types.LegacyTx{
+			From:  sender,
+			To:    receiver,
+			Value: value,
+			Input: input,
+		}
 	}
 
-	return types.NewTx(&types.MixedTxn{
-		From:  sender,
-		To:    receiver,
-		Value: value,
-		Input: input,
-		Type:  txType,
-	})
+	return types.NewTx(txData)
 }
 
 func DeployProxyContract(txRelayer txrelayer.TxRelayer, deployerKey crypto.Key, proxyContractName string,

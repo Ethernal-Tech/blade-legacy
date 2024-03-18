@@ -444,10 +444,9 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	mintInput, err := mintFn.EncodeAbi()
 	require.NoError(t, err)
 
-	tx := types.NewTx(&types.MixedTxn{
+	tx := types.NewTx(&types.DynamicFeeTx{
 		To:    &contracts.NativeERC20TokenContract,
 		Input: mintInput,
-		Type:  types.DynamicFeeTx,
 	})
 
 	receipt, err := relayer.SendTransaction(tx, minter)
@@ -468,10 +467,9 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	mintInput, err = mintFn.EncodeAbi()
 	require.NoError(t, err)
 
-	tx = types.NewTx(&types.MixedTxn{
+	tx = types.NewTx(&types.DynamicFeeTx{
 		To:    &contracts.NativeERC20TokenContract,
 		Input: mintInput,
-		Type:  types.DynamicFeeTx,
 	})
 
 	receipt, err = relayer.SendTransaction(tx, nonMinterAcc.Ecdsa)
@@ -555,19 +553,18 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	sendAmount := ethgo.Gwei(1)
 
 	txns := []*types.Transaction{
-		types.NewTx(&types.MixedTxn{
+		types.NewTx(&types.LegacyTx{
 			Value:    sendAmount,
 			To:       &recipient,
 			Gas:      21000,
 			Nonce:    uint64(0),
 			GasPrice: ethgo.Gwei(1),
 		}),
-		types.NewTx(&types.MixedTxn{
+		types.NewTx(&types.DynamicFeeTx{
 			Value:     sendAmount,
 			To:        &recipient,
 			Gas:       21000,
 			Nonce:     uint64(0),
-			Type:      types.DynamicFeeTx,
 			GasFeeCap: ethgo.Gwei(1),
 			GasTipCap: ethgo.Gwei(1),
 		}),
@@ -766,7 +763,7 @@ func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 
 	// deploy Wrapper contract
 	receipt, err := txRelayer.SendTransaction(
-		types.NewTx(&types.MixedTxn{Input: contractsapi.Wrapper.Bytecode}),
+		types.NewTx(&types.LegacyTx{Input: contractsapi.Wrapper.Bytecode}),
 		admin)
 	require.NoError(t, err)
 
@@ -792,7 +789,7 @@ func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 	setValueInput, err := setNumberFn.Encode([]interface{}{numberToPersist})
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		From:  admin.Address(),
 		To:    &wrapperAddr,
 		Input: setValueInput,

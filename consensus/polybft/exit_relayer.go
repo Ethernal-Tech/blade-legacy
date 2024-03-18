@@ -227,7 +227,7 @@ func (e *exitRelayer) sendTx(events []*RelayerEventMetaData) error {
 		return err
 	}
 
-	exitTxn := types.NewTx(&types.MixedTxn{
+	exitTxn := types.NewTx(&types.LegacyTx{
 		From:  e.key.Address(),
 		To:    &e.config.eventExecutionAddr,
 		Input: input,

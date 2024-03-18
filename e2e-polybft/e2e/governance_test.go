@@ -337,7 +337,7 @@ func sendQueueProposalTransaction(t *testing.T,
 	input, err := queueFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		To:    &childGovernorAddr,
 		Input: input,
 	})
@@ -363,7 +363,7 @@ func sendExecuteProposalTransaction(t *testing.T,
 	input, err := executeFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		To:    &childGovernorAddr,
 		Input: input,
 	})
@@ -386,7 +386,7 @@ func sendVoteTransaction(t *testing.T, proposalID *big.Int, vote VoteType,
 	input, err := castVoteFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		To:    &childGovernorAddr,
 		Input: input,
 	})
@@ -412,7 +412,7 @@ func sendProposalTransaction(t *testing.T, txRelayer txrelayer.TxRelayer,
 	input, err := proposeFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		To:    &childGovernorAddr,
 		Input: input,
 	})

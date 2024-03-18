@@ -63,7 +63,7 @@ func TestE2E_Migration(t *testing.T) {
 
 	// send transaction to user2
 	sendAmount := ethgo.Gwei(10000)
-	tx := types.NewTx(&types.MixedTxn{
+	tx := types.NewTx(&types.LegacyTx{
 		From:     userKey.Address(),
 		To:       userKey2.Address().Ptr(),
 		Gas:      1000000,
@@ -75,7 +75,7 @@ func TestE2E_Migration(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
 
-	tx = types.NewTx(&types.MixedTxn{
+	tx = types.NewTx(&types.LegacyTx{
 		From:     userKey.Address(),
 		To:       userKey2.Address().Ptr(),
 		Gas:      1000000,

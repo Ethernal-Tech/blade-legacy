@@ -86,7 +86,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		From:  validatorAccount.Ecdsa.Address(),
 		Input: encoded,
 		To:    &contracts.StakeManagerContract,

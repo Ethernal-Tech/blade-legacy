@@ -96,13 +96,20 @@ func (t *TxRelayerImpl) Call(from types.Address, to types.Address, input []byte)
 func (t *TxRelayerImpl) SendTransaction(txn *types.Transaction, key crypto.Key) (*ethgo.Receipt, error) {
 	txnHash, err := t.sendTransactionLocked(txn, key)
 	if err != nil {
-		if txn.Type() != types.LegacyTx {
+		if txn.Type() != types.LegacyTxType {
 			for _, fallbackErr := range dynamicFeeTxFallbackErrs {
 				if strings.Contains(
 					strings.ToLower(err.Error()),
 					strings.ToLower(fallbackErr.Error())) {
 					// "downgrade" transaction to the legacy tx type and resend it
-					txn.SetTransactionType(types.LegacyTx)
+					copyTxn := txn.Copy()
+					txn.InitInnerData(types.LegacyTxType)
+					txn.SetNonce(copyTxn.Nonce())
+					txn.SetInput(copyTxn.Input())
+					txn.SetValue(copyTxn.Value())
+					txn.SetTo(copyTxn.To())
+					txn.SetFrom(copyTxn.From())
+					txn.SetChainID(copyTxn.ChainID())
 					txn.SetGasPrice(big.NewInt(0))
 
 					return t.SendTransaction(txn, key)
@@ -142,7 +149,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 		txn.SetFrom(key.Address())
 	}
 
-	if txn.Type() == types.DynamicFeeTx {
+	if txn.Type() == types.DynamicFeeTxType {
 		maxPriorityFee := txn.GetGasTipCap()
 		if maxPriorityFee == nil {
 			// retrieve the max priority fee per gas
@@ -203,7 +210,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 	if t.writer != nil {
 		var msg string
 
-		if txn.Type() == types.DynamicFeeTx {
+		if txn.Type() == types.DynamicFeeTxType {
 			msg = fmt.Sprintf("[TxRelayer.SendTransaction]\nFrom = %s\nGas = %d\n"+
 				"Max Fee Per Gas = %d\nMax Priority Fee Per Gas = %d\n",
 				txn.From(), txn.Gas(), txn.GasFeeCap(), txn.GasTipCap())

@@ -161,7 +161,7 @@ func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 		return err
 	}
 
-	txn := types.NewTx(&types.MixedTxn{
+	txn := types.NewTx(&types.LegacyTx{
 		From:  ssr.key.Address(),
 		To:    &ssr.config.eventExecutionAddr,
 		Gas:   types.StateTransactionGasLimit,
