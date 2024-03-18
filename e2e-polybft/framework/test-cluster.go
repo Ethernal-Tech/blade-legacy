@@ -1124,14 +1124,14 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 
 	signer := crypto.NewEIP155Signer(chainID.Uint64(), true)
 	signedTxn, err := signer.SignTxWithCallback(txn,
-		func(hash []byte) (sig []byte, err error) {
-			return sender.Sign(hash)
+		func(hash types.Hash) (sig []byte, err error) {
+			return sender.Sign(hash.Bytes())
 		})
 	require.NoError(t, err)
 
-	txnRaw := signedTxn.MarshalRLPTo(nil)
+	rlpTxn := signedTxn.MarshalRLPTo(nil)
 
-	hash, err := client.Eth().SendRawTransaction(txnRaw)
+	hash, err := client.Eth().SendRawTransaction(rlpTxn)
 	require.NoError(t, err)
 
 	return &TestTxn{

@@ -33,7 +33,7 @@ type TxSigner interface {
 	SignTx(tx *types.Transaction, priv *ecdsa.PrivateKey) (*types.Transaction, error)
 
 	// SignTxWithCallback signs a transaction by using a custom callback
-	SignTxWithCallback(tx *types.Transaction, signFn func(hash []byte) (sig []byte, err error)) (*types.Transaction, error)
+	SignTxWithCallback(tx *types.Transaction, signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error)
 }
 
 // NewSigner creates a new signer based on currently supported forks

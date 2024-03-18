@@ -139,11 +139,11 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 }
 
 func (e *EIP155Signer) SignTxWithCallback(tx *types.Transaction,
-	signFn func(hash []byte) (sig []byte, err error)) (*types.Transaction, error) {
+	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
 	tx = tx.Copy()
 	h := e.Hash(tx)
 
-	signature, err := signFn(h.Bytes())
+	signature, err := signFn(h)
 	if err != nil {
 		return nil, err
 	}

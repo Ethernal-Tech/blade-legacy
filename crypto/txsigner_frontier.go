@@ -116,11 +116,11 @@ func (signer *FrontierSigner) signTx(tx *types.Transaction, privateKey *ecdsa.Pr
 
 func (f *FrontierSigner) SignTxWithCallback(
 	tx *types.Transaction,
-	signFn func(hash []byte) (sig []byte, err error)) (*types.Transaction, error) {
+	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
 	tx = tx.Copy()
 	h := f.Hash(tx)
 
-	signature, err := signFn(h.Bytes())
+	signature, err := signFn(h)
 	if err != nil {
 		return nil, err
 	}
