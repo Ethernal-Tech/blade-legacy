@@ -323,6 +323,18 @@ func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 			})
 	}
 
+	var (
+		vRaw []byte
+		rRaw []byte
+		sRaw []byte
+	)
+
+	if v != nil && r != nil && s != nil {
+		vRaw = v.Bytes()
+		rRaw = r.Bytes()
+		sRaw = s.Bytes()
+	}
+
 	return &ethgo.Transaction{
 		Hash:                 ethgo.Hash(tx.Hash()),
 		From:                 ethgo.Address(tx.From()),
@@ -332,9 +344,9 @@ func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 		Gas:                  tx.Gas(),
 		Value:                tx.Value(),
 		Nonce:                tx.Nonce(),
-		V:                    v.Bytes(),
-		R:                    r.Bytes(),
-		S:                    s.Bytes(),
+		V:                    vRaw,
+		R:                    rRaw,
+		S:                    sRaw,
 		ChainID:              tx.ChainID(),
 		AccessList:           accessList,
 		MaxPriorityFeePerGas: tx.GasTipCap(),
