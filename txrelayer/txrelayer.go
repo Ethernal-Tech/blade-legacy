@@ -191,14 +191,13 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 	}
 
 	signer := crypto.NewEIP155Signer(chainID.Uint64(), true)
-	if txn, err = signer.SignTxWithCallback(txn,
+	signedTxn, err := signer.SignTxWithCallback(txn,
 		func(hash []byte) (sig []byte, err error) {
 			return key.Sign(hash)
-		}); err != nil {
+		})
+	if err != nil {
 		return ethgo.ZeroHash, err
 	}
-
-	rlpTxn := txn.MarshalRLPTo(nil)
 
 	if t.writer != nil {
 		var msg string
@@ -214,6 +213,8 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 
 		_, _ = t.writer.Write([]byte(msg))
 	}
+
+	rlpTxn := signedTxn.MarshalRLP()
 
 	return t.client.Eth().SendRawTransaction(rlpTxn)
 }
