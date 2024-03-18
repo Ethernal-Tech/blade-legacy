@@ -331,8 +331,7 @@ func sendTransaction(t *testing.T, client *jsonrpc.Eth, sender crypto.Key, txn *
 		txn.SetChainID(chainID)
 	}
 
-	signer := crypto.NewLondonOrBerlinSigner(chainID.Uint64(), true,
-		crypto.NewEIP155Signer(chainID.Uint64(), true))
+	signer := crypto.NewLondonSigner(chainID.Uint64())
 
 	signedTxn, err := signer.SignTxWithCallback(txn,
 		func(hash types.Hash) (sig []byte, err error) {

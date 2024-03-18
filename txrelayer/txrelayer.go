@@ -197,8 +197,8 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 		txn.SetGas(gasLimit + (gasLimit * gasLimitIncreasePercentage / 100))
 	}
 
-	signer := crypto.NewLondonOrBerlinSigner(
-		chainID.Uint64(), true, crypto.NewEIP155Signer(chainID.Uint64(), true))
+	signer := crypto.NewLondonSigner(
+		chainID.Uint64())
 	signedTxn, err := signer.SignTxWithCallback(txn,
 		func(hash types.Hash) (sig []byte, err error) {
 			return key.Sign(hash.Bytes())

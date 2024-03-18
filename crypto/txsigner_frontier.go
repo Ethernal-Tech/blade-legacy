@@ -102,7 +102,7 @@ func (signer *FrontierSigner) signTxInternal(tx *types.Transaction,
 	}
 
 	tx = tx.Copy()
-	h := f.Hash(tx)
+	hash := signer.Hash(tx)
 
 	signature, err := Sign(privateKey, hash[:])
 	if err != nil {

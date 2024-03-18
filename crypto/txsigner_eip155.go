@@ -132,7 +132,12 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 		return nil, err
 	}
 
-	tx.SplitToRawSignatureValues(sig, e.calculateV(sig[64]))
+	tx.SplitToRawSignatureValues(signature, signer.calculateV(signature[64]))
+
+	_, _, s := tx.RawSignatureValues()
+	if s.Cmp(secp256k1NHalf) > 0 {
+		return nil, errors.New("SignTx method: S must be inclusively lower than secp256k1n/2")
+	}
 
 	return tx, nil
 }
