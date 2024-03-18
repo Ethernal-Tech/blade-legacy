@@ -101,8 +101,10 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	require.NoError(t, err)
 
 	deployTx := types.NewTx(&types.LegacyTx{
-		To:    nil,
-		Input: contractsapi.RootERC20.Bytecode,
+		BaseTx: &types.BaseTx{
+			To:    nil,
+			Input: contractsapi.RootERC20.Bytecode,
+		},
 	})
 
 	receipt, err := rootchainTxRelayer.SendTransaction(deployTx, deployerKey)
@@ -336,8 +338,10 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	deployTx := types.NewTx(&types.LegacyTx{
-		To:    nil,
-		Input: contractsapi.RootERC721.Bytecode,
+		BaseTx: &types.BaseTx{
+			To:    nil,
+			Input: contractsapi.RootERC721.Bytecode,
+		},
 	})
 
 	// deploy root ERC 721 token
@@ -508,8 +512,10 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	deployTx := types.NewTx(&types.LegacyTx{
-		To:    nil,
-		Input: contractsapi.RootERC1155.Bytecode,
+		BaseTx: &types.BaseTx{
+			To:    nil,
+			Input: contractsapi.RootERC1155.Bytecode,
+		},
 	})
 
 	// deploy root ERC 1155 token
@@ -1101,8 +1107,10 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	require.NoError(t, err)
 
 	deployTx := types.NewTx(&types.LegacyTx{
-		To:    nil,
-		Input: contractsapi.RootERC20.Bytecode,
+		BaseTx: &types.BaseTx{
+			To:    nil,
+			Input: contractsapi.RootERC20.Bytecode,
+		},
 	})
 
 	// deploy root erc20 token
@@ -1519,8 +1527,10 @@ func TestE2E_Bridge_L1OriginatedNativeToken_ERC20StakingToken(t *testing.T) {
 	nonNativeErc20 := polybftCfg.StakeTokenAddr
 
 	mintTx := types.NewTx(&types.DynamicFeeTx{
-		To:    &nonNativeErc20,
-		Input: mintInput,
+		BaseTx: &types.BaseTx{
+			To:    &nonNativeErc20,
+			Input: mintInput,
+		},
 	})
 
 	receipt, err := relayer.SendTransaction(mintTx, minter)

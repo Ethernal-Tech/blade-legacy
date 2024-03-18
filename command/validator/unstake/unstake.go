@@ -87,9 +87,11 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	txn := types.NewTx(&types.LegacyTx{
-		From:  validatorAccount.Ecdsa.Address(),
-		Input: encoded,
-		To:    &contracts.StakeManagerContract,
+		BaseTx: &types.BaseTx{
+			From:  validatorAccount.Ecdsa.Address(),
+			Input: encoded,
+			To:    &contracts.StakeManagerContract,
+		},
 	})
 
 	receipt, err := txRelayer.SendTransaction(txn, validatorAccount.Ecdsa)

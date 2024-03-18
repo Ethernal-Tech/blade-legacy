@@ -146,11 +146,14 @@ func TestE2E_JsonRPC(t *testing.T) {
 		estimateGasFn(ethgo.Gwei(1))
 
 		// transfer some funds to zero balance account
-		valueTransferTxn := cluster.SendTxn(t, senderKey, types.NewTx(&types.LegacyTx{
-			From:  fundedAccountAddress,
-			To:    &nonFundedAccountAddress,
-			Value: ethgo.Gwei(10),
-		}))
+		valueTransferTxn := cluster.SendTxn(t, senderKey,
+			types.NewTx(&types.LegacyTx{
+				BaseTx: &types.BaseTx{
+					From:  fundedAccountAddress,
+					To:    &nonFundedAccountAddress,
+					Value: ethgo.Gwei(10),
+				},
+			}))
 
 		require.NoError(t, valueTransferTxn.Wait())
 		require.True(t, valueTransferTxn.Succeed())
@@ -197,9 +200,11 @@ func TestE2E_JsonRPC(t *testing.T) {
 		targetAddr := senderKey.Address()
 		txn = cluster.SendTxn(t, recipientKey,
 			types.NewTx(&types.LegacyTx{
-				To:    &targetAddr,
-				Value: amountToSend,
-				Gas:   estimatedGas,
+				BaseTx: &types.BaseTx{
+					To:    &targetAddr,
+					Value: amountToSend,
+					Gas:   estimatedGas,
+				},
 			}))
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
@@ -269,7 +274,8 @@ func TestE2E_JsonRPC(t *testing.T) {
 		input, err := setValueFn.Encode([]interface{}{newVal})
 		require.NoError(t, err)
 
-		txn = cluster.SendTxn(t, senderKey, types.NewTx(&types.LegacyTx{Input: input, To: (*types.Address)(&target)}))
+		txn = cluster.SendTxn(t, senderKey, types.NewTx(
+			&types.LegacyTx{BaseTx: &types.BaseTx{Input: input, To: (*types.Address)(&target)}}))
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 

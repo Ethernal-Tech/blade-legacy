@@ -162,10 +162,12 @@ func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 	}
 
 	txn := types.NewTx(&types.LegacyTx{
-		From:  ssr.key.Address(),
-		To:    &ssr.config.eventExecutionAddr,
-		Gas:   types.StateTransactionGasLimit,
-		Input: input,
+		BaseTx: &types.BaseTx{
+			From:  ssr.key.Address(),
+			To:    &ssr.config.eventExecutionAddr,
+			Gas:   types.StateTransactionGasLimit,
+			Input: input,
+		},
 	})
 
 	// send batchExecute state sync

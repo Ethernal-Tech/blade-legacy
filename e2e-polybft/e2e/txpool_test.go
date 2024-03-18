@@ -58,21 +58,25 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 			// Send every second transaction as a dynamic fees one
 			if i%2 == 0 {
 				txData = &types.DynamicFeeTx{
-					From:      sender.Address(),
-					To:        (*types.Address)(&to),
-					Gas:       30000, // enough to send a transfer
-					Value:     big.NewInt(int64(sendAmount)),
-					Nonce:     uint64(i),
+					BaseTx: &types.BaseTx{
+						From:  sender.Address(),
+						To:    (*types.Address)(&to),
+						Gas:   30000, // enough to send a transfer
+						Value: big.NewInt(int64(sendAmount)),
+						Nonce: uint64(i),
+					},
 					GasFeeCap: big.NewInt(1000000000),
 					GasTipCap: big.NewInt(100000000),
 				}
 			} else {
 				txData = &types.LegacyTx{
-					From:     sender.Address(),
-					To:       (*types.Address)(&to),
-					Gas:      30000, // enough to send a transfer
-					Value:    big.NewInt(int64(sendAmount)),
-					Nonce:    uint64(i),
+					BaseTx: &types.BaseTx{
+						From:  sender.Address(),
+						To:    (*types.Address)(&to),
+						Gas:   30000, // enough to send a transfer
+						Value: big.NewInt(int64(sendAmount)),
+						Nonce: uint64(i),
+					},
 					GasPrice: ethgo.Gwei(2),
 				}
 			}
@@ -160,17 +164,21 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 
 		if i%2 == 0 {
 			txData = &types.DynamicFeeTx{
-				Value:     big.NewInt(int64(sendAmount * (num - i))),
-				To:        &recipient,
-				Gas:       21000,
+				BaseTx: &types.BaseTx{
+					Value: big.NewInt(int64(sendAmount * (num - i))),
+					To:    &recipient,
+					Gas:   21000,
+				},
 				GasFeeCap: big.NewInt(1000000000),
 				GasTipCap: big.NewInt(1000000000),
 			}
 		} else {
 			txData = &types.LegacyTx{
-				Value:    big.NewInt(int64(sendAmount * (num - i))),
-				To:       &recipient,
-				Gas:      21000,
+				BaseTx: &types.BaseTx{
+					Value: big.NewInt(int64(sendAmount * (num - i))),
+					To:    &recipient,
+					Gas:   21000,
+				},
 				GasPrice: ethgo.Gwei(1),
 			}
 		}
@@ -208,7 +216,10 @@ func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Servers[0].JSONRPCAddr()))
 	require.NoError(t, err)
 
-	tx := types.NewTx(&types.LegacyTx{Input: contractsapi.TestRewardToken.Bytecode})
+	tx := types.NewTx(&types.LegacyTx{
+		BaseTx: &types.BaseTx{
+			Input: contractsapi.TestRewardToken.Bytecode,
+		}})
 
 	receipt, err := relayer.SendTransaction(tx, sidechainKey)
 	require.NoError(t, err)
@@ -264,19 +275,23 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	for i := 0; i < txNum; i++ {
 		if i%2 == 0 {
 			txData = &types.DynamicFeeTx{
-				Value:     sendAmount,
-				To:        &recipient,
-				Gas:       21000,
-				Nonce:     nonce,
+				BaseTx: &types.BaseTx{
+					Value: sendAmount,
+					To:    &recipient,
+					Gas:   21000,
+					Nonce: nonce,
+				},
 				GasFeeCap: big.NewInt(1000000000),
 				GasTipCap: big.NewInt(100000000),
 			}
 		} else {
 			txData = &types.LegacyTx{
-				Value:    sendAmount,
-				To:       &recipient,
-				Gas:      21000,
-				Nonce:    nonce,
+				BaseTx: &types.BaseTx{
+					Value: sendAmount,
+					To:    &recipient,
+					Gas:   21000,
+					Nonce: nonce,
+				},
 				GasPrice: ethgo.Gwei(2),
 			}
 		}

@@ -445,8 +445,10 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	require.NoError(t, err)
 
 	tx := types.NewTx(&types.DynamicFeeTx{
-		To:    &contracts.NativeERC20TokenContract,
-		Input: mintInput,
+		BaseTx: &types.BaseTx{
+			To:    &contracts.NativeERC20TokenContract,
+			Input: mintInput,
+		},
 	})
 
 	receipt, err := relayer.SendTransaction(tx, minter)
@@ -468,8 +470,10 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	require.NoError(t, err)
 
 	tx = types.NewTx(&types.DynamicFeeTx{
-		To:    &contracts.NativeERC20TokenContract,
-		Input: mintInput,
+		BaseTx: &types.BaseTx{
+			To:    &contracts.NativeERC20TokenContract,
+			Input: mintInput,
+		},
 	})
 
 	receipt, err = relayer.SendTransaction(tx, nonMinterAcc.Ecdsa)
@@ -554,17 +558,21 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 
 	txns := []*types.Transaction{
 		types.NewTx(&types.LegacyTx{
-			Value:    sendAmount,
-			To:       &recipient,
-			Gas:      21000,
-			Nonce:    uint64(0),
+			BaseTx: &types.BaseTx{
+				Value: sendAmount,
+				To:    &recipient,
+				Gas:   21000,
+				Nonce: uint64(0),
+			},
 			GasPrice: ethgo.Gwei(1),
 		}),
 		types.NewTx(&types.DynamicFeeTx{
-			Value:     sendAmount,
-			To:        &recipient,
-			Gas:       21000,
-			Nonce:     uint64(0),
+			BaseTx: &types.BaseTx{
+				Value: sendAmount,
+				To:    &recipient,
+				Gas:   21000,
+				Nonce: uint64(0),
+			},
 			GasFeeCap: ethgo.Gwei(1),
 			GasTipCap: ethgo.Gwei(1),
 		}),
@@ -763,7 +771,11 @@ func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 
 	// deploy Wrapper contract
 	receipt, err := txRelayer.SendTransaction(
-		types.NewTx(&types.LegacyTx{Input: contractsapi.Wrapper.Bytecode}),
+		types.NewTx(&types.LegacyTx{
+			BaseTx: &types.BaseTx{
+				Input: contractsapi.Wrapper.Bytecode,
+			},
+		}),
 		admin)
 	require.NoError(t, err)
 
@@ -790,9 +802,11 @@ func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 	require.NoError(t, err)
 
 	txn := types.NewTx(&types.LegacyTx{
-		From:  admin.Address(),
-		To:    &wrapperAddr,
-		Input: setValueInput,
+		BaseTx: &types.BaseTx{
+			From:  admin.Address(),
+			To:    &wrapperAddr,
+			Input: setValueInput,
+		},
 	})
 
 	receipt, err = txRelayer.SendTransaction(txn, admin)

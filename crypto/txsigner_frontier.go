@@ -95,7 +95,8 @@ func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Pr
 }
 
 // signTxInternal takes the original transaction as input and returns its signed version
-func (signer *FrontierSigner) signTxInternal(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
+func (signer *FrontierSigner) signTxInternal(tx *types.Transaction,
+	privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}

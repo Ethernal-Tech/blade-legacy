@@ -338,8 +338,10 @@ func sendQueueProposalTransaction(t *testing.T,
 	require.NoError(t, err)
 
 	txn := types.NewTx(&types.LegacyTx{
-		To:    &childGovernorAddr,
-		Input: input,
+		BaseTx: &types.BaseTx{
+			To:    &childGovernorAddr,
+			Input: input,
+		},
 	})
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
@@ -364,8 +366,10 @@ func sendExecuteProposalTransaction(t *testing.T,
 	require.NoError(t, err)
 
 	txn := types.NewTx(&types.LegacyTx{
-		To:    &childGovernorAddr,
-		Input: input,
+		BaseTx: &types.BaseTx{
+			To:    &childGovernorAddr,
+			Input: input,
+		},
 	})
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
@@ -387,8 +391,10 @@ func sendVoteTransaction(t *testing.T, proposalID *big.Int, vote VoteType,
 	require.NoError(t, err)
 
 	txn := types.NewTx(&types.LegacyTx{
-		To:    &childGovernorAddr,
-		Input: input,
+		BaseTx: &types.BaseTx{
+			To:    &childGovernorAddr,
+			Input: input,
+		},
 	})
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
@@ -413,8 +419,10 @@ func sendProposalTransaction(t *testing.T, txRelayer txrelayer.TxRelayer,
 	require.NoError(t, err)
 
 	txn := types.NewTx(&types.LegacyTx{
-		To:    &childGovernorAddr,
-		Input: input,
+		BaseTx: &types.BaseTx{
+			To:    &childGovernorAddr,
+			Input: input,
+		},
 	})
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)

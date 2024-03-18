@@ -216,8 +216,10 @@ func (c *checkpointManager) encodeAndSendCheckpoint(header *types.Header, extra 
 	}
 
 	txn := types.NewTx(&types.DynamicFeeTx{
-		To:    &c.checkpointManagerAddr,
-		Input: input,
+		BaseTx: &types.BaseTx{
+			To:    &c.checkpointManagerAddr,
+			Input: input,
+		},
 	})
 
 	receipt, err := c.rootChainRelayer.SendTransaction(txn, c.key)
