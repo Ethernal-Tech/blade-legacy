@@ -40,7 +40,7 @@ func TestCheckpointManager_SubmitCheckpoint(t *testing.T) {
 	t.Run("submit checkpoint happy path", func(t *testing.T) {
 		t.Parallel()
 
-		var aliases = []string{"A", "B", "C", "D", "E"}
+		aliases := []string{"A", "B", "C", "D", "E"}
 
 		validators := validator.NewTestValidatorsWithAliases(t, aliases)
 		validatorsMetadata := validators.GetPublicIdentities()
@@ -387,7 +387,7 @@ func TestCheckpointManager_GenerateExitProof(t *testing.T) {
 	require.NoError(t, err)
 
 	dummyTxRelayer := newDummyTxRelayer(t)
-	dummyTxRelayer.On("Call", ethgo.ZeroAddress, ethgo.ZeroAddress, input).
+	dummyTxRelayer.On("Call", types.ZeroAddress, types.ZeroAddress, input).
 		Return(hex.EncodeToString(foundCheckpointReturn), error(nil))
 
 	// create checkpoint manager and insert exit events
@@ -454,7 +454,7 @@ func TestCheckpointManager_GenerateExitProof(t *testing.T) {
 		inputTwo, err := getCheckpointBlockFn.EncodeAbi()
 		require.NoError(t, err)
 
-		dummyTxRelayer.On("Call", ethgo.ZeroAddress, ethgo.ZeroAddress, inputTwo).
+		dummyTxRelayer.On("Call", types.ZeroAddress, types.ZeroAddress, inputTwo).
 			Return(hex.EncodeToString(notFoundCheckpointReturn), error(nil))
 
 		_, err = checkpointMgr.GenerateExitProof(futureBlockToGetExit)
