@@ -89,14 +89,13 @@ func (signer *FrontierSigner) sender(tx *types.Transaction, isHomestead bool) (t
 	return recoverAddress(signer.Hash(tx), r, s, parity, isHomestead)
 }
 
-// SingTx takes the original transaction as input and returns its signed version
+// SignTx takes the original transaction as input and returns its signed version
 func (signer *FrontierSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
-	return signer.signTx(tx, privateKey, nil)
+	return signer.signTxInternal(tx, privateKey)
 }
 
-// SingTx takes the original transaction as input and returns its signed version
-func (signer *FrontierSigner) signTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey,
-	validateFn func(v, r, s *big.Int) error) (*types.Transaction, error) {
+// signTxInternal takes the original transaction as input and returns its signed version
+func (signer *FrontierSigner) signTxInternal(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
@@ -109,7 +108,7 @@ func (signer *FrontierSigner) signTx(tx *types.Transaction, privateKey *ecdsa.Pr
 		return nil, err
 	}
 
-	tx.SplitToRawSignatureValues(sig, f.calculateV(sig[64]))
+	tx.SplitToRawSignatureValues(signature, signer.calculateV(signature[64]))
 
 	return tx, nil
 }

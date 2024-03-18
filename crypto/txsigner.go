@@ -29,8 +29,8 @@ type TxSigner interface {
 	// Sender returns the sender of the transaction
 	Sender(*types.Transaction) (types.Address, error)
 
-	// SignTx signs a transaction
-	SignTx(tx *types.Transaction, priv *ecdsa.PrivateKey) (*types.Transaction, error)
+	// SignTx takes the original transaction as input and returns its signed version
+	SignTx(*types.Transaction, *ecdsa.PrivateKey) (*types.Transaction, error)
 
 	// SignTxWithCallback signs a transaction by using a custom callback
 	SignTxWithCallback(tx *types.Transaction,

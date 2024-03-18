@@ -118,14 +118,13 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 	return recoverAddress(signer.Hash(tx), r, s, bigV, true)
 }
 
-// SingTx takes the original transaction as input and returns its signed version
+// SignTx takes the original transaction as input and returns its signed version
 func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
 
 	tx = tx.Copy()
-
 	hash := signer.Hash(tx)
 
 	signature, err := Sign(privateKey, hash[:])

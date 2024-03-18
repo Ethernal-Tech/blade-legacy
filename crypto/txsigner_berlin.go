@@ -113,7 +113,7 @@ func (signer *BerlinSigner) Sender(tx *types.Transaction) (types.Address, error)
 	return recoverAddress(signer.Hash(tx), r, s, v, true)
 }
 
-// SingTx takes the original transaction as input and returns its signed version
+// SignTx takes the original transaction as input and returns its signed version
 func (signer *BerlinSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.PrivateKey) (*types.Transaction, error) {
 	if tx.Type() == types.DynamicFeeTxType {
 		return nil, types.ErrTxTypeNotSupported
@@ -124,7 +124,6 @@ func (signer *BerlinSigner) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 	}
 
 	tx = tx.Copy()
-
 	h := signer.Hash(tx)
 
 	sig, err := Sign(privateKey, h[:])
