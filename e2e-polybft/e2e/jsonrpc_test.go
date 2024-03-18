@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -76,11 +75,11 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
-		acctZeroBalance, err := wallet.GenerateKey()
+		acctZeroBalance, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		resp, err := client.Call(&ethgo.CallMsg{
-			From: acctZeroBalance.Address(),
+			From: ethgo.Address(acctZeroBalance.Address()),
 			To:   &target,
 			Data: input,
 		}, ethgo.Latest)
@@ -114,11 +113,11 @@ func TestE2E_JsonRPC(t *testing.T) {
 		target := deployTxn.Receipt().ContractAddress
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
-		acctZeroBalance, err := wallet.GenerateKey()
+		acctZeroBalance, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		resp, err := client.EstimateGas(&ethgo.CallMsg{
-			From: acctZeroBalance.Address(),
+			From: ethgo.Address(acctZeroBalance.Address()),
 			To:   &target,
 			Data: input,
 		})
@@ -246,7 +245,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getStorageAt", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		txn := cluster.Transfer(t, senderKey, types.Address(key1.Address()), one)
@@ -331,7 +330,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getBlockByHash", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 		txn := cluster.Transfer(t, senderKey, types.Address(key1.Address()), one)
 		require.NoError(t, txn.Wait())
@@ -345,7 +344,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getBlockByNumber", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 		txn := cluster.Transfer(t, senderKey, types.Address(key1.Address()), one)
 		require.NoError(t, txn.Wait())
@@ -359,7 +358,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionReceipt", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 		txn := cluster.Transfer(t, senderKey, types.Address(key1.Address()), one)
 		require.NoError(t, txn.Wait())
@@ -391,7 +390,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionByHash", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		// Test. We should be able to query the transaction by its hash
@@ -407,11 +406,11 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("debug_traceTransaction", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		// Test. We should be able to query the transaction by its hash
-		txn := cluster.Transfer(t, senderKey, types.Address(key1.Address()), one)
+		txn := cluster.Transfer(t, senderKey, key1.Address(), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 

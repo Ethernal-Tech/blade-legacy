@@ -11,7 +11,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/state/runtime/addresslist"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 // Contract used as bytecode
@@ -368,9 +367,9 @@ func TestE2E_AddressLists_Bridge(t *testing.T) {
 	// create two accounts, one for an admin sender and a second
 	// one for a non-enabled account that will switch on-off between
 	// both enabled and non-enabled roles.
-	admin, _ := wallet.GenerateKey()
-	target, _ := wallet.GenerateKey()
-	other, _ := wallet.GenerateKey()
+	admin, _ := crypto.GenerateECDSAKey()
+	target, _ := crypto.GenerateECDSAKey()
+	other, _ := crypto.GenerateECDSAKey()
 
 	adminAddr := types.Address(admin.Address())
 	targetAddr := types.Address(target.Address())

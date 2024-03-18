@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/wallet"
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
@@ -54,7 +53,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	receiverKeys := make([]string, transfersCount)
 
 	for i := 0; i < transfersCount; i++ {
-		key, err := wallet.GenerateKey()
+		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		rawKey, err := key.MarshallPrivateKey()
@@ -299,7 +298,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	tokenIDs := make([]string, transfersCount)
 
 	for i := 0; i < transfersCount; i++ {
-		key, err := wallet.GenerateKey()
+		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		rawKey, err := key.MarshallPrivateKey()
@@ -469,7 +468,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	tokenIDs := make([]string, transfersCount)
 
 	for i := 0; i < transfersCount; i++ {
-		key, err := wallet.GenerateKey()
+		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		rawKey, err := key.MarshallPrivateKey()
@@ -679,7 +678,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	adminAddr := types.Address(admin.Address())
 
 	for i := uint64(0); i < transfersCount; i++ {
-		key, err := wallet.GenerateKey()
+		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		rawKey, err := key.MarshallPrivateKey()
@@ -1257,13 +1256,13 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		bigZero               = big.NewInt(0)
 	)
 
-	nonValidatorKey, err := wallet.GenerateKey()
+	nonValidatorKey, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	nonValidatorKeyRaw, err := nonValidatorKey.MarshallPrivateKey()
 	require.NoError(t, err)
 
-	rewardWalletKey, err := wallet.GenerateKey()
+	rewardWalletKey, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	rewardWalletKeyRaw, err := rewardWalletKey.MarshallPrivateKey()
@@ -1388,7 +1387,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, err)
 
 		nonValidatorBalanceAfterWithdraw, err := childEthEndpoint.GetBalance(
-			nonValidatorKey.Address(), ethgo.Latest)
+			ethgo.Address(nonValidatorKey.Address()), ethgo.Latest)
 		require.NoError(t, err)
 
 		currentBlock, err := childEthEndpoint.GetBlockByNumber(ethgo.Latest, false)

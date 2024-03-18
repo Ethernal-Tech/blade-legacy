@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -22,7 +21,7 @@ import (
 
 func TestE2E_TxPool_Transfer(t *testing.T) {
 	// premine an account in the genesis file
-	sender, err := wallet.GenerateKey()
+	sender, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 5,
@@ -41,10 +40,10 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 	receivers := []ethgo.Address{}
 
 	for i := 0; i < num; i++ {
-		key, err := wallet.GenerateKey()
+		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		receivers = append(receivers, key.Address())
+		receivers = append(receivers, ethgo.Address(key.Address()))
 	}
 
 	var wg sync.WaitGroup
@@ -54,22 +53,22 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 		go func(i int, to ethgo.Address) {
 			defer wg.Done()
 
-			txn := &ethgo.Transaction{
+			txn := types.NewTx(&types.MixedTxn{
 				From:  sender.Address(),
-				To:    &to,
+				To:    (*types.Address)(&to),
 				Gas:   30000, // enough to send a transfer
 				Value: big.NewInt(int64(sendAmount)),
 				Nonce: uint64(i),
-			}
+			})
 
 			// Send every second transaction as a dynamic fees one
 			if i%2 == 0 {
-				txn.Type = ethgo.TransactionDynamicFee
-				txn.MaxFeePerGas = big.NewInt(1000000000)
-				txn.MaxPriorityFeePerGas = big.NewInt(100000000)
+				txn.SetTransactionType(types.DynamicFeeTx)
+				txn.SetGasFeeCap(big.NewInt(1000000000))
+				txn.SetGasTipCap(big.NewInt(100000000))
 			} else {
-				txn.Type = ethgo.TransactionLegacy
-				txn.GasPrice = ethgo.Gwei(2).Uint64()
+				txn.SetTransactionType(types.LegacyTx)
+				txn.SetGasPrice(ethgo.Gwei(2))
 			}
 
 			sendTransaction(t, client, sender, txn)
@@ -97,7 +96,7 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 
 // First account send some amount to second one and then second one to third account
 func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
-	premine, err := wallet.GenerateKey()
+	premine, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	// first account should have some matics premined
@@ -124,24 +123,24 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 		return err
 	}
 
-	populateTxFees := func(txn *ethgo.Transaction, i int) {
+	populateTxFees := func(txn *types.Transaction, i int) {
 		if i%2 == 0 {
-			txn.Type = ethgo.TransactionDynamicFee
-			txn.MaxFeePerGas = big.NewInt(1000000000)
-			txn.MaxPriorityFeePerGas = big.NewInt(1000000000)
+			txn.SetTransactionType(types.DynamicFeeTx)
+			txn.SetGasFeeCap(big.NewInt(1000000000))
+			txn.SetGasTipCap(big.NewInt(1000000000))
 		} else {
-			txn.Type = ethgo.TransactionLegacy
-			txn.GasPrice = ethgo.Gwei(1).Uint64()
+			txn.SetTransactionType(types.LegacyTx)
+			txn.SetGasPrice(ethgo.Gwei(1))
 		}
 	}
 
 	num := 4
-	receivers := []*wallet.Key{
+	receivers := []crypto.Key{
 		premine,
 	}
 
 	for i := 0; i < num-1; i++ {
-		key, err := wallet.GenerateKey()
+		key, err := crypto.GenerateECDSAKey()
 		assert.NoError(t, err)
 
 		receivers = append(receivers, key)
@@ -159,27 +158,28 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 		// This means that since gasCost and sendAmount are fixed, account C must receive gasCost * 2
 		// (to cover two more transfers C->D and D->E) + sendAmount * 3 (one bundle for each C,D and E).
 		recipient := receivers[i].Address()
-		txn := &ethgo.Transaction{
+
+		txn := types.NewTx(&types.MixedTxn{
 			Value: big.NewInt(int64(sendAmount * (num - i))),
 			To:    &recipient,
 			Gas:   21000,
-		}
+		})
 
 		// Populate fees fields for the current transaction
 		populateTxFees(txn, i-1)
 
 		// Add remaining fees to finish the cycle
 		gasCostTotal := new(big.Int).Mul(txCost(txn), new(big.Int).SetInt64(int64(num-i-1)))
-		txn.Value = txn.Value.Add(txn.Value, gasCostTotal)
+		txn.SetValue(txn.Value().Add(txn.Value(), gasCostTotal))
 
 		sendTransaction(t, client, receivers[i-1], txn)
 
-		err := waitUntilBalancesChanged(receivers[i].Address())
+		err := waitUntilBalancesChanged(ethgo.Address(receivers[i].Address()))
 		require.NoError(t, err)
 	}
 
 	for i := 1; i < num; i++ {
-		balance, err := client.GetBalance(receivers[i].Address(), ethgo.Latest)
+		balance, err := client.GetBalance(ethgo.Address(receivers[i].Address()), ethgo.Latest)
 		require.NoError(t, err)
 		require.Equal(t, uint64(sendAmount), balance.Uint64())
 	}
@@ -224,7 +224,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	)
 
 	// Create recipient key
-	key, err := wallet.GenerateKey()
+	key, err := crypto.GenerateECDSAKey()
 	assert.NoError(t, err)
 
 	recipient := key.Address()
@@ -232,7 +232,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	t.Logf("Recipient %s\n", recipient)
 
 	// Create pre-mined balance for sender
-	sender, err := wallet.GenerateKey()
+	sender, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	// First account should have some matics premined
@@ -251,31 +251,31 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	nonce := uint64(0)
 
 	for i := 0; i < txNum; i++ {
-		txn := &ethgo.Transaction{
+		txn := types.NewTx(&types.MixedTxn{
 			Value: sendAmount,
 			To:    &recipient,
 			Gas:   21000,
 			Nonce: nonce,
-		}
+		})
 
 		if i%2 == 0 {
-			txn.Type = ethgo.TransactionDynamicFee
-			txn.MaxFeePerGas = big.NewInt(1000000000)
-			txn.MaxPriorityFeePerGas = big.NewInt(100000000)
+			txn.SetTransactionType(types.DynamicFeeTx)
+			txn.SetGasFeeCap(big.NewInt(1000000000))
+			txn.SetGasTipCap(big.NewInt(100000000))
 		} else {
-			txn.Type = ethgo.TransactionLegacy
-			txn.GasPrice = ethgo.Gwei(2).Uint64()
+			txn.SetTransactionType(types.LegacyTx)
+			txn.SetGasPrice(ethgo.Gwei(2))
 		}
 
 		sendTransaction(t, client, sender, txn)
-		sentAmount = sentAmount.Add(sentAmount, txn.Value)
+		sentAmount = sentAmount.Add(sentAmount, txn.Value())
 		nonce++
 	}
 
 	// Wait until the balance has changed on all nodes in the cluster
 	err = cluster.WaitUntil(time.Minute, time.Second*3, func() bool {
 		for _, srv := range cluster.Servers {
-			balance, err := srv.WaitForNonZeroBalance(recipient, time.Second*10)
+			balance, err := srv.WaitForNonZeroBalance(ethgo.Address(recipient), time.Second*10)
 			assert.NoError(t, err)
 			if balance != nil && balance.BitLen() > 0 {
 				assert.Equal(t, sentAmount, balance)
@@ -290,35 +290,40 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 }
 
 // sendTransaction is a helper function which signs transaction with provided private key and sends it
-func sendTransaction(t *testing.T, client *jsonrpc.Eth, sender *wallet.Key, txn *ethgo.Transaction) {
+func sendTransaction(t *testing.T, client *jsonrpc.Eth, sender crypto.Key, txn *types.Transaction) {
 	t.Helper()
 
 	chainID, err := client.ChainID()
 	require.NoError(t, err)
 
-	if txn.Type == ethgo.TransactionDynamicFee {
-		txn.ChainID = chainID
+	if txn.Type() == types.DynamicFeeTx {
+		txn.SetChainID(chainID)
 	}
 
-	signer := wallet.NewEIP155Signer(chainID.Uint64())
-	signedTxn, err := signer.SignTx(txn, sender)
+	signer := crypto.NewLondonOrBerlinSigner(chainID.Uint64(), true,
+		crypto.NewEIP155Signer(chainID.Uint64(), true))
+
+	signedTxn, err := signer.SignTxWithCallback(txn,
+		func(hash types.Hash) (sig []byte, err error) {
+			return sender.Sign(hash[:])
+		})
 	require.NoError(t, err)
 
-	txnRaw, err := signedTxn.MarshalRLPTo(nil)
+	txnRlp := signedTxn.MarshalRLPTo(nil)
 	require.NoError(t, err)
 
-	_, err = client.SendRawTransaction(txnRaw)
+	_, err = client.SendRawTransaction(txnRlp)
 	require.NoError(t, err)
 }
 
-func txCost(t *ethgo.Transaction) *big.Int {
+func txCost(t *types.Transaction) *big.Int {
 	var factor *big.Int
 
-	if t.Type == ethgo.TransactionDynamicFee {
-		factor = new(big.Int).Set(t.MaxFeePerGas)
+	if t.Type() == types.DynamicFeeTx {
+		factor = new(big.Int).Set(t.GasFeeCap())
 	} else {
-		factor = new(big.Int).SetUint64(t.GasPrice)
+		factor = new(big.Int).Set(t.GasPrice())
 	}
 
-	return new(big.Int).Mul(factor, new(big.Int).SetUint64(t.Gas))
+	return new(big.Int).Mul(factor, new(big.Int).SetUint64(t.Gas()))
 }

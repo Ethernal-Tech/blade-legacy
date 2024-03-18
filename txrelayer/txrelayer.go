@@ -301,11 +301,13 @@ func ConvertTxnToCallMsg(txn *types.Transaction) *ethgo.CallMsg {
 // convertTxn converts transaction from types.Transaction to ethgo.Transaction
 func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 	v, r, s := tx.RawSignatureValues()
-	accessList := make(ethgo.AccessList, 0)
+
 	gasPrice := uint64(0)
 	if tx.GasPrice() != nil {
 		gasPrice = tx.GasPrice().Uint64()
 	}
+
+	accessList := make(ethgo.AccessList, 0)
 
 	for _, e := range tx.AccessList() {
 		storageKeys := make([]ethgo.Hash, 0)
