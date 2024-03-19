@@ -129,9 +129,38 @@ const (
 
 type BlockNumber int64
 
+// String returns the string representation of the block number
+func (b *BlockNumber) String() string {
+	blockNumber := *b
+
+	switch blockNumber {
+	case PendingBlockNumber:
+		return pending
+	case LatestBlockNumber:
+		return latest
+	case EarliestBlockNumber:
+		return earliest
+	}
+
+	if *b < 0 {
+		panic("internal. blocknumber is negative") //nolint:gocritic
+	}
+
+	return fmt.Sprintf("0x%x", uint64(*b))
+}
+
 type BlockNumberOrHash struct {
 	BlockNumber *BlockNumber `json:"blockNumber,omitempty"`
 	BlockHash   *types.Hash  `json:"blockHash,omitempty"`
+}
+
+// String returns the string representation of the block number or hash
+func (b BlockNumberOrHash) String() string {
+	if b.BlockNumber != nil {
+		return b.BlockNumber.String()
+	}
+
+	return b.BlockHash.String()
 }
 
 // UnmarshalJSON will try to extract the filter's data.

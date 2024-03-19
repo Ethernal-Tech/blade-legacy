@@ -7,6 +7,7 @@ import (
 	"math/big"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/valyala/fastjson"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/gasprice"
@@ -16,6 +17,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
 )
+
+var defaultArena fastjson.ArenaPool
 
 type ethTxPoolStore interface {
 	// AddTx adds a new transaction to the tx pool
@@ -448,7 +451,7 @@ func (e *Eth) fillTransactionGasPrice(tx *types.Transaction) error {
 	return nil
 }
 
-type overrideAccount struct {
+type OverrideAccount struct {
 	Nonce     *argUint64                 `json:"nonce"`
 	Code      *argBytes                  `json:"code"`
 	Balance   *argUint64                 `json:"balance"`
@@ -456,7 +459,7 @@ type overrideAccount struct {
 	StateDiff *map[types.Hash]types.Hash `json:"stateDiff"`
 }
 
-func (o *overrideAccount) ToType() types.OverrideAccount {
+func (o *OverrideAccount) ToType() types.OverrideAccount {
 	res := types.OverrideAccount{}
 
 	if o.Nonce != nil {
@@ -483,10 +486,56 @@ func (o *overrideAccount) ToType() types.OverrideAccount {
 }
 
 // StateOverride is the collection of overridden accounts.
-type stateOverride map[types.Address]overrideAccount
+type StateOverride map[types.Address]OverrideAccount
+
+func (s StateOverride) MarshalJSON() ([]byte, error) {
+	a := defaultArena.Get()
+	defer a.Reset()
+
+	o := a.NewObject()
+	for addr, obj := range s {
+		oo := a.NewObject()
+		if obj.Nonce != nil {
+			oo.Set("nonce", a.NewString(fmt.Sprintf("0x%x", *obj.Nonce)))
+		}
+
+		if obj.Balance != nil {
+			oo.Set("balance", a.NewString(fmt.Sprintf("0x%x", obj.Balance)))
+		}
+
+		if obj.Code != nil {
+			oo.Set("code", a.NewString("0x"+hex.EncodeToString(*obj.Code)))
+		}
+
+		if obj.State != nil {
+			ooo := a.NewObject()
+			for k, v := range *obj.State {
+				ooo.Set(k.String(), a.NewString(v.String()))
+			}
+
+			oo.Set("state", ooo)
+		}
+
+		if obj.StateDiff != nil {
+			ooo := a.NewObject()
+			for k, v := range *obj.StateDiff {
+				ooo.Set(k.String(), a.NewString(v.String()))
+			}
+
+			oo.Set("stateDiff", ooo)
+		}
+
+		o.Set(addr.String(), oo)
+	}
+
+	res := o.MarshalTo(nil)
+	defaultArena.Put(a)
+
+	return res, nil
+}
 
 // Call executes a smart contract call using the transaction object data
-func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *stateOverride) (interface{}, error) {
+func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *StateOverride) (interface{}, error) {
 	header, err := GetHeaderFromBlockNumberOrHash(filter, e.store)
 	if err != nil {
 		return nil, err
