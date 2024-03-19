@@ -109,7 +109,7 @@ func opMod(c *state) {
 	a := c.pop()
 	b := c.top()
 
-	b = b.Mod(&a, b)
+	b.Mod(&a, b)
 }
 
 func opSMod(c *state) {
