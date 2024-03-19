@@ -1,10 +1,12 @@
 package evm
 
 import (
+	"math/big"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/holiman/uint256"
+	"github.com/stretchr/testify/assert"
 )
 
 type (
@@ -230,4 +232,69 @@ func BenchmarkInstruction_opSgt(b *testing.B) {
 	op2 := uint256.NewInt(9223372036854775807)
 
 	operationBenchmark(b, s, opSgt, *op1, *op2)
+}
+
+func GetLarge256bitUint() uint256.Int {
+	hexStr := "0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"
+
+	bigInt := new(big.Int)
+	bigInt.SetString(hexStr, 16)
+
+	return *uint256.MustFromBig(bigInt)
+}
+
+func TestGenericWriteToSlice32(t *testing.T) {
+
+	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+
+	var destination [32]byte
+
+	value := GetLarge256bitUint()
+
+	WriteToSlice32(value, destination[:])
+
+	assert.Equal(t, expectedDestinationSlice, destination)
+}
+
+func TestGenericWriteToSlice(t *testing.T) {
+
+	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+
+	var destination [32]byte
+
+	value := GetLarge256bitUint()
+
+	WriteToSlice(value, destination[:])
+
+	assert.Equal(t, expectedDestinationSlice, destination)
+}
+
+func BenchmarkUint256WriteToSlice(b *testing.B) {
+	value := GetLarge256bitUint()
+	var destination [32]byte
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		value.WriteToSlice(destination[:])
+	}
+}
+
+func BenchmarkStaticUnrolledWriteToSlice(b *testing.B) {
+	value := GetLarge256bitUint()
+	var destination [32]byte
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		WriteToSlice32(value, destination[:])
+	}
+}
+
+func BenchmarkGenericStaticUnrolledWriteToSlice(b *testing.B) {
+	value := GetLarge256bitUint()
+	var destination [32]byte
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		WriteToSlice(value, destination[:])
+	}
 }

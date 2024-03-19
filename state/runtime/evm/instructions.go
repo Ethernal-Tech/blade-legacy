@@ -70,6 +70,53 @@ func (c *state) calculateGasForEIP2929(addr types.Address) uint64 {
 	return gas
 }
 
+// Generic WriteToSlice function that calls optimized function when
+// applicable or generic one.
+func WriteToSlice(z uint256.Int, dest []byte) {
+	if len(dest) == 32 {
+		WriteToSlice32(z, dest)
+	} else {
+		z.WriteToSlice(dest)
+	}
+}
+
+// Optimized write to slice when destination size is 32 bytes. This way
+// the CPU does not execute code in loop achieving greater paralelization
+func WriteToSlice32(z uint256.Int, dest []byte) {
+	dest[31] = byte(z[0] >> uint64(8*0))
+	dest[30] = byte(z[0] >> uint64(8*1))
+	dest[29] = byte(z[0] >> uint64(8*2))
+	dest[28] = byte(z[0] >> uint64(8*3))
+	dest[27] = byte(z[0] >> uint64(8*4))
+	dest[26] = byte(z[0] >> uint64(8*5))
+	dest[25] = byte(z[0] >> uint64(8*6))
+	dest[24] = byte(z[0] >> uint64(8*7))
+	dest[23] = byte(z[1] >> uint64(8*0))
+	dest[22] = byte(z[1] >> uint64(8*1))
+	dest[21] = byte(z[1] >> uint64(8*2))
+	dest[20] = byte(z[1] >> uint64(8*3))
+	dest[19] = byte(z[1] >> uint64(8*4))
+	dest[18] = byte(z[1] >> uint64(8*5))
+	dest[17] = byte(z[1] >> uint64(8*6))
+	dest[16] = byte(z[1] >> uint64(8*7))
+	dest[15] = byte(z[2] >> uint64(8*0))
+	dest[14] = byte(z[2] >> uint64(8*1))
+	dest[13] = byte(z[2] >> uint64(8*2))
+	dest[12] = byte(z[2] >> uint64(8*3))
+	dest[11] = byte(z[2] >> uint64(8*4))
+	dest[10] = byte(z[2] >> uint64(8*5))
+	dest[9] = byte(z[2] >> uint64(8*6))
+	dest[8] = byte(z[2] >> uint64(8*7))
+	dest[7] = byte(z[3] >> uint64(8*0))
+	dest[6] = byte(z[3] >> uint64(8*1))
+	dest[5] = byte(z[3] >> uint64(8*2))
+	dest[4] = byte(z[3] >> uint64(8*3))
+	dest[3] = byte(z[3] >> uint64(8*4))
+	dest[2] = byte(z[3] >> uint64(8*5))
+	dest[1] = byte(z[3] >> uint64(8*6))
+	dest[0] = byte(z[3] >> uint64(8*7))
+}
+
 func opAdd(c *state) {
 	a := c.pop()
 	b := c.top()
@@ -151,7 +198,7 @@ func opMulMod(c *state) {
 	b := c.pop()
 	z := c.top()
 
-	z = z.MulMod(&a, &b, z)
+	z.MulMod(&a, &b, z)
 }
 
 func opAnd(c *state) {
@@ -179,7 +226,7 @@ func opByte(c *state) {
 	x := c.pop()
 	y := c.top()
 
-	y = y.Byte(&x)
+	y.Byte(&x)
 }
 
 func opNot(c *state) {
@@ -340,7 +387,7 @@ func opMStore(c *state) {
 
 	o := offset.Uint64()
 
-	val.WriteToSlice(c.memory[o : o+32])
+	WriteToSlice(val, c.memory[o:o+32])
 }
 
 func opMStore8(c *state) {
