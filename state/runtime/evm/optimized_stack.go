@@ -10,7 +10,6 @@ import (
 // to keep track of the current stack pointer.
 // OptimizedStack uint256 integers for improved operations on values on the
 // stack and minimizes heap allocations.
-// TODO: Check if sp field can be removed.
 type OptimizedStack struct {
 	sp   int           // Stack pointer to track the top of the stack
 	data []uint256.Int // Slice to store the stack's elements
@@ -61,14 +60,12 @@ func (s *OptimizedStack) top() (*uint256.Int, error) {
 // peekAt returns the element at the nth position from the top of the stack,
 // without modifying the stack. It does not perform bounds checking and it
 // returns the value of the element, not the reference.
-// TODO: Check on error handling
 func (s *OptimizedStack) peekAt(n int) uint256.Int {
 	return s.data[s.sp-n]
 }
 
 // swap exchanges the top element of the stack with the element at the n-th position
 // from the top. It does not perform bounds checking and assumes valid input.
-// TODO: Check on error handling
 func (s *OptimizedStack) swap(n int) {
 	s.data[s.sp-1], s.data[s.sp-n-1] = s.data[s.sp-n-1], s.data[s.sp-1]
 }

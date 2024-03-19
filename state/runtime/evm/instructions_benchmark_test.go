@@ -244,7 +244,6 @@ func GetLarge256bitUint() uint256.Int {
 }
 
 func TestGenericWriteToSlice32(t *testing.T) {
-
 	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
 
 	var destination [32]byte
@@ -257,7 +256,6 @@ func TestGenericWriteToSlice32(t *testing.T) {
 }
 
 func TestGenericWriteToSlice(t *testing.T) {
-
 	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
 
 	var destination [32]byte
@@ -271,9 +269,11 @@ func TestGenericWriteToSlice(t *testing.T) {
 
 func BenchmarkUint256WriteToSlice(b *testing.B) {
 	value := GetLarge256bitUint()
+
 	var destination [32]byte
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		value.WriteToSlice(destination[:])
 	}
@@ -281,9 +281,11 @@ func BenchmarkUint256WriteToSlice(b *testing.B) {
 
 func BenchmarkStaticUnrolledWriteToSlice(b *testing.B) {
 	value := GetLarge256bitUint()
+
 	var destination [32]byte
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		WriteToSlice32(value, destination[:])
 	}
@@ -291,9 +293,11 @@ func BenchmarkStaticUnrolledWriteToSlice(b *testing.B) {
 
 func BenchmarkGenericStaticUnrolledWriteToSlice(b *testing.B) {
 	value := GetLarge256bitUint()
+
 	var destination [32]byte
 
 	b.ResetTimer()
+
 	for i := 0; i < b.N; i++ {
 		WriteToSlice(value, destination[:])
 	}
