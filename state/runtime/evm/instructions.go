@@ -135,7 +135,7 @@ func opExp(c *state) {
 		return
 	}
 
-	y = y.Exp(&x, y)
+	y.Exp(&x, y)
 }
 
 func opAddMod(c *state) {
@@ -143,11 +143,7 @@ func opAddMod(c *state) {
 	b := c.pop()
 	z := c.top()
 
-	if z.IsZero() {
-		z.SetUint64(0)
-	} else {
-		z.AddMod(&a, &b, z)
-	}
+	z.AddMod(&a, &b, z)
 }
 
 func opMulMod(c *state) {
@@ -155,12 +151,7 @@ func opMulMod(c *state) {
 	b := c.pop()
 	z := c.top()
 
-	if z.IsZero() {
-		// division by zero
-		z.SetUint64(0)
-	} else {
-		z = z.MulMod(&a, &b, z)
-	}
+	z = z.MulMod(&a, &b, z)
 }
 
 func opAnd(c *state) {
@@ -371,10 +362,10 @@ func opSload(c *state) {
 	var gas uint64
 
 	if c.config.Berlin {
-		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, bigToHash(loc.ToBig())); !slotPresent {
+		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, uint256ToHash(loc)); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
 
-			c.host.AddSlotToAccessList(c.msg.Address, bigToHash(loc.ToBig()))
+			c.host.AddSlotToAccessList(c.msg.Address, uint256ToHash(loc))
 		} else {
 			gas = WarmStorageReadCostEIP2929
 		}
@@ -827,7 +818,7 @@ func opCodeCopy(c *state) {
 	}
 }
 
-// block information<
+// block information
 
 func opBlockHash(c *state) {
 	num := c.top()
@@ -966,15 +957,14 @@ func opPush(n int) instruction {
 		ins := c.code
 		ip := c.ip
 
+		d := uint256.NewInt(0)
 		if ip+1+n > len(ins) {
-			d := uint256.NewInt(0)
 			d.SetBytes(append(ins[ip+1:], make([]byte, n)...))
-			c.push(*d)
 		} else {
-			d := uint256.NewInt(0)
 			d.SetBytes(ins[ip+1 : ip+1+n])
-			c.push(*d)
 		}
+
+		c.push(*d)
 
 		c.ip += n
 	}

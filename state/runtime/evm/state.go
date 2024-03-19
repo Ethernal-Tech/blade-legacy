@@ -133,7 +133,6 @@ func (c *state) stackAtLeast(n int) bool {
 
 func (c *state) popHash() types.Hash {
 	v := c.pop()
-	v.Bytes()
 
 	return types.BytesToHash(v.Bytes())
 }
@@ -199,7 +198,6 @@ func (c *state) Run() ([]byte, error) {
 	)
 
 	tracer := c.host.GetTracer()
-	iterationCount := 0
 
 	for !c.stop {
 		op, ok = c.CurrentOpCode()
@@ -253,7 +251,6 @@ func (c *state) Run() ([]byte, error) {
 		}
 
 		c.ip++
-		iterationCount++
 	}
 
 	if err := c.err; err != nil {
@@ -282,7 +279,6 @@ func (c *state) Len() int {
 // allocateMemory allocates memory to enable accessing in the range of [offset, offset+size]
 // throws error if the given offset and size are negative
 // consumes gas if memory needs to be expanded
-// func (c *state) allocateMemory(offset, size *big.Int) bool {
 func (c *state) allocateMemory(offset, size uint256.Int) bool {
 	if !offset.IsUint64() || !size.IsUint64() {
 		c.exit(errReturnDataOutOfBounds)

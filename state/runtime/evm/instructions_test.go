@@ -25,6 +25,11 @@ var (
 	allEnabledForks = chain.AllForksEnabled.At(0)
 )
 
+var (
+	zero256 = *uint256.NewInt(0)
+	one256  = *uint256.NewInt(1)
+)
+
 type OperandsLogical struct {
 	operands       []*big.Int
 	expectedResult bool
@@ -543,8 +548,8 @@ func TestMStore(t *testing.T) {
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(*uint256.NewInt(1)) // value
-	s.push(*offset)            // offset
+	s.push(one256)  // value
+	s.push(*offset) // offset
 
 	opMStore(s)
 
@@ -563,8 +568,8 @@ func TestMStore8(t *testing.T) {
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(*uint256.NewInt(1)) //value
-	s.push(*offsetStore)       //offset
+	s.push(one256)       //value
+	s.push(*offsetStore) //offset
 
 	opMStore8(s)
 
@@ -585,7 +590,7 @@ func TestSload(t *testing.T) {
 		mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		opSload(s)
 		assert.Equal(t, uint64(200), s.gas)
@@ -601,7 +606,7 @@ func TestSload(t *testing.T) {
 		mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		opSload(s)
 		assert.Equal(t, uint64(800), s.gas)
@@ -617,7 +622,7 @@ func TestSload(t *testing.T) {
 		mockHost.On("GetStorage", mock.Anything, mock.Anything).Return(bigToHash(one)).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		opSload(s)
 		assert.Equal(t, uint64(950), s.gas)
@@ -633,7 +638,7 @@ func TestSStore(t *testing.T) {
 		})
 		defer closeFn()
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		opSStore(s)
 		assert.True(t, s.stop)
@@ -653,8 +658,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
-		s.push(*uint256.NewInt(0))
+		s.push(one256)
+		s.push(zero256)
 
 		opSStore(s)
 		assert.Equal(t, uint64(9200), s.gas)
@@ -673,8 +678,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
-		s.push(*uint256.NewInt(0))
+		s.push(one256)
+		s.push(zero256)
 
 		opSStore(s)
 		assert.Equal(t, uint64(5000), s.gas)
@@ -690,8 +695,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
-		s.push(*uint256.NewInt(0))
+		s.push(one256)
+		s.push(zero256)
 
 		opSStore(s)
 		assert.Equal(t, uint64(5000), s.gas)
@@ -710,8 +715,8 @@ func TestSStore(t *testing.T) {
 			mock.Anything, mock.Anything).Return(runtime.StorageDeleted).Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
-		s.push(*uint256.NewInt(0))
+		s.push(one256)
+		s.push(zero256)
 
 		opSStore(s)
 		assert.Equal(t, uint64(5000), s.gas)
@@ -894,7 +899,7 @@ func TestCallDataLoad(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.push(*uint256.NewInt(1))
+	s.push(one256)
 
 	s.msg = &runtime.Contract{Input: big.NewInt(7).Bytes()}
 
@@ -933,7 +938,7 @@ func TestExtCodeSize(t *testing.T) {
 
 		s, cancelFn := getState(&chain.ForksInTime{EIP150: true})
 		defer cancelFn()
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		mockHost := &mockHost{}
 		mockHost.On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once()
@@ -951,7 +956,7 @@ func TestExtCodeSize(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		mockHost := &mockHost{}
 		mockHost.On("GetCodeSize", types.StringToAddress("0x1")).Return(codeSize).Once()
@@ -1017,7 +1022,7 @@ func TestExtCodeHash(t *testing.T) {
 		})
 		defer cancelFn()
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		mockHost := &mockHost{}
 		mockHost.On("Empty", types.StringToAddress("0x1")).Return(false).Once()
@@ -1039,7 +1044,7 @@ func TestExtCodeHash(t *testing.T) {
 		})
 		defer cancelFn()
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		mockHost := &mockHost{}
 		mockHost.On("Empty", mock.Anything).Return(true).Once()
@@ -1055,7 +1060,7 @@ func TestExtCodeHash(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 
-		s.push(*uint256.NewInt(1))
+		s.push(one256)
 
 		mockHost := &mockHost{}
 		mockHost.On("Empty", mock.Anything).Return(true).Once()
@@ -1110,8 +1115,8 @@ func TestExtCodeCopy(t *testing.T) {
 		mockHost.On("GetCode", mock.Anything).Return("0x1").Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
-		s.push(*uint256.NewInt(0))
+		s.push(one256)
+		s.push(zero256)
 		s.push(*uint256.NewInt(31))
 		s.push(*uint256.NewInt(32))
 
@@ -1130,8 +1135,8 @@ func TestExtCodeCopy(t *testing.T) {
 		mockHost.On("GetCode", mock.Anything).Return("0x1").Once()
 		s.host = mockHost
 
-		s.push(*uint256.NewInt(1))
-		s.push(*uint256.NewInt(0))
+		s.push(one256)
+		s.push(zero256)
 		s.push(*uint256.NewInt(31))
 		s.push(*uint256.NewInt(32))
 
@@ -1150,8 +1155,8 @@ func TestCallDataCopy(t *testing.T) {
 
 	s.msg.Input = one.Bytes()
 
-	s.push(*uint256.NewInt(1))
-	s.push(*uint256.NewInt(0))
+	s.push(one256)
+	s.push(zero256)
 	s.push(*uint256.NewInt(31))
 
 	opCallDataCopy(s)
@@ -1166,9 +1171,9 @@ func TestCodeCopyLenZero(t *testing.T) {
 
 	var expectedGas = s.gas
 
-	s.push(*uint256.NewInt(0)) //length
-	s.push(*uint256.NewInt(0)) //dataOffset
-	s.push(*uint256.NewInt(0)) //memOffset
+	s.push(zero256) //length
+	s.push(zero256) //dataOffset
+	s.push(zero256) //memOffset
 
 	opCodeCopy(s)
 
@@ -1181,8 +1186,8 @@ func TestCodeCopy(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.push(*uint256.NewInt(1))  //length
-	s.push(*uint256.NewInt(0))  //dataOffset
+	s.push(one256)              //length
+	s.push(zero256)             //dataOffset
 	s.push(*uint256.NewInt(31)) //memOffset
 
 	s.code = one.Bytes()
@@ -1307,7 +1312,7 @@ func TestSelfDestruct(t *testing.T) {
 	s.msg.Address = types.StringToAddress("0x2")
 
 	s.gas = 100000
-	s.push(*uint256.NewInt(1))
+	s.push(one256)
 
 	mockHost := &mockHost{}
 	mockHost.On("Empty", addr).Return(true).Once()
@@ -1340,7 +1345,7 @@ func TestJumpI(t *testing.T) {
 
 	s.code = make([]byte, 10)
 	s.bitmap = bitmap{big.NewInt(255).Bytes()}
-	s.push(*uint256.NewInt(1))
+	s.push(one256)
 	s.push(*uint256.NewInt(5))
 
 	opJumpi(s)
@@ -2062,9 +2067,9 @@ func Test_opReturnDataCopy(t *testing.T) {
 			initState: &state{
 				stack: OptimizedStack{
 					data: []uint256.Int{
-						*uint256.NewInt(1), // length
-						*uint256.NewInt(0), // dataOffset
-						*uint256.NewInt(0), // memOffset
+						one256,  // length
+						zero256, // dataOffset
+						zero256, // memOffset
 					},
 					sp: 3,
 				},
@@ -2094,8 +2099,8 @@ func Test_opReturnDataCopy(t *testing.T) {
 			initState: &state{
 				stack: OptimizedStack{
 					data: []uint256.Int{
-						*uint256.NewInt(0), // length
-						*uint256.NewInt(0), // dataOffset
+						zero256,            // length
+						zero256,            // dataOffset
 						*uint256.NewInt(4), // memOffset
 					},
 					sp: 3,
@@ -2122,8 +2127,8 @@ func Test_opReturnDataCopy(t *testing.T) {
 				stack: OptimizedStack{
 					data: []uint256.Int{
 						*uint256.NewInt(2), // length
-						*uint256.NewInt(0), // dataOffset
-						*uint256.NewInt(0), // memOffset
+						zero256,            // dataOffset
+						zero256,            // memOffset
 					},
 					sp: 3,
 				},
@@ -2148,9 +2153,9 @@ func Test_opReturnDataCopy(t *testing.T) {
 			initState: &state{
 				stack: OptimizedStack{
 					data: []uint256.Int{
-						*uint256.NewInt(1), // length
-						*uint256.NewInt(0), // dataOffset
-						*uint256.NewInt(0), // memOffset
+						one256,  // length
+						zero256, // dataOffset
+						zero256, // memOffset
 					},
 					sp: 3,
 				},
