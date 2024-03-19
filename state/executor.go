@@ -667,6 +667,8 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 		result = t.Call2(msg.From(), *(msg.To()), msg.Input(), value, gasLeft)
 	}
 
+	result.AccessList = initialAccessList
+
 	refundQuotient := LegacyRefundQuotient
 	if t.config.London {
 		refundQuotient = LondonRefundQuotient

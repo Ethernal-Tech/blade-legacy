@@ -7,6 +7,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
+	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -139,6 +140,38 @@ type block struct {
 	Size         argUint64           `json:"size"`
 	Transactions []transactionOrHash `json:"transactions"`
 	Uncles       []types.Hash        `json:"uncles"`
+}
+
+func toAccessList(aList *runtime.AccessList) types.TxAccessList {
+	convertMapToStorageKeys := func(m map[types.Hash]struct{}) []types.Hash {
+		r := make([]types.Hash, len(m))
+		index := 0
+
+		for key := range m {
+			r[index] = key
+			index++
+		}
+
+		return r
+	}
+
+	if aList == nil {
+		return make(types.TxAccessList, 0)
+	}
+
+	result := make(types.TxAccessList, len(*aList))
+	idx := 0
+
+	for address, item := range *aList {
+		result[idx] = types.AccessTuple{
+			Address:     address,
+			StorageKeys: convertMapToStorageKeys(item),
+		}
+
+		idx++
+	}
+
+	return result
 }
 
 func (b *block) Copy() *block {

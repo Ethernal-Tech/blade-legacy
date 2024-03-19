@@ -430,7 +430,7 @@ func TestEth_GetBlockReceipts(t *testing.T) {
 	assert.Equal(t, block.Hash(), response[1].BlockHash)
 	assert.NotNil(t, response[1].Logs)
 	assert.Len(t, response[1].Logs, 1)
-	assert.Equal(t, uint64(4), uint64(response[1].Logs[0].LogIndex))
+	assert.Equal(t, uint64(3), uint64(response[1].Logs[0].LogIndex))
 	assert.Equal(t, uint64(1), uint64(response[1].Logs[0].TxIndex))
 }
 
@@ -655,43 +655,36 @@ func TestEth_CreateAccessList(t *testing.T) {
 
 	cases := []struct {
 		filter BlockNumberOrHash
-		gas    uint64
 		err    bool
 	}{
 		{
 			// both fields are empty
 			BlockNumberOrHash{},
-			90,
 			true,
 		},
 		{
 			// return the latest block number
 			BlockNumberOrHash{BlockNumber: &latest},
-			90,
 			true,
 		},
 		{
 			// specific real block number
 			BlockNumberOrHash{BlockNumber: &blockNum1},
-			10,
 			true,
 		},
 		{
 			// specific block number (not found)
 			BlockNumberOrHash{BlockNumber: &blockNum2},
-			20,
 			true,
 		},
 		{
 			// specific block by hash (found). By default all blocks in the mock have hash zero
 			BlockNumberOrHash{BlockHash: &types.ZeroHash},
-			0,
 			false,
 		},
 		{
 			// specific block by hash (not found)
 			BlockNumberOrHash{BlockHash: &hashs[8]},
-			80,
 			true,
 		},
 	}
@@ -701,8 +694,6 @@ func TestEth_CreateAccessList(t *testing.T) {
 		if c.err {
 			assert.NoError(t, err)
 			assert.NotNil(t, res)
-			bres := res.(*accessListResult)
-			assert.Equal(t, argUint64(c.gas), bres.GasUsed)
 		} else {
 			assert.Nil(t, err)
 		}

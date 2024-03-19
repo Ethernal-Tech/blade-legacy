@@ -220,12 +220,28 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 		return nil, err
 	}
 
-	res := &accessListResult{
-		Accesslist: transaction.AccessList(),
-		GasUsed:    argUint64(header.GasUsed),
+	// If the caller didn't supply the gas limit in the message, then we set it to maximum possible => block gas limit
+	if transaction.Gas() == 0 {
+		transaction.SetGas(header.GasLimit)
 	}
 
-	return res, nil
+	// Force transaction gas price if empty
+	if err = e.fillTransactionGasPrice(transaction); err != nil {
+		return nil, err
+	}
+
+	// The return value of the execution is saved in the transition (returnValue field)
+	result, err := e.store.ApplyTxn(header, transaction, nil, true)
+	if err != nil {
+		return nil, err
+	}
+
+	res := &accessListResult{
+		Accesslist: toAccessList(result.AccessList),
+		GasUsed:    argUint64(result.GasUsed),
+	}
+
+	return res, result.Err
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.
@@ -443,32 +459,19 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 		return nil, nil
 	}
 
-	blockHash := block.Hash()
 	if len(block.Transactions) == 0 {
-		e.logger.Warn(
-			fmt.Sprintf("No transactions found for block with hash [%s]", blockHash.String()),
-		)
-
 		return nil, nil
 	}
 
+	blockHash := block.Hash()
 	receipts, errR := e.store.GetReceiptsByHash(blockHash)
-	if errR != nil {
-		// block receipts not found
-		e.logger.Warn(
-			fmt.Sprintf("Receipts for block with hash [%s] not found", blockHash.String()),
-		)
 
+	if errR != nil {
 		return nil, errR
 	}
 
 	numberOfReceipts := len(receipts)
 	if numberOfReceipts == 0 {
-		// Receipts not written yet on the db
-		e.logger.Warn(
-			fmt.Sprintf("No receipts found for block with hash [%s]", blockHash.String()),
-		)
-
 		return nil, nil
 	}
 
@@ -479,9 +482,9 @@ func (e *Eth) GetBlockReceipts(number BlockNumber) (interface{}, error) {
 		raw := receipts[i]
 		// accumulate receipt logs indexes from block transactions
 		// that are before the desired transaction
-		logIndex += len(receipts[i].Logs)
 		logs := toLogs(raw.Logs, uint64(logIndex), uint64(i), block.Header, raw.TxHash)
 		resReceipts[i] = toReceipt(raw, transaction, uint64(i), block.Header, logs)
+		logIndex += len(receipts[i].Logs)
 	}
 
 	return resReceipts, nil
@@ -647,7 +650,7 @@ func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *stateOve
 
 // EstimateGas estimates the gas needed to execute a transaction
 func (e *Eth) EstimateGas(arg *txnArgs, rawNum *BlockNumber) (interface{}, error) {
-	number := LatestBlockNumber /*  */
+	number := LatestBlockNumber
 	if rawNum != nil {
 		number = *rawNum
 	}
