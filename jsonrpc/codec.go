@@ -147,10 +147,8 @@ var (
 type BlockNumber int64
 
 // String returns the string representation of the block number
-func (b *BlockNumber) String() string {
-	blockNumber := *b
-
-	switch blockNumber {
+func (b BlockNumber) String() string {
+	switch b {
 	case PendingBlockNumber:
 		return pending
 	case LatestBlockNumber:
@@ -159,11 +157,7 @@ func (b *BlockNumber) String() string {
 		return earliest
 	}
 
-	if *b < 0 {
-		panic("internal. blocknumber is negative") //nolint:gocritic
-	}
-
-	return fmt.Sprintf("0x%x", uint64(*b))
+	return fmt.Sprintf("0x%x", uint64(b))
 }
 
 type BlockNumberOrHash struct {
