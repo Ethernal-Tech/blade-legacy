@@ -80,7 +80,6 @@ func TestE2E_Migration(t *testing.T) {
 	tx = types.NewTx(&types.LegacyTx{
 		BaseTx: &types.BaseTx{
 			From:  userKey.Address(),
-			To:    userKey2.Address().Ptr(),
 			Gas:   1000000,
 			Input: contractsapi.TestWriteBlockMetadata.Bytecode,
 		},
