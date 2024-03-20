@@ -100,7 +100,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	receivers := make([]types.Address, len(wp.Receivers))
 	amounts := make([]*big.Int, len(wp.Receivers))
-	TokenIDs := make([]*big.Int, len(wp.Receivers))
+	tokenIDs := make([]*big.Int, len(wp.Receivers))
 
 	for i, receiverRaw := range wp.Receivers {
 		receivers[i] = types.StringToAddress(receiverRaw)
@@ -122,11 +122,11 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 
 		amounts[i] = amount
-		TokenIDs[i] = tokenID
+		tokenIDs[i] = tokenID
 	}
 
 	// withdraw tokens transaction
-	txn, err := createWithdrawTxn(receivers, amounts, TokenIDs)
+	txn, err := createWithdrawTxn(receivers, amounts, tokenIDs)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to create tx input: %w", err))
 
@@ -172,12 +172,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // createWithdrawTxn encodes parameters for withdraw function on child chain predicate contract
-func createWithdrawTxn(receivers []types.Address, amounts, TokenIDs []*big.Int) (*types.Transaction, error) {
+func createWithdrawTxn(receivers []types.Address, amounts, tokenIDs []*big.Int) (*types.Transaction, error) {
 	withdrawFn := &contractsapi.WithdrawBatchChildERC1155PredicateFn{
 		ChildToken: types.StringToAddress(wp.TokenAddr),
 		Receivers:  receivers,
 		Amounts:    amounts,
-		TokenIDs:   TokenIDs,
+		TokenIDs:   tokenIDs,
 	}
 
 	input, err := withdrawFn.EncodeAbi()
