@@ -178,7 +178,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 			compMaxFeePerGas = compMaxFeePerGas.Div(compMaxFeePerGas, big.NewInt(100))
 			txn.SetGasFeeCap(new(big.Int).Add(maxFeePerGas, compMaxFeePerGas))
 		}
-	} else if txn.GasPrice() == big.NewInt(0) {
+	} else if txn.GasPrice() == big.NewInt(0) || txn.GasPrice() == nil {
 		gasPrice, err := t.Client().Eth().GasPrice()
 		if err != nil {
 			return ethgo.ZeroHash, fmt.Errorf("failed to get gas price: %w", err)
@@ -307,13 +307,6 @@ func ConvertTxnToCallMsg(txn *types.Transaction) *ethgo.CallMsg {
 
 // convertTxn converts transaction from types.Transaction to ethgo.Transaction
 func convertTxn(tx *types.Transaction) *ethgo.Transaction {
-	v, r, s := tx.RawSignatureValues()
-
-	gasPrice := uint64(0)
-	if tx.GasPrice() != nil {
-		gasPrice = tx.GasPrice().Uint64()
-	}
-
 	accessList := make(ethgo.AccessList, 0)
 
 	for _, e := range tx.AccessList() {
@@ -330,35 +323,25 @@ func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 			})
 	}
 
-	var (
-		vRaw []byte
-		rRaw []byte
-		sRaw []byte
-	)
-
-	if v != nil && r != nil && s != nil {
-		vRaw = v.Bytes()
-		rRaw = r.Bytes()
-		sRaw = s.Bytes()
+	txEth := &ethgo.Transaction{
+		From:     ethgo.Address(tx.From()),
+		To:       (*ethgo.Address)(tx.To()),
+		Input:    tx.Input(),
+		Value:    tx.Value(),
+		Gas:      tx.Gas(),
+		GasPrice: defaultGasPrice,
 	}
 
-	return &ethgo.Transaction{
-		Hash:                 ethgo.Hash(tx.Hash()),
-		From:                 ethgo.Address(tx.From()),
-		To:                   (*ethgo.Address)(tx.To()),
-		Input:                tx.Input(),
-		GasPrice:             gasPrice,
-		Gas:                  tx.Gas(),
-		Value:                tx.Value(),
-		Nonce:                tx.Nonce(),
-		V:                    vRaw,
-		R:                    rRaw,
-		S:                    sRaw,
-		ChainID:              tx.ChainID(),
-		AccessList:           accessList,
-		MaxPriorityFeePerGas: tx.GasTipCap(),
-		MaxFeePerGas:         tx.GasFeeCap(),
+	if tx.Type() == types.DynamicFeeTxType {
+		txEth.Type = ethgo.TransactionDynamicFee
+	} else if tx.Type() == types.AccessListTxType {
+		txEth.Type = ethgo.TransactionAccessList
+		txEth.AccessList = accessList
+	} else {
+		txEth.Type = ethgo.TransactionLegacy
 	}
+
+	return txEth
 }
 
 type TxRelayerOption func(*TxRelayerImpl)
