@@ -436,7 +436,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	const epochSize = uint64(5)
 
-	acct, err := wallet.GenerateKey()
+	acct, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 4,
@@ -522,20 +522,20 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_getStorageAt", func(t *testing.T) {
-		key1, err := wallet.GenerateKey()
+		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		txn := cluster.Transfer(t, acct, types.Address(key1.Address()), one)
+		txn := cluster.Transfer(t, key1, key1.Address(), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
-		txn = cluster.Deploy(t, acct, contractsapi.TestSimple.Bytecode)
+		txn = cluster.Deploy(t, key1, contractsapi.TestSimple.Bytecode)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
-		target := txn.Receipt().ContractAddress
+		target := types.Address(txn.Receipt().ContractAddress)
 
-		resp, err := newEthClient.GetStorageAt(types.Address(target), types.Hash{}, bladeRPC.LatestBlockNumberOrHash)
+		resp, err := newEthClient.GetStorageAt(target, types.Hash{}, bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", resp.String())
 
@@ -546,7 +546,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 		input, err := setValueFn.Encode([]interface{}{newVal})
 		require.NoError(t, err)
 
-		txn = cluster.SendTxn(t, acct, &ethgo.Transaction{Input: input, To: &target})
+		txn = cluster.SendTxn(t, key1, types.NewTx(types.NewLegacyTx(types.WithInput(input), types.WithTo(&target))))
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
@@ -636,7 +636,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
-		acctZeroBalance, err := wallet.GenerateKey()
+		acctZeroBalance, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		resp, err := newEthClient.Call(&bladeRPC.CallMsg{
