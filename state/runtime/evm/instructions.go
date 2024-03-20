@@ -621,7 +621,7 @@ func opCallDataLoad(c *state) {
 
 	bufPtr := bufPool.Get().(*[]byte)
 	buf := *bufPtr
-	c.setBytes(buf[:32], c.msg.Input, 32, offset.ToBig())
+	c.setBytes(buf[:32], c.msg.Input, 32, *offset)
 	offset.SetBytes(buf[:32])
 	bufPool.Put(bufPtr)
 }
@@ -713,7 +713,7 @@ func opGas(c *state) {
 	c.push(*uint256.NewInt(c.gas))
 }
 
-func (c *state) setBytes(dst, input []byte, size uint64, dataOffset *big.Int) {
+func (c *state) setBytes(dst, input []byte, size uint64, dataOffset uint256.Int) {
 	if !dataOffset.IsUint64() {
 		// overflow, copy 'size' 0 bytes to dst
 		for i := uint64(0); i < size; i++ {
@@ -771,7 +771,7 @@ func opExtCodeCopy(c *state) {
 
 	code := c.host.GetCode(address)
 	if size != 0 {
-		c.setBytes(c.memory[memOffset.Uint64():], code, size, codeOffset.ToBig())
+		c.setBytes(c.memory[memOffset.Uint64():], code, size, codeOffset)
 	}
 }
 
@@ -790,7 +790,7 @@ func opCallDataCopy(c *state) {
 	}
 
 	if size != 0 {
-		c.setBytes(c.memory[memOffset.Uint64():], c.msg.Input, size, dataOffset.ToBig())
+		c.setBytes(c.memory[memOffset.Uint64():], c.msg.Input, size, dataOffset)
 	}
 }
 
@@ -861,7 +861,7 @@ func opCodeCopy(c *state) {
 	}
 
 	if size != 0 {
-		c.setBytes(c.memory[memOffset.Uint64():], c.code, size, dataOffset.ToBig())
+		c.setBytes(c.memory[memOffset.Uint64():], c.code, size, dataOffset)
 	}
 }
 
