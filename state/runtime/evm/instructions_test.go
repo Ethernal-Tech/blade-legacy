@@ -568,8 +568,8 @@ func TestMStore8(t *testing.T) {
 	s, closeFn := getState(&chain.ForksInTime{})
 	defer closeFn()
 
-	s.push(one256)       //value
-	s.push(*offsetStore) //offset
+	s.push(one256)       // value
+	s.push(*offsetStore) // offset
 
 	opMStore8(s)
 
@@ -1171,9 +1171,9 @@ func TestCodeCopyLenZero(t *testing.T) {
 
 	var expectedGas = s.gas
 
-	s.push(zero256) //length
-	s.push(zero256) //dataOffset
-	s.push(zero256) //memOffset
+	s.push(zero256) // length
+	s.push(zero256) // dataOffset
+	s.push(zero256) // memOffset
 
 	opCodeCopy(s)
 
