@@ -6,7 +6,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/jsonrpc"
 )
 
@@ -138,7 +137,7 @@ func (e *EthClient) GasPrice() (uint64, error) {
 }
 
 // Call executes a new message call immediately without creating a transaction on the blockchain
-func (e *EthClient) Call(msg *txnArgs, block ethgo.BlockNumber, override *StateOverride) (string, error) {
+func (e *EthClient) Call(msg *CallMsg, block BlockNumber, override *StateOverride) (string, error) {
 	var out string
 	if err := e.client.Call("eth_call", &out, msg, block.String(), override); err != nil {
 		return "", err
@@ -148,7 +147,7 @@ func (e *EthClient) Call(msg *txnArgs, block ethgo.BlockNumber, override *StateO
 }
 
 // EstimateGas generates and returns an estimate of how much gas is necessary to allow the transaction to complete
-func (e *EthClient) EstimateGas(msg *ethgo.CallMsg) (uint64, error) {
+func (e *EthClient) EstimateGas(msg *CallMsg) (uint64, error) {
 	var out string
 	if err := e.client.Call("eth_estimateGas", &out, msg); err != nil {
 		return 0, err

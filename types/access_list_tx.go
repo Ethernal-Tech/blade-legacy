@@ -105,6 +105,26 @@ func (al TxAccessList) MarshallRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	return accessListVV
 }
 
+func (t *TxAccessList) MarshalJSONWith(a *fastjson.Arena) *fastjson.Value {
+	arr := a.NewArray()
+
+	for i, tuple := range *t {
+		arrElem := a.NewObject()
+		arrElem.Set("address", a.NewString(tuple.Address.String()))
+
+		strg := a.NewArray()
+
+		for j, key := range tuple.StorageKeys {
+			strg.SetArrayItem(j, a.NewString(key.String()))
+		}
+
+		arrElem.Set("storageKeys", strg)
+		arr.SetArrayItem(i, arrElem)
+	}
+
+	return arr
+}
+
 func (t *TxAccessList) unmarshalJSON(v *fastjson.Value) error {
 	elems, err := v.Array()
 	if err != nil {

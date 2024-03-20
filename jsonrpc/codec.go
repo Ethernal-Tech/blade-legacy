@@ -9,6 +9,17 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
+func init() {
+	pendingBN := PendingBlockNumber
+	PendingBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &pendingBN}
+
+	latestBN := LatestBlockNumber
+	LatestBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &latestBN}
+
+	earliestBN := EarliestBlockNumber
+	EarliestBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &earliestBN}
+}
+
 // Request is a jsonrpc request
 type Request struct {
 	ID     interface{}     `json:"id"`
@@ -125,6 +136,12 @@ const (
 	PendingBlockNumber  = BlockNumber(-3)
 	LatestBlockNumber   = BlockNumber(-2)
 	EarliestBlockNumber = BlockNumber(-1)
+)
+
+var (
+	PendingBlockNumberOrHash  BlockNumberOrHash
+	LatestBlockNumberOrHash   BlockNumberOrHash
+	EarliestBlockNumberOrHash BlockNumberOrHash
 )
 
 type BlockNumber int64
