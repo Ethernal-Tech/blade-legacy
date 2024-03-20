@@ -567,7 +567,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	t.Run("eth_getTransactionCount", func(t *testing.T) {
 		nonce, err := newEthClient.GetNonce(types.Address(acct.Address()), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
-		require.GreaterOrEqual(t, uint64(0), nonce) // since we used this account in previous tests
+		require.GreaterOrEqual(t, nonce, uint64(0)) // since we used this account in previous tests
 
 		txn := cluster.Transfer(t, acct, types.StringToAddress("0xDEADBEEF"), one)
 		require.NoError(t, txn.Wait())
