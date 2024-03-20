@@ -58,16 +58,8 @@ func (t *TxPool) ContentFrom(addr types.Address) (interface{}, error) {
 	}
 
 	pendingTxs, queuedTxs := t.store.GetTxs(true)
-
-	pTxs, ok := pendingTxs[addr]
-	if !ok {
-		pTxs = make([]*types.Transaction, 0)
-	}
-
-	qTxs, ok := queuedTxs[addr]
-	if !ok {
-		qTxs = make([]*types.Transaction, 0)
-	}
+	pTxs, _ := pendingTxs[addr]
+	qTxs, _ := queuedTxs[addr]
 
 	resp := ContentAddressResponse{
 		Pending: convertTxMap(pTxs),

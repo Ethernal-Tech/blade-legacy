@@ -53,6 +53,9 @@ type ethBlockchainStore interface {
 	// GetBlockByHash gets a block using the provided hash
 	GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool)
 
+	// GetHeaderByHash returns the header by his hash
+	GetHeaderByHash(hash types.Hash) (*types.Header, bool)
+
 	// GetBlockByNumber returns a block using the provided number
 	GetBlockByNumber(num uint64, full bool) (*types.Block, bool)
 
@@ -156,51 +159,61 @@ func (e *Eth) GetBlockByHash(hash types.Hash, fullTx bool) (interface{}, error) 
 }
 
 // GetHeaderByNumber returns the requested canonical block header.
-// * When blockNr is -1 the chain head is returned.
-// * When blockNr is -2 the pending chain head is returned.
 func (e *Eth) GetHeaderByNumber(number BlockNumber) (interface{}, error) {
 	num, err := GetNumericBlockNumber(number, e.store)
 	if err != nil {
 		return nil, err
 	}
 
-	block, ok := e.store.GetBlockByNumber(num, true)
+	header, ok := e.store.GetHeaderByNumber(num)
 	if !ok {
 		return nil, nil
 	}
 
-	if err := e.filterExtra(block); err != nil {
+	headerCopy, err := e.headerFilterExtra(header)
+	if err != nil {
 		return nil, err
 	}
 
-	return toHeader(block.Header), nil
+	return toHeader(headerCopy), nil
 }
 
 // GetHeaderByHash returns the requested header by hash.
 func (e *Eth) GetHeaderByHash(hash types.Hash) (interface{}, error) {
-	block, ok := e.store.GetBlockByHash(hash, true)
+	header, ok := e.store.GetHeaderByHash(hash)
 	if !ok {
 		return nil, nil
 	}
 
-	if err := e.filterExtra(block); err != nil {
+	headerCopy, err := e.headerFilterExtra(header)
+	if err != nil {
 		return nil, err
 	}
 
-	return toHeader(block.Header), nil
+	return toHeader(headerCopy), nil
+}
+
+func (e *Eth) headerFilterExtra(header *types.Header) (*types.Header, error) {
+	// we need to copy it because the store returns header from storage directly
+	// and not a copy, so changing it, actually changes it in storage as well
+	headerCopy := header.Copy()
+
+	filteredExtra, err := e.store.FilterExtra(headerCopy.ExtraData)
+	if err != nil {
+		return nil, err
+	}
+
+	headerCopy.ExtraData = filteredExtra
+
+	return headerCopy, err
 }
 
 func (e *Eth) filterExtra(block *types.Block) error {
-	// we need to copy it because the store returns header from storage directly
-	// and not a copy, so changing it, actually changes it in storage as well
-	headerCopy := block.Header.Copy()
-
-	filteredExtra, err := e.store.FilterExtra(headerCopy.ExtraData)
+	headerCopy, err := e.headerFilterExtra(block.Header)
 	if err != nil {
 		return err
 	}
 
-	headerCopy.ExtraData = filteredExtra
 	// no need to recompute hash (filtered out data is not in the hash in the first place)
 	block.Header = headerCopy
 
@@ -237,11 +250,12 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 	}
 
 	res := &accessListResult{
-		Accesslist: toAccessList(result.AccessList),
+		Accesslist: toAccessList(*result.AccessList),
+		Error:      result.Err,
 		GasUsed:    argUint64(result.GasUsed),
 	}
 
-	return res, result.Err
+	return res, nil
 }
 
 // GetBlockTransactionCountByHash returns the number of transactions in the block with the given hash.

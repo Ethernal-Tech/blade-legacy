@@ -759,6 +759,15 @@ func (m *mockBlockStore) GetHeaderByNumber(num uint64) (*types.Header, bool) {
 	return block.Header, block.Header != nil
 }
 
+func (m *mockBlockStore) GetHeaderByHash(hash types.Hash) (*types.Header, bool) {
+	block, ok := m.GetBlockByHash(hash, true)
+	if !ok {
+		return nil, false
+	}
+
+	return block.Header, block.Header != nil
+}
+
 func (m *mockBlockStore) setupLogs() {
 	m.receipts = make(map[types.Hash][]*types.Receipt)
 
@@ -901,6 +910,7 @@ func (m *mockBlockStore) ApplyTxn(_ *types.Header, _ *types.Transaction, _ types
 	return &runtime.ExecutionResult{
 		Err:         m.ethCallError,
 		ReturnValue: m.returnValue,
+		AccessList:  runtime.NewAccessList(),
 	}, nil
 }
 
