@@ -218,7 +218,7 @@ func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
 
 	tx := types.NewTx(&types.LegacyTx{
 		BaseTx: &types.BaseTx{
-			Input: contractsapi.TestRewardToken.Bytecode,
+			Input: contractsapi.TestWriteBlockMetadata.Bytecode,
 		}})
 
 	receipt, err := relayer.SendTransaction(tx, sidechainKey)
