@@ -14,27 +14,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-type serverType int
-
-const (
-	serverIPC serverType = iota
-	serverHTTP
-	serverWS
-)
-
-func (s serverType) String() string {
-	switch s {
-	case serverIPC:
-		return "ipc"
-	case serverHTTP:
-		return "http"
-	case serverWS:
-		return "ws"
-	default:
-		panic("BUG: Not expected") //nolint:gocritic
-	}
-}
-
 // JSONRPC is an API consensus
 type JSONRPC struct {
 	logger     hclog.Logger
@@ -133,8 +112,8 @@ func (j *JSONRPC) setupHTTP() error {
 	}
 
 	if j.config.TLSCertFile != "" && j.config.TLSKeyFile != "" {
-		j.logger.Info("https cert file", j.config.TLSCertFile)
-		j.logger.Info("https key file", j.config.TLSKeyFile)
+		j.logger.Info("TLS", "cert file", j.config.TLSCertFile)
+		j.logger.Info("TLS", "key file", j.config.TLSKeyFile)
 
 		go func() {
 			if err := srv.ServeTLS(lis, j.config.TLSCertFile, j.config.TLSKeyFile); err != nil {

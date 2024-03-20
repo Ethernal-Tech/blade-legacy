@@ -5,11 +5,22 @@ import (
 	"math/big"
 
 	"github.com/umbracle/fastrlp"
+	"github.com/valyala/fastjson"
 )
 
 type LegacyTx struct {
 	*BaseTx
 	GasPrice *big.Int
+}
+
+func NewLegacyTx(options ...TxOption) *LegacyTx {
+	legacyTx := &LegacyTx{BaseTx: &BaseTx{}}
+
+	for _, opt := range options {
+		opt(legacyTx)
+	}
+
+	return legacyTx
 }
 
 func (tx *LegacyTx) transactionType() TxType { return LegacyTxType }
@@ -159,7 +170,7 @@ func (tx *LegacyTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 }
 
 func (tx *LegacyTx) copy() TxData { //nolint:dupl
-	cpy := &LegacyTx{BaseTx: &BaseTx{}}
+	cpy := NewLegacyTx()
 
 	if tx.gasPrice() != nil {
 		gasPrice := new(big.Int)
@@ -187,4 +198,19 @@ func deriveChainID(v *big.Int) *big.Int {
 	v = new(big.Int).Sub(v, big.NewInt(35))
 
 	return v.Div(v, big.NewInt(2))
+}
+
+func (tx *LegacyTx) unmarshalJSON(v *fastjson.Value) error {
+	if err := tx.BaseTx.unmarshalJSON(v); err != nil {
+		return err
+	}
+
+	gasPrice, err := unmarshalJSONBigInt(v, "gasPrice")
+	if err != nil {
+		return err
+	}
+
+	tx.setGasPrice(gasPrice)
+
+	return nil
 }
