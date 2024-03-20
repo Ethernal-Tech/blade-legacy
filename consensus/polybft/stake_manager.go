@@ -13,7 +13,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
-	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -68,11 +67,8 @@ var _ StakeManager = (*stakeManager)(nil)
 type stakeManager struct {
 	logger                   hclog.Logger
 	state                    *State
-	key                      crypto.Key
 	stakeManagerContractAddr types.Address
-	validatorSetContract     types.Address
 	polybftBackend           polybftBackend
-	stakeManagerContract     *contract.Contract
 	blockchain               blockchainBackend
 }
 
@@ -469,13 +465,4 @@ func (sc validatorStakeMap) String() string {
 	}
 
 	return sb.String()
-}
-
-func getEpochID(blockchain blockchainBackend, header *types.Header) (uint64, error) {
-	provider, err := blockchain.GetStateProviderForBlock(header)
-	if err != nil {
-		return 0, err
-	}
-
-	return blockchain.GetSystemState(provider).GetEpoch()
 }

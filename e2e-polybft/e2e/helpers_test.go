@@ -1,13 +1,8 @@
 package e2e
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io"
 	"math/big"
-	"net/http"
 	"testing"
 	"time"
 
@@ -16,7 +11,6 @@ import (
 	"github.com/umbracle/ethgo/abi"
 	"github.com/umbracle/ethgo/jsonrpc"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -29,53 +23,6 @@ import (
 )
 
 const nativeTokenNonMintableConfig = "Blade:BLD:18:false"
-
-// getCheckpointManagerValidators queries rootchain validator set on CheckpointManager contract
-func getCheckpointManagerValidators(relayer txrelayer.TxRelayer, checkpointManagerAddr types.Address) ([]*polybft.ValidatorInfo, error) {
-	validatorsCountRaw, err := ABICall(relayer, contractsapi.CheckpointManager,
-		checkpointManagerAddr, types.ZeroAddress, "currentValidatorSetLength")
-	if err != nil {
-		return nil, err
-	}
-
-	validatorsCount, err := common.ParseUint64orHex(&validatorsCountRaw)
-	if err != nil {
-		return nil, err
-	}
-
-	currentValidatorSetMethod := contractsapi.CheckpointManager.Abi.GetMethod("currentValidatorSet")
-	validators := make([]*polybft.ValidatorInfo, validatorsCount)
-
-	for i := 0; i < int(validatorsCount); i++ {
-		validatorRaw, err := ABICall(relayer, contractsapi.CheckpointManager,
-			checkpointManagerAddr, types.ZeroAddress, "currentValidatorSet", i)
-		if err != nil {
-			return nil, err
-		}
-
-		validatorSetRaw, err := hex.DecodeString(validatorRaw[2:])
-		if err != nil {
-			return nil, err
-		}
-
-		decodedResults, err := currentValidatorSetMethod.Outputs.Decode(validatorSetRaw)
-		if err != nil {
-			return nil, err
-		}
-
-		results, ok := decodedResults.(map[string]interface{})
-		if !ok {
-			return nil, errors.New("failed to decode validator")
-		}
-
-		validators[i] = &polybft.ValidatorInfo{
-			Address: types.Address(results["_address"].(ethgo.Address)),
-			Stake:   results["votingPower"].(*big.Int),
-		}
-	}
-
-	return validators, nil
-}
 
 func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contractAddress types.Address, senderAddr types.Address, method string, params ...interface{}) (string, error) {
 	input, err := artifact.Abi.GetMethod(method).Encode(params)
@@ -100,46 +47,6 @@ func ABITransaction(relayer txrelayer.TxRelayer, key crypto.Key, artifact *contr
 	})
 
 	return relayer.SendTransaction(tx, key)
-}
-
-func getExitProof(rpcAddress string, exitID uint64) (types.Proof, error) {
-	query := struct {
-		Jsonrpc string   `json:"jsonrpc"`
-		Method  string   `json:"method"`
-		Params  []string `json:"params"`
-		ID      int      `json:"id"`
-	}{
-		"2.0",
-		"bridge_generateExitProof",
-		[]string{fmt.Sprintf("0x%x", exitID)},
-		1,
-	}
-
-	d, err := json.Marshal(query)
-	if err != nil {
-		return types.Proof{}, err
-	}
-
-	resp, err := http.Post(rpcAddress, "application/json", bytes.NewReader(d))
-	if err != nil {
-		return types.Proof{}, err
-	}
-
-	s, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return types.Proof{}, err
-	}
-
-	rspProof := struct {
-		Result types.Proof `json:"result"`
-	}{}
-
-	err = json.Unmarshal(s, &rspProof)
-	if err != nil {
-		return types.Proof{}, err
-	}
-
-	return rspProof.Result, nil
 }
 
 // checkStateSyncResultLogs is helper function which parses given StateSyncResultEvent event's logs,
@@ -223,16 +130,10 @@ func setAccessListRole(t *testing.T, cluster *framework.TestCluster, precompile,
 	switch role {
 	case addresslist.AdminRole:
 		updateRoleFn = addresslist.SetAdminFunc
-
-		break
 	case addresslist.EnabledRole:
 		updateRoleFn = addresslist.SetEnabledFunc
-
-		break
 	case addresslist.NoRole:
 		updateRoleFn = addresslist.SetNoneFunc
-
-		break
 	}
 
 	input, err := updateRoleFn.Encode([]interface{}{account})
