@@ -307,7 +307,7 @@ func ConvertTxnToCallMsg(txn *types.Transaction) *ethgo.CallMsg {
 
 // convertTxn converts transaction from types.Transaction to ethgo.Transaction
 func convertTxn(tx *types.Transaction) *ethgo.Transaction {
-	accessList := make(ethgo.AccessList, 0)
+	accessList := make(ethgo.AccessList, 0, len(tx.AccessList()))
 
 	for _, e := range tx.AccessList() {
 		storageKeys := make([]ethgo.Hash, 0)
@@ -323,25 +323,37 @@ func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 			})
 	}
 
-	txEth := &ethgo.Transaction{
-		From:     ethgo.Address(tx.From()),
-		To:       (*ethgo.Address)(tx.To()),
-		Input:    tx.Input(),
-		Value:    tx.Value(),
-		Gas:      tx.Gas(),
-		GasPrice: defaultGasPrice,
+	convertedTx := &ethgo.Transaction{
+		From:  ethgo.Address(tx.From()),
+		To:    (*ethgo.Address)(tx.To()),
+		Input: tx.Input(),
+		Value: tx.Value(),
+		Gas:   tx.Gas(),
 	}
 
-	if tx.Type() == types.DynamicFeeTxType {
-		txEth.Type = ethgo.TransactionDynamicFee
-	} else if tx.Type() == types.AccessListTxType {
-		txEth.Type = ethgo.TransactionAccessList
-		txEth.AccessList = accessList
-	} else {
-		txEth.Type = ethgo.TransactionLegacy
+	switch tx.Type() {
+	case types.DynamicFeeTxType:
+		convertedTx.Type = ethgo.TransactionDynamicFee
+		convertedTx.AccessList = accessList
+		convertedTx.MaxFeePerGas = tx.GetGasFeeCap()
+		convertedTx.MaxPriorityFeePerGas = tx.GetGasTipCap()
+
+		break
+
+	case types.AccessListTxType:
+		convertedTx.Type = ethgo.TransactionAccessList
+		convertedTx.AccessList = accessList
+
+		break
+
+	default:
+		convertedTx.Type = ethgo.TransactionLegacy
+		convertedTx.GasPrice = tx.GetGasPrice(0).Uint64()
+
+		break
 	}
 
-	return txEth
+	return convertedTx
 }
 
 type TxRelayerOption func(*TxRelayerImpl)
