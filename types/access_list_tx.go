@@ -133,6 +133,7 @@ func (t *TxAccessList) unmarshalJSON(v *fastjson.Value) error {
 
 	for _, elem := range elems {
 		accessTuple := AccessTuple{}
+
 		addr, err := unmarshalJSONAddr(elem, "address")
 		if err != nil {
 			return err
@@ -146,6 +147,7 @@ func (t *TxAccessList) unmarshalJSON(v *fastjson.Value) error {
 		}
 
 		accessTuple.StorageKeys = make([]Hash, len(storage))
+
 		for indx, stg := range storage {
 			b, err := stg.StringBytes()
 			if err != nil {

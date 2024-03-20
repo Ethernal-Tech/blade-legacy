@@ -476,6 +476,7 @@ func (s StateOverride) MarshalJSON() ([]byte, error) {
 	defer a.Reset()
 
 	o := a.NewObject()
+
 	for addr, obj := range s {
 		oo := a.NewObject()
 		if obj.Nonce != nil {
@@ -512,6 +513,7 @@ func (s StateOverride) MarshalJSON() ([]byte, error) {
 	}
 
 	res := o.MarshalTo(nil)
+
 	defaultArena.Put(a)
 
 	return res, nil
@@ -569,6 +571,7 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 	}
 
 	res := o.MarshalTo(nil)
+
 	defaultArena.Put(a)
 
 	return res, nil

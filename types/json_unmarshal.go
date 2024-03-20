@@ -232,6 +232,7 @@ func (r *Receipt) UnmarshalJSON(buf []byte) error {
 
 	// logs
 	r.Logs = r.Logs[:0]
+
 	for _, elem := range v.GetArray("logs") {
 		log := new(Log)
 		if err := log.unmarshalJSON(elem); err != nil {
@@ -269,6 +270,7 @@ func (r *Log) unmarshalJSON(v *fastjson.Value) error {
 	}
 
 	r.Topics = r.Topics[:0]
+
 	for _, topic := range v.GetArray("topics") {
 		b, err := topic.StringBytes()
 		if err != nil {

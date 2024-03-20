@@ -172,12 +172,12 @@ type BlockNumberOrHash struct {
 }
 
 // String returns the string representation of the block number or hash
-func (b BlockNumberOrHash) String() string {
-	if b.BlockNumber != nil {
-		return b.BlockNumber.String()
+func (bnh BlockNumberOrHash) String() string {
+	if bnh.BlockNumber != nil {
+		return bnh.BlockNumber.String()
 	}
 
-	return b.BlockHash.String()
+	return bnh.BlockHash.String()
 }
 
 // UnmarshalJSON will try to extract the filter's data.

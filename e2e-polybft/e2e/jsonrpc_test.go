@@ -445,13 +445,13 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("eth_blockNumber", func(t *testing.T) {
-		cluster.WaitForBlock(epochSize, 15*time.Second)
+		require.NoError(t, cluster.WaitForBlock(epochSize, 15*time.Second))
 
 		blockNumber, err := newEthClient.BlockNumber()
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, blockNumber, epochSize)
 
-		cluster.WaitForBlock(blockNumber+1, 5*time.Second)
+		require.NoError(t, cluster.WaitForBlock(blockNumber+1, 5*time.Second))
 
 		blockNumber, err = newEthClient.BlockNumber()
 		require.NoError(t, err)

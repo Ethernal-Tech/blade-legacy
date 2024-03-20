@@ -127,6 +127,7 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 	if hasKey(v, "to") {
 		if v.Get("to").String() != "null" {
 			var to Address
+
 			if to, err = unmarshalJSONAddr(v, "to"); err != nil {
 				return err
 			}
