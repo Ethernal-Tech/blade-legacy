@@ -884,7 +884,6 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 		}
 	}
 
-	//Berlin: check
 	// we add this to the access-list before taking a snapshot. Even if the creation fails,
 	// the access-list change should not be rolled back according to EIP2929 specs
 	if t.config.Berlin {
