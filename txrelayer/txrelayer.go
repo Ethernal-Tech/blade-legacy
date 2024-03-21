@@ -322,6 +322,7 @@ func convertTxn(tx *types.Transaction) *ethgo.Transaction {
 					Storage: storageKeys,
 				})
 		}
+
 		return accessList
 	}
 

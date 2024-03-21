@@ -276,9 +276,11 @@ func CreateTransaction(sender types.Address, receiver *types.Address,
 	input []byte, value *big.Int, isDynamicFeeTx bool) *types.Transaction {
 	var txData types.TxData
 	if isDynamicFeeTx {
-		txData = types.NewDynamicFeeTx(types.WithFrom(sender), types.WithTo(receiver), types.WithValue(value), types.WithInput(input))
+		txData = types.NewDynamicFeeTx(types.WithFrom(sender),
+			types.WithTo(receiver), types.WithValue(value), types.WithInput(input))
 	} else {
-		txData = types.NewLegacyTx(types.WithFrom(sender), types.WithTo(receiver), types.WithValue(value), types.WithInput(input))
+		txData = types.NewLegacyTx(types.WithFrom(sender),
+			types.WithTo(receiver), types.WithValue(value), types.WithInput(input))
 	}
 
 	return types.NewTx(txData)
