@@ -1105,7 +1105,7 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 		txn.SetNonce(nonce)
 	}
 
-	if txn.GasPrice() == big.NewInt(0) {
+	if txn.GasPrice() == nil || txn.GasPrice() == big.NewInt(0) {
 		gasPrice, err := client.Eth().GasPrice()
 		require.NoError(t, err)
 

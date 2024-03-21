@@ -278,8 +278,10 @@ func TestE2E_JsonRPC(t *testing.T) {
 		input, err := setValueFn.Encode([]interface{}{newVal})
 		require.NoError(t, err)
 
-		txn = cluster.SendTxn(t, senderKey, types.NewTx(
-			&types.LegacyTx{BaseTx: &types.BaseTx{Input: input, To: (*types.Address)(&target)}}))
+		txn = cluster.SendTxn(t, senderKey,
+			types.NewTx(
+				types.NewLegacyTx(types.WithInput(input), types.WithTo((*types.Address)(&target))),
+			))
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
@@ -436,12 +438,12 @@ func TestE2E_JsonRPC(t *testing.T) {
 func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	const epochSize = uint64(5)
 
-	acct, err := crypto.GenerateECDSAKey()
+	preminedAcct, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 4,
 		framework.WithEpochSize(int(epochSize)),
-		framework.WithPremine(types.Address(acct.Address())),
+		framework.WithPremine(preminedAcct.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 	)
 	defer cluster.Stop()
@@ -510,7 +512,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_getCode", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, acct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 
@@ -525,7 +527,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		txn := cluster.Transfer(t, key1, key1.Address(), one)
+		txn := cluster.Transfer(t, preminedAcct, key1.Address(), ethgo.Ether(1))
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
@@ -556,14 +558,14 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionByHash and eth_getTransactionReceipt", func(t *testing.T) {
-		txn := cluster.Transfer(t, acct, types.StringToAddress("0xDEADBEEF"), one)
+		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		ethTxn, err := newEthClient.GetTransactionByHash(types.Hash(txn.Receipt().TransactionHash))
 		require.NoError(t, err)
 
-		require.Equal(t, ethTxn.From(), types.Address(acct.Address()))
+		require.Equal(t, ethTxn.From(), types.Address(preminedAcct.Address()))
 
 		receipt, err := newEthClient.GetTransactionReceipt(ethTxn.Hash())
 		require.NoError(t, err)
@@ -572,21 +574,21 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionCount", func(t *testing.T) {
-		nonce, err := newEthClient.GetNonce(types.Address(acct.Address()), bladeRPC.LatestBlockNumberOrHash)
+		nonce, err := newEthClient.GetNonce(types.Address(preminedAcct.Address()), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, nonce, uint64(0)) // since we used this account in previous tests
 
-		txn := cluster.Transfer(t, acct, types.StringToAddress("0xDEADBEEF"), one)
+		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
-		newNonce, err := newEthClient.GetNonce(types.Address(acct.Address()), bladeRPC.LatestBlockNumberOrHash)
+		newNonce, err := newEthClient.GetNonce(types.Address(preminedAcct.Address()), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, nonce+1, newNonce)
 	})
 
 	t.Run("eth_getBalance", func(t *testing.T) {
-		balance, err := newEthClient.GetBalance(types.Address(acct.Address()), bladeRPC.LatestBlockNumberOrHash)
+		balance, err := newEthClient.GetBalance(types.Address(preminedAcct.Address()), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.True(t, balance.Cmp(big.NewInt(0)) >= 0)
 
@@ -594,7 +596,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 
 		tokens := ethgo.Ether(1)
 
-		txn := cluster.Transfer(t, acct, receiver, tokens)
+		txn := cluster.Transfer(t, preminedAcct, receiver, tokens)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
@@ -604,7 +606,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_estimateGas", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, acct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 
@@ -613,7 +615,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
 		estimatedGas, err := newEthClient.EstimateGas(&bladeRPC.CallMsg{
-			From: types.Address(acct.Address()),
+			From: types.Address(preminedAcct.Address()),
 			To:   &target,
 			Data: input,
 		})
@@ -628,7 +630,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_call", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, acct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 
@@ -663,7 +665,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 
 	t.Run("eth_sendRawTransaction", func(t *testing.T) {
 		receiver := types.StringToAddress("0xDEADFFFF")
-		tokens := ethgo.Ether(1)
+		tokenAmount := ethgo.Ether(1)
 
 		chainID, err := newEthClient.ChainID()
 		require.NoError(t, err)
@@ -673,21 +675,23 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 
 		newAccountKey, newAccountAddr := tests.GenerateKeyAndAddr(t)
 
-		transferTxn := cluster.Transfer(t, acct, newAccountAddr, tokens)
+		transferTxn := cluster.Transfer(t, preminedAcct, newAccountAddr, tokenAmount)
 		require.NoError(t, transferTxn.Wait())
 		require.True(t, transferTxn.Succeed())
 
 		newAccountBalance, err := newEthClient.GetBalance(newAccountAddr, bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
-		require.Equal(t, tokens, newAccountBalance)
+		require.Equal(t, tokenAmount, newAccountBalance)
 
-		txn := types.NewTx(types.NewLegacyTx(types.WithNonce(0),
-			types.WithFrom(newAccountAddr),
-			types.WithTo(&receiver),
-			types.WithValue(ethgo.Gwei(1)),
-			types.WithGas(21000),
-			types.WithGasPrice(new(big.Int).SetUint64(gasPrice)),
-		))
+		txn := types.NewTx(
+			types.NewLegacyTx(
+				types.WithNonce(0),
+				types.WithFrom(newAccountAddr),
+				types.WithTo(&receiver),
+				types.WithValue(ethgo.Gwei(1)),
+				types.WithGas(21000),
+				types.WithGasPrice(new(big.Int).SetUint64(gasPrice)),
+			))
 
 		signedTxn, err := crypto.NewLondonSigner(chainID.Uint64()).SignTx(txn, newAccountKey)
 		require.NoError(t, err)

@@ -37,8 +37,8 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 	admin, _ := crypto.GenerateECDSAKey()
 	target, _ := crypto.GenerateECDSAKey()
 
-	adminAddr := types.Address(admin.Address())
-	targetAddr := types.Address(target.Address())
+	adminAddr := admin.Address()
+	targetAddr := target.Address()
 
 	otherAddr := types.Address{0x1}
 
