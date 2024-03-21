@@ -151,13 +151,11 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		// transfer some funds to zero balance account
 		valueTransferTxn := cluster.SendTxn(t, senderKey,
-			types.NewTx(&types.LegacyTx{
-				BaseTx: &types.BaseTx{
-					From:  fundedAccountAddress,
-					To:    &nonFundedAccountAddress,
-					Value: ethgo.Gwei(10),
-				},
-			}))
+			types.NewTx(types.NewLegacyTx(
+				types.WithFrom(fundedAccountAddress),
+				types.WithTo(&nonFundedAccountAddress),
+				types.WithValue(ethgo.Gwei(10)),
+			)))
 
 		require.NoError(t, valueTransferTxn.Wait())
 		require.True(t, valueTransferTxn.Succeed())
@@ -203,13 +201,11 @@ func TestE2E_JsonRPC(t *testing.T) {
 		amountToSend := new(big.Int).Sub(newBalance, big.NewInt(int64(txPrice)))
 		targetAddr := senderKey.Address()
 		txn = cluster.SendTxn(t, recipientKey,
-			types.NewTx(&types.LegacyTx{
-				BaseTx: &types.BaseTx{
-					To:    &targetAddr,
-					Value: amountToSend,
-					Gas:   estimatedGas,
-				},
-			}))
+			types.NewTx(types.NewLegacyTx(
+				types.WithTo(&targetAddr),
+				types.WithValue(amountToSend),
+				types.WithGas(estimatedGas),
+			)))
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 

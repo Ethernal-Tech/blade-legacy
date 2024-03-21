@@ -1058,13 +1058,11 @@ func (c *TestCluster) Deploy(t *testing.T, sender *crypto.ECDSAKey, bytecode []b
 func (c *TestCluster) Transfer(t *testing.T, sender *crypto.ECDSAKey, target types.Address, value *big.Int) *TestTxn {
 	t.Helper()
 
-	tx := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			From:  sender.Address(),
-			Value: value,
-			To:    &target,
-		},
-	})
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(sender.Address()),
+		types.WithValue(value),
+		types.WithTo(&target),
+	))
 
 	return c.SendTxn(t, sender, tx)
 }
@@ -1072,13 +1070,11 @@ func (c *TestCluster) Transfer(t *testing.T, sender *crypto.ECDSAKey, target typ
 func (c *TestCluster) MethodTxn(t *testing.T, sender *crypto.ECDSAKey, target types.Address, input []byte) *TestTxn {
 	t.Helper()
 
-	tx := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			From:  sender.Address(),
-			Input: input,
-			To:    &target,
-		},
-	})
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(sender.Address()),
+		types.WithInput(input),
+		types.WithTo(&target),
+	))
 
 	return c.SendTxn(t, sender, tx)
 }

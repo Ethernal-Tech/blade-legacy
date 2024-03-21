@@ -215,12 +215,10 @@ func (c *checkpointManager) encodeAndSendCheckpoint(header *types.Header, extra 
 		return fmt.Errorf("failed to encode checkpoint data to ABI for block %d: %w", header.Number, err)
 	}
 
-	txn := types.NewTx(&types.DynamicFeeTx{
-		BaseTx: &types.BaseTx{
-			To:    &c.checkpointManagerAddr,
-			Input: input,
-		},
-	})
+	txn := types.NewTx(types.NewDynamicFeeTx(
+		types.WithTo(&c.checkpointManagerAddr),
+		types.WithInput(input),
+	))
 
 	receipt, err := c.rootChainRelayer.SendTransaction(txn, c.key)
 	if err != nil {

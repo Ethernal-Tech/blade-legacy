@@ -227,13 +227,11 @@ func (e *exitRelayer) sendTx(events []*RelayerEventMetaData) error {
 		return err
 	}
 
-	exitTxn := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			From:  e.key.Address(),
-			To:    &e.config.eventExecutionAddr,
-			Input: input,
-		},
-	})
+	exitTxn := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(e.key.Address()),
+		types.WithTo(&e.config.eventExecutionAddr),
+		types.WithInput(input),
+	))
 
 	// send batchExecute exit events
 	_, err = e.txRelayer.SendTransaction(exitTxn, e.key)

@@ -337,12 +337,10 @@ func sendQueueProposalTransaction(t *testing.T,
 	input, err := queueFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    &childGovernorAddr,
-			Input: input,
-		},
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithTo(&childGovernorAddr),
+		types.WithInput(input),
+	))
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
 	require.NoError(t, err)
@@ -365,12 +363,10 @@ func sendExecuteProposalTransaction(t *testing.T,
 	input, err := executeFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    &childGovernorAddr,
-			Input: input,
-		},
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithTo(&childGovernorAddr),
+		types.WithInput(input),
+	))
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
 	require.NoError(t, err)
@@ -390,12 +386,10 @@ func sendVoteTransaction(t *testing.T, proposalID *big.Int, vote VoteType,
 	input, err := castVoteFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    &childGovernorAddr,
-			Input: input,
-		},
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithTo(&childGovernorAddr),
+		types.WithInput(input),
+	))
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
 	require.NoError(t, err)
@@ -418,12 +412,10 @@ func sendProposalTransaction(t *testing.T, txRelayer txrelayer.TxRelayer,
 	input, err := proposeFn.EncodeAbi()
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    &childGovernorAddr,
-			Input: input,
-		},
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithTo(&childGovernorAddr),
+		types.WithInput(input),
+	))
 
 	receipt, err := txRelayer.SendTransaction(txn, senderKey)
 	require.NoError(t, err)

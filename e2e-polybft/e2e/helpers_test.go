@@ -39,12 +39,10 @@ func ABITransaction(relayer txrelayer.TxRelayer, key crypto.Key, artifact *contr
 		return nil, err
 	}
 
-	tx := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    &contractAddress,
-			Input: input,
-		},
-	})
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithTo(&contractAddress),
+		types.WithInput(input),
+	))
 
 	return relayer.SendTransaction(tx, key)
 }

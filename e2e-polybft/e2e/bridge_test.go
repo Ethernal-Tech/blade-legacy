@@ -1106,12 +1106,10 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	deployerKey, err := bridgeHelper.DecodePrivateKey("")
 	require.NoError(t, err)
 
-	deployTx := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    nil,
-			Input: contractsapi.RootERC20.Bytecode,
-		},
-	})
+	deployTx := types.NewTx(types.NewLegacyTx(
+		types.WithTo(nil),
+		types.WithInput(contractsapi.RootERC20.Bytecode),
+	))
 
 	// deploy root erc20 token
 	receipt, err := rootchainTxRelayer.SendTransaction(deployTx, deployerKey)
@@ -1526,12 +1524,10 @@ func TestE2E_Bridge_L1OriginatedNativeToken_ERC20StakingToken(t *testing.T) {
 
 	nonNativeErc20 := polybftCfg.StakeTokenAddr
 
-	mintTx := types.NewTx(&types.DynamicFeeTx{
-		BaseTx: &types.BaseTx{
-			To:    &nonNativeErc20,
-			Input: mintInput,
-		},
-	})
+	mintTx := types.NewTx(types.NewDynamicFeeTx(
+		types.WithTo(&nonNativeErc20),
+		types.WithInput(mintInput),
+	))
 
 	receipt, err := relayer.SendTransaction(mintTx, minter)
 	require.NoError(t, err)

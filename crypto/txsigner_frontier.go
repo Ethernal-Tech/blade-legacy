@@ -117,6 +117,10 @@ func (signer *FrontierSigner) signTxInternal(tx *types.Transaction,
 func (f *FrontierSigner) SignTxWithCallback(
 	tx *types.Transaction,
 	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
+	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
+		return nil, types.ErrTxTypeNotSupported
+	}
+
 	tx = tx.Copy()
 	h := f.Hash(tx)
 

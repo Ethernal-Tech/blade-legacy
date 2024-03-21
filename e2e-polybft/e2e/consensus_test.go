@@ -444,12 +444,12 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	mintInput, err := mintFn.EncodeAbi()
 	require.NoError(t, err)
 
-	tx := types.NewTx(&types.DynamicFeeTx{
-		BaseTx: &types.BaseTx{
-			To:    &contracts.NativeERC20TokenContract,
-			Input: mintInput,
-		},
-	})
+	tx := types.NewTx(
+		types.NewDynamicFeeTx(
+			types.WithTo(&contracts.NativeERC20TokenContract),
+			types.WithInput(mintInput),
+		),
+	)
 
 	receipt, err := relayer.SendTransaction(tx, minter)
 	require.NoError(t, err)
@@ -469,12 +469,10 @@ func TestE2E_Consensus_MintableERC20NativeToken(t *testing.T) {
 	mintInput, err = mintFn.EncodeAbi()
 	require.NoError(t, err)
 
-	tx = types.NewTx(&types.DynamicFeeTx{
-		BaseTx: &types.BaseTx{
-			To:    &contracts.NativeERC20TokenContract,
-			Input: mintInput,
-		},
-	})
+	tx = types.NewTx(types.NewDynamicFeeTx(
+		types.WithTo(&contracts.NativeERC20TokenContract),
+		types.WithInput(mintInput),
+	))
 
 	receipt, err = relayer.SendTransaction(tx, nonMinterAcc.Ecdsa)
 	require.Error(t, err)
@@ -557,25 +555,21 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	sendAmount := ethgo.Gwei(1)
 
 	txns := []*types.Transaction{
-		types.NewTx(&types.LegacyTx{
-			BaseTx: &types.BaseTx{
-				Value: sendAmount,
-				To:    &recipient,
-				Gas:   21000,
-				Nonce: uint64(0),
-			},
-			GasPrice: ethgo.Gwei(1),
-		}),
-		types.NewTx(&types.DynamicFeeTx{
-			BaseTx: &types.BaseTx{
-				Value: sendAmount,
-				To:    &recipient,
-				Gas:   21000,
-				Nonce: uint64(0),
-			},
-			GasFeeCap: ethgo.Gwei(1),
-			GasTipCap: ethgo.Gwei(1),
-		}),
+		types.NewTx(types.NewLegacyTx(
+			types.WithValue(sendAmount),
+			types.WithTo(&recipient),
+			types.WithGas(21000),
+			types.WithNonce(uint64(0)),
+			types.WithGasPrice(ethgo.Gwei(1)),
+		)),
+		types.NewTx(types.NewDynamicFeeTx(
+			types.WithValue(sendAmount),
+			types.WithTo(&recipient),
+			types.WithGas(21000),
+			types.WithNonce(uint64(0)),
+			types.WithGasFeeCap(ethgo.Gwei(1)),
+			types.WithGasTipCap(ethgo.Gwei(1)),
+		)),
 	}
 
 	initialMinerBalance := big.NewInt(0)
@@ -801,13 +795,11 @@ func TestE2E_Deploy_Nested_Contract(t *testing.T) {
 	setValueInput, err := setNumberFn.Encode([]interface{}{numberToPersist})
 	require.NoError(t, err)
 
-	txn := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			From:  admin.Address(),
-			To:    &wrapperAddr,
-			Input: setValueInput,
-		},
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(admin.Address()),
+		types.WithTo(&wrapperAddr),
+		types.WithInput(setValueInput),
+	))
 
 	receipt, err = txRelayer.SendTransaction(txn, admin)
 	require.NoError(t, err)

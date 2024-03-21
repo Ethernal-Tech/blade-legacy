@@ -57,28 +57,24 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 
 			// Send every second transaction as a dynamic fees one
 			if i%2 == 0 {
-				txData = &types.DynamicFeeTx{
-					BaseTx: &types.BaseTx{
-						From:  sender.Address(),
-						To:    (*types.Address)(&to),
-						Gas:   30000, // enough to send a transfer
-						Value: big.NewInt(int64(sendAmount)),
-						Nonce: uint64(i),
-					},
-					GasFeeCap: big.NewInt(1000000000),
-					GasTipCap: big.NewInt(100000000),
-				}
+				txData = types.NewDynamicFeeTx(
+					types.WithFrom(sender.Address()),
+					types.WithTo((*types.Address)(&to)),
+					types.WithGas(30000), // enough to send a transfer
+					types.WithValue(big.NewInt(int64(sendAmount))),
+					types.WithNonce(uint64(i)),
+					types.WithGasFeeCap(big.NewInt(1000000000)),
+					types.WithGasTipCap(big.NewInt(100000000)),
+				)
 			} else {
-				txData = &types.LegacyTx{
-					BaseTx: &types.BaseTx{
-						From:  sender.Address(),
-						To:    (*types.Address)(&to),
-						Gas:   30000, // enough to send a transfer
-						Value: big.NewInt(int64(sendAmount)),
-						Nonce: uint64(i),
-					},
-					GasPrice: ethgo.Gwei(2),
-				}
+				txData = types.NewLegacyTx(
+					types.WithFrom(sender.Address()),
+					types.WithTo((*types.Address)(&to)),
+					types.WithGas(30000),
+					types.WithValue(big.NewInt(int64(sendAmount))),
+					types.WithNonce(uint64(i)),
+					types.WithGasPrice(ethgo.Gwei(2)),
+				)
 			}
 
 			txn := types.NewTx(txData)
@@ -163,24 +159,20 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 		var txData types.TxData
 
 		if i%2 == 0 {
-			txData = &types.DynamicFeeTx{
-				BaseTx: &types.BaseTx{
-					Value: big.NewInt(int64(sendAmount * (num - i))),
-					To:    &recipient,
-					Gas:   21000,
-				},
-				GasFeeCap: big.NewInt(1000000000),
-				GasTipCap: big.NewInt(1000000000),
-			}
+			txData = types.NewDynamicFeeTx(
+				types.WithValue(big.NewInt(int64(sendAmount*(num-i)))),
+				types.WithTo(&recipient),
+				types.WithGas(21000),
+				types.WithGasFeeCap(big.NewInt(1000000000)),
+				types.WithGasTipCap(big.NewInt(1000000000)),
+			)
 		} else {
-			txData = &types.LegacyTx{
-				BaseTx: &types.BaseTx{
-					Value: big.NewInt(int64(sendAmount * (num - i))),
-					To:    &recipient,
-					Gas:   21000,
-				},
-				GasPrice: ethgo.Gwei(1),
-			}
+			txData = types.NewLegacyTx(
+				types.WithValue(big.NewInt(int64(sendAmount*(num-i)))),
+				types.WithTo(&recipient),
+				types.WithGas(21000),
+				types.WithGasPrice(ethgo.Gwei(1)),
+			)
 		}
 
 		txn := types.NewTx(txData)
@@ -216,10 +208,9 @@ func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Servers[0].JSONRPCAddr()))
 	require.NoError(t, err)
 
-	tx := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			Input: contractsapi.TestWriteBlockMetadata.Bytecode,
-		}})
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithInput(contractsapi.TestWriteBlockMetadata.Bytecode),
+	))
 
 	receipt, err := relayer.SendTransaction(tx, sidechainKey)
 	require.NoError(t, err)
@@ -274,26 +265,22 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 
 	for i := 0; i < txNum; i++ {
 		if i%2 == 0 {
-			txData = &types.DynamicFeeTx{
-				BaseTx: &types.BaseTx{
-					Value: sendAmount,
-					To:    &recipient,
-					Gas:   21000,
-					Nonce: nonce,
-				},
-				GasFeeCap: big.NewInt(1000000000),
-				GasTipCap: big.NewInt(100000000),
-			}
+			txData = types.NewDynamicFeeTx(
+				types.WithValue(sendAmount),
+				types.WithTo(&recipient),
+				types.WithGas(21000),
+				types.WithNonce(nonce),
+				types.WithGasFeeCap(big.NewInt(1000000000)),
+				types.WithGasTipCap(big.NewInt(100000000)),
+			)
 		} else {
-			txData = &types.LegacyTx{
-				BaseTx: &types.BaseTx{
-					Value: sendAmount,
-					To:    &recipient,
-					Gas:   21000,
-					Nonce: nonce,
-				},
-				GasPrice: ethgo.Gwei(2),
-			}
+			txData = types.NewLegacyTx(
+				types.WithValue(sendAmount),
+				types.WithTo(&recipient),
+				types.WithGas(21000),
+				types.WithNonce(nonce),
+				types.WithGasPrice(ethgo.Gwei(2)),
+			)
 		}
 
 		txn := types.NewTx(txData)
