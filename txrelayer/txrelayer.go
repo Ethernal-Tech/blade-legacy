@@ -177,7 +177,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 			compMaxFeePerGas = compMaxFeePerGas.Div(compMaxFeePerGas, big.NewInt(100))
 			txn.SetGasFeeCap(new(big.Int).Add(maxFeePerGas, compMaxFeePerGas))
 		}
-	} else if txn.GasPrice().Uint64() == 0 || txn.GasPrice() == nil {
+	} else if txn.GasPrice() == nil || txn.GasPrice().Uint64() == 0 {
 		gasPrice, err := t.Client().Eth().GasPrice()
 		if err != nil {
 			return ethgo.ZeroHash, fmt.Errorf("failed to get gas price: %w", err)
