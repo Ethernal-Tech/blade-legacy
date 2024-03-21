@@ -565,7 +565,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 		ethTxn, err := newEthClient.GetTransactionByHash(types.Hash(txn.Receipt().TransactionHash))
 		require.NoError(t, err)
 
-		require.Equal(t, ethTxn.From(), types.Address(preminedAcct.Address()))
+		require.Equal(t, ethTxn.From(), preminedAcct.Address())
 
 		receipt, err := newEthClient.GetTransactionReceipt(ethTxn.Hash())
 		require.NoError(t, err)
@@ -574,7 +574,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionCount", func(t *testing.T) {
-		nonce, err := newEthClient.GetNonce(types.Address(preminedAcct.Address()), bladeRPC.LatestBlockNumberOrHash)
+		nonce, err := newEthClient.GetNonce(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, nonce, uint64(0)) // since we used this account in previous tests
 
@@ -582,13 +582,13 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
-		newNonce, err := newEthClient.GetNonce(types.Address(preminedAcct.Address()), bladeRPC.LatestBlockNumberOrHash)
+		newNonce, err := newEthClient.GetNonce(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, nonce+1, newNonce)
 	})
 
 	t.Run("eth_getBalance", func(t *testing.T) {
-		balance, err := newEthClient.GetBalance(types.Address(preminedAcct.Address()), bladeRPC.LatestBlockNumberOrHash)
+		balance, err := newEthClient.GetBalance(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.True(t, balance.Cmp(big.NewInt(0)) >= 0)
 
@@ -615,7 +615,7 @@ func TestE2E_JsonRPC_NewEthClient(t *testing.T) {
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
 		estimatedGas, err := newEthClient.EstimateGas(&bladeRPC.CallMsg{
-			From: types.Address(preminedAcct.Address()),
+			From: preminedAcct.Address(),
 			To:   &target,
 			Data: input,
 		})
