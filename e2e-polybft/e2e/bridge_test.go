@@ -100,12 +100,10 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	deployerKey, err := bridgeHelper.DecodePrivateKey("")
 	require.NoError(t, err)
 
-	deployTx := types.NewTx(&types.LegacyTx{
-		BaseTx: &types.BaseTx{
-			To:    nil,
-			Input: contractsapi.RootERC20.Bytecode,
-		},
-	})
+	deployTx := types.NewTx(types.NewLegacyTx(
+		types.WithTo(nil),
+		types.WithInput(contractsapi.RootERC20.Bytecode),
+	))
 
 	receipt, err := rootchainTxRelayer.SendTransaction(deployTx, deployerKey)
 	require.NoError(t, err)
