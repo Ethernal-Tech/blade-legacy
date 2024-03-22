@@ -61,7 +61,7 @@ func TestE2E_Migration(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(rpcClient))
 	require.NoError(t, err)
 
-	//send transaction to user2
+	// send transaction to user2
 	sendAmount := ethgo.Gwei(10000)
 	receipt, err := relayer.SendTransaction(
 		&ethgo.Transaction{

@@ -173,12 +173,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // createWithdrawTxn encodes parameters for withdraw function on child chain predicate contract
-func createWithdrawTxn(receivers []types.Address, amounts, TokenIDs []*big.Int) (*ethgo.Transaction, error) {
+func createWithdrawTxn(receivers []types.Address, amounts, tokenIDs []*big.Int) (*ethgo.Transaction, error) {
 	withdrawFn := &contractsapi.WithdrawBatchChildERC1155PredicateFn{
 		ChildToken: types.StringToAddress(wp.TokenAddr),
 		Receivers:  receivers,
 		Amounts:    amounts,
-		TokenIDs:   TokenIDs,
+		TokenIDs:   tokenIDs,
 	}
 
 	input, err := withdrawFn.EncodeAbi()
