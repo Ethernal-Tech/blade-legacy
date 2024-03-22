@@ -297,7 +297,7 @@ func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 	}
 
 	// if we do not have a snapshot in memory for given epoch, we will get the latest one we have
-	for ; currentEpoch >= 0; currentEpoch-- {
+	for {
 		cachedSnapshot = v.snapshots[currentEpoch]
 		if cachedSnapshot != nil {
 			v.logger.Trace("Found snapshot in memory cache", "Epoch", currentEpoch)
@@ -308,6 +308,8 @@ func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 		if currentEpoch == 0 { // prevent uint64 underflow
 			break
 		}
+
+		currentEpoch--
 	}
 
 	dbSnapshot, err := v.state.EpochStore.getNearestOrEpochSnapshot(epochToQuery, dbTx)

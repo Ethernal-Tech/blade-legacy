@@ -101,7 +101,7 @@ func (s *EpochStore) getNearestOrEpochSnapshot(epoch uint64, dbTx *bolt.Tx) (*va
 	)
 
 	getFn := func(tx *bolt.Tx) error {
-		for ; epoch >= 0; epoch-- {
+		for {
 			v := tx.Bucket(validatorSnapshotsBucket).Get(common.EncodeUint64ToBytes(epoch))
 			if v != nil {
 				return json.Unmarshal(v, &snapshot)
@@ -110,6 +110,8 @@ func (s *EpochStore) getNearestOrEpochSnapshot(epoch uint64, dbTx *bolt.Tx) (*va
 			if epoch == 0 { // prevent uint64 underflow
 				break
 			}
+
+			epoch--
 		}
 
 		return nil
