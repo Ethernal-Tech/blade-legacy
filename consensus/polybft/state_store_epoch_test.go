@@ -207,22 +207,32 @@ func TestEpochStore_getNearestOrEpochSnapshot(t *testing.T) {
 
 	require.NoError(t, state.EpochStore.insertValidatorSnapshot(snapshot, nil))
 
-	// Test with existing DB transaction
-	dbTx, err := state.EpochStore.db.Begin(false)
-	require.NoError(t, err)
-	defer dbTx.Rollback()
+	t.Run("with existing dbTx", func(t *testing.T) {
+		t.Parallel()
 
-	result, err := state.EpochStore.getNearestOrEpochSnapshot(epoch, dbTx)
-	assert.NoError(t, err)
-	assert.Equal(t, snapshot, result)
+		dbTx, err := state.EpochStore.db.Begin(false)
+		require.NoError(t, err)
 
-	// Test without DB transaction
-	result, err = state.EpochStore.getNearestOrEpochSnapshot(epoch, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, snapshot, result)
+		result, err := state.EpochStore.getNearestOrEpochSnapshot(epoch, dbTx)
+		assert.NoError(t, err)
+		assert.Equal(t, snapshot, result)
 
-	// Test with non-existing epoch
-	result, err = state.EpochStore.getNearestOrEpochSnapshot(2, nil)
-	assert.NoError(t, err)
-	assert.Equal(t, result, snapshot)
+		require.NoError(t, dbTx.Rollback())
+	})
+
+	t.Run("without existing dbTx", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := state.EpochStore.getNearestOrEpochSnapshot(epoch, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, snapshot, result)
+	})
+
+	t.Run("with non-existing epoch", func(t *testing.T) {
+		t.Parallel()
+
+		result, err := state.EpochStore.getNearestOrEpochSnapshot(2, nil)
+		assert.NoError(t, err)
+		assert.Equal(t, result, snapshot)
+	})
 }
