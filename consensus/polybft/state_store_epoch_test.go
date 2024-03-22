@@ -186,35 +186,43 @@ func TestState_Insert_And_Cleanup(t *testing.T) {
 	assert.Equal(t, 1, len(votes))
 }
 
-func TestState_getLastSnapshot(t *testing.T) {
+func TestEpochStore_getNearestOrEpochSnapshot(t *testing.T) {
 	t.Parallel()
 
-	const (
-		lastEpoch          = uint64(10)
-		fixedEpochSize     = uint64(10)
-		numberOfValidators = 3
-	)
-
 	state := newTestState(t)
+	epoch := uint64(1)
+	keys, err := bls.CreateRandomBlsKeys(3)
+	require.NoError(t, err)
 
-	for i := uint64(1); i <= lastEpoch; i++ {
-		keys, err := bls.CreateRandomBlsKeys(numberOfValidators)
-
-		require.NoError(t, err)
-
-		var snapshot validator.AccountSet
-		for j := 0; j < numberOfValidators; j++ {
-			snapshot = append(snapshot, &validator.ValidatorMetadata{Address: types.BytesToAddress(generateRandomBytes(t)), BlsKey: keys[j].PublicKey()})
-		}
-
-		require.NoError(t, state.EpochStore.insertValidatorSnapshot(
-			&validatorSnapshot{i, i * fixedEpochSize, snapshot}, nil))
+	// Insert a snapshot for epoch 1
+	snapshot := &validatorSnapshot{
+		Epoch:            epoch,
+		EpochEndingBlock: 100,
+		Snapshot: validator.AccountSet{
+			&validator.ValidatorMetadata{Address: types.BytesToAddress([]byte{0x18}), BlsKey: keys[0].PublicKey()},
+			&validator.ValidatorMetadata{Address: types.BytesToAddress([]byte{0x23}), BlsKey: keys[1].PublicKey()},
+			&validator.ValidatorMetadata{Address: types.BytesToAddress([]byte{0x37}), BlsKey: keys[2].PublicKey()},
+		},
 	}
 
-	snapshotFromDB, err := state.EpochStore.getLastSnapshot(nil)
+	require.NoError(t, state.EpochStore.insertValidatorSnapshot(snapshot, nil))
 
+	// Test with existing DB transaction
+	dbTx, err := state.EpochStore.db.Begin(false)
+	require.NoError(t, err)
+	defer dbTx.Rollback()
+
+	result, err := state.EpochStore.getNearestOrEpochSnapshot(epoch, dbTx)
 	assert.NoError(t, err)
-	assert.Equal(t, numberOfValidators, snapshotFromDB.Snapshot.Len())
-	assert.Equal(t, lastEpoch, snapshotFromDB.Epoch)
-	assert.Equal(t, lastEpoch*fixedEpochSize, snapshotFromDB.EpochEndingBlock)
+	assert.Equal(t, snapshot, result)
+
+	// Test without DB transaction
+	result, err = state.EpochStore.getNearestOrEpochSnapshot(epoch, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, snapshot, result)
+
+	// Test with non-existing epoch
+	result, err = state.EpochStore.getNearestOrEpochSnapshot(2, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, result, snapshot)
 }

@@ -289,6 +289,8 @@ func (v *validatorsSnapshotCache) cleanup(dbTx *bolt.Tx) error {
 // If it doesn't have snapshot cached for desired epoch, it will return the latest one it has
 func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 	dbTx *bolt.Tx) (*validatorSnapshot, error) {
+	epochToQuery := currentEpoch
+
 	cachedSnapshot := v.snapshots[currentEpoch]
 	if cachedSnapshot != nil {
 		return cachedSnapshot, nil
@@ -308,7 +310,7 @@ func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 		}
 	}
 
-	dbSnapshot, err := v.state.EpochStore.getLastSnapshot(dbTx)
+	dbSnapshot, err := v.state.EpochStore.getNearestOrEpochSnapshot(epochToQuery, dbTx)
 	if err != nil {
 		return nil, err
 	}
@@ -321,6 +323,12 @@ func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 			// save it in cache as well, since it doesn't exist
 			v.snapshots[dbSnapshot.Epoch] = dbSnapshot.copy()
 		}
+	}
+
+	if cachedSnapshot != nil && cachedSnapshot.Epoch > epochToQuery {
+		// if we have a snapshot in memory or db, but it's newer than the one we need
+		// then return nil, and just recalculate it from scratch
+		return nil, nil
 	}
 
 	return cachedSnapshot, nil
