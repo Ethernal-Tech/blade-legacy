@@ -156,7 +156,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		receipt, err := newEthClient.GetTransactionReceipt(ethTxn.Hash())
 		require.NoError(t, err)
 		require.NotNil(t, receipt)
-		require.Equal(t, ethTxn.Hash(), receipt.TransactionHash)
+		require.Equal(t, ethTxn.Hash(), types.Hash(receipt.TransactionHash))
 	})
 
 	t.Run("eth_getTransactionCount", func(t *testing.T) {
