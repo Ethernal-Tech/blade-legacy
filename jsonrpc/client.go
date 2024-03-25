@@ -25,7 +25,8 @@ func NewEthClient(url string) (*EthClient, error) {
 	return &EthClient{client}, nil
 }
 
-// EndpointCall calls a specified method on the json rpc client with given params and returns the result in the out parameter
+// EndpointCall calls a specified method on the json rpc client with given params
+// and returns the result in the out parameter
 func (e *EthClient) EndpointCall(method string, out interface{}, params ...interface{}) error {
 	return e.client.Call(method, out, params...)
 }

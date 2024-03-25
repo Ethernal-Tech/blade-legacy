@@ -638,6 +638,7 @@ func (f *FeeHistory) UnmarshalJSON(data []byte) error {
 
 	if raw.Reward != nil {
 		f.Reward = make([][]uint64, 0, len(raw.Reward))
+
 		for _, r := range raw.Reward {
 			elem := make([]uint64, 0, len(r))
 			for _, i := range r {

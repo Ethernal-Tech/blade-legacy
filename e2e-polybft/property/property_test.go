@@ -113,6 +113,7 @@ func TestProperty_DropValidators(t *testing.T) {
 		oldBlockNumber := currentBlock
 
 		time.Sleep(2 * blockTime)
+
 		currentBlock, err = activeValidator.JSONRPC().BlockNumber()
 		require.NoError(t, err)
 		require.Equal(t, oldBlockNumber, currentBlock)
