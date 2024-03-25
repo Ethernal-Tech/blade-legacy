@@ -124,7 +124,7 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 	tx.setFrom(from)
 
 	// Do not decode 'to' if it doesn't exist.
-	if HasKey(v, "to") {
+	if HasJSONKey(v, "to") {
 		if v.Get("to").String() != "null" {
 			var to Address
 

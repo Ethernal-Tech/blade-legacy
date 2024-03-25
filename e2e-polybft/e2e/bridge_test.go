@@ -434,7 +434,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
 	require.NoError(t, err)
 
-	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
+	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
 
 	currentEpoch := currentExtra.Checkpoint.EpochNumber
 	require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute, rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
@@ -627,7 +627,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	currentEpoch := currentExtra.Checkpoint.EpochNumber
-	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
+	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
 
 	require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute,
 		rootchainTxRelayer, polybftCfg.Bridge.CheckpointManagerAddr))
@@ -1217,7 +1217,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
 		require.NoError(t, err)
 
-		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
+		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
 
 		currentEpoch := currentExtra.Checkpoint.EpochNumber
 
@@ -1403,7 +1403,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
 		require.NoError(t, err)
 
-		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number, currentExtra.Checkpoint.EpochNumber)
+		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
 
 		currentEpoch := currentExtra.Checkpoint.EpochNumber
 

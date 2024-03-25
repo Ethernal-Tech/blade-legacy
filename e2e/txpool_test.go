@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/txpool"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e/framework"
@@ -373,7 +372,7 @@ func TestTxPool_GetPendingTx(t *testing.T) {
 	// Make sure the specific fields are not filled yet
 	assert.Equal(t, uint64(0), tx.TxnIndex)
 	assert.Equal(t, uint64(0), tx.BlockNumber)
-	assert.Equal(t, ethgo.ZeroHash, tx.BlockHash)
+	assert.Equal(t, types.ZeroHash, tx.BlockHash)
 
 	// Wait for the transaction to be included into a block
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -392,5 +391,5 @@ func TestTxPool_GetPendingTx(t *testing.T) {
 
 	assert.Equal(t, uint64(0), tx.TxnIndex)
 	assert.Equal(t, receipt.BlockNumber, tx.BlockNumber)
-	assert.Equal(t, receipt.BlockHash, tx.BlockHash)
+	assert.Equal(t, types.Hash(receipt.BlockHash), tx.BlockHash)
 }

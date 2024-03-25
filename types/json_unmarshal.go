@@ -15,7 +15,6 @@ func (b *Block) UnmarshalJSON(buf []byte) error {
 	}
 
 	// header
-	b.Header = &Header{}
 	if err := b.Header.unmarshalJSON(v); err != nil {
 		return err
 	}
@@ -66,6 +65,8 @@ func (h *Header) UnmarshalJSON(buf []byte) error {
 }
 
 func (h *Header) unmarshalJSON(v *fastjson.Value) error {
+	h = new(Header)
+
 	var err error
 
 	if h.Hash, err = UnmarshalJSONHash(v, "hash"); err != nil {
@@ -151,7 +152,9 @@ func (t *Transaction) UnmarshalJSON(buf []byte) error {
 }
 
 func (t *Transaction) UnmarshalJSONWith(v *fastjson.Value) error {
-	if HasKey(v, "type") {
+	t = new(Transaction)
+
+	if HasJSONKey(v, "type") {
 		txnType, err := UnmarshalJSONUint64(v, "type")
 		if err != nil {
 			return err
@@ -159,8 +162,8 @@ func (t *Transaction) UnmarshalJSONWith(v *fastjson.Value) error {
 
 		t.InitInnerData(TxType(txnType))
 	} else {
-		if HasKey(v, "chainId") {
-			if HasKey(v, "maxFeePerGas") {
+		if HasJSONKey(v, "chainId") {
+			if HasJSONKey(v, "maxFeePerGas") {
 				t.InitInnerData(DynamicFeeTxType)
 			} else {
 				t.InitInnerData(AccessListTxType)
@@ -183,7 +186,9 @@ func (r *Receipt) UnmarshalJSON(buf []byte) error {
 		return nil
 	}
 
-	if HasKey(v, "contractAddress") {
+	r = new(Receipt)
+
+	if HasJSONKey(v, "contractAddress") {
 		contractAddr, err := UnmarshalJSONAddr(v, "contractAddress")
 		if err != nil {
 			return err
@@ -212,7 +217,7 @@ func (r *Receipt) UnmarshalJSON(buf []byte) error {
 		return err
 	}
 
-	if HasKey(v, "status") {
+	if HasJSONKey(v, "status") {
 		// post-byzantium fork
 		status, err := UnmarshalJSONUint64(v, "status")
 		if err != nil {
@@ -238,7 +243,7 @@ func (r *Receipt) UnmarshalJSON(buf []byte) error {
 }
 
 // UnmarshalJSON implements the unmarshal interface
-func (r *Log) UnmarshalJSON(buf []byte) error {
+func (l *Log) UnmarshalJSON(buf []byte) error {
 	p := DefaultPool.Get()
 	defer DefaultPool.Put(p)
 
@@ -247,21 +252,23 @@ func (r *Log) UnmarshalJSON(buf []byte) error {
 		return nil
 	}
 
-	return r.unmarshalJSON(v)
+	return l.unmarshalJSON(v)
 }
 
-func (r *Log) unmarshalJSON(v *fastjson.Value) error {
+func (l *Log) unmarshalJSON(v *fastjson.Value) error {
+	l = new(Log)
+
 	var err error
 
-	if r.Address, err = UnmarshalJSONAddr(v, "address"); err != nil {
+	if l.Address, err = UnmarshalJSONAddr(v, "address"); err != nil {
 		return err
 	}
 
-	if r.Data, err = UnmarshalJSONBytes(v, "data"); err != nil {
+	if l.Data, err = UnmarshalJSONBytes(v, "data"); err != nil {
 		return err
 	}
 
-	r.Topics = r.Topics[:0]
+	l.Topics = l.Topics[:0]
 
 	for _, topic := range v.GetArray("topics") {
 		b, err := topic.StringBytes()
@@ -274,7 +281,7 @@ func (r *Log) unmarshalJSON(v *fastjson.Value) error {
 			return err
 		}
 
-		r.Topics = append(r.Topics, t)
+		l.Topics = append(l.Topics, t)
 	}
 
 	return nil

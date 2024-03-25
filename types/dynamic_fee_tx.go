@@ -274,7 +274,7 @@ func (tx *DynamicFeeTx) unmarshalJSON(v *fastjson.Value) error {
 
 	tx.setChainID(chainID)
 
-	if HasKey(v, "accessList") {
+	if HasJSONKey(v, "accessList") {
 		if err := tx.AccessList.unmarshalJSON(v.Get("accessList")); err != nil {
 			return err
 		}

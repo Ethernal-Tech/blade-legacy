@@ -129,8 +129,8 @@ func UnmarshalTextByte(dst, src []byte, size int) error {
 	return nil
 }
 
-// HasKey is a helper function for checking if given key exists in json
-func HasKey(v *fastjson.Value, key string) bool {
+// HasJSONKey is a helper function for checking if given key exists in json
+func HasJSONKey(v *fastjson.Value, key string) bool {
 	value := v.Get(key)
 
 	return value != nil && value.Type() != fastjson.TypeNull

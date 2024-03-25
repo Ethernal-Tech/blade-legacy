@@ -680,9 +680,26 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	t.BlockNumber = v.GetUint64("blockNumber")
-	t.BlockHash = types.Hash(v.GetStringBytes("blockHash"))
-	t.TxnIndex = v.GetUint64("transactionIndex")
+	if types.HasJSONKey(v, "blockNumber") {
+		t.BlockNumber, err = types.UnmarshalJSONUint64(v, "blockNumber")
+		if err != nil {
+			return err
+		}
+	}
+
+	if types.HasJSONKey(v, "blockHash") {
+		t.BlockHash, err = types.UnmarshalJSONHash(v, "blockHash")
+		if err != nil {
+			return err
+		}
+	}
+
+	if types.HasJSONKey(v, "transactionIndex") {
+		t.TxnIndex, err = types.UnmarshalJSONUint64(v, "transactionIndex")
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
