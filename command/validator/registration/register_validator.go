@@ -98,7 +98,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	rootChainID, err := txRelayer.Client().Eth().ChainID()
+	rootChainID, err := txRelayer.Client().ChainID()
 	if err != nil {
 		return err
 	}

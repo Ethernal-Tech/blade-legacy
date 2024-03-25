@@ -205,7 +205,7 @@ func (tx *LegacyTx) unmarshalJSON(v *fastjson.Value) error {
 		return err
 	}
 
-	gasPrice, err := unmarshalJSONBigInt(v, "gasPrice")
+	gasPrice, err := UnmarshalJSONBigInt(v, "gasPrice")
 	if err != nil {
 		return err
 	}

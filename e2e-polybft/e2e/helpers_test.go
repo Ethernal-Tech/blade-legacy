@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/abi"
-	"github.com/umbracle/ethgo/jsonrpc"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
@@ -33,7 +33,13 @@ func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contract
 	return relayer.Call(senderAddr, contractAddress, input)
 }
 
-func ABITransaction(relayer txrelayer.TxRelayer, key crypto.Key, artifact *contracts.Artifact, contractAddress types.Address, method string, params ...interface{}) (*ethgo.Receipt, error) {
+func ABITransaction(
+	relayer txrelayer.TxRelayer,
+	key crypto.Key,
+	artifact *contracts.Artifact,
+	contractAddress types.Address,
+	method string,
+	params ...interface{}) (*ethgo.Receipt, error) {
 	input, err := artifact.Abi.GetMethod(method).Encode(params)
 	if err != nil {
 		return nil, err
@@ -157,7 +163,7 @@ func expectRole(t *testing.T, cluster *framework.TestCluster, contract types.Add
 
 // getFilteredLogs retrieves Ethereum logs, described by event signature within the block range
 func getFilteredLogs(eventSig ethgo.Hash, startBlock, endBlock uint64,
-	ethEndpoint *jsonrpc.Eth) ([]*ethgo.Log, error) {
+	ethEndpoint *jsonrpc.EthClient) ([]*ethgo.Log, error) {
 	filter := &ethgo.LogFilter{Topics: [][]*ethgo.Hash{{&eventSig}}}
 
 	filter.SetFromUint64(startBlock)

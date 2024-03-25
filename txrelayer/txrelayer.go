@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -45,14 +45,14 @@ type TxRelayer interface {
 	// (this function is meant only for testing purposes and is about to be removed at some point)
 	SendTransactionLocal(txn *types.Transaction) (*ethgo.Receipt, error)
 	// Client returns jsonrpc client
-	Client() *jsonrpc.Client
+	Client() *jsonrpc.EthClient
 }
 
 var _ TxRelayer = (*TxRelayerImpl)(nil)
 
 type TxRelayerImpl struct {
 	ipAddress        string
-	client           *jsonrpc.Client
+	client           *jsonrpc.EthClient
 	receiptsPollFreq time.Duration
 	receiptsTimeout  time.Duration
 	noWaitReceipt    bool
@@ -84,7 +84,7 @@ func NewTxRelayer(opts ...TxRelayerOption) (TxRelayer, error) {
 	}
 
 	if t.client == nil {
-		client, err := jsonrpc.NewClient(t.ipAddress)
+		client, err := jsonrpc.NewEthClient(t.ipAddress)
 		if err != nil {
 			return nil, err
 		}
@@ -97,13 +97,13 @@ func NewTxRelayer(opts ...TxRelayerOption) (TxRelayer, error) {
 
 // Call executes a message call immediately without creating a transaction on the blockchain
 func (t *TxRelayerImpl) Call(from types.Address, to types.Address, input []byte) (string, error) {
-	callMsg := &ethgo.CallMsg{
-		From: ethgo.Address(from),
-		To:   (*ethgo.Address)(&to),
+	callMsg := &jsonrpc.CallMsg{
+		From: from,
+		To:   &to,
 		Data: input,
 	}
 
-	return t.client.Eth().Call(callMsg, ethgo.Pending)
+	return t.client.Call(callMsg, jsonrpc.PendingBlockNumber, nil)
 }
 
 // SendTransaction signs given transaction by provided key and sends it to the blockchain
@@ -137,22 +137,22 @@ func (t *TxRelayerImpl) SendTransaction(txn *types.Transaction, key crypto.Key) 
 }
 
 // Client returns jsonrpc client
-func (t *TxRelayerImpl) Client() *jsonrpc.Client {
+func (t *TxRelayerImpl) Client() *jsonrpc.EthClient {
 	return t.client
 }
 
-func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto.Key) (ethgo.Hash, error) {
+func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto.Key) (types.Hash, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	nonce, err := t.client.Eth().GetNonce(ethgo.Address(key.Address()), ethgo.Pending)
+	nonce, err := t.client.GetNonce(key.Address(), jsonrpc.PendingBlockNumberOrHash)
 	if err != nil {
-		return ethgo.ZeroHash, fmt.Errorf("failed to get nonce: %w", err)
+		return types.ZeroHash, fmt.Errorf("failed to get nonce: %w", err)
 	}
 
-	chainID, err := t.client.Eth().ChainID()
+	chainID, err := t.client.ChainID()
 	if err != nil {
-		return ethgo.ZeroHash, err
+		return types.ZeroHash, err
 	}
 
 	txn.SetChainID(chainID)
@@ -166,8 +166,8 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 		maxPriorityFee := txn.GetGasTipCap()
 		if maxPriorityFee == nil {
 			// retrieve the max priority fee per gas
-			if maxPriorityFee, err = t.Client().Eth().MaxPriorityFeePerGas(); err != nil {
-				return ethgo.ZeroHash, fmt.Errorf("failed to get max priority fee per gas: %w", err)
+			if maxPriorityFee, err = t.Client().MaxPriorityFeePerGas(); err != nil {
+				return types.ZeroHash, fmt.Errorf("failed to get max priority fee per gas: %w", err)
 			}
 
 			// set retrieved max priority fee per gas increased by certain percentage
@@ -178,12 +178,17 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 
 		if txn.GetGasFeeCap() == nil {
 			// retrieve the latest base fee
-			feeHist, err := t.Client().Eth().FeeHistory(1, ethgo.Latest, nil)
+			feeHist, err := t.Client().FeeHistory(1, jsonrpc.PendingBlockNumber, nil)
 			if err != nil {
-				return ethgo.ZeroHash, fmt.Errorf("failed to get fee history: %w", err)
+				return types.ZeroHash, fmt.Errorf("failed to get fee history: %w", err)
 			}
 
-			baseFee := feeHist.BaseFee[len(feeHist.BaseFee)-1]
+			baseFee := big.NewInt(0)
+
+			if len(feeHist.BaseFee) != 0 {
+				baseFee = baseFee.SetUint64(feeHist.BaseFee[len(feeHist.BaseFee)-1])
+			}
+
 			// set max fee per gas as sum of base fee and max priority fee
 			// (increased by certain percentage)
 			maxFeePerGas := new(big.Int).Add(baseFee, maxPriorityFee)
@@ -192,9 +197,9 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 			txn.SetGasFeeCap(new(big.Int).Add(maxFeePerGas, compMaxFeePerGas))
 		}
 	} else if txn.GasPrice() == nil || txn.GasPrice().Uint64() == 0 {
-		gasPrice, err := t.Client().Eth().GasPrice()
+		gasPrice, err := t.Client().GasPrice()
 		if err != nil {
-			return ethgo.ZeroHash, fmt.Errorf("failed to get gas price: %w", err)
+			return types.ZeroHash, fmt.Errorf("failed to get gas price: %w", err)
 		}
 
 		gasPriceBigInt := new(big.Int).SetUint64(gasPrice + (gasPrice * feeIncreasePercentage / 100))
@@ -202,9 +207,9 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 	}
 
 	if txn.Gas() == 0 {
-		gasLimit, err := t.client.Eth().EstimateGas(ConvertTxnToCallMsg(txn))
+		gasLimit, err := t.client.EstimateGas(ConvertTxnToCallMsg(txn))
 		if err != nil {
-			return ethgo.ZeroHash, fmt.Errorf("failed to estimate gas: %w", err)
+			return types.ZeroHash, fmt.Errorf("failed to estimate gas: %w", err)
 		}
 
 		txn.SetGas(gasLimit + (gasLimit * gasLimitIncreasePercentage / 100))
@@ -217,7 +222,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 			return key.Sign(hash.Bytes())
 		})
 	if err != nil {
-		return ethgo.ZeroHash, err
+		return types.ZeroHash, err
 	}
 
 	if t.writer != nil {
@@ -237,7 +242,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 
 	rlpTxn := signedTxn.MarshalRLP()
 
-	return t.client.Eth().SendRawTransaction(rlpTxn)
+	return t.client.SendRawTransaction(rlpTxn)
 }
 
 // SendTransactionLocal sends non-signed transaction
@@ -251,33 +256,33 @@ func (t *TxRelayerImpl) SendTransactionLocal(txn *types.Transaction) (*ethgo.Rec
 	return t.waitForReceipt(txnHash)
 }
 
-func (t *TxRelayerImpl) sendTransactionLocalLocked(txn *types.Transaction) (ethgo.Hash, error) {
+func (t *TxRelayerImpl) sendTransactionLocalLocked(txn *types.Transaction) (types.Hash, error) {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	accounts, err := t.client.Eth().Accounts()
+	accounts, err := t.client.Accounts()
 	if err != nil {
-		return ethgo.ZeroHash, err
+		return types.ZeroHash, err
 	}
 
 	if len(accounts) == 0 {
-		return ethgo.ZeroHash, errNoAccounts
+		return types.ZeroHash, errNoAccounts
 	}
 
 	txn.SetFrom(types.Address(accounts[0]))
 
-	gasLimit, err := t.client.Eth().EstimateGas(ConvertTxnToCallMsg(txn))
+	gasLimit, err := t.client.EstimateGas(ConvertTxnToCallMsg(txn))
 	if err != nil {
-		return ethgo.ZeroHash, err
+		return types.ZeroHash, err
 	}
 
 	txn.SetGas(gasLimit)
 	txn.SetGasPrice(new(big.Int).SetUint64(defaultGasPrice))
 
-	return t.client.Eth().SendTransaction(convertTxn(txn))
+	return t.client.SendTransaction(txn)
 }
 
-func (t *TxRelayerImpl) waitForReceipt(hash ethgo.Hash) (*ethgo.Receipt, error) {
+func (t *TxRelayerImpl) waitForReceipt(hash types.Hash) (*ethgo.Receipt, error) {
 	if t.noWaitReceipt {
 		return nil, nil
 	}
@@ -291,7 +296,7 @@ func (t *TxRelayerImpl) waitForReceipt(hash ethgo.Hash) (*ethgo.Receipt, error) 
 	for {
 		select {
 		case <-ticker.C:
-			receipt, err := t.client.Eth().GetTransactionReceipt(hash)
+			receipt, err := t.client.GetTransactionReceipt(hash)
 			if err != nil {
 				if err.Error() != "not found" {
 					return nil, err
@@ -308,80 +313,25 @@ func (t *TxRelayerImpl) waitForReceipt(hash ethgo.Hash) (*ethgo.Receipt, error) 
 }
 
 // ConvertTxnToCallMsg converts txn instance to call message
-func ConvertTxnToCallMsg(txn *types.Transaction) *ethgo.CallMsg {
-	gasPrice := uint64(0)
+func ConvertTxnToCallMsg(txn *types.Transaction) *jsonrpc.CallMsg {
+	gasPrice := big.NewInt(0)
 	if txn.GasPrice() != nil {
-		gasPrice = txn.GasPrice().Uint64()
+		gasPrice = gasPrice.Set(txn.GasPrice())
 	}
 
-	return &ethgo.CallMsg{
-		From:     ethgo.Address(txn.From()),
-		To:       (*ethgo.Address)(txn.To()),
+	return &jsonrpc.CallMsg{
+		From:     txn.From(),
+		To:       txn.To(),
 		Data:     txn.Input(),
 		GasPrice: gasPrice,
 		Value:    txn.Value(),
-		Gas:      new(big.Int).SetUint64(txn.Gas()),
+		Gas:      txn.Gas(),
 	}
-}
-
-// convertTxn converts transaction from types.Transaction to ethgo.Transaction
-func convertTxn(tx *types.Transaction) *ethgo.Transaction {
-	getAccessList := func() ethgo.AccessList {
-		accessList := make(ethgo.AccessList, 0, len(tx.AccessList()))
-
-		for _, e := range tx.AccessList() {
-			storageKeys := make([]ethgo.Hash, 0)
-
-			for _, sk := range e.StorageKeys {
-				storageKeys = append(storageKeys, ethgo.Hash(sk))
-			}
-
-			accessList = append(accessList,
-				ethgo.AccessEntry{
-					Address: ethgo.Address(e.Address),
-					Storage: storageKeys,
-				})
-		}
-
-		return accessList
-	}
-
-	convertedTx := &ethgo.Transaction{
-		From:  ethgo.Address(tx.From()),
-		To:    (*ethgo.Address)(tx.To()),
-		Input: tx.Input(),
-		Value: tx.Value(),
-		Gas:   tx.Gas(),
-	}
-
-	switch tx.Type() {
-	case types.DynamicFeeTxType:
-		convertedTx.Type = ethgo.TransactionDynamicFee
-		convertedTx.AccessList = getAccessList()
-		convertedTx.MaxFeePerGas = tx.GetGasFeeCap()
-		convertedTx.MaxPriorityFeePerGas = tx.GetGasTipCap()
-
-		break
-
-	case types.AccessListTxType:
-		convertedTx.Type = ethgo.TransactionAccessList
-		convertedTx.AccessList = getAccessList()
-
-		break
-
-	default:
-		convertedTx.Type = ethgo.TransactionLegacy
-		convertedTx.GasPrice = tx.GetGasPrice(0).Uint64()
-
-		break
-	}
-
-	return convertedTx
 }
 
 type TxRelayerOption func(*TxRelayerImpl)
 
-func WithClient(client *jsonrpc.Client) TxRelayerOption {
+func WithClient(client *jsonrpc.EthClient) TxRelayerOption {
 	return func(t *TxRelayerImpl) {
 		t.client = client
 	}

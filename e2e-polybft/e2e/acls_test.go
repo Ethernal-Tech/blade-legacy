@@ -77,17 +77,18 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 		deployTxn := cluster.Deploy(t, target, bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Reverted())
-		require.False(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
+		require.False(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
 	{
 		// Step 3. 'adminAddr' can create contracts
 		deployTxn := cluster.Deploy(t, admin, bytecode)
 		require.NoError(t, deployTxn.Wait())
-		require.True(t, deployTxn.Succeed())
-		require.True(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
 
 		proxyContract = types.Address(deployTxn.Receipt().ContractAddress)
+
+		require.True(t, deployTxn.Succeed())
+		require.True(t, cluster.ExistsCode(t, proxyContract))
 	}
 
 	{
@@ -104,7 +105,7 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 		deployTxn := cluster.Deploy(t, target, bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
-		require.True(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
+		require.True(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
 	{
@@ -168,7 +169,7 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 		deployTxn := cluster.Deploy(t, target, bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
-		require.True(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
+		require.True(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
 	{
@@ -176,7 +177,7 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 		deployTxn := cluster.Deploy(t, admin, bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
-		require.True(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
+		require.True(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
 	{
@@ -193,7 +194,7 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 		deployTxn := cluster.Deploy(t, target, bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Reverted())
-		require.False(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
+		require.False(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
 	{
@@ -256,7 +257,7 @@ func TestE2E_AllowList_Transactions(t *testing.T) {
 		deployTxn := cluster.Deploy(t, target, bytecode)
 		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Reverted())
-		require.False(t, cluster.ExistsCode(t, deployTxn.Receipt().ContractAddress))
+		require.False(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
 	{

@@ -17,6 +17,7 @@ import (
 	frameworkpolybft "github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/e2e/framework"
 	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	itrie "github.com/0xPolygon/polygon-edge/state/immutable-trie"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -24,9 +25,9 @@ import (
 
 func TestE2E_Migration(t *testing.T) {
 	userKey, _ := crypto.GenerateECDSAKey()
-	userAddr := ethgo.Address(userKey.Address())
+	userAddr := userKey.Address()
 	userKey2, _ := crypto.GenerateECDSAKey()
-	userAddr2 := ethgo.Address(userKey2.Address())
+	userAddr2 := userKey2.Address()
 
 	initialBalance := ethgo.Ether(10)
 	srvs := framework.NewTestServers(t, 1, func(config *framework.TestServerConfig) {
@@ -41,17 +42,11 @@ func TestE2E_Migration(t *testing.T) {
 	rpcClient := srv.JSONRPC()
 
 	// Fetch the balances before sending
-	balanceSender, err := rpcClient.Eth().GetBalance(
-		userAddr,
-		ethgo.Latest,
-	)
+	balanceSender, err := rpcClient.GetBalance(userAddr, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 	require.Equal(t, balanceSender.Cmp(initialBalance), 0)
 
-	balanceReceiver, err := rpcClient.Eth().GetBalance(
-		userAddr2,
-		ethgo.Latest,
-	)
+	balanceReceiver, err := rpcClient.GetBalance(userAddr2, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 
 	if balanceReceiver.Uint64() != 0 {
@@ -101,25 +96,19 @@ func TestE2E_Migration(t *testing.T) {
 	require.Equal(t, uint64(types.ReceiptSuccess), initReceipt.Status)
 
 	// Fetch the balances after sending
-	balanceSender, err = rpcClient.Eth().GetBalance(
-		userAddr,
-		ethgo.Latest,
-	)
+	balanceSender, err = rpcClient.GetBalance(userAddr, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 
-	balanceReceiver, err = rpcClient.Eth().GetBalance(
-		userAddr2,
-		ethgo.Latest,
-	)
+	balanceReceiver, err = rpcClient.GetBalance(userAddr2, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 	require.Equal(t, sendAmount, balanceReceiver)
 
-	block, err := rpcClient.Eth().GetBlockByNumber(ethgo.Latest, true)
+	block, err := rpcClient.GetBlockByNumber(jsonrpc.LatestBlockNumber, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateRoot := block.StateRoot
+	stateRoot := block.Header.StateRoot
 
 	path := filepath.Join(srvs[0].Config.RootDir, "trie")
 	srvs[0].Stop()
@@ -131,7 +120,7 @@ func TestE2E_Migration(t *testing.T) {
 
 	err = frameworkpolybft.RunEdgeCommand([]string{
 		"regenesis",
-		"--stateRoot", block.StateRoot.String(),
+		"--stateRoot", block.Header.StateRoot.String(),
 		"--source-path", path,
 		"--target-path", tmpDir,
 	}, os.Stdout)
@@ -146,7 +135,7 @@ func TestE2E_Migration(t *testing.T) {
 
 	stateStorageNew := itrie.NewKV(db)
 
-	copiedStateRoot, err := itrie.HashChecker(block.StateRoot.Bytes(), stateStorageNew)
+	copiedStateRoot, err := itrie.HashChecker(block.Header.StateRoot.Bytes(), stateStorageNew)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -168,12 +157,12 @@ func TestE2E_Migration(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	senderBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().Eth().GetBalance(userAddr, ethgo.Latest)
+	senderBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().GetBalance(userAddr, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	receiverBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().Eth().GetBalance(userAddr2, ethgo.Latest)
+	receiverBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().GetBalance(userAddr2, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +170,7 @@ func TestE2E_Migration(t *testing.T) {
 	require.Equal(t, balanceSender, senderBalanceAfterMigration)
 	require.Equal(t, balanceReceiver, receiverBalanceAfterMigration)
 
-	deployedCode, err := cluster.Servers[0].JSONRPC().Eth().GetCode(deployedContractBalance, ethgo.Latest)
+	deployedCode, err := cluster.Servers[0].JSONRPC().GetCode(types.Address(deployedContractBalance), jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}

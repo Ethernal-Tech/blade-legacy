@@ -6,9 +6,9 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 )
 
 func TestE2E_BurnContract_Deployed(t *testing.T) {
@@ -30,10 +30,10 @@ func TestE2E_BurnContract_Deployed(t *testing.T) {
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
-	client := cluster.Servers[0].JSONRPC().Eth()
+	client := cluster.Servers[0].JSONRPC()
 
 	// Get the code for the default deployed burn contract
-	code, err := client.GetCode(ethgo.Address(contractAddr), ethgo.Latest)
+	code, err := client.GetCode(contractAddr, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 	require.NotEqual(t, code, "0x")
 }

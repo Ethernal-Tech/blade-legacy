@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -32,25 +32,25 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	client := cluster.Servers[0].JSONRPC().Eth()
+	client := cluster.Servers[0].JSONRPC()
 
 	sendAmount := 1
 	num := 20
 
-	receivers := []ethgo.Address{}
+	receivers := []types.Address{}
 
 	for i := 0; i < num; i++ {
 		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		receivers = append(receivers, ethgo.Address(key.Address()))
+		receivers = append(receivers, key.Address())
 	}
 
 	var wg sync.WaitGroup
 	for i := 0; i < num; i++ {
 		wg.Add(1)
 
-		go func(i int, to ethgo.Address) {
+		go func(i int, to types.Address) {
 			defer wg.Done()
 
 			var txData types.TxData
@@ -87,7 +87,7 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 
 	err = cluster.WaitUntil(2*time.Minute, 2*time.Second, func() bool {
 		for _, receiver := range receivers {
-			balance, err := client.GetBalance(receiver, ethgo.Latest)
+			balance, err := client.GetBalance(receiver, jsonrpc.LatestBlockNumberOrHash)
 			if err != nil {
 				return true
 			}
@@ -118,11 +118,11 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	client := cluster.Servers[0].JSONRPC().Eth()
+	client := cluster.Servers[0].JSONRPC()
 
-	waitUntilBalancesChanged := func(acct ethgo.Address) error {
+	waitUntilBalancesChanged := func(acct types.Address) error {
 		err := cluster.WaitUntil(30*time.Second, 2*time.Second, func() bool {
-			balance, err := client.GetBalance(acct, ethgo.Latest)
+			balance, err := client.GetBalance(acct, jsonrpc.LatestBlockNumberOrHash)
 			if err != nil {
 				return true
 			}
@@ -185,12 +185,12 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 
 		sendTransaction(t, client, receivers[i-1], txn)
 
-		err := waitUntilBalancesChanged(ethgo.Address(receivers[i].Address()))
+		err := waitUntilBalancesChanged(receivers[i].Address())
 		require.NoError(t, err)
 	}
 
 	for i := 1; i < num; i++ {
-		balance, err := client.GetBalance(ethgo.Address(receivers[i].Address()), ethgo.Latest)
+		balance, err := client.GetBalance(receivers[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, uint64(sendAmount), balance.Uint64())
 	}
@@ -258,7 +258,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	// Wait until the cluster is up and running
 	cluster.WaitForReady(t)
 
-	client := cluster.Servers[0].JSONRPC().Eth()
+	client := cluster.Servers[0].JSONRPC()
 
 	sentAmount := new(big.Int)
 	nonce := uint64(0)
@@ -295,7 +295,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 	// Wait until the balance has changed on all nodes in the cluster
 	err = cluster.WaitUntil(time.Minute, time.Second*3, func() bool {
 		for _, srv := range cluster.Servers {
-			balance, err := srv.WaitForNonZeroBalance(ethgo.Address(recipient), time.Second*10)
+			balance, err := srv.WaitForNonZeroBalance(recipient, time.Second*10)
 			assert.NoError(t, err)
 
 			if balance != nil && balance.BitLen() > 0 {
@@ -311,7 +311,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 }
 
 // sendTransaction is a helper function which signs transaction with provided private key and sends it
-func sendTransaction(t *testing.T, client *jsonrpc.Eth, sender crypto.Key, txn *types.Transaction) {
+func sendTransaction(t *testing.T, client *jsonrpc.EthClient, sender crypto.Key, txn *types.Transaction) {
 	t.Helper()
 
 	chainID, err := client.ChainID()

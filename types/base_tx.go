@@ -109,14 +109,14 @@ func (tx *BaseTx) copy() *BaseTx {
 }
 
 func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
-	hash, err := unmarshalJSONHash(v, "hash")
+	hash, err := UnmarshalJSONHash(v, "hash")
 	if err != nil {
 		return err
 	}
 
 	tx.setHash(hash)
 
-	from, err := unmarshalJSONAddr(v, "from")
+	from, err := UnmarshalJSONAddr(v, "from")
 	if err != nil {
 		return err
 	}
@@ -124,11 +124,11 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 	tx.setFrom(from)
 
 	// Do not decode 'to' if it doesn't exist.
-	if hasKey(v, "to") {
+	if HasKey(v, "to") {
 		if v.Get("to").String() != "null" {
 			var to Address
 
-			if to, err = unmarshalJSONAddr(v, "to"); err != nil {
+			if to, err = UnmarshalJSONAddr(v, "to"); err != nil {
 				return err
 			}
 
@@ -136,45 +136,45 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 		}
 	}
 
-	input, err := unmarshalJSONBytes(v, "input")
+	input, err := UnmarshalJSONBytes(v, "input")
 	if err != nil {
 		return err
 	}
 
 	tx.setInput(input)
 
-	value, err := unmarshalJSONBigInt(v, "value")
+	value, err := UnmarshalJSONBigInt(v, "value")
 	if err != nil {
 		return err
 	}
 
 	tx.setValue(value)
 
-	nonce, err := unmarshalJSONUint64(v, "nonce")
+	nonce, err := UnmarshalJSONUint64(v, "nonce")
 	if err != nil {
 		return err
 	}
 
 	tx.setNonce(nonce)
 
-	vParity, err := unmarshalJSONBigInt(v, "v")
+	vParity, err := UnmarshalJSONBigInt(v, "v")
 	if err != nil {
 		return err
 	}
 
-	r, err := unmarshalJSONBigInt(v, "r")
+	r, err := UnmarshalJSONBigInt(v, "r")
 	if err != nil {
 		return err
 	}
 
-	s, err := unmarshalJSONBigInt(v, "s")
+	s, err := UnmarshalJSONBigInt(v, "s")
 	if err != nil {
 		return err
 	}
 
 	tx.setSignatureValues(vParity, r, s)
 
-	gas, err := unmarshalJSONUint64(v, "gas")
+	gas, err := UnmarshalJSONUint64(v, "gas")
 	if err != nil {
 		return err
 	}

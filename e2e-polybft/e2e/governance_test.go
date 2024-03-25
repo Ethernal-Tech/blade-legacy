@@ -13,10 +13,10 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 )
 
 type VoteType uint8
@@ -119,7 +119,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 			return proposalState == Queued
 		}))
 
-		currentBlockNumber, err := relayer.Client().Eth().BlockNumber()
+		currentBlockNumber, err := relayer.Client().BlockNumber()
 		require.NoError(t, err)
 
 		// wait for couple of more blocks because of execution delay
@@ -131,7 +131,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 			polybftCfg.GovernanceConfig.NetworkParamsAddr,
 			proposalInput, proposalDescription)
 
-		currentBlockNumber, err = relayer.Client().Eth().BlockNumber()
+		currentBlockNumber, err = relayer.Client().BlockNumber()
 		require.NoError(t, err)
 
 		// check if epoch size changed on NetworkParams
@@ -149,20 +149,20 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 		// wait until the new epoch (with new size finishes)
 		require.NoError(t, cluster.WaitForBlock(endOfNewEpoch, 3*time.Minute))
 
-		block, err := relayer.Client().Eth().GetBlockByNumber(
-			ethgo.BlockNumber(endOfPreviousEpoch), false)
+		block, err := relayer.Client().GetBlockByNumber(
+			jsonrpc.BlockNumber(endOfPreviousEpoch), false)
 		require.NoError(t, err)
 
-		extra, err := polybft.GetIbftExtra(block.ExtraData)
+		extra, err := polybft.GetIbftExtra(block.Header.ExtraData)
 		require.NoError(t, err)
 
 		oldEpoch := extra.Checkpoint.EpochNumber
 
-		block, err = relayer.Client().Eth().GetBlockByNumber(
-			ethgo.BlockNumber(endOfNewEpoch), false)
+		block, err = relayer.Client().GetBlockByNumber(
+			jsonrpc.BlockNumber(endOfNewEpoch), false)
 		require.NoError(t, err)
 
-		extra, err = polybft.GetIbftExtra(block.ExtraData)
+		extra, err = polybft.GetIbftExtra(block.Header.ExtraData)
 		require.NoError(t, err)
 
 		newEpoch := extra.Checkpoint.EpochNumber
@@ -209,7 +209,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 				relayer, voterAcc.Ecdsa)
 		}
 
-		currentBlockNumber, err := relayer.Client().Eth().BlockNumber()
+		currentBlockNumber, err := relayer.Client().BlockNumber()
 		require.NoError(t, err)
 
 		// wait for voting period to end
@@ -277,7 +277,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 			return proposalState == Queued
 		}))
 
-		currentBlockNumber, err := relayer.Client().Eth().BlockNumber()
+		currentBlockNumber, err := relayer.Client().BlockNumber()
 		require.NoError(t, err)
 
 		// wait for couple of more blocks because of execution delay

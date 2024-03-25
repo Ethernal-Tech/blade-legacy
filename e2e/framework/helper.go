@@ -211,7 +211,7 @@ func WaitUntilTxPoolFilled(
 // WaitUntilBlockMined waits until server mined block with bigger height than given height
 // otherwise returns timeout
 func WaitUntilBlockMined(ctx context.Context, srv *TestServer, desiredHeight uint64) (uint64, error) {
-	clt := srv.JSONRPC().Eth()
+	clt := srv.JSONRPC()
 	res, err := tests.RetryUntilTimeout(ctx, func() (interface{}, bool) {
 		height, err := clt.BlockNumber()
 		if err == nil && height >= desiredHeight {

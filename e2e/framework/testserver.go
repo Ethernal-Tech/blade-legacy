@@ -20,9 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	empty "google.golang.org/protobuf/types/known/emptypb"
@@ -104,8 +103,8 @@ func (t *TestServer) WSJSONRPCURL() string {
 	return fmt.Sprintf("ws://%s/ws", t.JSONRPCAddr())
 }
 
-func (t *TestServer) JSONRPC() *jsonrpc.Client {
-	clt, err := jsonrpc.NewClient(t.HTTPJSONRPCURL())
+func (t *TestServer) JSONRPC() *jsonrpc.EthClient {
+	clt, err := jsonrpc.NewEthClient(t.HTTPJSONRPCURL())
 	if err != nil {
 		t.t.Fatal(err)
 	}
@@ -156,7 +155,7 @@ func (t *TestServer) Stop() {
 }
 
 func (t *TestServer) GetLatestBlockHeight() (uint64, error) {
-	return t.JSONRPC().Eth().BlockNumber()
+	return t.JSONRPC().BlockNumber()
 }
 
 type InitIBFTResult struct {
@@ -276,7 +275,7 @@ func (t *TestServer) Start(ctx context.Context) error {
 	}
 
 	// query the chain id
-	chainID, err := t.JSONRPC().Eth().ChainID()
+	chainID, err := t.JSONRPC().ChainID()
 	if err != nil {
 		return err
 	}
@@ -299,15 +298,15 @@ func (t *TestServer) DeployContract(
 	ctx context.Context,
 	binary string,
 	privateKey *ecdsa.PrivateKey,
-) (ethgo.Address, error) {
+) (types.Address, error) {
 	buf, err := hex.DecodeString(binary)
 	if err != nil {
-		return ethgo.Address{}, err
+		return types.ZeroAddress, err
 	}
 
 	sender, err := crypto.GetAddressFromKey(privateKey)
 	if err != nil {
-		return ethgo.ZeroAddress, fmt.Errorf("unable to extract key, %w", err)
+		return types.ZeroAddress, fmt.Errorf("unable to extract key, %w", err)
 	}
 
 	receipt, err := t.SendRawTx(ctx, &PreparedTransaction{
@@ -317,10 +316,10 @@ func (t *TestServer) DeployContract(
 		Input:    buf,
 	}, privateKey)
 	if err != nil {
-		return ethgo.Address{}, err
+		return types.ZeroAddress, err
 	}
 
-	return receipt.ContractAddress, nil
+	return types.Address(receipt.ContractAddress), nil
 }
 
 const (
@@ -337,176 +336,6 @@ type PreparedTransaction struct {
 	Input    []byte
 }
 
-type Txn struct {
-	key     *wallet.Key
-	client  *jsonrpc.Eth
-	hash    *ethgo.Hash
-	receipt *ethgo.Receipt
-	raw     *ethgo.Transaction
-	chainID *big.Int
-
-	sendErr error
-	waitErr error
-}
-
-func (t *Txn) Deploy(input []byte) *Txn {
-	t.raw.Input = input
-
-	return t
-}
-
-func (t *Txn) Transfer(to ethgo.Address, value *big.Int) *Txn {
-	t.raw.To = &to
-	t.raw.Value = value
-	t.raw.GasPrice = ethgo.Gwei(2).Uint64()
-
-	return t
-}
-
-func (t *Txn) Value(value *big.Int) *Txn {
-	t.raw.Value = value
-
-	return t
-}
-
-func (t *Txn) To(to ethgo.Address) *Txn {
-	t.raw.To = &to
-
-	return t
-}
-
-func (t *Txn) GasLimit(gas uint64) *Txn {
-	t.raw.Gas = gas
-
-	return t
-}
-
-func (t *Txn) Nonce(nonce uint64) *Txn {
-	t.raw.Nonce = nonce
-
-	return t
-}
-
-func (t *Txn) sendImpl() error {
-	// populate default values
-	if t.raw.Gas == 0 {
-		t.raw.Gas = 1048576
-	}
-
-	if t.raw.GasPrice == 0 {
-		gasPrice, err := t.client.GasPrice()
-		if err != nil {
-			return fmt.Errorf("failed to get gas price: %w", err)
-		}
-
-		t.raw.GasPrice = gasPrice
-	}
-
-	if t.raw.Nonce == 0 {
-		nextNonce, err := t.client.GetNonce(t.key.Address(), ethgo.Latest)
-		if err != nil {
-			return fmt.Errorf("failed to get nonce: %w", err)
-		}
-
-		t.raw.Nonce = nextNonce
-	}
-
-	signer := wallet.NewEIP155Signer(t.chainID.Uint64())
-
-	signedTxn, err := signer.SignTx(t.raw, t.key)
-	if err != nil {
-		return err
-	}
-
-	data, _ := signedTxn.MarshalRLPTo(nil)
-
-	txHash, err := t.client.SendRawTransaction(data)
-	if err != nil {
-		return fmt.Errorf("failed to send transaction: %w", err)
-	}
-
-	t.hash = &txHash
-
-	return nil
-}
-
-func (t *Txn) Send() (*Txn, error) {
-	if t.hash != nil {
-		return nil, errors.New("txn already sent")
-	}
-
-	t.sendErr = t.sendImpl()
-
-	return t, nil
-}
-
-func (t *Txn) Receipt() *ethgo.Receipt {
-	return t.receipt
-}
-
-//nolint:thelper
-func (t *Txn) NoFail(tt *testing.T) {
-	t.Wait()
-
-	if t.sendErr != nil {
-		tt.Fatal(t.sendErr)
-	}
-
-	if t.waitErr != nil {
-		tt.Fatal(t.waitErr)
-	}
-
-	if t.receipt.Status != 1 {
-		tt.Fatal("txn failed with status 0")
-	}
-}
-
-func (t *Txn) Complete() bool {
-	if t.sendErr != nil {
-		// txn failed during sending
-		return true
-	}
-
-	if t.waitErr != nil {
-		// txn failed during waiting
-		return true
-	}
-
-	if t.receipt != nil {
-		// txn was mined
-		return true
-	}
-
-	return false
-}
-
-func (t *Txn) Wait() {
-	if t.Complete() {
-		return
-	}
-
-	ctx, cancelFn := context.WithTimeout(context.Background(), DefaultTimeout)
-	defer cancelFn()
-
-	receipt, err := tests.WaitForReceipt(ctx, t.client, *t.hash)
-	if err != nil {
-		t.waitErr = err
-	} else {
-		t.receipt = receipt
-	}
-}
-
-func (t *TestServer) Txn(key *wallet.Key) *Txn {
-	tt := &Txn{
-		key:     key,
-		client:  t.JSONRPC().Eth(),
-		chainID: t.chainID,
-		raw:     &ethgo.Transaction{},
-	}
-
-	return tt
-}
-
 // SendRawTx signs the transaction with the provided private key, executes it, and returns the receipt
 func (t *TestServer) SendRawTx(
 	ctx context.Context,
@@ -515,7 +344,7 @@ func (t *TestServer) SendRawTx(
 ) (*ethgo.Receipt, error) {
 	client := t.JSONRPC()
 
-	nextNonce, err := client.Eth().GetNonce(ethgo.Address(tx.From), ethgo.Latest)
+	nextNonce, err := client.GetNonce(tx.From, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		return nil, err
 	}
@@ -533,15 +362,15 @@ func (t *TestServer) SendRawTx(
 		return nil, err
 	}
 
-	txHash, err := client.Eth().SendRawTransaction(signedTx.MarshalRLP())
+	txHash, err := client.SendRawTransaction(signedTx.MarshalRLP())
 	if err != nil {
 		return nil, err
 	}
 
-	return tests.WaitForReceipt(ctx, t.JSONRPC().Eth(), txHash)
+	return tests.WaitForReceipt(ctx, t.JSONRPC(), txHash)
 }
 
-func (t *TestServer) WaitForReceipt(ctx context.Context, hash ethgo.Hash) (*ethgo.Receipt, error) {
+func (t *TestServer) WaitForReceipt(ctx context.Context, hash types.Hash) (*ethgo.Receipt, error) {
 	client := t.JSONRPC()
 
 	type result struct {
@@ -550,7 +379,7 @@ func (t *TestServer) WaitForReceipt(ctx context.Context, hash ethgo.Hash) (*ethg
 	}
 
 	res, err := tests.RetryUntilTimeout(ctx, func() (interface{}, bool) {
-		receipt, err := client.Eth().GetTransactionReceipt(hash)
+		receipt, err := client.GetTransactionReceipt(hash)
 
 		if err != nil && err.Error() != "not found" {
 			return result{receipt, err}, false
@@ -576,7 +405,7 @@ func (t *TestServer) WaitForReceipt(ctx context.Context, hash ethgo.Hash) (*ethg
 
 // GetGasTotal waits for the total gas used sum for the passed in
 // transactions
-func (t *TestServer) GetGasTotal(txHashes []ethgo.Hash) uint64 {
+func (t *TestServer) GetGasTotal(txHashes []types.Hash) uint64 {
 	t.t.Helper()
 
 	var (
@@ -596,13 +425,13 @@ func (t *TestServer) GetGasTotal(txHashes []ethgo.Hash) uint64 {
 	for _, txHash := range txHashes {
 		wg.Add(1)
 
-		go func(txHash ethgo.Hash) {
+		go func(txHash types.Hash) {
 			defer wg.Done()
 
 			ctx, cancelFn := context.WithTimeout(context.Background(), DefaultTimeout)
 			defer cancelFn()
 
-			receipt, receiptErr := tests.WaitForReceipt(ctx, t.JSONRPC().Eth(), txHash)
+			receipt, receiptErr := tests.WaitForReceipt(ctx, t.JSONRPC(), txHash)
 			if receiptErr != nil {
 				appendReceiptErr(fmt.Errorf("unable to wait for receipt, %w", receiptErr))
 

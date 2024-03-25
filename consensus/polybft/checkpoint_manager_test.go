@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/umbracle/ethgo/jsonrpc"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
@@ -495,7 +495,7 @@ func (d *dummyTxRelayer) SendTransactionLocal(txn *types.Transaction) (*ethgo.Re
 	return args.Get(0).(*ethgo.Receipt), args.Error(1)
 }
 
-func (d *dummyTxRelayer) Client() *jsonrpc.Client {
+func (d *dummyTxRelayer) Client() *jsonrpc.EthClient {
 	return nil
 }
 

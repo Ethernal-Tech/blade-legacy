@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/spf13/cobra"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -368,7 +368,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	client, err := jsonrpc.NewClient(params.jsonRPCAddress)
+	client, err := jsonrpc.NewEthClient(params.jsonRPCAddress)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize JSON RPC client for provided IP address: %s: %w",
 			params.jsonRPCAddress, err))
@@ -377,7 +377,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	if consensusCfg.Bridge != nil {
-		code, err := client.Eth().GetCode(ethgo.Address(consensusCfg.Bridge.StateSenderAddr), ethgo.Latest)
+		code, err := client.GetCode(consensusCfg.Bridge.StateSenderAddr, jsonrpc.LatestBlockNumberOrHash)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("failed to check if rootchain contracts are deployed: %w", err))
 
@@ -394,7 +394,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	// set event tracker start blocks for rootchain contract(s) of interest
 	// the block number should be queried before deploying contracts so that no events during deployment
 	// and initialization are missed
-	blockNum, err := client.Eth().BlockNumber()
+	blockNum, err := client.BlockNumber()
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to query rootchain latest block number: %w", err))
 
@@ -434,7 +434,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // deployContracts deploys and initializes rootchain smart contracts
-func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, chainID int64,
+func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClient, chainID int64,
 	initialValidators []*validator.GenesisValidator, cmdCtx context.Context) (deploymentResultInfo, error) {
 	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(client), txrelayer.WithWriter(outputter),
 		txrelayer.WithReceiptsTimeout(params.txTimeout))
@@ -474,7 +474,7 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 	if !consensusCfg.NativeTokenConfig.IsMintable {
 		if params.rootERC20TokenAddr != "" {
 			// use existing root chain ERC20 token
-			if err := populateExistingTokenAddr(client.Eth(),
+			if err := populateExistingTokenAddr(client,
 				params.rootERC20TokenAddr, rootERC20Name, rootchainConfig); err != nil {
 				return deploymentResultInfo{RootchainCfg: nil, CommandResults: nil}, err
 			}
@@ -697,11 +697,11 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 
 // populateExistingTokenAddr checks whether given token is deployed on the provided address.
 // If it is, then its address is set to the rootchain config, otherwise an error is returned
-func populateExistingTokenAddr(eth *jsonrpc.Eth, tokenAddr, tokenName string,
+func populateExistingTokenAddr(eth *jsonrpc.EthClient, tokenAddr, tokenName string,
 	rootchainCfg *polybft.RootchainConfig) error {
 	addr := types.StringToAddress(tokenAddr)
 
-	code, err := eth.GetCode(ethgo.Address(addr), ethgo.Latest)
+	code, err := eth.GetCode(addr, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		return fmt.Errorf("failed to check is %s token deployed: %w", tokenName, err)
 	} else if code == "0x" {

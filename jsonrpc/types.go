@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -12,7 +13,10 @@ import (
 	"github.com/valyala/fastjson"
 )
 
-var defaultArena fastjson.ArenaPool
+var (
+	defaultArena fastjson.ArenaPool
+	defaultPool  fastjson.ParserPool
+)
 
 const jsonRPCMetric = "json_rpc"
 
@@ -614,4 +618,70 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 	defaultArena.Put(a)
 
 	return res, nil
+}
+
+type FeeHistory struct {
+	OldestBlock  uint64     `json:"oldestBlock"`
+	Reward       [][]uint64 `json:"reward,omitempty"`
+	BaseFee      []uint64   `json:"baseFeePerGas,omitempty"`
+	GasUsedRatio []float64  `json:"gasUsedRatio"`
+}
+
+func (f *FeeHistory) UnmarshalJSON(data []byte) error {
+	var raw feeHistoryResult
+
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	f.OldestBlock = uint64(raw.OldestBlock)
+
+	if raw.Reward != nil {
+		f.Reward = make([][]uint64, 0, len(raw.Reward))
+		for _, r := range raw.Reward {
+			elem := make([]uint64, 0, len(r))
+			for _, i := range r {
+				elem = append(elem, uint64(i))
+			}
+
+			f.Reward = append(f.Reward, elem)
+		}
+	}
+
+	f.BaseFee = make([]uint64, 0, len(raw.BaseFeePerGas))
+	for _, i := range raw.BaseFeePerGas {
+		f.BaseFee = append(f.BaseFee, uint64(i))
+	}
+
+	f.GasUsedRatio = raw.GasUsedRatio
+
+	return nil
+}
+
+type Transaction struct {
+	*types.Transaction
+
+	BlockNumber uint64     `json:"blockNumber"`
+	BlockHash   types.Hash `json:"blockHash"`
+	TxnIndex    uint64     `json:"transactionIndex"`
+}
+
+func (t *Transaction) UnmarshalJSON(data []byte) error {
+	p := defaultPool.Get()
+	defer defaultPool.Put(p)
+
+	v, err := p.Parse(string(data))
+	if err != nil {
+		return err
+	}
+
+	if err := t.Transaction.UnmarshalJSONWith(v); err != nil {
+		return err
+	}
+
+	t.BlockNumber = v.GetUint64("blockNumber")
+	t.BlockHash = types.Hash(v.GetStringBytes("blockHash"))
+	t.TxnIndex = v.GetUint64("transactionIndex")
+
+	return nil
 }

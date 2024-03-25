@@ -7,7 +7,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/0xPolygon/polygon-edge/helper/tests"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -184,7 +183,10 @@ func TestGasHelper_FeeHistory(t *testing.T) {
 				backend := createTestBlocks(t, 10)
 				rand.Seed(time.Now().UTC().UnixNano())
 
-				senderKey, sender := tests.GenerateKeyAndAddr(t)
+				senderKey, err := crypto.GenerateECDSAPrivateKey()
+				require.NoError(t, err)
+
+				sender := crypto.PubKeyToAddress(&senderKey.PublicKey)
 
 				for _, b := range backend.blocksByNumber {
 					signer := crypto.NewSigner(backend.Config().Forks.At(b.Number()),

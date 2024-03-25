@@ -23,12 +23,12 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/abi"
-	"github.com/umbracle/ethgo/jsonrpc"
 )
 
 const (
@@ -863,7 +863,7 @@ func (c *TestCluster) Stats(t *testing.T) {
 			continue
 		}
 
-		num, err := i.JSONRPC().Eth().BlockNumber()
+		num, err := i.JSONRPC().BlockNumber()
 		t.Log("Stats node", index, "err", err, "block", num, "validator", i.config.Validator)
 	}
 }
@@ -911,7 +911,7 @@ func (c *TestCluster) WaitForBlock(n uint64, timeout time.Duration) error {
 				continue
 			}
 
-			num, err := i.JSONRPC().Eth().BlockNumber()
+			num, err := i.JSONRPC().BlockNumber()
 
 			if err != nil || num < n {
 				ok = false
@@ -1000,13 +1000,13 @@ func (c *TestCluster) InitSecrets(prefix string, count int) ([]types.Address, er
 	return result, nil
 }
 
-func (c *TestCluster) ExistsCode(t *testing.T, addr ethgo.Address) bool {
+func (c *TestCluster) ExistsCode(t *testing.T, addr types.Address) bool {
 	t.Helper()
 
-	client, err := jsonrpc.NewClient(c.Servers[0].JSONRPCAddr())
+	client, err := jsonrpc.NewEthClient(c.Servers[0].JSONRPCAddr())
 	require.NoError(t, err)
 
-	code, err := client.Eth().GetCode(addr, ethgo.Latest)
+	code, err := client.GetCode(addr, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		return false
 	}
@@ -1018,19 +1018,17 @@ func (c *TestCluster) Call(t *testing.T, to types.Address, method *abi.Method,
 	args ...interface{}) map[string]interface{} {
 	t.Helper()
 
-	client, err := jsonrpc.NewClient(c.Servers[0].JSONRPCAddr())
+	client, err := jsonrpc.NewEthClient(c.Servers[0].JSONRPCAddr())
 	require.NoError(t, err)
 
 	input, err := method.Encode(args)
 	require.NoError(t, err)
 
-	toAddr := ethgo.Address(to)
-
-	msg := &ethgo.CallMsg{
-		To:   &toAddr,
+	msg := &jsonrpc.CallMsg{
+		To:   &to,
 		Data: input,
 	}
-	resp, err := client.Eth().Call(msg, ethgo.Latest)
+	resp, err := client.Call(msg, jsonrpc.LatestBlockNumber, nil)
 	require.NoError(t, err)
 
 	data, err := hex.DecodeString(resp[2:])
@@ -1090,19 +1088,19 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 	c.sendTxnLock.Lock()
 	defer c.sendTxnLock.Unlock()
 
-	client, err := jsonrpc.NewClient(c.Servers[0].JSONRPCAddr())
+	client, err := jsonrpc.NewEthClient(c.Servers[0].JSONRPCAddr())
 	require.NoError(t, err)
 
 	// initialize transaction values if not set
 	if txn.Nonce() == 0 {
-		nonce, err := client.Eth().GetNonce(ethgo.Address(sender.Address()), ethgo.Latest)
+		nonce, err := client.GetNonce(sender.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 
 		txn.SetNonce(nonce)
 	}
 
 	if txn.GasPrice() == nil || txn.GasPrice() == big.NewInt(0) {
-		gasPrice, err := client.Eth().GasPrice()
+		gasPrice, err := client.GasPrice()
 		require.NoError(t, err)
 
 		txn.SetGasPrice(new(big.Int).SetUint64(gasPrice))
@@ -1111,7 +1109,7 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 	if txn.Gas() == 0 {
 		callMsg := txrelayer.ConvertTxnToCallMsg(txn)
 
-		gasLimit, err := client.Eth().EstimateGas(callMsg)
+		gasLimit, err := client.EstimateGas(callMsg)
 		if err != nil {
 			// gas estimation can fail in case an account is not allow-listed
 			// (fallback it to default gas limit in that case)
@@ -1121,7 +1119,7 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 		}
 	}
 
-	chainID, err := client.Eth().ChainID()
+	chainID, err := client.ChainID()
 	require.NoError(t, err)
 
 	signer := crypto.NewLondonSigner(chainID.Uint64())
@@ -1133,19 +1131,19 @@ func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.
 
 	rlpTxn := signedTxn.MarshalRLPTo(nil)
 
-	hash, err := client.Eth().SendRawTransaction(rlpTxn)
+	hash, err := client.SendRawTransaction(rlpTxn)
 	require.NoError(t, err)
 
 	return &TestTxn{
-		client: client.Eth(),
+		client: client,
 		txn:    txn,
 		hash:   hash,
 	}
 }
 
 type TestTxn struct {
-	client  *jsonrpc.Eth
-	hash    ethgo.Hash
+	client  *jsonrpc.EthClient
+	hash    types.Hash
 	txn     *types.Transaction
 	receipt *ethgo.Receipt
 }
@@ -1162,18 +1160,18 @@ func (t *TestTxn) Receipt() *ethgo.Receipt {
 
 // Succeed returns whether the transaction succeed and it was not reverted
 func (t *TestTxn) Succeed() bool {
-	return t.receipt.Status == uint64(types.ReceiptSuccess)
+	return t.receipt != nil && t.receipt.Status == uint64(types.ReceiptSuccess)
 }
 
 // Failed returns whether the transaction failed
 func (t *TestTxn) Failed() bool {
-	return t.receipt.Status == uint64(types.ReceiptFailed)
+	return t.receipt == nil || t.receipt.Status == uint64(types.ReceiptFailed)
 }
 
 // Reverted returns whether the transaction failed and was reverted consuming
 // all the gas from the call
 func (t *TestTxn) Reverted() bool {
-	return t.receipt.Status == uint64(types.ReceiptFailed) && t.txn.Gas() == t.receipt.GasUsed
+	return t.Failed() && t.txn.Gas() == t.receipt.GasUsed
 }
 
 // Wait waits for the transaction to be executed

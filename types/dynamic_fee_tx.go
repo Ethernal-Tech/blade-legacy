@@ -253,28 +253,28 @@ func (tx *DynamicFeeTx) unmarshalJSON(v *fastjson.Value) error {
 		return err
 	}
 
-	gasTipCap, err := unmarshalJSONBigInt(v, "maxPriorityFeePerGas")
+	gasTipCap, err := UnmarshalJSONBigInt(v, "maxPriorityFeePerGas")
 	if err != nil {
 		return err
 	}
 
 	tx.setGasTipCap(gasTipCap)
 
-	gasFeeCap, err := unmarshalJSONBigInt(v, "maxFeePerGas")
+	gasFeeCap, err := UnmarshalJSONBigInt(v, "maxFeePerGas")
 	if err != nil {
 		return err
 	}
 
 	tx.setGasFeeCap(gasFeeCap)
 
-	chainID, err := unmarshalJSONBigInt(v, "chainId")
+	chainID, err := UnmarshalJSONBigInt(v, "chainId")
 	if err != nil {
 		return err
 	}
 
 	tx.setChainID(chainID)
 
-	if hasKey(v, "accessList") {
+	if HasKey(v, "accessList") {
 		if err := tx.AccessList.unmarshalJSON(v.Get("accessList")); err != nil {
 			return err
 		}

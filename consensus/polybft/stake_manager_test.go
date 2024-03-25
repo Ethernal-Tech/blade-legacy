@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -15,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/abi"
-	"github.com/umbracle/ethgo/jsonrpc"
 )
 
 func TestStakeManager_PostBlock(t *testing.T) {
@@ -534,6 +534,6 @@ func (d *dummyStakeTxRelayer) SendTransactionLocal(txn *types.Transaction) (*eth
 	return args.Get(0).(*ethgo.Receipt), args.Error(1)
 }
 
-func (d *dummyStakeTxRelayer) Client() *jsonrpc.Client {
+func (d *dummyStakeTxRelayer) Client() *jsonrpc.EthClient {
 	return nil
 }

@@ -9,7 +9,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/0xPolygon/polygon-edge/helper/tests"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -74,7 +73,10 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 				backend := createTestBlocks(t, 10)
 				rand.Seed(time.Now().UTC().UnixNano())
 
-				senderKey, sender := tests.GenerateKeyAndAddr(t)
+				senderKey, err := crypto.GenerateECDSAPrivateKey()
+				require.NoError(t, err)
+
+				sender := crypto.PubKeyToAddress(&senderKey.PublicKey)
 
 				for _, b := range backend.blocks {
 					signer := crypto.NewSigner(backend.Config().Forks.At(b.Number()),
@@ -217,7 +219,10 @@ func createTestTxs(t *testing.T, backend *backendMock, numOfTxsPerBlock, txCap i
 		b.Transactions = make([]*types.Transaction, numOfTxsPerBlock)
 
 		for i := 0; i < numOfTxsPerBlock; i++ {
-			senderKey, sender := tests.GenerateKeyAndAddr(t)
+			senderKey, err := crypto.GenerateECDSAPrivateKey()
+			require.NoError(t, err)
+
+			sender := crypto.PubKeyToAddress(&senderKey.PublicKey)
 
 			tx := types.NewTx(types.NewDynamicFeeTx(
 				types.WithGasTipCap(ethgo.Gwei(uint64(rand.Intn(txCap)))),
@@ -228,7 +233,7 @@ func createTestTxs(t *testing.T, backend *backendMock, numOfTxsPerBlock, txCap i
 				types.WithTo(&types.ZeroAddress),
 			))
 
-			tx, err := signer.SignTx(tx, senderKey)
+			tx, err = signer.SignTx(tx, senderKey)
 			require.NoError(t, err)
 
 			b.Transactions[i] = tx
