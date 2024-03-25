@@ -695,7 +695,7 @@ func TestEth_CreateAccessList(t *testing.T) {
 			assert.NoError(t, err)
 			assert.NotNil(t, res)
 		} else {
-			assert.Nil(t, err)
+			assert.NoError(t, err)
 		}
 	}
 }
