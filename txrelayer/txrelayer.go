@@ -9,7 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/umbracle/ethgo"
 
@@ -287,18 +286,6 @@ func (t *TxRelayerImpl) sendTransactionLocalLocked(txn *types.Transaction) (type
 
 	txn.SetGas(gasLimit)
 	txn.SetGasPrice(new(big.Int).SetUint64(defaultGasPrice))
-
-	fmt.Println("Type:", txn.Type())
-	fmt.Println("From:", txn.From())
-	fmt.Println("To:", txn.To())
-	fmt.Println("Value:", txn.Value())
-	fmt.Println("Gas Limit:", txn.Gas())
-	fmt.Println("Gas Price:", txn.GasPrice())
-	fmt.Println("Nonce:", txn.Nonce())
-	fmt.Println("Data:", hex.EncodeToHex(txn.Input()))
-	fmt.Println("Chain ID:", txn.ChainID())
-	fmt.Println("Max Fee Per Gas:", txn.GetGasFeeCap())
-	fmt.Println("Max Priority Fee Per Gas:", txn.GetGasTipCap())
 
 	return t.client.SendTransaction(txn)
 }

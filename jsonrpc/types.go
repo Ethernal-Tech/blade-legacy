@@ -623,6 +623,7 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 	return res, nil
 }
 
+// FeeHistory represents the fee history data returned by an rpc node
 type FeeHistory struct {
 	OldestBlock  uint64     `json:"oldestBlock"`
 	Reward       [][]uint64 `json:"reward,omitempty"`
@@ -630,6 +631,7 @@ type FeeHistory struct {
 	GasUsedRatio []float64  `json:"gasUsedRatio"`
 }
 
+// UnmarshalJSON unmarshals the FeeHistory object from JSON
 func (f *FeeHistory) UnmarshalJSON(data []byte) error {
 	var raw feeHistoryResult
 
@@ -662,14 +664,22 @@ func (f *FeeHistory) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// Transaction is the json rpc transaction object
+// (types.Transaction object, expanded with block number, hash and index)
 type Transaction struct {
 	*types.Transaction
 
-	BlockNumber uint64     `json:"blockNumber"`
-	BlockHash   types.Hash `json:"blockHash"`
-	TxnIndex    uint64     `json:"transactionIndex"`
+	// BlockNumber is the number of the block in which the transaction was included.
+	BlockNumber uint64 `json:"blockNumber"`
+
+	// BlockHash is the hash of the block in which the transaction was included.
+	BlockHash types.Hash `json:"blockHash"`
+
+	// TxnIndex is the index of the transaction within the block.
+	TxnIndex uint64 `json:"transactionIndex"`
 }
 
+// UnmarshalJSON unmarshals the transaction object from JSON
 func (t *Transaction) UnmarshalJSON(data []byte) error {
 	p := defaultPool.Get()
 	defer defaultPool.Put(p)
