@@ -5,11 +5,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func TestState_insertAndGetValidatorSnapshot(t *testing.T) {
@@ -191,18 +192,13 @@ func TestEpochStore_getNearestOrEpochSnapshot(t *testing.T) {
 
 	state := newTestState(t)
 	epoch := uint64(1)
-	keys, err := bls.CreateRandomBlsKeys(3)
-	require.NoError(t, err)
+	tv := validator.NewTestValidators(t, 3)
 
 	// Insert a snapshot for epoch 1
 	snapshot := &validatorSnapshot{
 		Epoch:            epoch,
 		EpochEndingBlock: 100,
-		Snapshot: validator.AccountSet{
-			&validator.ValidatorMetadata{Address: types.BytesToAddress([]byte{0x18}), BlsKey: keys[0].PublicKey()},
-			&validator.ValidatorMetadata{Address: types.BytesToAddress([]byte{0x23}), BlsKey: keys[1].PublicKey()},
-			&validator.ValidatorMetadata{Address: types.BytesToAddress([]byte{0x37}), BlsKey: keys[2].PublicKey()},
-		},
+		Snapshot:         tv.GetPublicIdentities(),
 	}
 
 	require.NoError(t, state.EpochStore.insertValidatorSnapshot(snapshot, nil))
@@ -233,6 +229,6 @@ func TestEpochStore_getNearestOrEpochSnapshot(t *testing.T) {
 
 		result, err := state.EpochStore.getNearestOrEpochSnapshot(2, nil)
 		assert.NoError(t, err)
-		assert.Equal(t, result, snapshot)
+		assert.Equal(t, snapshot, result)
 	})
 }
