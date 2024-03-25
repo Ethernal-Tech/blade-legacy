@@ -327,12 +327,6 @@ func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 		}
 	}
 
-	if cachedSnapshot != nil && cachedSnapshot.Epoch > epochToQuery {
-		// if we have a snapshot in memory or db, but it's newer than the one we need
-		// then return nil, and just recalculate it from scratch
-		return nil, nil
-	}
-
 	return cachedSnapshot, nil
 }
 
