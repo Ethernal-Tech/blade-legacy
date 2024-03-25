@@ -200,6 +200,19 @@ func deriveChainID(v *big.Int) *big.Int {
 	return v.Div(v, big.NewInt(2))
 }
 
+func (tx *LegacyTx) marshalJSON(a *fastjson.Arena) *fastjson.Value {
+	v := a.NewObject()
+
+	tx.BaseTx.marshalJSON(a, v)
+	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+
+	if tx.GasPrice != nil {
+		v.Set("gasPrice", a.NewString(fmt.Sprintf("0x%x", tx.GasPrice)))
+	}
+
+	return v
+}
+
 func (tx *LegacyTx) unmarshalJSON(v *fastjson.Value) error {
 	if err := tx.BaseTx.unmarshalJSON(v); err != nil {
 		return err

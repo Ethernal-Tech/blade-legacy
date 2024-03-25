@@ -41,14 +41,6 @@ func (r *Receipt) SetStatus(s ReceiptStatus) {
 	r.Status = &s
 }
 
-func (r *Receipt) HasFailed() bool {
-	if r.Status != nil {
-		return *r.Status == ReceiptFailed
-	}
-
-	return true
-}
-
 func (r *Receipt) SetContractAddress(contractAddress Address) {
 	r.ContractAddress = &contractAddress
 }

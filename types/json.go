@@ -11,7 +11,8 @@ import (
 )
 
 var (
-	DefaultPool fastjson.ParserPool
+	DefaultArena fastjson.ArenaPool
+	DefaultPool  fastjson.ParserPool
 )
 
 func UnmarshalJSONHash(v *fastjson.Value, key string) (Hash, error) {

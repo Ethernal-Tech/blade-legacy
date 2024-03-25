@@ -583,7 +583,10 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 
 	o := a.NewObject()
 	o.Set("from", a.NewString(c.From.String()))
-	o.Set("gas", a.NewString(fmt.Sprintf("0x%x", c.Gas)))
+
+	if c.Gas != 0 {
+		o.Set("gas", a.NewString(fmt.Sprintf("0x%x", c.Gas)))
+	}
 
 	if c.To != nil {
 		o.Set("to", a.NewString(c.To.String()))
@@ -676,6 +679,7 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
+	t.Transaction = new(types.Transaction)
 	if err := t.Transaction.UnmarshalJSONWith(v); err != nil {
 		return err
 	}

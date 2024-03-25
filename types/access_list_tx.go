@@ -390,6 +390,23 @@ func (tx *AccessListTxn) copy() TxData {
 	return cpy
 }
 
+func (tx *AccessListTxn) marshalJSON(a *fastjson.Arena) *fastjson.Value {
+	v := a.NewObject()
+
+	tx.BaseTx.marshalJSON(a, v)
+	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+
+	if tx.ChainID != nil {
+		v.Set("chainId", a.NewString(fmt.Sprintf("0x%x", tx.ChainID)))
+	}
+
+	if len(tx.AccessList) > 0 {
+		v.Set("accessList", tx.AccessList.MarshalJSONWith(a))
+	}
+
+	return v
+}
+
 func (tx *AccessListTxn) unmarshalJSON(v *fastjson.Value) error {
 	if err := tx.BaseTx.unmarshalJSON(v); err != nil {
 		return err

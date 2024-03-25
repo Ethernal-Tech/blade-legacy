@@ -15,6 +15,8 @@ func (b *Block) UnmarshalJSON(buf []byte) error {
 	}
 
 	// header
+	b.Header = new(Header)
+
 	if err := b.Header.unmarshalJSON(v); err != nil {
 		return err
 	}
@@ -65,8 +67,6 @@ func (h *Header) UnmarshalJSON(buf []byte) error {
 }
 
 func (h *Header) unmarshalJSON(v *fastjson.Value) error {
-	h = new(Header)
-
 	var err error
 
 	if h.Hash, err = UnmarshalJSONHash(v, "hash"); err != nil {
@@ -152,8 +152,6 @@ func (t *Transaction) UnmarshalJSON(buf []byte) error {
 }
 
 func (t *Transaction) UnmarshalJSONWith(v *fastjson.Value) error {
-	t = new(Transaction)
-
 	if HasJSONKey(v, "type") {
 		txnType, err := UnmarshalJSONUint64(v, "type")
 		if err != nil {
@@ -185,8 +183,6 @@ func (r *Receipt) UnmarshalJSON(buf []byte) error {
 	if err != nil {
 		return nil
 	}
-
-	r = new(Receipt)
 
 	if HasJSONKey(v, "contractAddress") {
 		contractAddr, err := UnmarshalJSONAddr(v, "contractAddress")
@@ -256,8 +252,6 @@ func (l *Log) UnmarshalJSON(buf []byte) error {
 }
 
 func (l *Log) unmarshalJSON(v *fastjson.Value) error {
-	l = new(Log)
-
 	var err error
 
 	if l.Address, err = UnmarshalJSONAddr(v, "address"); err != nil {

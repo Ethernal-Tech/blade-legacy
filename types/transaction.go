@@ -118,6 +118,7 @@ type TxData interface {
 	setSignatureValues(v, r, s *big.Int)
 	unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error
 	marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value
+	marshalJSON(a *fastjson.Arena) *fastjson.Value
 	unmarshalJSON(v *fastjson.Value) error
 	copy() TxData
 }

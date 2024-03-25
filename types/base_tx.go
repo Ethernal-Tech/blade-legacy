@@ -1,8 +1,10 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 
+	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/valyala/fastjson"
 )
 
@@ -106,6 +108,39 @@ func (tx *BaseTx) copy() *BaseTx {
 	cpy.setFrom(tx.from())
 
 	return cpy
+}
+
+func (tx *BaseTx) marshalJSON(a *fastjson.Arena, v *fastjson.Value) {
+	v.Set("hash", a.NewString(tx.Hash.String()))
+	v.Set("from", a.NewString(tx.From.String()))
+	v.Set("gas", a.NewString(fmt.Sprintf("0x%x", tx.Gas)))
+	v.Set("nonce", a.NewString(fmt.Sprintf("0x%x", tx.Nonce)))
+
+	if tx.V != nil {
+		v.Set("v", a.NewString(hex.EncodeToHex(tx.V.Bytes())))
+	}
+
+	if tx.R != nil {
+		v.Set("r", a.NewString(hex.EncodeToHex(tx.R.Bytes())))
+	}
+
+	if tx.S != nil {
+		v.Set("s", a.NewString(hex.EncodeToHex(tx.S.Bytes())))
+	}
+
+	if len(tx.Input) != 0 {
+		v.Set("input", a.NewString(hex.EncodeToHex(tx.Input)))
+	}
+
+	if tx.Value != nil {
+		v.Set("value", a.NewString(fmt.Sprintf("0x%x", tx.Value)))
+	}
+
+	if tx.To == nil {
+		v.Set("to", a.NewNull())
+	} else {
+		v.Set("to", a.NewString(tx.To.String()))
+	}
 }
 
 func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {

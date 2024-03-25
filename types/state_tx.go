@@ -200,6 +200,19 @@ func (tx *StateTx) copy() TxData { //nolint:dupl
 	return cpy
 }
 
+func (tx *StateTx) marshalJSON(a *fastjson.Arena) *fastjson.Value {
+	v := a.NewObject()
+
+	tx.BaseTx.marshalJSON(a, v)
+	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+
+	if tx.GasPrice != nil {
+		v.Set("gasPrice", a.NewString(fmt.Sprintf("0x%x", tx.GasPrice)))
+	}
+
+	return v
+}
+
 func (tx *StateTx) unmarshalJSON(v *fastjson.Value) error {
 	if err := tx.BaseTx.unmarshalJSON(v); err != nil {
 		return err

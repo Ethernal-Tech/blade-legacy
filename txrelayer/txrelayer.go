@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/umbracle/ethgo"
 
@@ -178,7 +179,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 
 		if txn.GetGasFeeCap() == nil {
 			// retrieve the latest base fee
-			feeHist, err := t.Client().FeeHistory(1, jsonrpc.PendingBlockNumber, nil)
+			feeHist, err := t.Client().FeeHistory(1, jsonrpc.LatestBlockNumber, nil)
 			if err != nil {
 				return types.ZeroHash, fmt.Errorf("failed to get fee history: %w", err)
 			}
@@ -269,7 +270,15 @@ func (t *TxRelayerImpl) sendTransactionLocalLocked(txn *types.Transaction) (type
 		return types.ZeroHash, errNoAccounts
 	}
 
-	txn.SetFrom(types.Address(accounts[0]))
+	sender := accounts[0]
+	txn.SetFrom(sender)
+
+	nonce, err := t.client.GetNonce(sender, jsonrpc.PendingBlockNumberOrHash)
+	if err != nil {
+		return types.ZeroHash, fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	txn.SetNonce(nonce)
 
 	gasLimit, err := t.client.EstimateGas(ConvertTxnToCallMsg(txn))
 	if err != nil {
@@ -278,6 +287,18 @@ func (t *TxRelayerImpl) sendTransactionLocalLocked(txn *types.Transaction) (type
 
 	txn.SetGas(gasLimit)
 	txn.SetGasPrice(new(big.Int).SetUint64(defaultGasPrice))
+
+	fmt.Println("Type:", txn.Type())
+	fmt.Println("From:", txn.From())
+	fmt.Println("To:", txn.To())
+	fmt.Println("Value:", txn.Value())
+	fmt.Println("Gas Limit:", txn.Gas())
+	fmt.Println("Gas Price:", txn.GasPrice())
+	fmt.Println("Nonce:", txn.Nonce())
+	fmt.Println("Data:", hex.EncodeToHex(txn.Input()))
+	fmt.Println("Chain ID:", txn.ChainID())
+	fmt.Println("Max Fee Per Gas:", txn.GetGasFeeCap())
+	fmt.Println("Max Priority Fee Per Gas:", txn.GetGasTipCap())
 
 	return t.client.SendTransaction(txn)
 }
