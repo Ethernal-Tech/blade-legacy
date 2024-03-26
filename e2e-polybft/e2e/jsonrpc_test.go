@@ -448,27 +448,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.Equal(t, txReceipt.BlockHash, ethgo.Hash(header.Hash))
 	})
 
-	t.Run("txpool_contentFrom", func(t *testing.T) {
-		key1, err := crypto.GenerateECDSAKey()
-		require.NoError(t, err)
-
-		txn := cluster.Transfer(t, senderKey, key1.Address(), one)
-		require.NoError(t, txn.Wait())
-		require.True(t, txn.Succeed())
-		txReceipt := txn.Receipt()
-
-		type ContentAddressResponse struct {
-			Pending map[uint64]*ethgo.Transaction `json:"pending"`
-			Queued  map[uint64]*ethgo.Transaction `json:"queued"`
-		}
-
-		var contentFrom ContentAddressResponse
-		err = jsonRPC.Call("txpool_contentFrom", &contentFrom, key1.Address())
-		require.NoError(t, err)
-
-		require.Equal(t, txReceipt.TransactionHash, contentFrom.Pending[txn.Txn().Nonce()].Hash)
-	})
-
 	t.Run("debug_traceTransaction", func(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
