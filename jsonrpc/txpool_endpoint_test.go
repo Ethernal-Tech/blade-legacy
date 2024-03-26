@@ -226,7 +226,8 @@ func TestContentFrom(t *testing.T) {
 		mockStore.queued[address2] = []*types.Transaction{testTx2}
 		txPoolEndpoint := &TxPool{mockStore}
 
-		result, _ := txPoolEndpoint.ContentFrom(address2)
+		result, err := txPoolEndpoint.ContentFrom(address2)
+		assert.NoError(t, err)
 
 		response := result.(ContentAddressResponse)
 		assert.Equal(t, 1, len(response.Queued))
@@ -264,12 +265,17 @@ func TestContentFrom(t *testing.T) {
 		mockStore.queued[address2] = []*types.Transaction{testTx5}
 		txPoolEndpoint := &TxPool{mockStore}
 
-		result, _ := txPoolEndpoint.ContentFrom(address2)
+		result, err := txPoolEndpoint.ContentFrom(address2)
+		assert.NoError(t, err)
 
 		response := result.(ContentAddressResponse)
 
 		assert.True(t, mockStore.includeQueued)
 		assert.Equal(t, 1, len(response.Pending))
+		assert.Equal(t, testTx4.Hash(), response.Pending[testTx4.Nonce()].Hash)
+		assert.Equal(t, 1, len(response.Queued))
+		assert.Equal(t, testTx5.Hash(), response.Queued[testTx5.Nonce()].Hash)
+
 	})
 }
 
