@@ -250,7 +250,7 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 	}
 
 	res := &accessListResult{
-		Accesslist: toAccessList(*result.AccessList),
+		Accesslist: result.AccessList.ToTxAccessList(),
 		Error:      result.Err,
 		GasUsed:    argUint64(result.GasUsed),
 	}

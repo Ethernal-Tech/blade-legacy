@@ -418,7 +418,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		// Test. We should be able to query the transaction by its hash
 		txn := cluster.Transfer(t, senderKey, key1.Address(), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
@@ -436,7 +435,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		// Test. We should be able to query the transaction by its hash
 		txn := cluster.Transfer(t, senderKey, key1.Address(), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
@@ -454,7 +452,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		// Test. We should be able to query the transaction by its hash
 		txn := cluster.Transfer(t, senderKey, key1.Address(), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
@@ -471,7 +468,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		// Test. We should be able to query the transaction by its hash
 		txn := cluster.Transfer(t, senderKey, key1.Address(), one)
 		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())

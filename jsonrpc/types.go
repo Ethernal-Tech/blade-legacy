@@ -146,33 +146,6 @@ type block struct {
 	Uncles       []types.Hash        `json:"uncles"`
 }
 
-func toAccessList(aList map[types.Address]map[types.Hash]struct{}) types.TxAccessList {
-	convertMapToStorageKeys := func(m map[types.Hash]struct{}) []types.Hash {
-		r := make([]types.Hash, len(m))
-		index := 0
-
-		for key := range m {
-			r[index] = key
-			index++
-		}
-
-		return r
-	}
-
-	result := make(types.TxAccessList, 0, len(aList))
-	for address, item := range aList {
-		result = append(
-			result,
-			types.AccessTuple{
-				Address:     address,
-				StorageKeys: convertMapToStorageKeys(item),
-			},
-		)
-	}
-
-	return result
-}
-
 func (b *block) Copy() *block {
 	bb := new(block)
 	*bb = *b
