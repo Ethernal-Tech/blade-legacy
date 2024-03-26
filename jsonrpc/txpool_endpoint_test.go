@@ -275,7 +275,6 @@ func TestContentFrom(t *testing.T) {
 		assert.Equal(t, testTx4.Hash(), response.Pending[testTx4.Nonce()].Hash)
 		assert.Equal(t, 1, len(response.Queued))
 		assert.Equal(t, testTx5.Hash(), response.Queued[testTx5.Nonce()].Hash)
-
 	})
 }
 
