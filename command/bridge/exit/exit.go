@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo/jsonrpc"
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
@@ -15,6 +14,7 @@ import (
 	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -118,7 +118,7 @@ func run(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	childClient, err := jsonrpc.NewClient(ep.childJSONRPCAddr)
+	childClient, err := jsonrpc.NewEthClient(ep.childJSONRPCAddr)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("could not create child chain JSON RPC client: %w", err))
 
@@ -127,9 +127,7 @@ func run(cmd *cobra.Command, _ []string) {
 
 	// acquire proof for given exit event
 	var proof types.Proof
-
-	err = childClient.Call(generateExitProofFn, &proof, fmt.Sprintf("0x%x", ep.exitID))
-	if err != nil {
+	if err = childClient.EndpointCall(generateExitProofFn, &proof, fmt.Sprintf("0x%x", ep.exitID)); err != nil {
 		outputter.SetError(fmt.Errorf("failed to get exit proof (exit id=%d): %w", ep.exitID, err))
 
 		return
