@@ -319,6 +319,12 @@ func TestTxPool_RecoverableError(t *testing.T) {
 	secondTx, err := client.GetTransactionByHash(hashes[1])
 	require.NoError(t, err)
 	require.NotNil(t, secondTx)
+
+	// first two are in one block
+	require.Equal(t, firstTx.BlockNumber, secondTx.BlockNumber)
+
+	// last tx is included in next block
+	require.NotEqual(t, secondTx.BlockNumber, receipt.BlockNumber)
 }
 
 func TestTxPool_GetPendingTx(t *testing.T) {
