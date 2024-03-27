@@ -16,7 +16,7 @@ type Web3 struct {
 var clientVersionTemplate = "%s/%s/%s-%s/%s"
 
 // ClientVersion returns the version of the web3 client (web3_clientVersion)
-// Example: "polygon-edge-53105/v1.1.0/linux-amd64/go1.20.0"
+// Example: "polygon-edge-53105/v1.1.0/linux-amd64/go1.21.6"
 // Spec: https://ethereum.org/en/developers/docs/apis/json-rpc/#web3_clientversion
 func (w *Web3) ClientVersion() (interface{}, error) {
 	var version string

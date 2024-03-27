@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5.0.0
         with:
-          go-version: 1.20.x
+          go-version: 1.21.x
       - name: Prepare
         id: prepare
         run: |
@@ -53,7 +53,7 @@ jobs:
           		--clean --skip-validate
         env:
           PACKAGE_NAME: github.com/${GITHUB_REPOSITORY}
-          GOLANG_CROSS_VERSION: v1.20.5
+          GOLANG_CROSS_VERSION: v1.21.6
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.prepare.outputs.tag_name }}
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
