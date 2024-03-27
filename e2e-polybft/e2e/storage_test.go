@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 	"github.com/umbracle/ethgo/wallet"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
@@ -30,23 +30,23 @@ func TestE2E_Storage(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	client := cluster.Servers[0].JSONRPC().Eth()
+	client := cluster.Servers[0].JSONRPC()
 
 	num := 20
 
-	receivers := []ethgo.Address{}
+	receivers := []types.Address{}
 
 	for i := 0; i < num; i++ {
 		key, err := wallet.GenerateKey()
 		require.NoError(t, err)
 
-		receivers = append(receivers, key.Address())
+		receivers = append(receivers, types.Address(key.Address()))
 	}
 
 	txs := []*framework.TestTxn{}
 
 	for i := 0; i < num; i++ {
-		func(i int, to ethgo.Address) {
+		func(i int, to types.Address) {
 			// Send every second transaction as a dynamic fees one
 			var txn *types.Transaction
 
@@ -81,7 +81,7 @@ func TestE2E_Storage(t *testing.T) {
 
 	err = cluster.WaitUntil(2*time.Minute, 2*time.Second, func() bool {
 		for i, receiver := range receivers {
-			balance, err := client.GetBalance(receiver, ethgo.Latest)
+			balance, err := client.GetBalance(receiver, jsonrpc.LatestBlockNumberOrHash)
 			if err != nil {
 				return true
 			}
@@ -100,15 +100,15 @@ func TestE2E_Storage(t *testing.T) {
 	checkStorage(t, txs, client)
 }
 
-func checkStorage(t *testing.T, txs []*framework.TestTxn, client *jsonrpc.Eth) {
+func checkStorage(t *testing.T, txs []*framework.TestTxn, client *jsonrpc.EthClient) {
 	t.Helper()
 
 	for i, tx := range txs {
-		bn, err := client.GetBlockByNumber(ethgo.BlockNumber(tx.Receipt().BlockNumber), true)
+		bn, err := client.GetBlockByNumber(jsonrpc.BlockNumber(tx.Receipt().BlockNumber), true)
 		require.NoError(t, err)
 		assert.NotNil(t, bn)
 
-		bh, err := client.GetBlockByHash(bn.Hash, true)
+		bh, err := client.GetBlockByHash(bn.Header.Hash, true)
 		require.NoError(t, err)
 		assert.NotNil(t, bh)
 
@@ -116,36 +116,37 @@ func checkStorage(t *testing.T, txs []*framework.TestTxn, client *jsonrpc.Eth) {
 			t.Fatal("blocks dont match")
 		}
 
-		bt, err := client.GetTransactionByHash(tx.Receipt().TransactionHash)
+		bt, err := client.GetTransactionByHash(types.Hash(tx.Receipt().TransactionHash))
 		require.NoError(t, err)
 		assert.NotNil(t, bt)
-		assert.Equal(t, tx.Txn().Value(), bt.Value)
-		assert.Equal(t, tx.Txn().Gas(), bt.Gas)
-		assert.Equal(t, tx.Txn().Nonce(), bt.Nonce)
+		assert.Equal(t, tx.Txn().Value(), bt.Value())
+		assert.Equal(t, tx.Txn().Gas(), bt.Gas())
+		assert.Equal(t, tx.Txn().Nonce(), bt.Nonce())
 		assert.Equal(t, tx.Receipt().TransactionIndex, bt.TxnIndex)
-		assert.NotEmpty(t, bt.V)
-		assert.NotEmpty(t, bt.R)
-		assert.NotEmpty(t, bt.S)
-		assert.Equal(t, tx.Txn().From().Bytes(), bt.From.Bytes())
-		assert.Equal(t, tx.Txn().To().Bytes(), bt.To.Bytes())
+		v, r, s := bt.RawSignatureValues()
+		assert.NotEmpty(t, v)
+		assert.NotEmpty(t, r)
+		assert.NotEmpty(t, s)
+		assert.Equal(t, tx.Txn().From().Bytes(), bt.From().Bytes())
+		assert.Equal(t, tx.Txn().To().Bytes(), bt.To().Bytes())
 
 		if i%2 == 10 { // Intentionally disable it since dynamic fee tx not working
-			assert.Equal(t, ethgo.TransactionDynamicFee, bt.Type)
-			assert.Equal(t, uint64(0), bt.GasPrice)
-			assert.NotNil(t, bt.ChainID)
+			assert.Equal(t, ethgo.TransactionDynamicFee, bt.Type())
+			assert.Equal(t, uint64(0), bt.GasPrice().Uint64())
+			assert.NotNil(t, bt.ChainID())
 		} else {
 			// assert.Equal(t, ethgo.TransactionLegacy, bt.Type)
-			assert.Equal(t, ethgo.Gwei(2).Uint64(), bt.GasPrice)
+			assert.Equal(t, ethgo.Gwei(2).Uint64(), bt.GasPrice().Uint64())
 		}
 
-		r, err := client.GetTransactionReceipt(tx.Receipt().TransactionHash)
+		receipt, err := client.GetTransactionReceipt(types.Hash(tx.Receipt().TransactionHash))
 		require.NoError(t, err)
 		assert.NotNil(t, r)
-		assert.Equal(t, bt.TxnIndex, r.TransactionIndex)
-		assert.Equal(t, bt.Hash, r.TransactionHash)
-		assert.Equal(t, bt.BlockHash, r.BlockHash)
-		assert.Equal(t, bt.BlockNumber, r.BlockNumber)
-		assert.NotEmpty(t, r.LogsBloom)
-		assert.Equal(t, bt.To, r.To)
+		assert.Equal(t, bt.TxnIndex, receipt.TransactionIndex)
+		assert.Equal(t, bt.Hash(), types.Hash(receipt.TransactionHash))
+		assert.Equal(t, bt.BlockHash, types.Hash(receipt.BlockHash))
+		assert.Equal(t, bt.BlockNumber, receipt.BlockNumber)
+		assert.NotEmpty(t, receipt.LogsBloom)
+		assert.Equal(t, bt.To(), (*types.Address)(receipt.To))
 	}
 }
