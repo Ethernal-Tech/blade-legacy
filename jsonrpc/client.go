@@ -6,6 +6,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/jsonrpc"
 )
 
@@ -22,6 +23,12 @@ func NewEthClient(url string) (*EthClient, error) {
 	}
 
 	return &EthClient{client}, nil
+}
+
+// EndpointCall calls a specified method on the json rpc client with given params
+// and returns the result in the out parameter
+func (e *EthClient) EndpointCall(method string, out interface{}, params ...interface{}) error {
+	return e.client.Call(method, out, params...)
 }
 
 // GetCode returns the code of a contract
@@ -73,8 +80,8 @@ func (e *EthClient) GetBlockByHash(hash types.Hash, full bool) (*types.Block, er
 }
 
 // GetTransactionByHash returns a transaction by hash
-func (e *EthClient) GetTransactionByHash(hash types.Hash) (*types.Transaction, error) {
-	var txn *types.Transaction
+func (e *EthClient) GetTransactionByHash(hash types.Hash) (*Transaction, error) {
+	var txn *Transaction
 	err := e.client.Call("eth_getTransactionByHash", &txn, hash)
 
 	return txn, err
@@ -99,8 +106,8 @@ func (e *EthClient) SendTransaction(txn *types.Transaction) (types.Hash, error) 
 }
 
 // GetTransactionReceipt returns the receipt of a transaction by transaction hash
-func (e *EthClient) GetTransactionReceipt(hash types.Hash) (*types.Receipt, error) {
-	var receipt *types.Receipt
+func (e *EthClient) GetTransactionReceipt(hash types.Hash) (*ethgo.Receipt, error) {
+	var receipt *ethgo.Receipt
 	err := e.client.Call("eth_getTransactionReceipt", &receipt, hash)
 
 	return receipt, err
@@ -175,4 +182,39 @@ func (e *EthClient) MaxPriorityFeePerGas() (*big.Int, error) {
 	}
 
 	return common.ParseUint256orHex(&out)
+}
+
+// FeeHistory returns base fee per gas and transaction effective priority fee
+func (e *EthClient) FeeHistory(
+	blockCount uint64,
+	newestBlock BlockNumber,
+	rewardPercentiles []float64,
+) (*FeeHistory, error) {
+	var out *FeeHistory
+	if err := e.client.Call("eth_feeHistory", &out, blockCount,
+		newestBlock.String(), rewardPercentiles); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+// Accounts returns a list of addresses owned by client
+func (e *EthClient) Accounts() ([]types.Address, error) {
+	var out []types.Address
+	if err := e.client.Call("eth_accounts", &out); err != nil {
+		return nil, err
+	}
+
+	return out, nil
+}
+
+// GetLogs returns an array of all logs matching a given filter object
+func (e *EthClient) GetLogs(filter *ethgo.LogFilter) ([]*ethgo.Log, error) {
+	var out []*ethgo.Log
+	if err := e.client.Call("eth_getLogs", &out, filter); err != nil {
+		return nil, err
+	}
+
+	return out, nil
 }

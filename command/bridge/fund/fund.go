@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
+	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -60,6 +61,13 @@ func setFlags(cmd *cobra.Command) {
 		"",
 		polybftsecrets.PrivateKeyFlagDesc,
 	)
+
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		cmdHelper.TxTimeoutFlag,
+		txrelayer.DefaultTimeoutTransactions,
+		cmdHelper.TxTimeoutDesc,
+	)
 }
 
 func preRunCommand(_ *cobra.Command, _ []string) error {
@@ -70,7 +78,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPCAddress))
+	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPCAddress),
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize tx relayer: %w", err))
 
@@ -96,8 +105,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 				return ctx.Err()
 
 			default:
-				fundAddr := ethgo.Address(params.addresses[i])
-				txn := helper.CreateTransaction(ethgo.ZeroAddress, &fundAddr, nil, params.amountValues[i], true)
+				fundAddr := params.addresses[i]
+				txn := helper.CreateTransaction(types.ZeroAddress, &fundAddr, nil, params.amountValues[i], true)
 
 				var (
 					receipt *ethgo.Receipt

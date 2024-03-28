@@ -14,7 +14,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
 )
 
 var params withdrawParams
@@ -47,6 +46,13 @@ func setFlags(cmd *cobra.Command) {
 		polybftsecrets.AccountConfigFlagDesc,
 	)
 
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		helper.TxTimeoutFlag,
+		150*time.Second,
+		helper.TxTimeoutDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	helper.RegisterJSONRPCFlag(cmd)
 }
@@ -67,7 +73,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPC),
-		txrelayer.WithReceiptTimeout(150*time.Millisecond))
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		return err
 	}
@@ -77,8 +83,8 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	receiver := (*ethgo.Address)(&contracts.StakeManagerContract)
-	txn := bridgeHelper.CreateTransaction(validatorAccount.Ecdsa.Address(), receiver, encoded, nil, false)
+	txn := bridgeHelper.CreateTransaction(validatorAccount.Ecdsa.Address(),
+		&contracts.StakeManagerContract, encoded, nil, false)
 
 	receipt, err := txRelayer.SendTransaction(txn, validatorAccount.Ecdsa)
 	if err != nil {

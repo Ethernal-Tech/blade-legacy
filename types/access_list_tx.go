@@ -134,7 +134,7 @@ func (t *TxAccessList) unmarshalJSON(v *fastjson.Value) error {
 	for _, elem := range elems {
 		accessTuple := AccessTuple{}
 
-		addr, err := unmarshalJSONAddr(elem, "address")
+		addr, err := UnmarshalJSONAddr(elem, "address")
 		if err != nil {
 			return err
 		}
@@ -390,26 +390,43 @@ func (tx *AccessListTxn) copy() TxData {
 	return cpy
 }
 
+func (tx *AccessListTxn) marshalJSON(a *fastjson.Arena) *fastjson.Value {
+	v := a.NewObject()
+
+	tx.BaseTx.marshalJSON(a, v)
+	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+
+	if tx.ChainID != nil {
+		v.Set("chainId", a.NewString(fmt.Sprintf("0x%x", tx.ChainID)))
+	}
+
+	if len(tx.AccessList) > 0 {
+		v.Set("accessList", tx.AccessList.MarshalJSONWith(a))
+	}
+
+	return v
+}
+
 func (tx *AccessListTxn) unmarshalJSON(v *fastjson.Value) error {
 	if err := tx.BaseTx.unmarshalJSON(v); err != nil {
 		return err
 	}
 
-	gasPrice, err := unmarshalJSONBigInt(v, "gasPrice")
+	gasPrice, err := UnmarshalJSONBigInt(v, "gasPrice")
 	if err != nil {
 		return err
 	}
 
 	tx.setGasPrice(gasPrice)
 
-	chainID, err := unmarshalJSONBigInt(v, "chainId")
+	chainID, err := UnmarshalJSONBigInt(v, "chainId")
 	if err != nil {
 		return err
 	}
 
 	tx.setChainID(chainID)
 
-	if hasKey(v, "accessList") {
+	if HasJSONKey(v, "accessList") {
 		if err := tx.AccessList.unmarshalJSON(v.Get("accessList")); err != nil {
 			return err
 		}

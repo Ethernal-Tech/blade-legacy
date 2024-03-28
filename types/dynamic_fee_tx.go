@@ -248,33 +248,58 @@ func (tx *DynamicFeeTx) copy() TxData {
 	return cpy
 }
 
+func (tx *DynamicFeeTx) marshalJSON(a *fastjson.Arena) *fastjson.Value {
+	v := a.NewObject()
+
+	tx.BaseTx.marshalJSON(a, v)
+	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+
+	if tx.GasTipCap != nil {
+		v.Set("maxPriorityFeePerGas", a.NewString(fmt.Sprintf("0x%x", tx.GasTipCap)))
+	}
+
+	if tx.GasFeeCap != nil {
+		v.Set("maxFeePerGas", a.NewString(fmt.Sprintf("0x%x", tx.GasFeeCap)))
+	}
+
+	if tx.ChainID != nil {
+		v.Set("chainId", a.NewString(fmt.Sprintf("0x%x", tx.ChainID)))
+	}
+
+	if len(tx.AccessList) > 0 {
+		v.Set("accessList", tx.AccessList.MarshalJSONWith(a))
+	}
+
+	return v
+}
+
 func (tx *DynamicFeeTx) unmarshalJSON(v *fastjson.Value) error {
 	if err := tx.BaseTx.unmarshalJSON(v); err != nil {
 		return err
 	}
 
-	gasTipCap, err := unmarshalJSONBigInt(v, "maxPriorityFeePerGas")
+	gasTipCap, err := UnmarshalJSONBigInt(v, "maxPriorityFeePerGas")
 	if err != nil {
 		return err
 	}
 
 	tx.setGasTipCap(gasTipCap)
 
-	gasFeeCap, err := unmarshalJSONBigInt(v, "maxFeePerGas")
+	gasFeeCap, err := UnmarshalJSONBigInt(v, "maxFeePerGas")
 	if err != nil {
 		return err
 	}
 
 	tx.setGasFeeCap(gasFeeCap)
 
-	chainID, err := unmarshalJSONBigInt(v, "chainId")
+	chainID, err := UnmarshalJSONBigInt(v, "chainId")
 	if err != nil {
 		return err
 	}
 
 	tx.setChainID(chainID)
 
-	if hasKey(v, "accessList") {
+	if HasJSONKey(v, "accessList") {
 		if err := tx.AccessList.unmarshalJSON(v.Get("accessList")); err != nil {
 			return err
 		}

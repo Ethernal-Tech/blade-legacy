@@ -13,16 +13,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/sha3"
+	empty "google.golang.org/protobuf/types/known/emptypb"
+
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/tests"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/server/proto"
 	txpoolProto "github.com/0xPolygon/polygon-edge/txpool/proto"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/stretchr/testify/assert"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
-	"golang.org/x/crypto/sha3"
-	empty "google.golang.org/protobuf/types/known/emptypb"
 )
 
 var (
@@ -65,13 +65,10 @@ func EthToWeiPrecise(ethValue int64, decimals int64) *big.Int {
 }
 
 // GetAccountBalance is a helper method for fetching the Balance field of an account
-func GetAccountBalance(t *testing.T, address types.Address, rpcClient *jsonrpc.Client) *big.Int {
+func GetAccountBalance(t *testing.T, address types.Address, rpcClient *jsonrpc.EthClient) *big.Int {
 	t.Helper()
 
-	accountBalance, err := rpcClient.Eth().GetBalance(
-		ethgo.Address(address),
-		ethgo.Latest,
-	)
+	accountBalance, err := rpcClient.GetBalance(address, jsonrpc.LatestBlockNumberOrHash)
 
 	assert.NoError(t, err)
 
@@ -211,7 +208,7 @@ func WaitUntilTxPoolFilled(
 // WaitUntilBlockMined waits until server mined block with bigger height than given height
 // otherwise returns timeout
 func WaitUntilBlockMined(ctx context.Context, srv *TestServer, desiredHeight uint64) (uint64, error) {
-	clt := srv.JSONRPC().Eth()
+	clt := srv.JSONRPC()
 	res, err := tests.RetryUntilTimeout(ctx, func() (interface{}, bool) {
 		height, err := clt.BlockNumber()
 		if err == nil && height >= desiredHeight {

@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -12,7 +13,10 @@ import (
 	"github.com/valyala/fastjson"
 )
 
-var defaultArena fastjson.ArenaPool
+var (
+	defaultArena fastjson.ArenaPool
+	defaultPool  fastjson.ParserPool
+)
 
 const jsonRPCMetric = "json_rpc"
 
@@ -112,28 +116,38 @@ func toTransaction(
 	return res
 }
 
+type header struct {
+	ParentHash      types.Hash  `json:"parentHash"`
+	Sha3Uncles      types.Hash  `json:"sha3Uncles"`
+	Miner           argBytes    `json:"miner"`
+	StateRoot       types.Hash  `json:"stateRoot"`
+	TxRoot          types.Hash  `json:"transactionsRoot"`
+	ReceiptsRoot    types.Hash  `json:"receiptsRoot"`
+	LogsBloom       types.Bloom `json:"logsBloom"`
+	Difficulty      argUint64   `json:"difficulty"`
+	TotalDifficulty argUint64   `json:"totalDifficulty"`
+	Number          argUint64   `json:"number"`
+	GasLimit        argUint64   `json:"gasLimit"`
+	GasUsed         argUint64   `json:"gasUsed"`
+	Timestamp       argUint64   `json:"timestamp"`
+	ExtraData       argBytes    `json:"extraData"`
+	MixHash         types.Hash  `json:"mixHash"`
+	Nonce           types.Nonce `json:"nonce"`
+	Hash            types.Hash  `json:"hash"`
+	BaseFee         argUint64   `json:"baseFeePerGas,omitempty"`
+}
+
+type accessListResult struct {
+	Accesslist types.TxAccessList `json:"accessList"`
+	Error      error              `json:"error,omitempty"`
+	GasUsed    argUint64          `json:"gasUsed"`
+}
+
 type block struct {
-	ParentHash      types.Hash          `json:"parentHash"`
-	Sha3Uncles      types.Hash          `json:"sha3Uncles"`
-	Miner           argBytes            `json:"miner"`
-	StateRoot       types.Hash          `json:"stateRoot"`
-	TxRoot          types.Hash          `json:"transactionsRoot"`
-	ReceiptsRoot    types.Hash          `json:"receiptsRoot"`
-	LogsBloom       types.Bloom         `json:"logsBloom"`
-	Difficulty      argUint64           `json:"difficulty"`
-	TotalDifficulty argUint64           `json:"totalDifficulty"`
-	Size            argUint64           `json:"size"`
-	Number          argUint64           `json:"number"`
-	GasLimit        argUint64           `json:"gasLimit"`
-	GasUsed         argUint64           `json:"gasUsed"`
-	Timestamp       argUint64           `json:"timestamp"`
-	ExtraData       argBytes            `json:"extraData"`
-	MixHash         types.Hash          `json:"mixHash"`
-	Nonce           types.Nonce         `json:"nonce"`
-	Hash            types.Hash          `json:"hash"`
-	Transactions    []transactionOrHash `json:"transactions"`
-	Uncles          []types.Hash        `json:"uncles"`
-	BaseFee         argUint64           `json:"baseFeePerGas,omitempty"`
+	header
+	Size         argUint64           `json:"size"`
+	Transactions []transactionOrHash `json:"transactions"`
+	Uncles       []types.Hash        `json:"uncles"`
 }
 
 func (b *block) Copy() *block {
@@ -151,7 +165,7 @@ func (b *block) Copy() *block {
 
 func toBlock(b *types.Block, fullTx bool) *block {
 	h := b.Header
-	res := &block{
+	resHeader := header{
 		ParentHash:      h.ParentHash,
 		Sha3Uncles:      h.Sha3Uncles,
 		Miner:           argBytes(h.Miner),
@@ -161,7 +175,6 @@ func toBlock(b *types.Block, fullTx bool) *block {
 		LogsBloom:       h.LogsBloom,
 		Difficulty:      argUint64(h.Difficulty),
 		TotalDifficulty: argUint64(h.Difficulty), // not needed for POS
-		Size:            argUint64(b.Size()),
 		Number:          argUint64(h.Number),
 		GasLimit:        argUint64(h.GasLimit),
 		GasUsed:         argUint64(h.GasUsed),
@@ -170,9 +183,14 @@ func toBlock(b *types.Block, fullTx bool) *block {
 		MixHash:         h.MixHash,
 		Nonce:           h.Nonce,
 		Hash:            h.Hash,
-		Transactions:    []transactionOrHash{},
-		Uncles:          []types.Hash{},
 		BaseFee:         argUint64(h.BaseFee),
+	}
+
+	res := &block{
+		header:       resHeader,
+		Size:         argUint64(b.Size()),
+		Transactions: []transactionOrHash{},
+		Uncles:       []types.Hash{},
 	}
 
 	for idx, txn := range b.Transactions {
@@ -197,6 +215,31 @@ func toBlock(b *types.Block, fullTx bool) *block {
 
 	for _, uncle := range b.Uncles {
 		res.Uncles = append(res.Uncles, uncle.Hash)
+	}
+
+	return res
+}
+
+func toHeader(h *types.Header) *header {
+	res := &header{
+		ParentHash:      h.ParentHash,
+		Sha3Uncles:      h.Sha3Uncles,
+		Miner:           argBytes(h.Miner),
+		StateRoot:       h.StateRoot,
+		TxRoot:          h.TxRoot,
+		ReceiptsRoot:    h.ReceiptsRoot,
+		LogsBloom:       h.LogsBloom,
+		Difficulty:      argUint64(h.Difficulty),
+		TotalDifficulty: argUint64(h.Difficulty), // not needed for POS
+		Number:          argUint64(h.Number),
+		GasLimit:        argUint64(h.GasLimit),
+		GasUsed:         argUint64(h.GasUsed),
+		Timestamp:       argUint64(h.Timestamp),
+		ExtraData:       argBytes(h.ExtraData),
+		MixHash:         h.MixHash,
+		Nonce:           h.Nonce,
+		Hash:            h.Hash,
+		BaseFee:         argUint64(h.BaseFee),
 	}
 
 	return res
@@ -540,7 +583,10 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 
 	o := a.NewObject()
 	o.Set("from", a.NewString(c.From.String()))
-	o.Set("gas", a.NewString(fmt.Sprintf("0x%x", c.Gas)))
+
+	if c.Gas != 0 {
+		o.Set("gas", a.NewString(fmt.Sprintf("0x%x", c.Gas)))
+	}
 
 	if c.To != nil {
 		o.Set("to", a.NewString(c.To.String()))
@@ -575,4 +621,99 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 	defaultArena.Put(a)
 
 	return res, nil
+}
+
+// FeeHistory represents the fee history data returned by an rpc node
+type FeeHistory struct {
+	OldestBlock  uint64     `json:"oldestBlock"`
+	Reward       [][]uint64 `json:"reward,omitempty"`
+	BaseFee      []uint64   `json:"baseFeePerGas,omitempty"`
+	GasUsedRatio []float64  `json:"gasUsedRatio"`
+}
+
+// UnmarshalJSON unmarshals the FeeHistory object from JSON
+func (f *FeeHistory) UnmarshalJSON(data []byte) error {
+	var raw feeHistoryResult
+
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	f.OldestBlock = uint64(raw.OldestBlock)
+
+	if raw.Reward != nil {
+		f.Reward = make([][]uint64, 0, len(raw.Reward))
+
+		for _, r := range raw.Reward {
+			elem := make([]uint64, 0, len(r))
+			for _, i := range r {
+				elem = append(elem, uint64(i))
+			}
+
+			f.Reward = append(f.Reward, elem)
+		}
+	}
+
+	f.BaseFee = make([]uint64, 0, len(raw.BaseFeePerGas))
+	for _, i := range raw.BaseFeePerGas {
+		f.BaseFee = append(f.BaseFee, uint64(i))
+	}
+
+	f.GasUsedRatio = raw.GasUsedRatio
+
+	return nil
+}
+
+// Transaction is the json rpc transaction object
+// (types.Transaction object, expanded with block number, hash and index)
+type Transaction struct {
+	*types.Transaction
+
+	// BlockNumber is the number of the block in which the transaction was included.
+	BlockNumber uint64 `json:"blockNumber"`
+
+	// BlockHash is the hash of the block in which the transaction was included.
+	BlockHash types.Hash `json:"blockHash"`
+
+	// TxnIndex is the index of the transaction within the block.
+	TxnIndex uint64 `json:"transactionIndex"`
+}
+
+// UnmarshalJSON unmarshals the transaction object from JSON
+func (t *Transaction) UnmarshalJSON(data []byte) error {
+	p := defaultPool.Get()
+	defer defaultPool.Put(p)
+
+	v, err := p.Parse(string(data))
+	if err != nil {
+		return err
+	}
+
+	t.Transaction = new(types.Transaction)
+	if err := t.Transaction.UnmarshalJSONWith(v); err != nil {
+		return err
+	}
+
+	if types.HasJSONKey(v, "blockNumber") {
+		t.BlockNumber, err = types.UnmarshalJSONUint64(v, "blockNumber")
+		if err != nil {
+			return err
+		}
+	}
+
+	if types.HasJSONKey(v, "blockHash") {
+		t.BlockHash, err = types.UnmarshalJSONHash(v, "blockHash")
+		if err != nil {
+			return err
+		}
+	}
+
+	if types.HasJSONKey(v, "transactionIndex") {
+		t.TxnIndex, err = types.UnmarshalJSONUint64(v, "transactionIndex")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

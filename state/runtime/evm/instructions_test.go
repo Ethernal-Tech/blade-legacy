@@ -656,6 +656,7 @@ func TestSStore(t *testing.T) {
 		mockHost := &mockHost{}
 		mockHost.On("SetStorage", mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything).Return(runtime.StorageUnchanged).Once()
+
 		s.host = mockHost
 
 		s.push(one256)
@@ -676,6 +677,7 @@ func TestSStore(t *testing.T) {
 		mockHost := &mockHost{}
 		mockHost.On("SetStorage", mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything).Return(runtime.StorageModified).Once()
+
 		s.host = mockHost
 
 		s.push(one256)
@@ -693,6 +695,7 @@ func TestSStore(t *testing.T) {
 		mockHost := &mockHost{}
 		mockHost.On("SetStorage", mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything).Return(runtime.StorageAdded).Once()
+
 		s.host = mockHost
 
 		s.push(one256)
@@ -713,6 +716,7 @@ func TestSStore(t *testing.T) {
 		mockHost := &mockHost{}
 		mockHost.On("SetStorage", mock.Anything, mock.Anything,
 			mock.Anything, mock.Anything).Return(runtime.StorageDeleted).Once()
+
 		s.host = mockHost
 
 		s.push(one256)
@@ -1128,6 +1132,7 @@ func TestExtCodeCopy(t *testing.T) {
 
 	t.Run("NonEIP150Fork", func(t *testing.T) {
 		leftGas := uint64(974)
+
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
 

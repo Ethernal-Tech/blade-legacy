@@ -66,6 +66,13 @@ func setFlags(cmd *cobra.Command) {
 		polybftsecrets.StakeTokenFlagDesc,
 	)
 
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		helper.TxTimeoutFlag,
+		txrelayer.DefaultTimeoutTransactions,
+		helper.TxTimeoutDesc,
+	)
+
 	helper.RegisterJSONRPCFlag(cmd)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountConfigFlag, polybftsecrets.AccountDirFlag)
 }
@@ -85,12 +92,13 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPC))
+	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPC),
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		return err
 	}
 
-	rootChainID, err := txRelayer.Client().Eth().ChainID()
+	rootChainID, err := txRelayer.Client().ChainID()
 	if err != nil {
 		return err
 	}
@@ -183,8 +191,7 @@ func registerValidator(sender txrelayer.TxRelayer, account *wallet.Account,
 		return nil, fmt.Errorf("register validator failed: %w", err)
 	}
 
-	stakeManagerAddr := ethgo.Address(contracts.StakeManagerContract)
-	txn := bridgeHelper.CreateTransaction(ethgo.ZeroAddress, &stakeManagerAddr, input, nil, true)
+	txn := bridgeHelper.CreateTransaction(types.ZeroAddress, &contracts.StakeManagerContract, input, nil, true)
 
 	return sender.SendTransaction(txn, account.Ecdsa)
 }

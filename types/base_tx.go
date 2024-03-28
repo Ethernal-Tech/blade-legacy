@@ -1,8 +1,10 @@
 package types
 
 import (
+	"fmt"
 	"math/big"
 
+	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/valyala/fastjson"
 )
 
@@ -108,15 +110,48 @@ func (tx *BaseTx) copy() *BaseTx {
 	return cpy
 }
 
+func (tx *BaseTx) marshalJSON(a *fastjson.Arena, v *fastjson.Value) {
+	v.Set("hash", a.NewString(tx.Hash.String()))
+	v.Set("from", a.NewString(tx.From.String()))
+	v.Set("gas", a.NewString(fmt.Sprintf("0x%x", tx.Gas)))
+	v.Set("nonce", a.NewString(fmt.Sprintf("0x%x", tx.Nonce)))
+
+	if tx.V != nil {
+		v.Set("v", a.NewString(hex.EncodeToHex(tx.V.Bytes())))
+	}
+
+	if tx.R != nil {
+		v.Set("r", a.NewString(hex.EncodeToHex(tx.R.Bytes())))
+	}
+
+	if tx.S != nil {
+		v.Set("s", a.NewString(hex.EncodeToHex(tx.S.Bytes())))
+	}
+
+	if len(tx.Input) != 0 {
+		v.Set("input", a.NewString(hex.EncodeToHex(tx.Input)))
+	}
+
+	if tx.Value != nil {
+		v.Set("value", a.NewString(fmt.Sprintf("0x%x", tx.Value)))
+	}
+
+	if tx.To == nil {
+		v.Set("to", a.NewNull())
+	} else {
+		v.Set("to", a.NewString(tx.To.String()))
+	}
+}
+
 func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
-	hash, err := unmarshalJSONHash(v, "hash")
+	hash, err := UnmarshalJSONHash(v, "hash")
 	if err != nil {
 		return err
 	}
 
 	tx.setHash(hash)
 
-	from, err := unmarshalJSONAddr(v, "from")
+	from, err := UnmarshalJSONAddr(v, "from")
 	if err != nil {
 		return err
 	}
@@ -124,11 +159,11 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 	tx.setFrom(from)
 
 	// Do not decode 'to' if it doesn't exist.
-	if hasKey(v, "to") {
+	if HasJSONKey(v, "to") {
 		if v.Get("to").String() != "null" {
 			var to Address
 
-			if to, err = unmarshalJSONAddr(v, "to"); err != nil {
+			if to, err = UnmarshalJSONAddr(v, "to"); err != nil {
 				return err
 			}
 
@@ -136,45 +171,45 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 		}
 	}
 
-	input, err := unmarshalJSONBytes(v, "input")
+	input, err := UnmarshalJSONBytes(v, "input")
 	if err != nil {
 		return err
 	}
 
 	tx.setInput(input)
 
-	value, err := unmarshalJSONBigInt(v, "value")
+	value, err := UnmarshalJSONBigInt(v, "value")
 	if err != nil {
 		return err
 	}
 
 	tx.setValue(value)
 
-	nonce, err := unmarshalJSONUint64(v, "nonce")
+	nonce, err := UnmarshalJSONUint64(v, "nonce")
 	if err != nil {
 		return err
 	}
 
 	tx.setNonce(nonce)
 
-	vParity, err := unmarshalJSONBigInt(v, "v")
+	vParity, err := UnmarshalJSONBigInt(v, "v")
 	if err != nil {
 		return err
 	}
 
-	r, err := unmarshalJSONBigInt(v, "r")
+	r, err := UnmarshalJSONBigInt(v, "r")
 	if err != nil {
 		return err
 	}
 
-	s, err := unmarshalJSONBigInt(v, "s")
+	s, err := UnmarshalJSONBigInt(v, "s")
 	if err != nil {
 		return err
 	}
 
 	tx.setSignatureValues(vParity, r, s)
 
-	gas, err := unmarshalJSONUint64(v, "gas")
+	gas, err := UnmarshalJSONUint64(v, "gas")
 	if err != nil {
 		return err
 	}

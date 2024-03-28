@@ -7,25 +7,26 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
+	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	frameworkpolybft "github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/e2e/framework"
 	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	itrie "github.com/0xPolygon/polygon-edge/state/immutable-trie"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/stretchr/testify/require"
-	"github.com/syndtr/goleveldb/leveldb"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 func TestE2E_Migration(t *testing.T) {
-	userKey, _ := wallet.GenerateKey()
+	userKey, _ := crypto.GenerateECDSAKey()
 	userAddr := userKey.Address()
-	userKey2, _ := wallet.GenerateKey()
+	userKey2, _ := crypto.GenerateECDSAKey()
 	userAddr2 := userKey2.Address()
 
 	initialBalance := ethgo.Ether(10)
@@ -41,17 +42,11 @@ func TestE2E_Migration(t *testing.T) {
 	rpcClient := srv.JSONRPC()
 
 	// Fetch the balances before sending
-	balanceSender, err := rpcClient.Eth().GetBalance(
-		userAddr,
-		ethgo.Latest,
-	)
+	balanceSender, err := rpcClient.GetBalance(userAddr, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 	require.Equal(t, balanceSender.Cmp(initialBalance), 0)
 
-	balanceReceiver, err := rpcClient.Eth().GetBalance(
-		userAddr2,
-		ethgo.Latest,
-	)
+	balanceReceiver, err := rpcClient.GetBalance(userAddr2, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 
 	if balanceReceiver.Uint64() != 0 {
@@ -61,32 +56,39 @@ func TestE2E_Migration(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(rpcClient))
 	require.NoError(t, err)
 
-	//send transaction to user2
+	// send transaction to user2
 	sendAmount := ethgo.Gwei(10000)
-	receipt, err := relayer.SendTransaction(
-		&ethgo.Transaction{
-			From:     userAddr,
-			To:       &userAddr2,
-			Gas:      1000000,
-			Value:    sendAmount,
-			GasPrice: ethgo.Gwei(2).Uint64(),
-		}, userKey)
+	tx := types.NewTx(&types.LegacyTx{
+		BaseTx: &types.BaseTx{
+			From:  userKey.Address(),
+			To:    userKey2.Address().Ptr(),
+			Gas:   1000000,
+			Value: sendAmount,
+		},
+		GasPrice: ethgo.Gwei(2),
+	})
+
+	receipt, err := relayer.SendTransaction(tx, userKey)
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
 
-	receipt, err = relayer.SendTransaction(&ethgo.Transaction{
-		From:     userAddr,
-		Gas:      1000000,
-		GasPrice: ethgo.Gwei(2).Uint64(),
-		Input:    contractsapi.TestWriteBlockMetadata.Bytecode,
-	}, userKey)
+	tx = types.NewTx(&types.LegacyTx{
+		BaseTx: &types.BaseTx{
+			From:  userKey.Address(),
+			Gas:   1000000,
+			Input: contractsapi.TestWriteBlockMetadata.Bytecode,
+		},
+		GasPrice: ethgo.Gwei(2),
+	})
+
+	receipt, err = relayer.SendTransaction(tx, userKey)
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
 	deployedContractBalance := receipt.ContractAddress
 
-	initReceipt, err := ABITransaction(relayer, userKey, contractsapi.TestWriteBlockMetadata, receipt.ContractAddress, "init")
+	initReceipt, err := ABITransaction(relayer, userKey, contractsapi.TestWriteBlockMetadata, types.Address(receipt.ContractAddress), "init")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,25 +96,19 @@ func TestE2E_Migration(t *testing.T) {
 	require.Equal(t, uint64(types.ReceiptSuccess), initReceipt.Status)
 
 	// Fetch the balances after sending
-	balanceSender, err = rpcClient.Eth().GetBalance(
-		userAddr,
-		ethgo.Latest,
-	)
+	balanceSender, err = rpcClient.GetBalance(userAddr, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 
-	balanceReceiver, err = rpcClient.Eth().GetBalance(
-		userAddr2,
-		ethgo.Latest,
-	)
+	balanceReceiver, err = rpcClient.GetBalance(userAddr2, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 	require.Equal(t, sendAmount, balanceReceiver)
 
-	block, err := rpcClient.Eth().GetBlockByNumber(ethgo.Latest, true)
+	block, err := rpcClient.GetBlockByNumber(jsonrpc.LatestBlockNumber, true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	stateRoot := block.StateRoot
+	stateRoot := block.Header.StateRoot
 
 	path := filepath.Join(srvs[0].Config.RootDir, "trie")
 	srvs[0].Stop()
@@ -124,7 +120,7 @@ func TestE2E_Migration(t *testing.T) {
 
 	err = frameworkpolybft.RunEdgeCommand([]string{
 		"regenesis",
-		"--stateRoot", block.StateRoot.String(),
+		"--stateRoot", block.Header.StateRoot.String(),
 		"--source-path", path,
 		"--target-path", tmpDir,
 	}, os.Stdout)
@@ -139,7 +135,7 @@ func TestE2E_Migration(t *testing.T) {
 
 	stateStorageNew := itrie.NewKV(db)
 
-	copiedStateRoot, err := itrie.HashChecker(block.StateRoot.Bytes(), stateStorageNew)
+	copiedStateRoot, err := itrie.HashChecker(block.Header.StateRoot.Bytes(), stateStorageNew)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -161,12 +157,12 @@ func TestE2E_Migration(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	senderBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().Eth().GetBalance(userAddr, ethgo.Latest)
+	senderBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().GetBalance(userAddr, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	receiverBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().Eth().GetBalance(userAddr2, ethgo.Latest)
+	receiverBalanceAfterMigration, err := cluster.Servers[0].JSONRPC().GetBalance(userAddr2, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,7 +170,7 @@ func TestE2E_Migration(t *testing.T) {
 	require.Equal(t, balanceSender, senderBalanceAfterMigration)
 	require.Equal(t, balanceReceiver, receiverBalanceAfterMigration)
 
-	deployedCode, err := cluster.Servers[0].JSONRPC().Eth().GetCode(deployedContractBalance, ethgo.Latest)
+	deployedCode, err := cluster.Servers[0].JSONRPC().GetCode(types.Address(deployedContractBalance), jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}

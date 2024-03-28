@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/chain"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/txpool"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e/framework"
@@ -190,7 +190,7 @@ func TestTxPool_ErrorCodes(t *testing.T) {
 				defer waitCancelFn()
 
 				convertedHash := types.StringToHash(addResponse.TxHash)
-				_, receiptErr := tests.WaitForReceipt(receiptCtx, srv.JSONRPC().Eth(), ethgo.Hash(convertedHash))
+				_, receiptErr := tests.WaitForReceipt(receiptCtx, srv.JSONRPC(), convertedHash)
 
 				if receiptErr != nil {
 					t.Fatalf("Unable to get receipt, %v", receiptErr)
@@ -280,7 +280,7 @@ func TestTxPool_RecoverableError(t *testing.T) {
 
 	client := server.JSONRPC()
 	operator := server.TxnPoolOperator()
-	hashes := make([]ethgo.Hash, 3)
+	hashes := make([]types.Hash, 3)
 
 	for i, tx := range transactions {
 		signedTx, err := signer.SignTx(tx, senderKey)
@@ -294,31 +294,29 @@ func TestTxPool_RecoverableError(t *testing.T) {
 		})
 		require.NoError(t, err, "Unable to send transaction, %v", err)
 
-		txHash := ethgo.Hash(types.StringToHash(response.TxHash))
-
 		// save for later querying
-		hashes[i] = txHash
+		hashes[i] = types.StringToHash(response.TxHash)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
 	defer cancel()
 
 	// wait for the last tx to be included in a block
-	receipt, err := tests.WaitForReceipt(ctx, client.Eth(), hashes[2])
+	receipt, err := tests.WaitForReceipt(ctx, client, hashes[2])
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
 
 	// assert balance moved
-	balance, err := client.Eth().GetBalance(ethgo.Address(receiverAddress), ethgo.Latest)
+	balance, err := client.GetBalance(receiverAddress, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err, "failed to retrieve receiver account balance")
 	require.Equal(t, framework.EthToWei(3).String(), balance.String())
 
 	// Query 1st and 2nd txs
-	firstTx, err := client.Eth().GetTransactionByHash(hashes[0])
+	firstTx, err := client.GetTransactionByHash(hashes[0])
 	require.NoError(t, err)
 	require.NotNil(t, firstTx)
 
-	secondTx, err := client.Eth().GetTransactionByHash(hashes[1])
+	secondTx, err := client.GetTransactionByHash(hashes[1])
 	require.NoError(t, err)
 	require.NotNil(t, secondTx)
 
@@ -370,34 +368,34 @@ func TestTxPool_GetPendingTx(t *testing.T) {
 	})
 	assert.NoError(t, err, "Unable to send transaction, %v", err)
 
-	txHash := ethgo.Hash(types.StringToHash(response.TxHash))
+	txHash := types.StringToHash(response.TxHash)
 
 	// Grab the pending transaction from the pool
-	tx, err := client.Eth().GetTransactionByHash(txHash)
+	tx, err := client.GetTransactionByHash(txHash)
 	assert.NoError(t, err, "Unable to get transaction by hash, %v", err)
 	assert.NotNil(t, tx)
 
 	// Make sure the specific fields are not filled yet
 	assert.Equal(t, uint64(0), tx.TxnIndex)
 	assert.Equal(t, uint64(0), tx.BlockNumber)
-	assert.Equal(t, ethgo.ZeroHash, tx.BlockHash)
+	assert.Equal(t, types.ZeroHash, tx.BlockHash)
 
 	// Wait for the transaction to be included into a block
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	receipt, err := tests.WaitForReceipt(ctx, client.Eth(), txHash)
+	receipt, err := tests.WaitForReceipt(ctx, client, txHash)
 	assert.NoError(t, err)
 	assert.NotNil(t, receipt)
 
 	assert.Equal(t, tx.TxnIndex, receipt.TransactionIndex)
 
 	// fields should be updated
-	tx, err = client.Eth().GetTransactionByHash(txHash)
+	tx, err = client.GetTransactionByHash(txHash)
 	assert.NoError(t, err, "Unable to get transaction by hash, %v", err)
 	assert.NotNil(t, tx)
 
 	assert.Equal(t, uint64(0), tx.TxnIndex)
 	assert.Equal(t, receipt.BlockNumber, tx.BlockNumber)
-	assert.Equal(t, receipt.BlockHash, tx.BlockHash)
+	assert.Equal(t, types.Hash(receipt.BlockHash), tx.BlockHash)
 }

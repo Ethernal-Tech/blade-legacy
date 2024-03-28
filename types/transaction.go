@@ -118,6 +118,7 @@ type TxData interface {
 	setSignatureValues(v, r, s *big.Int)
 	unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error
 	marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value
+	marshalJSON(a *fastjson.Arena) *fastjson.Value
 	unmarshalJSON(v *fastjson.Value) error
 	copy() TxData
 }
@@ -181,6 +182,15 @@ func (t *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 // set methods for transaction fields
 func (t *Transaction) SetSignatureValues(v, r, s *big.Int) {
 	t.Inner.setSignatureValues(v, r, s)
+}
+
+// SplitToRawSignatureValues splits signature to v, r and s components and sets it to the transaction
+func (t *Transaction) SplitToRawSignatureValues(signature, vRaw []byte) {
+	r := new(big.Int).SetBytes(signature[:HashLength])
+	s := new(big.Int).SetBytes(signature[HashLength : 2*HashLength])
+	v := new(big.Int).SetBytes(vRaw)
+
+	t.SetSignatureValues(v, r, s)
 }
 
 func (t *Transaction) SetFrom(addr Address) {

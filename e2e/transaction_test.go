@@ -11,6 +11,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/e2e/framework"
 	"github.com/0xPolygon/polygon-edge/helper/tests"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -59,7 +60,7 @@ func TestPreminedBalance(t *testing.T) {
 
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			balance, err := rpcClient.Eth().GetBalance(ethgo.Address(testCase.address), ethgo.Latest)
+			balance, err := rpcClient.GetBalance(testCase.address, jsonrpc.LatestBlockNumberOrHash)
 			require.NoError(t, err)
 			require.Equal(t, testCase.balance, balance)
 		})
@@ -137,16 +138,10 @@ func TestEthTransfer(t *testing.T) {
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
 			// Fetch the balances before sending
-			balanceSender, err := rpcClient.Eth().GetBalance(
-				ethgo.Address(testCase.sender),
-				ethgo.Latest,
-			)
+			balanceSender, err := rpcClient.GetBalance(testCase.sender, jsonrpc.LatestBlockNumberOrHash)
 			require.NoError(t, err)
 
-			balanceReceiver, err := rpcClient.Eth().GetBalance(
-				ethgo.Address(testCase.recipient),
-				ethgo.Latest,
-			)
+			balanceReceiver, err := rpcClient.GetBalance(testCase.recipient, jsonrpc.LatestBlockNumberOrHash)
 			require.NoError(t, err)
 
 			// Set the preSend balances
@@ -176,16 +171,10 @@ func TestEthTransfer(t *testing.T) {
 			}
 
 			// Fetch the balances after sending
-			balanceSender, err = rpcClient.Eth().GetBalance(
-				ethgo.Address(testCase.sender),
-				ethgo.Latest,
-			)
+			balanceSender, err = rpcClient.GetBalance(testCase.sender, jsonrpc.LatestBlockNumberOrHash)
 			require.NoError(t, err)
 
-			balanceReceiver, err = rpcClient.Eth().GetBalance(
-				ethgo.Address(testCase.recipient),
-				ethgo.Latest,
-			)
+			balanceReceiver, err = rpcClient.GetBalance(testCase.recipient, jsonrpc.LatestBlockNumberOrHash)
 			require.NoError(t, err)
 
 			expectedSenderBalance := previousSenderBalance

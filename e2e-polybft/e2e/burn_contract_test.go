@@ -4,16 +4,16 @@ import (
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 func TestE2E_BurnContract_Deployed(t *testing.T) {
-	contractKey, _ := wallet.GenerateKey()
-	destinationKey, _ := wallet.GenerateKey()
+	contractKey, _ := crypto.GenerateECDSAKey()
+	destinationKey, _ := crypto.GenerateECDSAKey()
 
 	contractAddr := types.Address(contractKey.Address())
 	destinationAddr := types.Address(destinationKey.Address())
@@ -30,10 +30,10 @@ func TestE2E_BurnContract_Deployed(t *testing.T) {
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
-	client := cluster.Servers[0].JSONRPC().Eth()
+	client := cluster.Servers[0].JSONRPC()
 
 	// Get the code for the default deployed burn contract
-	code, err := client.GetCode(ethgo.Address(contractAddr), ethgo.Latest)
+	code, err := client.GetCode(contractAddr, jsonrpc.LatestBlockNumberOrHash)
 	require.NoError(t, err)
 	require.NotEqual(t, code, "0x")
 }

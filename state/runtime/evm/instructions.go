@@ -1297,6 +1297,7 @@ func (c *state) buildCallContract(op OpCode) (*runtime.Contract, uint64, uint64,
 
 			return nil, 0, 0, nil
 		}
+
 		gas = initialGas.Uint64()
 	}
 
