@@ -48,8 +48,8 @@ jobs:
       block_time: "2"
       max_slots: "276480"
       max_enqueued: "276480"
-      is_london_fork_active: false
-      is_bridge_active: true
+      is_london_fork_active: true
+      is_bridge_active: false
       notification: false
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -125,8 +125,8 @@ jobs:
       block_time: "2"
       max_slots: "276480"
       max_enqueued: "276480"
-      is_london_fork_active: false
-      is_bridge_active: true
+      is_london_fork_active: true
+      is_bridge_active: false
       logs: true
       build_blade_output: ${{ needs.ci.outputs.build-blade }}
       lint_output: ${{ needs.ci.outputs.lint }}
