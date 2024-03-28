@@ -66,7 +66,7 @@ func TestE2E_Storage(t *testing.T) {
 			}
 
 			txn.SetFrom(sender.Address())
-			txn.SetTo((*types.Address)(&to))
+			txn.SetTo(&to)
 			txn.SetGas(21000)
 			txn.SetValue(big.NewInt(int64(i)))
 			txn.SetNonce(uint64(i))

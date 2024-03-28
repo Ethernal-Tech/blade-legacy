@@ -32,13 +32,15 @@ func BenchmarkStack(b *testing.B) {
 	b.StopTimer()
 }
 
-func operationBenchmark(b *testing.B, s *state, op instructionOperation, op1 uint256.Int, op2 uint256.Int) {
+func operationBenchmark(b *testing.B, s *state, op instructionOperation, operands ...uint256.Int) {
 	b.Helper()
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		s.push(op1)
-		s.push(op2)
+		for _, op := range operands {
+			s.push(op)
+		}
+
 		op(s)
 		s.pop()
 	}
@@ -234,7 +236,7 @@ func BenchmarkInstruction_opSgt(b *testing.B) {
 	operationBenchmark(b, s, opSgt, *op1, *op2)
 }
 
-func GetLarge256bitUint() uint256.Int {
+func getLarge256bitUint() uint256.Int {
 	hexStr := "0102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F"
 
 	bigInt := new(big.Int)
@@ -248,7 +250,7 @@ func TestGenericWriteToSlice32(t *testing.T) {
 
 	var destination [32]byte
 
-	value := GetLarge256bitUint()
+	value := getLarge256bitUint()
 
 	WriteToSlice32(value, destination[:])
 
@@ -260,7 +262,7 @@ func TestGenericWriteToSlice(t *testing.T) {
 
 	var destination [32]byte
 
-	value := GetLarge256bitUint()
+	value := getLarge256bitUint()
 
 	WriteToSlice(value, destination[:])
 
@@ -268,7 +270,7 @@ func TestGenericWriteToSlice(t *testing.T) {
 }
 
 func BenchmarkUint256WriteToSlice(b *testing.B) {
-	value := GetLarge256bitUint()
+	value := getLarge256bitUint()
 
 	var destination [32]byte
 
@@ -280,7 +282,7 @@ func BenchmarkUint256WriteToSlice(b *testing.B) {
 }
 
 func BenchmarkStaticUnrolledWriteToSlice(b *testing.B) {
-	value := GetLarge256bitUint()
+	value := getLarge256bitUint()
 
 	var destination [32]byte
 
@@ -292,7 +294,7 @@ func BenchmarkStaticUnrolledWriteToSlice(b *testing.B) {
 }
 
 func BenchmarkGenericStaticUnrolledWriteToSlice(b *testing.B) {
-	value := GetLarge256bitUint()
+	value := getLarge256bitUint()
 
 	var destination [32]byte
 

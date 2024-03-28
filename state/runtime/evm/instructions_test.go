@@ -1191,9 +1191,9 @@ func TestCodeCopy(t *testing.T) {
 	s, cancelFn := getState(&chain.ForksInTime{})
 	defer cancelFn()
 
-	s.push(one256)              //length
-	s.push(zero256)             //dataOffset
-	s.push(*uint256.NewInt(31)) //memOffset
+	s.push(one256)              // length
+	s.push(zero256)             // dataOffset
+	s.push(*uint256.NewInt(31)) // memOffset
 
 	s.code = one.Bytes()
 
@@ -1682,7 +1682,7 @@ func Test_opSload(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			//t.Parallel()
+			// t.Parallel()
 
 			s, closeFn := getState(tt.config)
 			defer closeFn()

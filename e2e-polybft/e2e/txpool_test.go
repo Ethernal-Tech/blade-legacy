@@ -59,7 +59,7 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 			if i%2 == 0 {
 				txData = types.NewDynamicFeeTx(
 					types.WithFrom(sender.Address()),
-					types.WithTo((*types.Address)(&to)),
+					types.WithTo(&to),
 					types.WithGas(30000), // enough to send a transfer
 					types.WithValue(big.NewInt(int64(sendAmount))),
 					types.WithNonce(uint64(i)),
@@ -69,7 +69,7 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 			} else {
 				txData = types.NewLegacyTx(
 					types.WithFrom(sender.Address()),
-					types.WithTo((*types.Address)(&to)),
+					types.WithTo(&to),
 					types.WithGas(30000),
 					types.WithValue(big.NewInt(int64(sendAmount))),
 					types.WithNonce(uint64(i)),
