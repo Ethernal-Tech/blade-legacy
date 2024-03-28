@@ -1,8 +1,6 @@
 module github.com/0xPolygon/polygon-edge
 
-go 1.21
-
-toolchain go1.21.6
+go 1.20
 
 require (
 	cloud.google.com/go/secretmanager v1.11.5
