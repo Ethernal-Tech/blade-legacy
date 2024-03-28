@@ -1,6 +1,8 @@
 module github.com/0xPolygon/polygon-edge
 
-go 1.20
+go 1.21
+
+toolchain go1.21.6
 
 require (
 	cloud.google.com/go/secretmanager v1.11.5
@@ -53,7 +55,7 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
-require github.com/holiman/uint256 v1.2.4 // indirect
+require github.com/holiman/uint256 v1.2.4
 
 require (
 	cloud.google.com/go/compute v1.23.3 // indirect
