@@ -58,7 +58,7 @@ func TestOptimizedStackTop(t *testing.T) {
 func TestOptimizedStackReset(t *testing.T) {
 	var stack OptimizedStack
 
-	stack.push(*uint256.NewInt(0))
+	stack.push(uint256.Int{0})
 	stack.reset()
 
 	require.Zero(t, stack.sp, "Expected stack to be empty after reset")

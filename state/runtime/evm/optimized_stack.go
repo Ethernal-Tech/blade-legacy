@@ -34,7 +34,7 @@ func (s *OptimizedStack) push(val uint256.Int) {
 func (s *OptimizedStack) pop() (uint256.Int, error) {
 	if s.sp == 0 {
 		// The stack is empty, return a zero value and an underflow error
-		return *uint256.NewInt(0), &runtime.StackUnderflowError{}
+		return uint256.Int{0}, &runtime.StackUnderflowError{}
 	}
 
 	o := s.data[s.sp-1]    // Get the top element

@@ -527,9 +527,9 @@ func opSha3(c *state) {
 
 	c.tmp = keccak.Keccak256(c.tmp[:0], c.tmp)
 
-	v := uint256.NewInt(0)
+	v := uint256.Int{0}
 	v.SetBytes(c.tmp)
-	c.push(*v)
+	c.push(v)
 }
 
 func opPop(c *state) {
@@ -539,9 +539,9 @@ func opPop(c *state) {
 // context operations
 
 func opAddress(c *state) {
-	v := uint256.NewInt(0)
+	v := uint256.Int{0}
 	v.SetBytes(c.msg.Address.Bytes())
-	c.push(*v)
+	c.push(v)
 }
 
 func opBalance(c *state) {
@@ -595,17 +595,17 @@ func opChainID(c *state) {
 }
 
 func opOrigin(c *state) {
-	x := uint256.NewInt(0)
+	x := uint256.Int{0}
 	x.SetBytes(c.host.GetTxContext().Origin.Bytes())
 
-	c.push(*x)
+	c.push(x)
 }
 
 func opCaller(c *state) {
-	x := uint256.NewInt(0)
+	x := uint256.Int{0}
 	x.SetBytes(c.msg.Caller.Bytes())
 
-	c.push(*x)
+	c.push(x)
 }
 
 func opCallValue(c *state) {
@@ -613,7 +613,7 @@ func opCallValue(c *state) {
 		uintValue, _ := uint256.FromBig(value)
 		c.push(*uintValue)
 	} else {
-		c.push(*uint256.NewInt(0))
+		c.push(uint256.Int{0})
 	}
 }
 
@@ -658,9 +658,9 @@ func opExtCodeSize(c *state) {
 }
 
 func opGasPrice(c *state) {
-	x := uint256.NewInt(0)
+	x := uint256.Int{0}
 	x.SetBytes(c.host.GetTxContext().GasPrice.Bytes())
-	c.push(*x)
+	c.push(x)
 }
 
 func opReturnDataSize(c *state) {
@@ -694,12 +694,12 @@ func opExtCodeHash(c *state) {
 		return
 	}
 
-	v := uint256.NewInt(0)
+	v := uint256.Int{0}
 	if !c.host.Empty(address) {
 		v.SetBytes(c.host.GetCodeHash(address).Bytes())
 	}
 
-	c.push(*v)
+	c.push(v)
 }
 
 func opPC(c *state) {
@@ -997,7 +997,7 @@ func opPush0(c *state) {
 		return
 	}
 
-	c.push(*uint256.NewInt(0))
+	c.push(uint256.Int{0})
 }
 
 func opPush(n int) instruction {
@@ -1005,14 +1005,14 @@ func opPush(n int) instruction {
 		ins := c.code
 		ip := c.ip
 
-		d := uint256.NewInt(0)
+		d := uint256.Int{0}
 		if ip+1+n > len(ins) {
 			d.SetBytes(append(ins[ip+1:], make([]byte, n)...))
 		} else {
 			d.SetBytes(ins[ip+1 : ip+1+n])
 		}
 
-		c.push(*d)
+		c.push(d)
 
 		c.ip += n
 	}
@@ -1108,7 +1108,7 @@ func opCreate(op OpCode) instruction {
 
 		contract, err := c.buildCreateContract(op)
 		if err != nil {
-			c.push(*uint256.NewInt(0))
+			c.push(uint256.Int{0})
 
 			if contract != nil {
 				c.gas += contract.Gas
@@ -1126,7 +1126,7 @@ func opCreate(op OpCode) instruction {
 		// Correct call
 		result := c.host.Callx(contract, c.host)
 
-		v := uint256.NewInt(0)
+		v := uint256.Int{0}
 		if op == CREATE && c.config.Homestead && errors.Is(result.Err, runtime.ErrCodeStoreOutOfGas) {
 			v.SetUint64(0)
 		} else if op == CREATE && result.Failed() && !errors.Is(result.Err, runtime.ErrCodeStoreOutOfGas) {
@@ -1137,7 +1137,7 @@ func opCreate(op OpCode) instruction {
 			v.SetBytes(contract.Address.Bytes())
 		}
 
-		c.push(*v)
+		c.push(v)
 		c.gas += result.GasLeft
 
 		if result.Reverted() {
@@ -1191,7 +1191,7 @@ func opCall(op OpCode) instruction {
 
 		contract, offset, size, err := c.buildCallContract(op)
 		if err != nil {
-			c.push(*uint256.NewInt(0))
+			c.push(uint256.Int{0})
 
 			if contract != nil {
 				c.gas += contract.Gas
@@ -1211,7 +1211,7 @@ func opCall(op OpCode) instruction {
 		if result.Succeeded() {
 			c.push(*uint256.NewInt(1))
 		} else {
-			c.push(*uint256.NewInt(0))
+			c.push(uint256.Int{0})
 		}
 
 		if result.Succeeded() || result.Reverted() {
