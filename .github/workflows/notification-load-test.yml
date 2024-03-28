@@ -47,6 +47,10 @@ on: # yamllint disable-line rule:truthy
         description: "Number Of Transactions"
         type: string
         required: true
+      dropped_iterations:
+        description: "Number Of Dropped Transactions"
+        type: string
+        required: true
       block:
         description: "Block Number"
         type: string
@@ -190,6 +194,10 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "*Transactions*\n${{ inputs.iterations }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Dropped Transactions*\n${{ inputs.dropped_iterations }}"
                     },
                     {
                       "type": "mrkdwn",

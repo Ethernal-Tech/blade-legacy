@@ -97,6 +97,9 @@ on: # yamllint disable-line rule:truthy
       iterations:
         description: "Number Of Transactions"
         value: ${{ jobs.load_test_scenario.outputs.iterations }}
+      dropped_iterations:
+        description: "Number Of Dropped Transactions"
+        value: ${{ jobs.load_test_scenario.outputs.dropped_iterations }}
       block:
         description: "Block Number"
         value: ${{ jobs.load_test_scenario.outputs.block }}
@@ -187,6 +190,7 @@ jobs:
       tps_avg: ${{ steps.load_test_results.outputs.tps_avg }}
       tps_max: ${{ steps.load_test_results.outputs.tps_max }}
       iterations: ${{ steps.load_test_results.outputs.iterations }}
+      dropped_iterations: ${{ steps.load_test_results.outcome.dropped_iterations }}
       block: ${{ steps.load_test_results.outputs.block }}
       ttm: ${{ steps.load_test_results.outputs.ttm }}
       gas_avg: ${{ steps.load_test_results.outputs.gas_avg }}
@@ -201,6 +205,7 @@ jobs:
           echo "tps_avg=$(cat summary.json | jq -r '.metrics.ethereum_tps.values.avg')" >> $GITHUB_OUTPUT
           echo "tps_max=$(cat summary.json | jq -r '.metrics.ethereum_tps.values.max')" >> $GITHUB_OUTPUT
           echo "iterations=$(cat summary.json | jq -r '.metrics.iterations.values.count')" >> $GITHUB_OUTPUT
+          echo "dropped_iterations=$(cat summary.json | jq -r '.metrics.dropped_iterations.values.count')" >> $GITHUB_OUTPUT
           echo "block=$(cat summary.json | jq -r '.metrics.ethereum_block.values.count')" >> $GITHUB_OUTPUT
           echo "ttm=$(cat summary.json | jq -r '.metrics.ethereum_time_to_mine.values.avg')" >> $GITHUB_OUTPUT
           echo "gas_avg=$(cat summary.json | jq -r '.metrics.ethereum_gas_used.values.avg')" >> $GITHUB_OUTPUT
@@ -236,6 +241,7 @@ jobs:
       tps_avg: ${{ needs.load_test_scenario.outputs.tps_avg }}
       tps_max: ${{ needs.load_test_scenario.outputs.tps_max }}
       iterations: ${{ needs.load_test_scenario.outputs.iterations }}
+      dropped_iterations: ${{ needs.load_test_scenario.outputs.dropped_iterations }}
       block: ${{ needs.load_test_scenario.outputs.block }}
       ttm: ${{ needs.load_test_scenario.outputs.ttm }}
       gas_avg: ${{ needs.load_test_scenario.outputs.gas_avg }}
