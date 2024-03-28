@@ -190,7 +190,7 @@ jobs:
       tps_avg: ${{ steps.load_test_results.outputs.tps_avg }}
       tps_max: ${{ steps.load_test_results.outputs.tps_max }}
       iterations: ${{ steps.load_test_results.outputs.iterations }}
-      dropped_iterations: ${{ steps.load_test_results.outcome.dropped_iterations }}
+      dropped_iterations: ${{ steps.load_test_results.outputs.dropped_iterations }}
       block: ${{ steps.load_test_results.outputs.block }}
       ttm: ${{ steps.load_test_results.outputs.ttm }}
       gas_avg: ${{ steps.load_test_results.outputs.gas_avg }}
