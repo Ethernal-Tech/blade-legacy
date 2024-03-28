@@ -186,7 +186,7 @@ jobs:
       tps_avg: ${{ needs.load_test_multiple_erc20.outputs.tps_avg }}
       tps_max: ${{ needs.load_test_multiple_erc20.outputs.tps_max }}
       iterations: ${{ needs.load_test_multiple_erc20.outputs.iterations }}
-      dropped_iterations: ${{ needs.load_test_multiple_eoa.outputs.dropped_iterations }}
+      dropped_iterations: ${{ needs.load_test_multiple_erc20.outputs.dropped_iterations }}
       block: ${{ needs.load_test_multiple_erc20.outputs.block }}
       ttm: ${{ needs.load_test_multiple_erc20.outputs.ttm }}
       gas_avg: ${{ needs.load_test_multiple_erc20.outputs.gas_avg }}
