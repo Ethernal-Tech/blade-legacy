@@ -2211,37 +2211,9 @@ func Test_opReturnDataCopy(t *testing.T) {
 
 			opReturnDataCopy(state)
 
-			assert.True(t, CompareStates(test.resultState, state))
+			assert.True(t, compareStates(test.resultState, state))
 		})
 	}
-}
-
-// Since the state is complex structure, here is the specialized comparison
-// function that checks significant fields. This function should be updated
-// to suite future needs.
-func CompareStates(a *state, b *state) bool {
-	// Compare simple fields
-	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.stack.sp != b.stack.sp || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
-		return false
-	}
-
-	// Deep compare slices
-	if !reflect.DeepEqual(a.code, b.code) || !reflect.DeepEqual(a.tmp, b.tmp) || !reflect.DeepEqual(a.returnData, b.returnData) || !reflect.DeepEqual(a.memory, b.memory) {
-		return false
-	}
-
-	// Deep comparison of stacks
-	if len(a.stack.data) != len(b.stack.data) {
-		return false
-	}
-
-	for i := range a.stack.data {
-		if a.stack.data[i] != b.stack.data[i] {
-			return false
-		}
-	}
-
-	return true
 }
 
 func Test_opCall(t *testing.T) {
@@ -2318,4 +2290,56 @@ func Test_opCall(t *testing.T) {
 			assert.Equal(t, test.resultState.gas, state.gas, "gas in state after execution is incorrect")
 		})
 	}
+}
+
+func TestGenericWriteToSlice32(t *testing.T) {
+	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+
+	var destination [32]byte
+
+	value := getLarge256bitUint()
+
+	WriteToSlice32(value, destination[:])
+
+	assert.Equal(t, expectedDestinationSlice, destination)
+}
+
+func TestGenericWriteToSlice(t *testing.T) {
+	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+
+	var destination [32]byte
+
+	value := getLarge256bitUint()
+
+	WriteToSlice(value, destination[:])
+
+	assert.Equal(t, expectedDestinationSlice, destination)
+}
+
+// Since the state is complex structure, here is the specialized comparison
+// function that checks significant fields. This function should be updated
+// to suite future needs.
+func compareStates(a *state, b *state) bool {
+	// Compare simple fields
+	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.stack.sp != b.stack.sp || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
+		return false
+	}
+
+	// Deep compare slices
+	if !reflect.DeepEqual(a.code, b.code) || !reflect.DeepEqual(a.tmp, b.tmp) || !reflect.DeepEqual(a.returnData, b.returnData) || !reflect.DeepEqual(a.memory, b.memory) {
+		return false
+	}
+
+	// Deep comparison of stacks
+	if len(a.stack.data) != len(b.stack.data) {
+		return false
+	}
+
+	for i := range a.stack.data {
+		if a.stack.data[i] != b.stack.data[i] {
+			return false
+		}
+	}
+
+	return true
 }

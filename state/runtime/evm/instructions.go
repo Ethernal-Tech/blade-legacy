@@ -409,10 +409,11 @@ func opSload(c *state) {
 	var gas uint64
 
 	if c.config.Berlin {
-		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, uint256ToHash(loc)); !slotPresent {
+		storageKey := uint256ToHash(loc)
+		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, storageKey); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
 
-			c.host.AddSlotToAccessList(c.msg.Address, uint256ToHash(loc))
+			c.host.AddSlotToAccessList(c.msg.Address, storageKey)
 		} else {
 			gas = WarmStorageReadCostEIP2929
 		}

@@ -6,7 +6,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/holiman/uint256"
-	"github.com/stretchr/testify/assert"
 )
 
 type (
@@ -243,30 +242,6 @@ func getLarge256bitUint() uint256.Int {
 	bigInt.SetString(hexStr, 16)
 
 	return *uint256.MustFromBig(bigInt)
-}
-
-func TestGenericWriteToSlice32(t *testing.T) {
-	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
-
-	var destination [32]byte
-
-	value := getLarge256bitUint()
-
-	WriteToSlice32(value, destination[:])
-
-	assert.Equal(t, expectedDestinationSlice, destination)
-}
-
-func TestGenericWriteToSlice(t *testing.T) {
-	expectedDestinationSlice := [32]uint8{0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
-
-	var destination [32]byte
-
-	value := getLarge256bitUint()
-
-	WriteToSlice(value, destination[:])
-
-	assert.Equal(t, expectedDestinationSlice, destination)
 }
 
 func BenchmarkUint256WriteToSlice(b *testing.B) {
