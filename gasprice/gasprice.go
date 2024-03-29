@@ -17,7 +17,7 @@ const couldNotFoundBlockFormat = "could not find block. Number: %d, Hash: %s"
 
 // DefaultGasHelperConfig is the default config for gas helper (as per ethereum)
 var DefaultGasHelperConfig = &Config{
-	NumOfBlocksToCheck: 20,
+	NumOfBlocksToCheck: 5,
 	PricePercentile:    60,
 	SampleNumber:       3,
 	MaxPrice:           ethgo.Gwei(500),

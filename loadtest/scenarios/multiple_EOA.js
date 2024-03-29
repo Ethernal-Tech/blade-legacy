@@ -61,9 +61,11 @@ export async function setup() {
     mnemonic: mnemonic,
   });
 
+  var gas_price = client.gasPrice();
+
   var accounts = await fundTestAccounts(client, root_address);
 
-  return { accounts: accounts };
+  return { accounts: accounts, gas_price: gas_price };
 }
 
 var clients = [];
@@ -85,7 +87,7 @@ export default function (data) {
   const tx = {
     to: "0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF",
     value: Number(0.00000001 * 1e18),
-    gas_price: client.gasPrice()*1.2,
+    gas_price: data.gas_price*1.3,
     nonce: userData.nonce,
   };
 

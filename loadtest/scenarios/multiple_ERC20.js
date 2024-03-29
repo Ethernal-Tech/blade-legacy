@@ -67,11 +67,14 @@ export async function setup() {
 
     const receipt = client.deployContract(JSON.stringify(ZexCoin.abi), ZexCoin.bytecode.substring(2), 500000000000, "ZexCoin", "ZEX")
 
+    var gas_price = client.gasPrice();
+
     var accounts = await fundTestAccounts(client, root_address);
 
     return {
         accounts: accounts,
-        contract_address: data.contract_address
+        contract_address: data.contract_address,
+        gas_price: gas_price
     };
 }
 
@@ -93,7 +96,7 @@ export default function (data) {
 
     console.log(acc.address);
     const con = client.newContract(data.contract_address, JSON.stringify(ZexCoin.abi));
-    const res = con.txn("transfer", { gas_limit: 100000, nonce: acc.nonce, gas_price: client.gasPrice()*1.3 }, acc.address, 1);
+    const res = con.txn("transfer", { gas_limit: 100000, nonce: acc.nonce, gas_price: data.gas_price*1.3 }, acc.address, 1);
     console.log("sender => " + acc.address + " tx hash => " + res + " nonce => " + acc.nonce);
 
     acc.nonce++;
