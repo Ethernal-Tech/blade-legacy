@@ -50,7 +50,7 @@ func TestE2E_Storage(t *testing.T) {
 			// Send every second transaction as a dynamic fees one
 			var txn *types.Transaction
 
-			if i%2 == 10 { // Intentionally disable it since dynamic fee tx not working
+			if i%2 == 0 { // Intentionally disable it since dynamic fee tx not working
 				chainID, err := client.ChainID()
 				require.NoError(t, err)
 
@@ -129,7 +129,7 @@ func checkStorage(t *testing.T, txs []*framework.TestTxn, client *jsonrpc.EthCli
 		assert.Equal(t, tx.Txn().From().Bytes(), bt.From().Bytes())
 		assert.Equal(t, tx.Txn().To().Bytes(), bt.To().Bytes())
 
-		if i%2 == 10 { // Intentionally disable it since dynamic fee tx not working
+		if i%2 == 0 { // Intentionally disable it since dynamic fee tx not working
 			assert.Equal(t, ethgo.TransactionDynamicFee, bt.Type())
 			assert.Equal(t, uint64(0), bt.GasPrice().Uint64())
 			assert.NotNil(t, bt.ChainID())
