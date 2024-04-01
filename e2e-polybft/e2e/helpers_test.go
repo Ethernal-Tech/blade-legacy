@@ -144,7 +144,7 @@ func setAccessListRole(t *testing.T, cluster *framework.TestCluster, precompile,
 	require.NoError(t, err)
 
 	enableSetTxn := cluster.MethodTxn(t, aclAdmin, precompile, input)
-	require.NoError(t, enableSetTxn.Wait())
+	require.True(t, enableSetTxn.Succeed())
 
 	expectRole(t, cluster, precompile, account, role)
 }

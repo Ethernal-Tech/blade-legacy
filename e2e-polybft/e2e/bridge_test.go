@@ -856,7 +856,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		initialExitEventID := getLastExitEventID(t, childchainTxRelayer)
 
 		erc721DeployTxn := cluster.Deploy(t, admin, contractsapi.RootERC721.Bytecode)
-		require.NoError(t, erc721DeployTxn.Wait())
 		require.True(t, erc721DeployTxn.Succeed())
 		rootERC721Token := types.Address(erc721DeployTxn.Receipt().ContractAddress)
 
@@ -867,7 +866,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			require.NoError(t, err)
 
 			mintTxn := cluster.MethodTxn(t, admin, rootERC721Token, mintInput)
-			require.NoError(t, mintTxn.Wait())
 			require.True(t, mintTxn.Succeed())
 
 			// add all depositors to bride block list

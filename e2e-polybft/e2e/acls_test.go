@@ -64,8 +64,8 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 
 	{
 		// Step 1. 'targetAddr' can send a normal transaction (non-contract creation).
-		err := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1)).Wait()
-		require.NoError(t, err)
+		txn := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1))
+		require.True(t, txn.Succeed())
 	}
 
 	var proxyContract types.Address
@@ -75,7 +75,6 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 		// (The transaction does not fail but the contract is not deployed and all gas
 		// for the transaction is consumed)
 		deployTxn := cluster.Deploy(t, target, bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Reverted())
 		require.False(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
@@ -83,8 +82,6 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 	{
 		// Step 3. 'adminAddr' can create contracts
 		deployTxn := cluster.Deploy(t, admin, bytecode)
-		require.NoError(t, deployTxn.Wait())
-
 		proxyContract = types.Address(deployTxn.Receipt().ContractAddress)
 
 		require.True(t, deployTxn.Succeed())
@@ -96,14 +93,13 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{targetAddr})
 
 		adminSetTxn := cluster.MethodTxn(t, admin, contracts.AllowListContractsAddr, input)
-		require.NoError(t, adminSetTxn.Wait())
+		require.True(t, adminSetTxn.Succeed())
 		expectRole(t, cluster, contracts.AllowListContractsAddr, targetAddr, addresslist.EnabledRole)
 	}
 
 	{
 		// Step 5. 'targetAddr' can create contracts now.
 		deployTxn := cluster.Deploy(t, target, bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 		require.True(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
@@ -114,7 +110,6 @@ func TestE2E_AllowList_ContractDeployment(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{types.ZeroAddress})
 
 		adminSetFailTxn := cluster.MethodTxn(t, target, contracts.AllowListContractsAddr, input)
-		require.NoError(t, adminSetFailTxn.Wait())
 		require.True(t, adminSetFailTxn.Failed())
 		expectRole(t, cluster, contracts.AllowListContractsAddr, types.ZeroAddress, addresslist.NoRole)
 	}
@@ -160,14 +155,13 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 
 	{
 		// Step 1. 'targetAddr' can send a normal transaction (non-contract creation).
-		err := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1)).Wait()
-		require.NoError(t, err)
+		txn := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1))
+		require.True(t, txn.Succeed())
 	}
 
 	{
 		// Step 2. 'targetAddr' **can** deploy a contract because it is not blacklisted.
 		deployTxn := cluster.Deploy(t, target, bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 		require.True(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
@@ -175,7 +169,6 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 	{
 		// Step 3. 'adminAddr' can create contracts
 		deployTxn := cluster.Deploy(t, admin, bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 		require.True(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
@@ -185,14 +178,13 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{target.Address()})
 
 		adminSetTxn := cluster.MethodTxn(t, admin, contracts.BlockListContractsAddr, input)
-		require.NoError(t, adminSetTxn.Wait())
+		require.True(t, adminSetTxn.Succeed())
 		expectRole(t, cluster, contracts.BlockListContractsAddr, target.Address(), addresslist.EnabledRole)
 	}
 
 	{
 		// Step 5. 'targetAddr' **cannot** create contracts now as it's now blacklisted.
 		deployTxn := cluster.Deploy(t, target, bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Reverted())
 		require.False(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
@@ -203,7 +195,6 @@ func TestE2E_BlockList_ContractDeployment(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{types.ZeroAddress})
 
 		adminSetFailTxn := cluster.MethodTxn(t, target, contracts.BlockListContractsAddr, input)
-		require.NoError(t, adminSetFailTxn.Wait())
 		require.True(t, adminSetFailTxn.Failed())
 		expectRole(t, cluster, contracts.BlockListContractsAddr, types.ZeroAddress, addresslist.NoRole)
 	}
@@ -239,14 +230,12 @@ func TestE2E_AllowList_Transactions(t *testing.T) {
 	{
 		// Step 1. 'otherAddr' can send a normal transaction (non-contract creation).
 		otherTxn := cluster.Transfer(t, other, types.ZeroAddress, big.NewInt(1))
-		require.NoError(t, otherTxn.Wait())
 		require.True(t, otherTxn.Succeed())
 	}
 
 	{
 		// Step 2. 'targetAddr' **cannot** send a normal transaction because it is not whitelisted.
 		targetTxn := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1))
-		require.NoError(t, targetTxn.Wait())
 		require.True(t, targetTxn.Reverted())
 	}
 
@@ -255,8 +244,7 @@ func TestE2E_AllowList_Transactions(t *testing.T) {
 		// (The transaction does not fail but the contract is not deployed and all gas
 		// for the transaction is consumed)
 		deployTxn := cluster.Deploy(t, target, bytecode)
-		require.NoError(t, deployTxn.Wait())
-		require.True(t, deployTxn.Reverted())
+		require.True(t, deployTxn.Failed())
 		require.False(t, cluster.ExistsCode(t, types.Address(deployTxn.Receipt().ContractAddress)))
 	}
 
@@ -265,14 +253,13 @@ func TestE2E_AllowList_Transactions(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{target.Address()})
 
 		adminSetTxn := cluster.MethodTxn(t, admin, contracts.AllowListTransactionsAddr, input)
-		require.NoError(t, adminSetTxn.Wait())
+		require.True(t, adminSetTxn.Succeed())
 		expectRole(t, cluster, contracts.AllowListTransactionsAddr, target.Address(), addresslist.EnabledRole)
 	}
 
 	{
 		// Step 4. 'targetAddr' **can** send a normal transaction because it is whitelisted.
 		targetTxn := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1))
-		require.NoError(t, targetTxn.Wait())
 		require.True(t, targetTxn.Succeed())
 	}
 
@@ -282,7 +269,6 @@ func TestE2E_AllowList_Transactions(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{types.ZeroAddress})
 
 		adminSetFailTxn := cluster.MethodTxn(t, target, contracts.AllowListTransactionsAddr, input)
-		require.NoError(t, adminSetFailTxn.Wait())
 		require.True(t, adminSetFailTxn.Failed())
 		expectRole(t, cluster, contracts.AllowListTransactionsAddr, types.ZeroAddress, addresslist.NoRole)
 	}
@@ -292,7 +278,6 @@ func TestE2E_AllowList_Transactions(t *testing.T) {
 		input, _ := addresslist.SetNoneFunc.Encode([]interface{}{admin.Address()})
 
 		noneSetTxn := cluster.MethodTxn(t, admin, contracts.AllowListTransactionsAddr, input)
-		require.NoError(t, noneSetTxn.Wait())
 		require.True(t, noneSetTxn.Failed())
 		expectRole(t, cluster, contracts.AllowListTransactionsAddr, admin.Address(), addresslist.AdminRole)
 	}
@@ -325,14 +310,12 @@ func TestE2E_BlockList_Transactions(t *testing.T) {
 	{
 		// Step 1. 'otherAddr' **cannot** send a normal transaction (non-contract creation) because it is blacklisted.
 		otherTxn := cluster.Transfer(t, other, types.ZeroAddress, big.NewInt(1))
-		require.NoError(t, otherTxn.Wait())
 		require.True(t, otherTxn.Reverted())
 	}
 
 	{
 		// Step 2. 'targetAddr' **can** send a normal transaction because it is not blacklisted.
 		targetTxn := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1))
-		require.NoError(t, targetTxn.Wait())
 		require.True(t, targetTxn.Succeed())
 	}
 
@@ -342,7 +325,6 @@ func TestE2E_BlockList_Transactions(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{types.ZeroAddress})
 
 		adminSetFailTxn := cluster.MethodTxn(t, target, contracts.BlockListTransactionsAddr, input)
-		require.NoError(t, adminSetFailTxn.Wait())
 		require.True(t, adminSetFailTxn.Failed())
 		expectRole(t, cluster, contracts.BlockListTransactionsAddr, types.ZeroAddress, addresslist.NoRole)
 	}
@@ -352,14 +334,13 @@ func TestE2E_BlockList_Transactions(t *testing.T) {
 		input, _ := addresslist.SetEnabledFunc.Encode([]interface{}{target.Address()})
 
 		adminSetTxn := cluster.MethodTxn(t, admin, contracts.BlockListTransactionsAddr, input)
-		require.NoError(t, adminSetTxn.Wait())
+		require.True(t, adminSetTxn.Succeed())
 		expectRole(t, cluster, contracts.BlockListTransactionsAddr, target.Address(), addresslist.EnabledRole)
 	}
 
 	{
 		// Step 5. 'targetAddr' **cannot** send a normal transaction because it is blacklisted.
 		targetTxn := cluster.Transfer(t, target, types.ZeroAddress, big.NewInt(1))
-		require.NoError(t, targetTxn.Wait())
 		require.True(t, targetTxn.Reverted())
 	}
 }

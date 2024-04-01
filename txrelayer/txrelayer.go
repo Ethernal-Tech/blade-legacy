@@ -51,11 +51,12 @@ type TxRelayer interface {
 var _ TxRelayer = (*TxRelayerImpl)(nil)
 
 type TxRelayerImpl struct {
-	ipAddress        string
-	client           *jsonrpc.EthClient
-	receiptsPollFreq time.Duration
-	receiptsTimeout  time.Duration
-	noWaitReceipt    bool
+	ipAddress           string
+	client              *jsonrpc.EthClient
+	receiptsPollFreq    time.Duration
+	receiptsTimeout     time.Duration
+	noWaitReceipt       bool
+	estimateGasFallback bool
 
 	lock sync.Mutex
 
@@ -209,10 +210,17 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 	if txn.Gas() == 0 {
 		gasLimit, err := t.client.EstimateGas(ConvertTxnToCallMsg(txn))
 		if err != nil {
-			return types.ZeroHash, fmt.Errorf("failed to estimate gas: %w", err)
+			if !t.estimateGasFallback {
+				return types.ZeroHash, fmt.Errorf("failed to estimate gas: %w", err)
+			}
+
+			gasLimit = DefaultGasLimit
+		} else {
+			// increase gas limit by certain percentage
+			gasLimit = gasLimit + (gasLimit * gasLimitIncreasePercentage / 100)
 		}
 
-		txn.SetGas(gasLimit + (gasLimit * gasLimitIncreasePercentage / 100))
+		txn.SetGas(gasLimit)
 	}
 
 	signer := crypto.NewLondonSigner(
@@ -281,7 +289,11 @@ func (t *TxRelayerImpl) sendTransactionLocalLocked(txn *types.Transaction) (type
 
 	gasLimit, err := t.client.EstimateGas(ConvertTxnToCallMsg(txn))
 	if err != nil {
-		return types.ZeroHash, err
+		if !t.estimateGasFallback {
+			return types.ZeroHash, err
+		}
+
+		gasLimit = DefaultGasLimit
 	}
 
 	txn.SetGas(gasLimit)
@@ -369,5 +381,11 @@ func WithNoWaiting() TxRelayerOption {
 func WithReceiptsTimeout(receiptsTimeout time.Duration) TxRelayerOption {
 	return func(t *TxRelayerImpl) {
 		t.receiptsTimeout = receiptsTimeout
+	}
+}
+
+func WithEstimateGasFallback() TxRelayerOption {
+	return func(t *TxRelayerImpl) {
+		t.estimateGasFallback = true
 	}
 }

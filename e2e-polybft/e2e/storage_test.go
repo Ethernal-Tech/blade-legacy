@@ -72,7 +72,6 @@ func TestE2E_Storage(t *testing.T) {
 			txn.SetNonce(uint64(i))
 
 			tx := cluster.SendTxn(t, sender, txn)
-			err = tx.Wait()
 			require.NoError(t, err)
 
 			txs = append(txs, tx)

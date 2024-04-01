@@ -31,6 +31,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		framework.WithEpochSize(int(epochSize)),
 		framework.WithPremine(preminedAcct.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
+		framework.WithHTTPS("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
 	)
 	defer cluster.Stop()
 
@@ -99,7 +100,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 	t.Run("eth_getCode", func(t *testing.T) {
 		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
@@ -114,11 +114,9 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.NoError(t, err)
 
 		txn := cluster.Transfer(t, preminedAcct, key1.Address(), ethgo.Ether(1))
-		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		txn = cluster.Deploy(t, key1, contractsapi.TestSimple.Bytecode)
-		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		target := types.Address(txn.Receipt().ContractAddress)
@@ -135,7 +133,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.NoError(t, err)
 
 		txn = cluster.SendTxn(t, key1, types.NewTx(types.NewLegacyTx(types.WithInput(input), types.WithTo(&target))))
-		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		resp, err = newEthClient.GetStorageAt(target, types.Hash{}, bladeRPC.LatestBlockNumberOrHash)
@@ -145,7 +142,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 	t.Run("eth_getTransactionByHash and eth_getTransactionReceipt", func(t *testing.T) {
 		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
-		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		ethTxn, err := newEthClient.GetTransactionByHash(types.Hash(txn.Receipt().TransactionHash))
@@ -165,7 +161,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.GreaterOrEqual(t, nonce, uint64(0)) // since we used this account in previous tests
 
 		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
-		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		newNonce, err := newEthClient.GetNonce(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
@@ -183,7 +178,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		tokens := ethgo.Ether(1)
 
 		txn := cluster.Transfer(t, preminedAcct, receiver, tokens)
-		require.NoError(t, txn.Wait())
 		require.True(t, txn.Succeed())
 
 		newBalance, err := newEthClient.GetBalance(receiver, bladeRPC.LatestBlockNumberOrHash)
@@ -193,7 +187,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 	t.Run("eth_estimateGas", func(t *testing.T) {
 		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
@@ -216,7 +209,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 	t.Run("eth_call", func(t *testing.T) {
 		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
-		require.NoError(t, deployTxn.Wait())
 		require.True(t, deployTxn.Succeed())
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
@@ -260,7 +252,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		newAccountKey, newAccountAddr := tests.GenerateKeyAndAddr(t)
 
 		transferTxn := cluster.Transfer(t, preminedAcct, newAccountAddr, tokenAmount)
-		require.NoError(t, transferTxn.Wait())
 		require.True(t, transferTxn.Succeed())
 
 		newAccountBalance, err := newEthClient.GetBalance(newAccountAddr, bladeRPC.LatestBlockNumberOrHash)
@@ -285,5 +276,37 @@ func TestE2E_JsonRPC(t *testing.T) {
 		hash, err := newEthClient.SendRawTransaction(data)
 		require.NoError(t, err)
 		require.NotEqual(t, types.ZeroHash, hash)
+	})
+
+	t.Run("eth_getHeaderByNumber", func(t *testing.T) {
+		key1, err := crypto.GenerateECDSAKey()
+		require.NoError(t, err)
+
+		txn := cluster.Transfer(t, preminedAcct, key1.Address(), one)
+		require.True(t, txn.Succeed())
+		txReceipt := txn.Receipt()
+
+		var header types.Header
+		err = newEthClient.EndpointCall("eth_getHeaderByNumber", &header, ethgo.BlockNumber(txReceipt.BlockNumber))
+		require.NoError(t, err)
+
+		require.Equal(t, txReceipt.BlockNumber, header.Number)
+		require.Equal(t, txReceipt.BlockHash, ethgo.Hash(header.Hash))
+	})
+
+	t.Run("eth_getHeaderByHash", func(t *testing.T) {
+		key1, err := crypto.GenerateECDSAKey()
+		require.NoError(t, err)
+
+		txn := cluster.Transfer(t, preminedAcct, key1.Address(), one)
+		require.True(t, txn.Succeed())
+		txReceipt := txn.Receipt()
+
+		var header types.Header
+		err = newEthClient.EndpointCall("eth_getHeaderByHash", &header, txReceipt.BlockHash)
+		require.NoError(t, err)
+
+		require.Equal(t, txReceipt.BlockNumber, header.Number)
+		require.Equal(t, txReceipt.BlockHash, ethgo.Hash(header.Hash))
 	})
 }

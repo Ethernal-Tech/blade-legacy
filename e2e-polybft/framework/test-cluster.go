@@ -237,8 +237,6 @@ type TestCluster struct {
 	once         sync.Once
 	failCh       chan struct{}
 	executionErr error
-
-	sendTxnLock sync.Mutex
 }
 
 type ClusterOption func(*TestClusterConfig)
@@ -519,7 +517,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			testType = "integration"
 		}
 
-		t.Skip(fmt.Sprintf("%s tests are disabled.", testType))
+		t.Skipf("%s tests are disabled.", testType)
 	}
 
 	config.TmpDir, err = os.MkdirTemp("/tmp", "e2e-polybft-")
@@ -989,7 +987,7 @@ func (c *TestCluster) InitSecrets(prefix string, count int) ([]types.Address, er
 		return nil, err
 	}
 
-	re := regexp.MustCompile("\\(address\\) = 0x([a-fA-F0-9]+)")
+	re := regexp.MustCompile(`\(address\) = 0x([a-fA-F0-9]+)`)
 	parsed := re.FindAllStringSubmatch(b.String(), -1)
 	result := make([]types.Address, len(parsed))
 
@@ -1081,69 +1079,25 @@ func (c *TestCluster) MethodTxn(t *testing.T, sender *crypto.ECDSAKey, target ty
 func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.Transaction) *TestTxn {
 	t.Helper()
 
-	// since we might use get nonce to query the latest nonce and that value is only
-	// updated if the transaction is on the pool, it is recommended to lock the whole
-	// execution in case we send multiple transactions from the same account and we expect
-	// to get a sequential nonce order.
-	c.sendTxnLock.Lock()
-	defer c.sendTxnLock.Unlock()
-
-	client, err := jsonrpc.NewEthClient(c.Servers[0].JSONRPCAddr())
+	txRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithIPAddress(c.Servers[0].JSONRPCAddr()),
+		txrelayer.WithReceiptsTimeout(1*time.Minute),
+		txrelayer.WithEstimateGasFallback(),
+	)
 	require.NoError(t, err)
 
-	// initialize transaction values if not set
-	if txn.Nonce() == 0 {
-		nonce, err := client.GetNonce(sender.Address(), jsonrpc.LatestBlockNumberOrHash)
-		require.NoError(t, err)
-
-		txn.SetNonce(nonce)
+	receipt, err := txRelayer.SendTransaction(txn, sender)
+	if err != nil {
+		t.Errorf("failed to send transaction: %s", err.Error())
 	}
-
-	if txn.GasPrice() == nil || txn.GasPrice() == big.NewInt(0) {
-		gasPrice, err := client.GasPrice()
-		require.NoError(t, err)
-
-		txn.SetGasPrice(new(big.Int).SetUint64(gasPrice))
-	}
-
-	if txn.Gas() == 0 {
-		callMsg := txrelayer.ConvertTxnToCallMsg(txn)
-
-		gasLimit, err := client.EstimateGas(callMsg)
-		if err != nil {
-			// gas estimation can fail in case an account is not allow-listed
-			// (fallback it to default gas limit in that case)
-			txn.SetGas(txrelayer.DefaultGasLimit)
-		} else {
-			txn.SetGas(gasLimit)
-		}
-	}
-
-	chainID, err := client.ChainID()
-	require.NoError(t, err)
-
-	signer := crypto.NewLondonSigner(chainID.Uint64())
-	signedTxn, err := signer.SignTxWithCallback(txn,
-		func(hash types.Hash) (sig []byte, err error) {
-			return sender.Sign(hash.Bytes())
-		})
-	require.NoError(t, err)
-
-	rlpTxn := signedTxn.MarshalRLPTo(nil)
-
-	hash, err := client.SendRawTransaction(rlpTxn)
-	require.NoError(t, err)
 
 	return &TestTxn{
-		client: client,
-		txn:    txn,
-		hash:   hash,
+		txn:     txn,
+		receipt: receipt,
 	}
 }
 
 type TestTxn struct {
-	client  *jsonrpc.EthClient
-	hash    types.Hash
 	txn     *types.Transaction
 	receipt *ethgo.Receipt
 }
@@ -1172,32 +1126,6 @@ func (t *TestTxn) Failed() bool {
 // all the gas from the call
 func (t *TestTxn) Reverted() bool {
 	return t.Failed() && t.txn.Gas() == t.receipt.GasUsed
-}
-
-// Wait waits for the transaction to be executed
-func (t *TestTxn) Wait() error {
-	tt := time.NewTimer(1 * time.Minute)
-
-	for {
-		select {
-		case <-time.After(100 * time.Millisecond):
-			receipt, err := t.client.GetTransactionReceipt(t.hash)
-			if err != nil {
-				if err.Error() != "not found" {
-					return err
-				}
-			}
-
-			if receipt != nil {
-				t.receipt = receipt
-
-				return nil
-			}
-
-		case <-tt.C:
-			return fmt.Errorf("timeout")
-		}
-	}
 }
 
 func sliceAddressToSliceString(addrs []types.Address) []string {
