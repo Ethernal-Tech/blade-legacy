@@ -217,7 +217,7 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 			gasLimit = DefaultGasLimit
 		} else {
 			// increase gas limit by certain percentage
-			gasLimit = gasLimit + (gasLimit * gasLimitIncreasePercentage / 100)
+			gasLimit += (gasLimit * gasLimitIncreasePercentage / 100)
 		}
 
 		txn.SetGas(gasLimit)
