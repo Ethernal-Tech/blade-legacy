@@ -72,7 +72,7 @@ func TestE2E_Storage(t *testing.T) {
 			txn.SetNonce(uint64(i))
 
 			tx := cluster.SendTxn(t, sender, txn)
-			require.NoError(t, err)
+			require.True(t, tx.Succeed())
 
 			txs = append(txs, tx)
 		}(i, receivers[i])
