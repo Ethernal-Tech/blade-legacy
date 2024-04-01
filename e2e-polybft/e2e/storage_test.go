@@ -123,15 +123,17 @@ func checkStorage(t *testing.T, txs []*framework.TestTxn, client *jsonrpc.EthCli
 		assert.Equal(t, tx.Txn().Nonce(), bt.Nonce())
 		assert.Equal(t, tx.Receipt().TransactionIndex, bt.TxnIndex)
 		v, r, s := bt.RawSignatureValues()
-		assert.NotEmpty(t, v)
-		assert.NotEmpty(t, r)
-		assert.NotEmpty(t, s)
+		assert.NotNil(t, v)
+		assert.NotNil(t, r)
+		assert.NotNil(t, s)
 		assert.Equal(t, tx.Txn().From().Bytes(), bt.From().Bytes())
 		assert.Equal(t, tx.Txn().To().Bytes(), bt.To().Bytes())
 
-		if i%2 == 0 { // Intentionally disable it since dynamic fee tx not working
+		if i%2 == 0 {
 			assert.Equal(t, types.DynamicFeeTxType, bt.Type())
-			assert.Equal(t, uint64(0), bt.GasPrice().Uint64())
+			assert.Nil(t, bt.GasPrice()) // dynamic txs don't have gasPrice set
+			assert.NotNil(t, bt.GasFeeCap())
+			assert.NotNil(t, bt.GasTipCap())
 			assert.NotNil(t, bt.ChainID())
 		} else {
 			// assert.Equal(t, ethgo.TransactionLegacy, bt.Type)
