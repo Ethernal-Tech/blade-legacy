@@ -12,19 +12,23 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
-	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/leveldb"
-	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/memory"
-	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
-	"github.com/0xPolygon/polygon-edge/forkmanager"
-	"github.com/0xPolygon/polygon-edge/gasprice"
+	"github.com/hashicorp/go-hclog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 
 	"github.com/0xPolygon/polygon-edge/archive"
 	"github.com/0xPolygon/polygon-edge/blockchain"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/leveldb"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/memory"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
+	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/forkmanager"
+	"github.com/0xPolygon/polygon-edge/gasprice"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/progress"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
@@ -39,10 +43,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/txpool"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/0xPolygon/polygon-edge/validate"
-	"github.com/hashicorp/go-hclog"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"google.golang.org/grpc"
+	"github.com/0xPolygon/polygon-edge/versioning"
 )
 
 var (
@@ -147,6 +148,7 @@ func NewServer(config *Config) (*Server, error) {
 	}
 
 	m.logger.Info("Data dir", "path", config.DataDir)
+	m.logger.Info("Version metadata", "version", versioning.Version, "commit", versioning.Commit, "branch", versioning.Branch, "build time", versioning.BuildTime)
 
 	var dirPaths = []string{
 		"blockchain",
