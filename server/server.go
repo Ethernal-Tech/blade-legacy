@@ -148,7 +148,11 @@ func NewServer(config *Config) (*Server, error) {
 	}
 
 	m.logger.Info("Data dir", "path", config.DataDir)
-	m.logger.Info("Version metadata", "version", versioning.Version, "commit", versioning.Commit, "branch", versioning.Branch, "build time", versioning.BuildTime)
+	m.logger.Info("Version metadata",
+		"version", versioning.Version,
+		"commit", versioning.Commit,
+		"branch", versioning.Branch,
+		"build time", versioning.BuildTime)
 
 	var dirPaths = []string{
 		"blockchain",
