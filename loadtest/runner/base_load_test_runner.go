@@ -234,10 +234,15 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 
 	foundErrors := make([]error, 0)
 
+	var lock sync.Mutex
+
 	getTxReceipts := func(txHashes []types.Hash) {
 		for _, txHash := range txHashes {
 			if blockNum, exists := txToBlockMap[txHash]; exists {
+				lock.Lock()
 				txnStats = append(txnStats, txStats{txHash, blockNum})
+				lock.Unlock()
+
 				_ = bar.Add(1)
 
 				continue
@@ -245,17 +250,24 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 
 			receipt, err := r.waitForReceipt(txHash)
 			if err != nil {
+				lock.Lock()
 				foundErrors = append(foundErrors, err)
+				lock.Unlock()
 
 				continue
 			}
 
+			lock.Lock()
 			txnStats = append(txnStats, txStats{txHash, receipt.BlockNumber})
+			lock.Unlock()
+
 			_ = bar.Add(1)
 
 			block, err := r.client.GetBlockByNumber(jsonrpc.BlockNumber(receipt.BlockNumber), true)
 			if err != nil {
+				lock.Lock()
 				foundErrors = append(foundErrors, err)
+				lock.Unlock()
 
 				continue
 			}
@@ -267,6 +279,7 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 
 			gu, _ := gasUtilization.Float64()
 
+			lock.Lock()
 			blockInfoMap[receipt.BlockNumber] = &BlockInfo{
 				Number:         receipt.BlockNumber,
 				CreatedAt:      block.Header.Timestamp,
@@ -279,6 +292,7 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 			for _, txn := range block.Transactions {
 				txToBlockMap[txn.Hash()] = receipt.BlockNumber
 			}
+			lock.Unlock()
 		}
 	}
 
