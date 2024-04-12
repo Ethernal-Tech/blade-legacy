@@ -328,7 +328,12 @@ func (r *BaseLoadTestRunner) waitForReceipt(txHash types.Hash) (*ethgo.Receipt, 
 	timer := time.NewTimer(r.cfg.ReceiptsTimeout)
 	defer timer.Stop()
 
-	ticker := time.NewTicker(time.Second)
+	tickerTimeout := time.Second
+	if r.cfg.ReceiptsTimeout <= time.Second {
+		tickerTimeout = r.cfg.ReceiptsTimeout / 2
+	}
+
+	ticker := time.NewTicker(tickerTimeout)
 	defer ticker.Stop()
 
 	for {
@@ -616,7 +621,7 @@ func getFeeData(client *jsonrpc.EthClient, dynamicTxs bool) (*feeData, error) {
 			return nil, err
 		}
 
-		gasPrice := new(big.Int).SetUint64(gp + (gp * 20 / 100))
+		gasPrice := new(big.Int).SetUint64(gp + (gp * 50 / 100))
 
 		feeData.gasPrice = gasPrice
 	}

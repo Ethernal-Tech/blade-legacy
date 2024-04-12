@@ -235,7 +235,7 @@ func (e *ERC20Runner) sendTransactionsForUser(account *account, chainID *big.Int
 	}
 
 	sendErrs := make([]error, 0)
-	checkFeeDataNum := e.cfg.TxsPerUser / 3
+	checkFeeDataNum := e.cfg.TxsPerUser / 5
 
 	for i := 0; i < e.cfg.TxsPerUser; i++ {
 		input, err := e.erc20TokenArtifact.Abi.Methods["transfer"].Encode(map[string]interface{}{
