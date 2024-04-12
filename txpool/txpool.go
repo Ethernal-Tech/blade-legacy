@@ -28,10 +28,10 @@ const (
 	topicNameV1 = "txpool/0.1"
 
 	// maximum allowed number of times an account was excluded from block building
-	maxAccountDemotions uint64 = 10
+	maxAccountDemotions uint64 = 1000
 
 	// maximum allowed number of consecutive blocks that don't have the account's transaction
-	maxAccountSkips = uint64(10)
+	maxAccountSkips = uint64(1000)
 
 	pruningCooldown = 5000 * time.Millisecond
 
@@ -621,8 +621,13 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		}
 
 		// check if the given tx is not underpriced (same as Legacy approach)
-		if tx.GetGasPrice(p.GetBaseFee()).Cmp(big.NewInt(0).SetUint64(p.priceLimit)) < 0 {
+		if tx.GetGasPrice(baseFee).Cmp(big.NewInt(0).SetUint64(p.priceLimit)) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
+
+			p.logger.Debug("access list tx is undepriced",
+				"gasPrice", tx.GetGasPrice(baseFee).String(),
+				"baseFee", baseFee,
+				"priceLimit", p.priceLimit)
 
 			return ErrUnderpriced
 		}
@@ -637,6 +642,10 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		// Check EIP-1559-related fields and make sure they are correct
 		if tx.GasFeeCap() == nil || tx.GasTipCap() == nil {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
+
+			p.logger.Debug("dynamic tx is undepriced because no fee cap or tip cap is set",
+				"baseFee", baseFee,
+				"priceLimit", p.priceLimit)
 
 			return ErrUnderpriced
 		}
@@ -663,12 +672,22 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		if tx.GasFeeCap().Cmp(new(big.Int).SetUint64(baseFee)) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
 
+			p.logger.Debug("dynamic tx is undepriced",
+				"gasPrice", tx.GetGasPrice(baseFee).String(),
+				"baseFee", baseFee,
+				"priceLimit", p.priceLimit)
+
 			return ErrUnderpriced
 		}
 	} else {
 		// Legacy approach to check if the given tx is not underpriced when london hardfork is enabled
 		if forks.London && tx.GasPrice().Cmp(new(big.Int).SetUint64(baseFee)) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
+
+			p.logger.Debug("legacy tx is undepriced on london fork",
+				"gasPrice", tx.GasPrice().String(),
+				"baseFee", baseFee,
+				"priceLimit", p.priceLimit)
 
 			return ErrUnderpriced
 		}
@@ -677,6 +696,11 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 	if tx.GetGasPrice(baseFee).Cmp(new(big.Int).SetUint64(p.priceLimit)) < 0 {
 		// Make sure that the transaction is not underpriced
 		metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
+
+		p.logger.Debug("tx is undepriced in regards to price limit	",
+			"gasPrice", tx.GasPrice().String(),
+			"baseFee", baseFee,
+			"priceLimit", p.priceLimit)
 
 		return ErrUnderpriced
 	}
