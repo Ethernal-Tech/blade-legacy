@@ -21,7 +21,7 @@ func TestMnemonic(t *testing.T) {
 }
 
 func TestLoadRunner(t *testing.T) {
-	//t.Skip("this is only added for the sake of the example and running it in local")
+	t.Skip("this is only added for the sake of the example and running it in local")
 
 	cfg := LoadTestConfig{
 		Mnemonnic:       "code code code code code code code code code code code quality",

@@ -279,7 +279,8 @@ func (r *BaseLoadTestRunner) waitForReceiptsParallel() {
 				continue
 			}
 
-			if (len(block.Transactions) == 1 && block.Transactions[0].Type() == types.StateTxType) || len(block.Transactions) == 0 {
+			if (len(block.Transactions) == 1 && block.Transactions[0].Type() == types.StateTxType) ||
+				len(block.Transactions) == 0 {
 				sequentialEmptyBlocks++
 				currentBlock++
 
@@ -462,6 +463,7 @@ func (r *BaseLoadTestRunner) calculateResultsParallel() {
 
 	if len(stats.foundErrors) > 0 {
 		fmt.Println("Errors found while gathering results:")
+
 		for _, err := range stats.foundErrors {
 			fmt.Println(err)
 		}
@@ -492,6 +494,7 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 
 	for num, stat := range blockInfos {
 		uniqueBlocks[num] = struct{}{}
+
 		infos = append(infos, stat)
 	}
 
