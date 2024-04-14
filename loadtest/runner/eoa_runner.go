@@ -46,6 +46,18 @@ func (e *EOARunner) Run() error {
 		return err
 	}
 
+	if !e.cfg.WaitForTxPoolToEmpty {
+		go e.waitForReceiptsParallel()
+		go e.calculateResultsParallel()
+
+		_, err := e.sendTransactions()
+		if err != nil {
+			return err
+		}
+
+		return <-e.done
+	}
+
 	txHashes, err := e.sendTransactions()
 	if err != nil {
 		return err
@@ -55,7 +67,7 @@ func (e *EOARunner) Run() error {
 		return err
 	}
 
-	return e.calculateTPS(e.waitForReceipts(txHashes))
+	return e.calculateResults(e.waitForReceipts(txHashes))
 }
 
 // sendTransactions sends transactions for the load test.

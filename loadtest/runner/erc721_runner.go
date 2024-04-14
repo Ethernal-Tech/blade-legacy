@@ -58,6 +58,18 @@ func (e *ERC721Runner) Run() error {
 		return err
 	}
 
+	if !e.cfg.WaitForTxPoolToEmpty {
+		go e.waitForReceiptsParallel()
+		go e.calculateResultsParallel()
+
+		_, err := e.sendTransactions()
+		if err != nil {
+			return err
+		}
+
+		return <-e.done
+	}
+
 	txHashes, err := e.sendTransactions()
 	if err != nil {
 		return err
@@ -67,7 +79,7 @@ func (e *ERC721Runner) Run() error {
 		return err
 	}
 
-	return e.calculateTPS(e.waitForReceipts(txHashes))
+	return e.calculateResults(e.waitForReceipts(txHashes))
 }
 
 // deployERC21Token deploys an ERC721 token contract.

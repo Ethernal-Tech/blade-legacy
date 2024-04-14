@@ -19,7 +19,8 @@ const (
 	txsPerUserFlag = "txs-per-user"
 	dynamicTxsFlag = "dynamic"
 
-	saveToJSONFlag = "to-json"
+	saveToJSONFlag           = "to-json"
+	waitForTxPoolToEmptyFlag = "wait-txpool"
 )
 
 var (
@@ -31,18 +32,20 @@ var (
 )
 
 type loadTestParams struct {
-	mnemonic     string
-	loadTestType string
-	loadTestName string
+	mnemonic       string
+	loadTestType   string
+	loadTestName   string
+	jsonRPCAddress string
 
-	jsonRPCAddress  string
 	receiptsTimeout time.Duration
 	txPoolTimeout   time.Duration
 
 	vus        int
 	txsPerUser int
-	dynamicTxs bool
-	toJSON     bool
+
+	dynamicTxs           bool
+	toJSON               bool
+	waitForTxPoolToEmpty bool
 }
 
 func (ltp *loadTestParams) validateFlags() error {

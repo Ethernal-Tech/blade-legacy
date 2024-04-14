@@ -29,11 +29,6 @@ type account struct {
 	key   *crypto.ECDSAKey
 }
 
-type txStats struct {
-	hash  types.Hash
-	block uint64
-}
-
 type BlockInfo struct {
 	Number    uint64
 	CreatedAt uint64
@@ -62,7 +57,9 @@ type LoadTestConfig struct {
 	TxsPerUser int  // TxsPerUser is the number of transactions per user.
 	DynamicTxs bool // DynamicTxs indicates whether the load test should generate dynamic transactions.
 
-	ResultsToJSON bool // ResultsToJSON indicates whether the results should be written in JSON format.
+	ResultsToJSON        bool // ResultsToJSON indicates whether the results should be written in JSON format.
+	WaitForTxPoolToEmpty bool // WaitForTxPoolToEmpty indicates whether the load test
+	// should wait for the tx pool to empty before gathering results
 }
 
 // LoadTestRunner represents a runner for load tests.

@@ -98,6 +98,13 @@ func setFlags(cmd *cobra.Command) {
 		"saves results to JSON file",
 	)
 
+	cmd.Flags().BoolVar(
+		&params.waitForTxPoolToEmpty,
+		waitForTxPoolToEmptyFlag,
+		false,
+		"waits for tx pool to empty before collecting results",
+	)
+
 	_ = cmd.MarkFlagRequired(mnemonicFlag)
 	_ = cmd.MarkFlagRequired(loadTestTypeFlag)
 }
@@ -109,16 +116,17 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	loadTestRunner := &runner.LoadTestRunner{}
 
 	err := loadTestRunner.Run(runner.LoadTestConfig{
-		Mnemonnic:       params.mnemonic,
-		LoadTestType:    params.loadTestType,
-		LoadTestName:    params.loadTestName,
-		JSONRPCUrl:      params.jsonRPCAddress,
-		ReceiptsTimeout: params.receiptsTimeout,
-		TxPoolTimeout:   params.txPoolTimeout,
-		VUs:             params.vus,
-		TxsPerUser:      params.txsPerUser,
-		DynamicTxs:      params.dynamicTxs,
-		ResultsToJSON:   params.toJSON,
+		Mnemonnic:            params.mnemonic,
+		LoadTestType:         params.loadTestType,
+		LoadTestName:         params.loadTestName,
+		JSONRPCUrl:           params.jsonRPCAddress,
+		ReceiptsTimeout:      params.receiptsTimeout,
+		TxPoolTimeout:        params.txPoolTimeout,
+		VUs:                  params.vus,
+		TxsPerUser:           params.txsPerUser,
+		DynamicTxs:           params.dynamicTxs,
+		ResultsToJSON:        params.toJSON,
+		WaitForTxPoolToEmpty: params.waitForTxPoolToEmpty,
 	})
 
 	if err != nil {

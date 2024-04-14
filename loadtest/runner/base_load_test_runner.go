@@ -22,6 +22,14 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const emptyBlocksNum = 10
+
+type stats struct {
+	totalTxs    int
+	blockInfo   map[uint64]*BlockInfo
+	foundErrors []error
+}
+
 type feeData struct {
 	gasPrice  *big.Int
 	gasTipCap *big.Int
@@ -36,6 +44,9 @@ type BaseLoadTestRunner struct {
 	vus             []*account
 
 	client *jsonrpc.EthClient
+
+	resultsCollectedCh chan *stats
+	done               chan error
 }
 
 // NewBaseLoadTestRunner creates a new instance of BaseLoadTestRunner with the provided LoadTestConfig.
@@ -65,9 +76,11 @@ func NewBaseLoadTestRunner(cfg LoadTestConfig) (*BaseLoadTestRunner, error) {
 	}
 
 	return &BaseLoadTestRunner{
-		cfg:             cfg,
-		loadTestAccount: &account{key: ecdsaKey},
-		client:          client,
+		cfg:                cfg,
+		loadTestAccount:    &account{key: ecdsaKey},
+		client:             client,
+		resultsCollectedCh: make(chan *stats),
+		done:               make(chan error),
 	}, nil
 }
 
@@ -215,15 +228,96 @@ func (r *BaseLoadTestRunner) waitForTxPoolToEmpty() error {
 	}
 }
 
+// waitForReceiptsParallel waits for the receipts of the given transaction hashes in in a separate go routine.
+// It continuously checks for the receipts until they are found or the timeout is reached.
+// If the receipts are found, it sends the transaction statistics to the resultsCollectedCh channel.
+// If the timeout is reached before the receipts are found, it returns.
+// if there is a predefined number of empty blocks, it stops the results gathering before the timer.
+func (r *BaseLoadTestRunner) waitForReceiptsParallel() {
+	startBlock, err := r.client.BlockNumber()
+	if err != nil {
+		fmt.Println("Error getting start block on gathering block info:", err)
+
+		return
+	}
+
+	currentBlock := startBlock
+	blockInfoMap := make(map[uint64]*BlockInfo)
+	foundErrors := make([]error, 0)
+	sequentialEmptyBlocks := 0
+	totalTxsExecuted := 0
+
+	timer := time.NewTimer(30 * time.Minute)
+	ticker := time.NewTicker(2 * time.Second)
+
+	defer func() {
+		timer.Stop()
+		ticker.Stop()
+		fmt.Println("Gathering results in parallel finished.")
+		r.resultsCollectedCh <- &stats{totalTxs: totalTxsExecuted, blockInfo: blockInfoMap, foundErrors: foundErrors}
+	}()
+
+	for {
+		select {
+		case <-timer.C:
+			fmt.Println("Timeout while gathering block info")
+
+			return
+		case <-ticker.C:
+			if sequentialEmptyBlocks >= emptyBlocksNum {
+				return
+			}
+
+			block, err := r.client.GetBlockByNumber(jsonrpc.BlockNumber(currentBlock), true)
+			if err != nil {
+				foundErrors = append(foundErrors, err)
+
+				continue
+			}
+
+			if block == nil {
+				continue
+			}
+
+			if (len(block.Transactions) == 1 && block.Transactions[0].Type() == types.StateTxType) || len(block.Transactions) == 0 {
+				sequentialEmptyBlocks++
+				currentBlock++
+
+				continue
+			}
+
+			sequentialEmptyBlocks = 0
+
+			gasUsed := new(big.Int).SetUint64(block.Header.GasUsed)
+			gasLimit := new(big.Int).SetUint64(block.Header.GasLimit)
+			gasUtilization := new(big.Int).Mul(gasUsed, big.NewInt(10000))
+			gasUtilization = gasUtilization.Div(gasUtilization, gasLimit).Div(gasUtilization, big.NewInt(100))
+
+			gu, _ := gasUtilization.Float64()
+
+			blockInfoMap[block.Number()] = &BlockInfo{
+				Number:         block.Number(),
+				CreatedAt:      block.Header.Timestamp,
+				NumTxs:         len(block.Transactions),
+				GasUsed:        new(big.Int).SetUint64(block.Header.GasUsed),
+				GasLimit:       new(big.Int).SetUint64(block.Header.GasLimit),
+				GasUtilization: gu,
+			}
+
+			totalTxsExecuted += len(block.Transactions)
+			currentBlock++
+		}
+	}
+}
+
 // waitForReceipts waits for the receipts of the given transaction hashes and returns
 // a map of block information, transaction statistics, and an error if any.
-func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]*BlockInfo, []txStats) {
+func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]*BlockInfo, int) {
 	fmt.Println("=============================================================")
 
 	start := time.Now().UTC()
 	blockInfoMap := make(map[uint64]*BlockInfo)
 	txToBlockMap := make(map[types.Hash]uint64)
-	txnStats := make([]txStats, 0, len(txHashes))
 	bar := progressbar.Default(int64(len(txHashes)), "Gathering receipts")
 
 	defer func() {
@@ -238,11 +332,7 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 
 	getTxReceipts := func(txHashes []types.Hash) {
 		for _, txHash := range txHashes {
-			if blockNum, exists := txToBlockMap[txHash]; exists {
-				lock.Lock()
-				txnStats = append(txnStats, txStats{txHash, blockNum})
-				lock.Unlock()
-
+			if _, exists := txToBlockMap[txHash]; exists {
 				_ = bar.Add(1)
 
 				continue
@@ -256,10 +346,6 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 
 				continue
 			}
-
-			lock.Lock()
-			txnStats = append(txnStats, txStats{txHash, receipt.BlockNumber})
-			lock.Unlock()
 
 			_ = bar.Add(1)
 
@@ -331,7 +417,7 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 		}
 	}
 
-	return blockInfoMap, txnStats
+	return blockInfoMap, len(txHashes)
 }
 
 // waitForReceipt waits for the transaction receipt of the given transaction hash.
@@ -369,33 +455,44 @@ func (r *BaseLoadTestRunner) waitForReceipt(txHash types.Hash) (*ethgo.Receipt, 
 	}
 }
 
-// calculateTPS calculates the transactions per second (TPS) for a given set of
+// calculateResultsParallel calculates the results of load test.
+// Should be used in a separate go routine.
+func (r *BaseLoadTestRunner) calculateResultsParallel() {
+	stats := <-r.resultsCollectedCh
+
+	if len(stats.foundErrors) > 0 {
+		fmt.Println("Errors found while gathering results:")
+		for _, err := range stats.foundErrors {
+			fmt.Println(err)
+		}
+	}
+
+	r.done <- r.calculateResults(stats.blockInfo, stats.totalTxs)
+}
+
+// calculateResults calculates the results of a load test for a given set of
 // block information and transaction statistics.
 // It takes a map of block information and an array of transaction statistics as input.
 // The function iterates over the transaction statistics and calculates the TPS for each block.
 // It also calculates the minimum and maximum TPS values, as well as the total time taken to mine the transactions.
 // The calculated TPS values are displayed in a table using the tablewriter package.
 // The function returns an error if there is any issue retrieving block information or calculating TPS.
-func (r *BaseLoadTestRunner) calculateTPS(blockInfos map[uint64]*BlockInfo, txnStats []txStats) error {
+func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, totalTxs int) error {
 	fmt.Println("=============================================================")
 	fmt.Println("Calculating results...")
 
 	var (
-		totalTxs        = len(txnStats)
 		totalTime       float64
 		maxTxsPerSecond float64
 		minTxsPerSecond = math.MaxFloat64
+		blockTimeMap    = make(map[uint64]uint64)
+		uniqueBlocks    = map[uint64]struct{}{}
+		infos           = make([]*BlockInfo, 0, len(blockInfos))
 	)
 
-	blockTimeMap := make(map[uint64]uint64)
-	uniqueBlocks := map[uint64]struct{}{}
-
-	for _, stat := range txnStats {
-		if stat.block == 0 {
-			continue
-		}
-
-		uniqueBlocks[stat.block] = struct{}{}
+	for num, stat := range blockInfos {
+		uniqueBlocks[num] = struct{}{}
+		infos = append(infos, stat)
 	}
 
 	for block := range uniqueBlocks {
@@ -451,8 +548,6 @@ func (r *BaseLoadTestRunner) calculateTPS(blockInfos map[uint64]*BlockInfo, txnS
 
 		totalTime += blockTime
 	}
-
-	infos := make([]*BlockInfo, 0, len(blockInfos))
 
 	for _, info := range blockInfos {
 		info.BlockTime = math.Abs(float64(info.CreatedAt - blockTimeMap[info.Number-1]))
