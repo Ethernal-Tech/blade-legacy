@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -138,14 +139,32 @@ func (e *Executor) ProcessBlock(
 		return nil, err
 	}
 
-	for _, t := range block.Transactions {
+	var buf bytes.Buffer
+
+	err = block.TxnIterator(func(t *types.Transaction) *types.IterationResult {
 		if t.Gas() > block.Header.GasLimit {
-			continue
+			return &types.IterationResult{ShouldContinue: true}
 		}
 
 		if err = txn.Write(t); err != nil {
-			return nil, err
+			return &types.IterationResult{Err: err}
 		}
+
+		if e.logger.IsDebug() {
+			_, _ = buf.WriteString(t.String())
+		}
+
+		return &types.IterationResult{}
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	if e.logger.IsDebug() {
+		e.logger.Debug("[Executor.ProcessBlock]",
+			"block number", block.Number(),
+			"txs", buf.String())
 	}
 
 	return txn, nil
@@ -337,6 +356,7 @@ func (t *Transition) Write(txn *types.Transaction) error {
 		}
 
 		txn.SetFrom(from)
+		t.logger.Debug("[Transition.Write]", "recovered sender", from)
 	}
 
 	// Make a local copy and apply the transaction

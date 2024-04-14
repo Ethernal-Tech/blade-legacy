@@ -462,6 +462,7 @@ func (p *Polybft) Initialize() error {
 
 	// set blockchain backend
 	p.blockchain = &blockchainWrapper{
+		logger:     p.logger.Named("blockchain_wrapper"),
 		blockchain: p.config.Blockchain,
 		executor:   p.config.Executor,
 	}

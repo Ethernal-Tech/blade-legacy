@@ -1,6 +1,7 @@
 package polybft
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -71,6 +72,7 @@ type blockchainBackend interface {
 var _ blockchainBackend = &blockchainWrapper{}
 
 type blockchainWrapper struct {
+	logger     hclog.Logger
 	executor   *state.Executor
 	blockchain *blockchain.Blockchain
 }
@@ -87,6 +89,10 @@ func (p *blockchainWrapper) CommitBlock(block *types.FullBlock) error {
 
 // ProcessBlock builds a final block from given 'block' on top of 'parent'
 func (p *blockchainWrapper) ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error) {
+	p.logger.Debug("[BlockchainWrapper.ProcessBlock]",
+		"block number", block.Number(), "block hash", block.Hash(),
+		"parent state root", parent.StateRoot, "block state root", block.Header.StateRoot)
+
 	header := block.Header.Copy()
 	start := time.Now().UTC()
 
@@ -95,11 +101,23 @@ func (p *blockchainWrapper) ProcessBlock(parent *types.Header, block *types.Bloc
 		return nil, err
 	}
 
+	var buf bytes.Buffer
+
 	// apply transactions from block
-	for _, tx := range block.Transactions {
-		if err = transition.Write(tx); err != nil {
-			return nil, fmt.Errorf("process block tx error, tx = %v, err = %w", tx.Hash(), err)
+	err = block.TxnIterator(func(t *types.Transaction) *types.IterationResult {
+		if err := transition.Write(t); err != nil {
+			return &types.IterationResult{Err: fmt.Errorf("process block tx error, tx = %s, err = %w", t.Hash(), err)}
 		}
+
+		if p.logger.IsDebug() {
+			_, _ = buf.WriteString(t.String())
+		}
+
+		return &types.IterationResult{}
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
 	_, root, err := transition.Commit()
