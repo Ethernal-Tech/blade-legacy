@@ -574,8 +574,6 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 	for _, info := range blockInfos {
 		info.BlockTime = math.Abs(float64(info.CreatedAt - blockTimeMap[info.Number-1]))
 		info.TPS = float64(info.NumTxs) / info.BlockTime
-
-		infos = append(infos, info)
 	}
 
 	sort.Slice(infos, func(i, j int) bool {
