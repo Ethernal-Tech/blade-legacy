@@ -221,6 +221,20 @@ func setFlags(cmd *cobra.Command) {
 		"start json rpc endpoint with tls enabled",
 	)
 
+	cmd.Flags().StringVar(
+		&params.rawConfig.TLSCertFile,
+		tlsCertFileLocationFlag,
+		defaultConfig.TLSCertFile,
+		"path to TLS cert file, if no file is provided then cert file is loaded from secrets manager",
+	)
+
+	cmd.Flags().StringVar(
+		&params.rawConfig.TLSKeyFile,
+		tlsKeyFileLocationFlag,
+		defaultConfig.TLSKeyFile,
+		"path to TLS key file, if no file is provided then key file is loaded from secrets manager",
+	)
+
 	cmd.Flags().BoolVar(
 		&params.rawConfig.Relayer,
 		relayerFlag,

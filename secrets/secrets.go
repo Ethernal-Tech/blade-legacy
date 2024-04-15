@@ -44,15 +44,15 @@ const (
 	ValidatorKeyLocal    = "validator.key"
 	ValidatorBLSKeyLocal = "validator-bls.key"
 	NetworkKeyLocal      = "libp2p.key"
-	JSONTLSKeyLocal      = "/private/jsontls.key"
-	JSONTLSCertLocal     = "/certs/jsontls.pem"
+	JSONTLSKeyLocal      = "jsontls.key"
+	JSONTLSCertLocal     = "jsontls.pem"
 )
 
 // Define constant folder names for the local StorageManager
 const (
 	ConsensusFolderLocal = "consensus"
 	NetworkFolderLocal   = "libp2p"
-	JSONTLSFolderLocal   = "/etc/ssl"
+	JSONTLSFolderLocal   = "jsontls"
 )
 
 var (

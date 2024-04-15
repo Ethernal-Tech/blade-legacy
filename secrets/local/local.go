@@ -63,7 +63,7 @@ func (l *LocalSecretsManager) Setup() error {
 	l.secretPathMapLock.Lock()
 	defer l.secretPathMapLock.Unlock()
 
-	subDirectories := []string{secrets.ConsensusFolderLocal, secrets.NetworkFolderLocal}
+	subDirectories := []string{secrets.ConsensusFolderLocal, secrets.NetworkFolderLocal, secrets.JSONTLSFolderLocal}
 
 	// Set up the local directories
 	if err := common.SetupDataDir(l.path, subDirectories, 0770); err != nil {
@@ -91,14 +91,16 @@ func (l *LocalSecretsManager) Setup() error {
 		secrets.NetworkKeyLocal,
 	)
 
-	// /etc/ssl/certs/jsonrpc.pem
+	// baseDir/jsontls/jsontls.pem
 	l.secretPathMap[secrets.JSONTLSCert] = filepath.Join(
+		l.path,
 		secrets.JSONTLSFolderLocal,
 		secrets.JSONTLSCertLocal,
 	)
 
-	// /etc/ssl/private/jsonrpc.key
+	// baseDir/jsontls/jsontls.key
 	l.secretPathMap[secrets.JSONTLSKey] = filepath.Join(
+		l.path,
 		secrets.JSONTLSFolderLocal,
 		secrets.JSONTLSKeyLocal,
 	)

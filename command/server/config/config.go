@@ -33,6 +33,8 @@ type Config struct {
 	JSONLogFormat            bool       `json:"json_log_format" yaml:"json_log_format"`
 	CorsAllowedOrigins       []string   `json:"cors_allowed_origins" yaml:"cors_allowed_origins"`
 	UseTLS                   bool       `json:"use_tls" yaml:"use_tls"`
+	TLSCertFile              string     `json:"tls_cert_file" yaml:"tls_cert_file"`
+	TLSKeyFile               string     `json:"tls_key_file" yaml:"tls_key_file"`
 
 	Relayer bool `json:"relayer" yaml:"relayer"`
 
@@ -146,6 +148,8 @@ func DefaultConfig() *Config {
 		},
 		LogFilePath:              "",
 		UseTLS:                   false,
+		TLSCertFile:              "",
+		TLSKeyFile:               "",
 		JSONRPCBatchRequestLimit: DefaultJSONRPCBatchRequestLimit,
 		JSONRPCBlockRangeLimit:   DefaultJSONRPCBlockRangeLimit,
 		Relayer:                  false,

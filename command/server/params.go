@@ -38,6 +38,8 @@ const (
 	corsOriginFlag               = "access-control-allow-origins"
 	logFileLocationFlag          = "log-to"
 	useTLSFlag                   = "use-tls"
+	tlsCertFileLocationFlag      = "tls-cert-file"
+	tlsKeyFileLocationFlag       = "tls-key-file"
 
 	relayerFlag = "relayer"
 
@@ -185,6 +187,8 @@ func (p *serverParams) generateConfig() *server.Config {
 		JSONLogFormat:      p.rawConfig.JSONLogFormat,
 		LogFilePath:        p.logFileLocation,
 		UseTLS:             p.rawConfig.UseTLS,
+		TLSCertFile:        p.rawConfig.TLSCertFile,
+		TLSKeyFile:         p.rawConfig.TLSKeyFile,
 
 		Relayer:         p.relayer,
 		MetricsInterval: p.rawConfig.MetricsInterval,

@@ -44,6 +44,10 @@ type Config struct {
 
 	UseTLS bool
 
+	TLSCertFile string
+
+	TLSKeyFile string
+
 	Relayer bool
 
 	MetricsInterval time.Duration

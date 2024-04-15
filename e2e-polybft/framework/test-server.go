@@ -40,6 +40,8 @@ type TestServerConfig struct {
 	NumBlockConfirmations uint64
 	BridgeJSONRPC         string
 	UseTLS                bool
+	TLSCertFile           string
+	TLSKeyFile            string
 }
 
 type TestServerConfigCallback func(*TestServerConfig)
@@ -170,6 +172,10 @@ func (t *TestServer) Start() {
 		"--jsonrpc", fmt.Sprintf(":%d", config.JSONRPCPort),
 		// minimal number of child blocks required for the parent block to be considered final
 		"--num-block-confirmations", strconv.FormatUint(config.NumBlockConfirmations, 10),
+		// TLS certificate file
+		"--tls-cert-file", config.TLSCertFile,
+		// TLS key file
+		"--tls-key-file", config.TLSKeyFile,
 	}
 
 	if len(config.LogLevel) > 0 {

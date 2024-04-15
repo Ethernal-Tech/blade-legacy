@@ -53,6 +53,8 @@ type Config struct {
 	ConcurrentRequestsDebug uint64
 	WebSocketReadLimit      uint64
 	UseTLS                  bool
+	TLSCertFile             string
+	TLSKeyFile              string
 	SecretsManager          secrets.SecretsManager
 }
 
@@ -116,23 +118,36 @@ func (j *JSONRPC) setupHTTP() error {
 	if j.config.UseTLS {
 		j.logger.Info("configuring http server with tls...")
 
-		cert, err := loadTLSCertificate(j.config.SecretsManager)
-		if err != nil {
-			j.logger.Error("loading tls certificate", "err", err)
+		if j.config.TLSCertFile != "" && j.config.TLSKeyFile != "" {
+			j.logger.Info("TLS", "cert file", j.config.TLSCertFile)
+			j.logger.Info("TLS", "key file", j.config.TLSKeyFile)
 
-			return err
-		}
+			go func() {
+				if err := srv.ServeTLS(lis, j.config.TLSCertFile, j.config.TLSKeyFile); err != nil {
+					j.logger.Error("closed https connection", "err", err)
+				}
+			}()
+		} else {
+			j.logger.Info("loading tls certificate from secrets manager...")
 
-		srv.TLSConfig = &tls.Config{
-			Certificates: []tls.Certificate{*cert},
-			MinVersion:   tls.VersionTLS12,
-		}
+			cert, err := loadTLSCertificate(j.config.SecretsManager)
+			if err != nil {
+				j.logger.Error("loading tls certificate", "err", err)
 
-		go func() {
-			if err := srv.ServeTLS(lis, "", ""); err != nil {
-				j.logger.Error("closed https connection", "err", err)
+				return err
 			}
-		}()
+
+			srv.TLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{*cert},
+				MinVersion:   tls.VersionTLS12,
+			}
+
+			go func() {
+				if err := srv.ServeTLS(lis, "", ""); err != nil {
+					j.logger.Error("closed https connection", "err", err)
+				}
+			}()
+		}
 	} else {
 		go func() {
 			if err := srv.Serve(lis); err != nil {

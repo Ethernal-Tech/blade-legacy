@@ -1,7 +1,9 @@
 package e2e
 
 import (
+	"crypto/tls"
 	"math/big"
+	"net/http"
 	"testing"
 	"time"
 
@@ -32,6 +34,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		framework.WithPremine(preminedAcct.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 		framework.WithHTTPS(),
+		framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
 	)
 	defer cluster.Stop()
 
@@ -309,4 +312,28 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.Equal(t, txReceipt.BlockNumber, header.Number)
 		require.Equal(t, txReceipt.BlockHash, ethgo.Hash(header.Hash))
 	})
+}
+
+func TestE2E_JsonRPCSelfSignedTLS(t *testing.T) {
+	cluster := framework.NewTestCluster(t, 4,
+		framework.WithHTTPS(),
+	)
+	defer cluster.Stop()
+
+	// Wait for endpoint to start, can't use cluster.WaitForReady because server certificate is not trusted by client
+	time.Sleep(1 * time.Second)
+
+	addr := cluster.Servers[0].JSONRPCAddr()
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+	_, err := client.Get(addr)
+	require.NoError(t, err)
+
+	// This will fail with certificate signed by unknown authority error
+	client = &http.Client{}
+	_, err = client.Get(addr)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "x509: certificate signed by unknown authority")
 }

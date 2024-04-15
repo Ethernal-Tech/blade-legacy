@@ -101,5 +101,7 @@ func (w *Writer) getBatch(t uint8) Batch {
 }
 
 func getKey(n uint64, h types.Hash) []byte {
-	return append(append(make([]byte, 0, 40), common.EncodeUint64ToBytes(n)...), h.Bytes()...)
+	a, b := common.EncodeUint64ToBytes(n), h.Bytes()
+
+	return append(append(make([]byte, 0, len(a)+len(b)), a...), b...)
 }
