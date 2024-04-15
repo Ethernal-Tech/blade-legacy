@@ -2031,7 +2031,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		checkTxExistence(t, pool, tx.Hash(), true)
 
 		// set 9 to skips in order to drop transaction next
-		accountMap.skips = 9
+		accountMap.skips = maxAccountSkips - 1
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
@@ -2066,7 +2066,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		checkTxExistence(t, pool, tx.Hash(), true)
 
 		// set 9 to skips in order to drop transaction next
-		accountMap.skips = 9
+		accountMap.skips = maxAccountSkips - 1
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
