@@ -485,12 +485,16 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 	fmt.Println("Calculating results...")
 
 	var (
-		totalTime       float64
-		maxTxsPerSecond float64
-		minTxsPerSecond = math.MaxFloat64
-		blockTimeMap    = make(map[uint64]uint64)
-		uniqueBlocks    = map[uint64]struct{}{}
-		infos           = make([]*BlockInfo, 0, len(blockInfos))
+		totalTime           float64
+		maxTxsPerSecond     float64
+		minTxsPerSecond     = math.MaxFloat64
+		blockTimeMap        = make(map[uint64]uint64)
+		uniqueBlocks        = map[uint64]struct{}{}
+		infos               = make([]*BlockInfo, 0, len(blockInfos))
+		totalGasUsed        = big.NewInt(0)
+		minGasUtilization   = math.MaxFloat64
+		maxGasUtilization   float64
+		totalGasUtilization float64
 	)
 
 	for num, stat := range blockInfos {
@@ -550,7 +554,17 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 			minTxsPerSecond = currentBlockTxsPerSecond
 		}
 
+		if blockInfos[block].GasUtilization < minGasUtilization {
+			minGasUtilization = blockInfos[block].GasUtilization
+		}
+
+		if blockInfos[block].GasUtilization > maxGasUtilization {
+			maxGasUtilization = blockInfos[block].GasUtilization
+		}
+
 		totalTime += blockTime
+		totalGasUtilization += blockInfos[block].GasUtilization
+		totalGasUsed.Add(totalGasUsed, blockInfos[block].GasUsed)
 	}
 
 	for _, info := range blockInfos {
@@ -565,18 +579,22 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 	})
 
 	avgTxsPerSecond := math.Ceil(float64(totalTxs) / totalTime)
+	avgGasPerTx := new(big.Int).Div(totalGasUsed, big.NewInt(int64(totalTxs)))
+	avgGasUtilization := totalGasUtilization / float64(len(blockInfos))
 
 	if !r.cfg.ResultsToJSON {
 		return printResults(
-			totalTxs, totalTime,
-			maxTxsPerSecond, minTxsPerSecond, avgTxsPerSecond,
+			totalTxs, totalTime, totalGasUsed,
+			maxTxsPerSecond, minTxsPerSecond, avgTxsPerSecond, avgGasPerTx,
+			minGasUtilization, maxGasUtilization, avgGasUtilization,
 			infos,
 		)
 	}
 
 	return r.saveResultsToJSONFile(
-		totalTxs, totalTime,
-		maxTxsPerSecond, minTxsPerSecond, avgTxsPerSecond,
+		totalTxs, totalTime, totalGasUsed,
+		maxTxsPerSecond, minTxsPerSecond, avgTxsPerSecond, avgGasPerTx,
+		minGasUtilization, maxGasUtilization, avgGasUtilization,
 		infos,
 	)
 }
@@ -587,27 +605,40 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 // average transactions per second (avgTxsPerSecond), and a map of block information (blockInfos).
 // It returns an error if there was a problem saving the results to the file.
 func (r *BaseLoadTestRunner) saveResultsToJSONFile(
-	totalTxs int, totalTime float64,
-	maxTxsPerSecond float64, minTxsPerSecond float64, avgTxsPerSecond float64,
+	totalTxs int, totalTime float64, totalGasUsed *big.Int,
+	maxTxsPerSecond, minTxsPerSecond, avgTxsPerSecond float64, avgGasPerTx *big.Int,
+	minGasUtilization, maxGasUtilization, avgGasUtilization float64,
 	blockInfos []*BlockInfo) error {
 	fmt.Println("Saving results to JSON file...")
 
 	type Result struct {
-		TotalTxs        int          `json:"totalTxs"`
-		TotalTime       float64      `json:"totalTime"`
-		MinTxsPerSecond float64      `json:"minTxsPerSecond"`
-		MaxTxsPerSecond float64      `json:"maxTxsPerSecond"`
-		AvgTxsPerSecond float64      `json:"avgTxsPerSecond"`
-		Blocks          []*BlockInfo `json:"blocks"`
+		TotalBlocks       int          `json:"totalBlocks"`
+		TotalTxs          int          `json:"totalTxs"`
+		TotalTime         float64      `json:"totalTime"`
+		TotalGasUsed      string       `json:"totalGasUsed"`
+		MinTxsPerSecond   float64      `json:"minTxsPerSecond"`
+		MaxTxsPerSecond   float64      `json:"maxTxsPerSecond"`
+		AvgTxsPerSecond   float64      `json:"avgTxsPerSecond"`
+		AvgGasPerTx       string       `json:"avgGasPerTx"`
+		MinGasUtilization float64      `json:"minGasUtilization"`
+		MaxGasUtilization float64      `json:"maxGasUtilization"`
+		AvgGasUtilization float64      `json:"avgGasUtilization"`
+		Blocks            []*BlockInfo `json:"blocks"`
 	}
 
 	result := Result{
-		TotalTxs:        totalTxs,
-		TotalTime:       totalTime,
-		MinTxsPerSecond: minTxsPerSecond,
-		MaxTxsPerSecond: maxTxsPerSecond,
-		AvgTxsPerSecond: avgTxsPerSecond,
-		Blocks:          blockInfos,
+		TotalBlocks:       len(blockInfos),
+		TotalTxs:          totalTxs,
+		TotalTime:         totalTime,
+		TotalGasUsed:      totalGasUsed.String(),
+		MinTxsPerSecond:   minTxsPerSecond,
+		MaxTxsPerSecond:   maxTxsPerSecond,
+		AvgTxsPerSecond:   avgTxsPerSecond,
+		Blocks:            blockInfos,
+		AvgGasPerTx:       avgGasPerTx.String(),
+		MinGasUtilization: minGasUtilization,
+		MaxGasUtilization: maxGasUtilization,
+		AvgGasUtilization: avgGasUtilization,
 	}
 
 	jsonData, err := json.Marshal(result)
@@ -743,8 +774,9 @@ func getFeeData(client *jsonrpc.EthClient, dynamicTxs bool) (*feeData, error) {
 }
 
 // printResults prints the results of the load test to stdout in a form of a table
-func printResults(totalTxs int, totalTime float64,
-	maxTxsPerSecond float64, minTxsPerSecond float64, avgTxsPerSecond float64,
+func printResults(totalTxs int, totalTime float64, totalGasUsed *big.Int,
+	maxTxsPerSecond, minTxsPerSecond, avgTxsPerSecond float64, avgGasPerTx *big.Int,
+	minGasUtilization, maxGasUtilization, avgGasUtilization float64,
 	blockInfos []*BlockInfo) error {
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetHeader([]string{
@@ -772,13 +804,31 @@ func printResults(totalTxs int, totalTime float64,
 	table.Render()
 
 	table = tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Total Txs", "Total Time To Mine (s)", "Min TPS", "Max TPS", "Average TPS"})
+	table.SetHeader([]string{
+		"Total Blocks",
+		"Total Txs",
+		"Total Time To Mine (s)",
+		"Total Gas Used",
+		"Average Gas Per Tx",
+		"Min TPS",
+		"Max TPS",
+		"Average TPS",
+		"Min Gas Utilization",
+		"Max Gas Utilization",
+		"Average Gas Utilization",
+	})
 	table.Append([]string{
+		fmt.Sprintf("%d", len(blockInfos)),
 		fmt.Sprintf("%d", totalTxs),
 		fmt.Sprintf("%.2f", totalTime),
+		totalGasUsed.String(),
+		avgGasPerTx.String(),
 		fmt.Sprintf("%.2f", minTxsPerSecond),
 		fmt.Sprintf("%.2f", maxTxsPerSecond),
 		fmt.Sprintf("%.2f", avgTxsPerSecond),
+		fmt.Sprintf("%.2f", minGasUtilization),
+		fmt.Sprintf("%.2f", maxGasUtilization),
+		fmt.Sprintf("%.2f", avgGasUtilization),
 	})
 
 	table.Render()
