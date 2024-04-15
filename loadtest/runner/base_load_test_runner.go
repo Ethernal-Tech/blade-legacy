@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -211,7 +212,7 @@ func (r *BaseLoadTestRunner) waitForTxPoolToEmpty() error {
 	for {
 		select {
 		case <-ticker.C:
-			txPoolStatus, err := r.client.Status()
+			txPoolStatus, err := r.client.TxPoolStatus()
 			if err != nil {
 				return err
 			}
@@ -616,7 +617,7 @@ func (r *BaseLoadTestRunner) saveResultsToJSONFile(
 
 	fileName := fmt.Sprintf("./%s_%s.json", r.cfg.LoadTestName, r.cfg.LoadTestType)
 
-	err = os.WriteFile(fileName, jsonData, 0600)
+	err = common.SaveFileSafe(fileName, jsonData, 0600)
 	if err != nil {
 		return err
 	}

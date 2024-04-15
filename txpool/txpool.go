@@ -673,7 +673,7 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
 
 			p.logger.Debug("dynamic tx is undepriced",
-				"gasPrice", tx.GetGasPrice(baseFee).String(),
+				"gasFeeCap", tx.GasFeeCap().String(),
 				"baseFee", baseFee,
 				"priceLimit", p.priceLimit)
 
@@ -697,8 +697,8 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		// Make sure that the transaction is not underpriced
 		metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
 
-		p.logger.Debug("tx is undepriced in regards to price limit	",
-			"gasPrice", tx.GasPrice().String(),
+		p.logger.Debug("tx is undepriced in regards to price limit",
+			"gasPrice", tx.GetGasPrice(baseFee).String(),
 			"baseFee", baseFee,
 			"priceLimit", p.priceLimit)
 
