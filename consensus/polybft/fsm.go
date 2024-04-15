@@ -394,8 +394,11 @@ func (f *fsm) Validate(proposal []byte) error {
 			return fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}
 
-		f.logger.Debug("[FSM Validate] Finish", "block num", block.Number(), "proposer", types.BytesToHash(block.Header.Miner),
-			"txs", len(block.Transactions), "proposal hash", checkpointHash)
+		f.logger.Debug("[FSM Validate] Finish",
+			"block num", block.Number(),
+			"proposer", types.BytesToHash(block.Header.Miner),
+			"txs", len(block.Transactions),
+			"proposal hash", checkpointHash)
 	}
 
 	f.target = stateBlock
