@@ -334,11 +334,15 @@ func (r *BaseLoadTestRunner) waitForReceipts(txHashes []types.Hash) (map[uint64]
 
 	getTxReceipts := func(txHashes []types.Hash) {
 		for _, txHash := range txHashes {
+			lock.Lock()
 			if _, exists := txToBlockMap[txHash]; exists {
 				_ = bar.Add(1)
+				lock.Unlock()
 
 				continue
 			}
+
+			lock.Unlock()
 
 			receipt, err := r.waitForReceipt(txHash)
 			if err != nil {
