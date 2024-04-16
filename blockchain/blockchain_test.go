@@ -569,7 +569,6 @@ func TestBlockchainWriteBody(t *testing.T) {
 	newChain := func(
 		t *testing.T,
 		txFromByTxHash map[types.Hash]types.Address,
-		path string,
 	) *Blockchain {
 		t.Helper()
 
@@ -604,7 +603,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 
 		txFromByTxHash := map[types.Hash]types.Address{}
 
-		chain := newChain(t, txFromByTxHash, "t1")
+		chain := newChain(t, txFromByTxHash)
 		defer chain.db.Close()
 		batchWriter := chain.db.NewWriter()
 
@@ -633,7 +632,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 
 		txFromByTxHash := map[types.Hash]types.Address{}
 
-		chain := newChain(t, txFromByTxHash, "t2")
+		chain := newChain(t, txFromByTxHash)
 		defer chain.db.Close()
 		batchWriter := chain.db.NewWriter()
 
@@ -665,7 +664,7 @@ func TestBlockchainWriteBody(t *testing.T) {
 			tx.Hash(): addr,
 		}
 
-		chain := newChain(t, txFromByTxHash, "t3")
+		chain := newChain(t, txFromByTxHash)
 		defer chain.db.Close()
 		batchWriter := chain.db.NewWriter()
 
