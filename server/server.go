@@ -147,12 +147,21 @@ func NewServer(config *Config) (*Server, error) {
 		restoreProgression: progress.NewProgressionWrapper(progress.ChainSyncRestore),
 	}
 
-	m.logger.Info("Data dir", "path", config.DataDir)
-	m.logger.Info("Version metadata",
+	m.logger.Info("data dir", "path", config.DataDir)
+	m.logger.Info("version metadata",
 		"version", versioning.Version,
 		"commit", versioning.Commit,
 		"branch", versioning.Branch,
 		"build time", versioning.BuildTime)
+
+	if m.logger.IsDebug() {
+		chainConfigJSON, err := json.MarshalIndent(config.Chain, "", "\t")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal chain config to JSON: %w", err)
+		}
+
+		m.logger.Debug(fmt.Sprintf("chain configuration %s", string(chainConfigJSON)))
+	}
 
 	var dirPaths = []string{
 		"blockchain",
