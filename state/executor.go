@@ -134,6 +134,10 @@ func (e *Executor) ProcessBlock(
 	block *types.Block,
 	blockCreator types.Address,
 ) (*Transition, error) {
+	e.logger.Debug("[BlockchainWrapper.ProcessBlock]",
+		"block number", block.Number(), "block hash", block.Hash(),
+		"parent state root", parentRoot, "block state root", block.Header.StateRoot)
+
 	txn, err := e.BeginTxn(parentRoot, block.Header, blockCreator)
 	if err != nil {
 		return nil, err
@@ -141,7 +145,7 @@ func (e *Executor) ProcessBlock(
 
 	var buf bytes.Buffer
 
-	err = block.TxnIterator(func(t *types.Transaction) *types.IterationResult {
+	err = block.TxnIterator(func(i int, t *types.Transaction) *types.IterationResult {
 		if t.Gas() > block.Header.GasLimit {
 			return &types.IterationResult{ShouldContinue: true}
 		}
@@ -150,8 +154,18 @@ func (e *Executor) ProcessBlock(
 			return &types.IterationResult{Err: err}
 		}
 
-		if e.logger.IsDebug() {
-			_, _ = buf.WriteString(t.String())
+		if e.logger.GetLevel() <= hclog.Debug {
+			if e.logger.IsTrace() {
+				_, _ = buf.WriteString(t.String())
+			}
+
+			if e.logger.IsDebug() {
+				_, _ = buf.WriteString(t.Hash().String())
+			}
+
+			if i != len(block.Transactions)-1 {
+				_, _ = buf.WriteString("\n")
+			}
 		}
 
 		return &types.IterationResult{}
@@ -162,9 +176,7 @@ func (e *Executor) ProcessBlock(
 	}
 
 	if e.logger.IsDebug() {
-		e.logger.Debug("[Executor.ProcessBlock]",
-			"block number", block.Number(),
-			"txs", buf.String())
+		e.logger.Debug("[Executor.ProcessBlock]", "txs count", len(block.Transactions), "txs", buf.String())
 	}
 
 	return txn, nil

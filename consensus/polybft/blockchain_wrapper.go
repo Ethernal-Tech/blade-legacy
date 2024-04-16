@@ -104,21 +104,34 @@ func (p *blockchainWrapper) ProcessBlock(parent *types.Header, block *types.Bloc
 	var buf bytes.Buffer
 
 	// apply transactions from block
-	err = block.TxnIterator(func(t *types.Transaction) *types.IterationResult {
-		if err := transition.Write(t); err != nil {
-			return &types.IterationResult{Err: fmt.Errorf("process block tx error, tx = %s, err = %w", t.Hash(), err)}
-		}
+	err = block.TxnIterator(
+		func(i int, t *types.Transaction) *types.IterationResult {
+			if err := transition.Write(t); err != nil {
+				return &types.IterationResult{Err: fmt.Errorf("process block tx error, tx = %s, err = %w", t.Hash(), err)}
+			}
 
-		if p.logger.IsDebug() {
-			_, _ = buf.WriteString(t.String())
-		}
+			if p.logger.GetLevel() <= hclog.Debug {
+				if p.logger.IsTrace() {
+					_, _ = buf.WriteString(t.String())
+				}
 
-		return &types.IterationResult{}
-	})
+				if p.logger.IsDebug() {
+					_, _ = buf.WriteString(t.Hash().String())
+				}
+
+				if i != len(block.Transactions)-1 {
+					_, _ = buf.WriteString("\n")
+				}
+			}
+
+			return &types.IterationResult{}
+		})
 
 	if err != nil {
 		return nil, err
 	}
+
+	p.logger.Debug("[BlockchainWrapper.ProcessBlock]", "txs count", len(block.Transactions), "txs", buf.String())
 
 	_, root, err := transition.Commit()
 	if err != nil {

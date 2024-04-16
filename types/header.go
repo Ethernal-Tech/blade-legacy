@@ -165,9 +165,9 @@ type IterationResult struct {
 }
 
 // TxnIterator represents an iterator for block transactions
-func (b *Block) TxnIterator(handler func(*Transaction) *IterationResult) error {
-	for _, tx := range b.Transactions {
-		result := handler(tx)
+func (b *Block) TxnIterator(handler func(int, *Transaction) *IterationResult) error {
+	for i, tx := range b.Transactions {
+		result := handler(i, tx)
 
 		if result == nil || result.ShouldContinue {
 			continue

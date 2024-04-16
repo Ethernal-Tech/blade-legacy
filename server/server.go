@@ -218,7 +218,7 @@ func NewServer(config *Config) (*Server, error) {
 	st := itrie.NewState(stateStorage)
 	m.state = st
 
-	m.executor = state.NewExecutor(config.Chain.Params, st, logger)
+	m.executor = state.NewExecutor(config.Chain.Params, st, logger.Named("executor"))
 
 	// custom write genesis hook per consensus engine
 	engineName := m.config.Chain.Params.GetEngine()
