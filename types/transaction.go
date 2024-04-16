@@ -124,18 +124,13 @@ type TxData interface {
 }
 
 func (tx *Transaction) String() string {
-	recipient := ""
-	if tx.To() != nil {
-		recipient = tx.To().String()
-	}
-
 	v, r, s := tx.RawSignatureValues()
 
 	return fmt.Sprintf("[%s] Nonce: %d, GasPrice: %d, GasTipCap: %d, GasFeeCap: %d, "+
-		"Gas: %d, To: %s, Value: %d, Input: %x, V: %d, R: %d, S: %s, Hash: %s, From: %s",
+		"Gas: %d, To: %s, Value: %d, Input: %x, V: %d, R: %d, S: %s, Hash: %s, From: %s, AccessList: %s",
 		tx.Type(), tx.Nonce(), tx.GasPrice(), tx.GasTipCap(), tx.GasFeeCap(),
-		tx.Gas(), recipient, tx.Value(), tx.Input(),
-		v, r, s, tx.Hash(), tx.From())
+		tx.Gas(), tx.To(), tx.Value(), tx.Input(),
+		v, r, s, tx.Hash(), tx.From(), tx.AccessList())
 }
 
 func (t *Transaction) Type() TxType {

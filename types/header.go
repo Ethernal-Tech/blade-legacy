@@ -158,29 +158,6 @@ func (b *Block) String() string {
 	return str
 }
 
-type IterationResult struct {
-	ShouldContinue bool
-	ShouldBreak    bool
-	Err            error
-}
-
-// TxnIterator represents an iterator for block transactions
-func (b *Block) TxnIterator(handler func(int, *Transaction) *IterationResult) error {
-	for i, tx := range b.Transactions {
-		result := handler(i, tx)
-
-		if result == nil || result.ShouldContinue {
-			continue
-		}
-
-		if result.ShouldBreak || result.Err != nil {
-			return result.Err
-		}
-	}
-
-	return nil
-}
-
 // WithSeal returns a new block with the data from b but the header replaced with
 // the sealed one.
 func (b *Block) WithSeal(header *Header) *Block {

@@ -103,32 +103,26 @@ func (p *blockchainWrapper) ProcessBlock(parent *types.Header, block *types.Bloc
 
 	var buf bytes.Buffer
 
-	// apply transactions from block
-	err = block.TxnIterator(
-		func(i int, t *types.Transaction) *types.IterationResult {
-			if err := transition.Write(t); err != nil {
-				return &types.IterationResult{Err: fmt.Errorf("process block tx error, tx = %s, err = %w", t.Hash(), err)}
+	for i, t := range block.Transactions {
+		if err := transition.Write(t); err != nil {
+			p.logger.Error("failed to write transaction to the block", "tx", t, "err", err)
+
+			return nil, fmt.Errorf("failed to write transaction %s to the block: %w", t.Hash(), err)
+		}
+
+		if p.logger.GetLevel() <= hclog.Debug {
+			if p.logger.IsTrace() {
+				_, _ = buf.WriteString(t.String())
 			}
 
-			if p.logger.GetLevel() <= hclog.Debug {
-				if p.logger.IsTrace() {
-					_, _ = buf.WriteString(t.String())
-				}
-
-				if p.logger.IsDebug() {
-					_, _ = buf.WriteString(t.Hash().String())
-				}
-
-				if i != len(block.Transactions)-1 {
-					_, _ = buf.WriteString("\n")
-				}
+			if p.logger.IsDebug() {
+				_, _ = buf.WriteString(t.Hash().String())
 			}
 
-			return &types.IterationResult{}
-		})
-
-	if err != nil {
-		return nil, err
+			if i != len(block.Transactions)-1 {
+				_, _ = buf.WriteString("\n")
+			}
+		}
 	}
 
 	p.logger.Debug("[BlockchainWrapper.ProcessBlock]", "txs count", len(block.Transactions), "txs", buf.String())

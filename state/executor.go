@@ -145,13 +145,15 @@ func (e *Executor) ProcessBlock(
 
 	var buf bytes.Buffer
 
-	err = block.TxnIterator(func(i int, t *types.Transaction) *types.IterationResult {
+	for i, t := range block.Transactions {
 		if t.Gas() > block.Header.GasLimit {
-			return &types.IterationResult{ShouldContinue: true}
+			continue
 		}
 
 		if err = txn.Write(t); err != nil {
-			return &types.IterationResult{Err: err}
+			e.logger.Error("failed to write transaction to the block", "tx", t, "err", err)
+
+			return nil, err
 		}
 
 		if e.logger.GetLevel() <= hclog.Debug {
@@ -167,12 +169,6 @@ func (e *Executor) ProcessBlock(
 				_, _ = buf.WriteString("\n")
 			}
 		}
-
-		return &types.IterationResult{}
-	})
-
-	if err != nil {
-		return nil, err
 	}
 
 	if e.logger.IsDebug() {
