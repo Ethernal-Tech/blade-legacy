@@ -170,14 +170,14 @@ func (t *TxAccessList) String() string {
 	var buf bytes.Buffer
 
 	for _, accessEntry := range *t {
-		buf.WriteString(fmt.Sprintf("address=%s", accessEntry.Address))
+		_, _ = buf.WriteString(fmt.Sprintf("address=%s", accessEntry.Address))
 
 		for i, storageKey := range accessEntry.StorageKeys {
 			if i == 0 {
-				buf.WriteString("\n")
+				_, _ = buf.WriteString("\n")
 			}
 
-			buf.WriteString(fmt.Sprintf("\tkey=%s", storageKey))
+			_, _ = buf.WriteString(fmt.Sprintf("\tstorage key=%s", storageKey))
 		}
 	}
 
