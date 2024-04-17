@@ -671,7 +671,8 @@ func (r *BaseLoadTestRunner) saveResultsToJSONFile(
 // The transaction hashes are appended to the allTxnHashes slice.
 // Finally, the function prints the time taken to send the transactions
 // and returns the transaction hashes and nil error.
-func (r *BaseLoadTestRunner) sendTransactions(createTxnFn func(*account, *feeData, *big.Int) *types.Transaction) ([]types.Hash, error) {
+func (r *BaseLoadTestRunner) sendTransactions(createTxnFn func(*account, *feeData, *big.Int) *types.Transaction,
+) ([]types.Hash, error) {
 	fmt.Println("=============================================================")
 
 	chainID, err := r.client.ChainID()
@@ -792,7 +793,7 @@ func (r *BaseLoadTestRunner) sendTransactionsForUserInBatches(account *account, 
 	txHashes := make([]types.Hash, 0, r.cfg.TxsPerUser)
 	sendErrs := make([]error, 0)
 	totalTxs := 0
-	gas := uint64(0)
+	var gas uint64
 
 	feeData, err := getFeeData(r.client, r.cfg.DynamicTxs)
 	if err != nil {
@@ -849,7 +850,7 @@ func (r *BaseLoadTestRunner) sendTransactionsForUserInBatches(account *account, 
 		}
 
 		txHashes = append(txHashes, hashes...)
-		bar.Add(len(batchTxs))
+		_ = bar.Add(len(batchTxs))
 	}
 
 	return txHashes, sendErrs, nil

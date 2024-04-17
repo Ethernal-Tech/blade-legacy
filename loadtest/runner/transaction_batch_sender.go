@@ -81,9 +81,10 @@ func (h *TransactionBatchSender) SendBatch(params []string) ([]types.Hash, error
 	}
 
 	txHashes := make([]types.Hash, 0, len(responses))
+
 	for _, response := range responses {
 		if response.Error != nil {
-			return nil, fmt.Errorf("error: %v", response.Error)
+			return nil, fmt.Errorf("error: %w", response.Error)
 		}
 
 		txHashes = append(txHashes, types.StringToHash(strings.Trim(string(response.Result), "\"")))
