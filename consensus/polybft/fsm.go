@@ -219,7 +219,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 				buf.WriteString(tx.String())
 			}
 
-			if i != len(stateBlock.Block.Transactions) {
+			if i != len(stateBlock.Block.Transactions)-1 {
 				buf.WriteString("\n")
 			}
 		}
