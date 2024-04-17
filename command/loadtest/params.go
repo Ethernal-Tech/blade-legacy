@@ -30,7 +30,7 @@ var (
 	errUnsupportedLoadTestType = errors.New("unsupported load test type")
 	errInvalidVUs              = errors.New("vus must be greater than 0")
 	errInvalidTxsPerUser       = errors.New("txs-per-user must be greater than 0")
-	errInvalidBatchSize        = errors.New("batch-size must be greater than 0 and les or equal to txs-per-user")
+	errInvalidBatchSize        = errors.New("batch-size must be greater than 0 and less or equal to txs-per-user")
 )
 
 type loadTestParams struct {

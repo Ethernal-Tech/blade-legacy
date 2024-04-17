@@ -793,6 +793,7 @@ func (r *BaseLoadTestRunner) sendTransactionsForUserInBatches(account *account, 
 	txHashes := make([]types.Hash, 0, r.cfg.TxsPerUser)
 	sendErrs := make([]error, 0)
 	totalTxs := 0
+
 	var gas uint64
 
 	feeData, err := getFeeData(r.client, r.cfg.DynamicTxs)
