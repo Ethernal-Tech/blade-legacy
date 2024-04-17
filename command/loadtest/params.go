@@ -18,6 +18,7 @@ const (
 	vusFlag        = "vus"
 	txsPerUserFlag = "txs-per-user"
 	dynamicTxsFlag = "dynamic"
+	batchSizeFlag  = "batch-size"
 
 	saveToJSONFlag           = "to-json"
 	waitForTxPoolToEmptyFlag = "wait-txpool"
@@ -29,6 +30,7 @@ var (
 	errUnsupportedLoadTestType = errors.New("unsupported load test type")
 	errInvalidVUs              = errors.New("vus must be greater than 0")
 	errInvalidTxsPerUser       = errors.New("txs-per-user must be greater than 0")
+	errInvalidBatchSize        = errors.New("batch-size must be greater than 0 and les or equal to txs-per-user")
 )
 
 type loadTestParams struct {
@@ -42,6 +44,7 @@ type loadTestParams struct {
 
 	vus        int
 	txsPerUser int
+	batchSize  int
 
 	dynamicTxs           bool
 	toJSON               bool
@@ -67,6 +70,10 @@ func (ltp *loadTestParams) validateFlags() error {
 
 	if ltp.txsPerUser < 1 {
 		return errInvalidTxsPerUser
+	}
+
+	if ltp.batchSize < 1 || ltp.batchSize > ltp.txsPerUser {
+		return errInvalidBatchSize
 	}
 
 	return nil

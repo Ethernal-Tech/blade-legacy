@@ -55,6 +55,7 @@ type LoadTestConfig struct {
 
 	VUs        int  // VUs is the number of virtual users.
 	TxsPerUser int  // TxsPerUser is the number of transactions per user.
+	BatchSize  int  // BatchSize is the number of transactions to send in a single batch.
 	DynamicTxs bool // DynamicTxs indicates whether the load test should generate dynamic transactions.
 
 	ResultsToJSON        bool // ResultsToJSON indicates whether the results should be written in JSON format.

@@ -21,6 +21,7 @@ type ERC20Runner struct {
 
 	erc20Token         types.Address
 	erc20TokenArtifact *contracts.Artifact
+	txInput            []byte
 }
 
 // NewERC20Runner creates a new ERC20Runner instance with the given LoadTestConfig.
@@ -68,7 +69,7 @@ func (e *ERC20Runner) Run() error {
 		go e.waitForReceiptsParallel()
 		go e.calculateResultsParallel()
 
-		_, err := e.sendTransactions()
+		_, err := e.sendTransactions(e.createERC20Transaction)
 		if err != nil {
 			return err
 		}
@@ -76,7 +77,7 @@ func (e *ERC20Runner) Run() error {
 		return <-e.done
 	}
 
-	txHashes, err := e.sendTransactions()
+	txHashes, err := e.sendTransactions(e.createERC20Transaction)
 	if err != nil {
 		return err
 	}
@@ -135,6 +136,16 @@ func (e *ERC20Runner) deployERC20Token() error {
 
 	e.erc20Token = types.Address(receipt.ContractAddress)
 	e.erc20TokenArtifact = artifact
+
+	input, err = e.erc20TokenArtifact.Abi.Methods["transfer"].Encode(map[string]interface{}{
+		"receiver":  receiverAddr,
+		"numTokens": big.NewInt(1),
+	})
+	if err != nil {
+		return err
+	}
+
+	e.txInput = input
 
 	fmt.Printf("Deploying ERC20 token took %s\n", time.Since(start))
 
@@ -219,79 +230,26 @@ func (e *ERC20Runner) mintERC20TokenToVUs() error {
 	return nil
 }
 
-// sendTransactions sends transactions for the load test.
-func (e *ERC20Runner) sendTransactions() ([]types.Hash, error) {
-	return e.BaseLoadTestRunner.sendTransactions(e.sendTransactionsForUser)
-}
-
-// sendTransactionsForUser sends ERC20 token transactions for a given user account.
-// It takes an account pointer and a chainID as input parameters.
-// It returns a slice of transaction hashes and an error if any.
-func (e *ERC20Runner) sendTransactionsForUser(account *account, chainID *big.Int,
-	bar *progressbar.ProgressBar) ([]types.Hash, []error, error) {
-	txRelayer, err := txrelayer.NewTxRelayer(
-		txrelayer.WithClient(e.client),
-		txrelayer.WithChainID(chainID),
-		txrelayer.WithCollectTxnHashes(),
-		txrelayer.WithNoWaiting(),
-		txrelayer.WithEstimateGasFallback(),
-		txrelayer.WithoutNonceGet(),
-	)
-	if err != nil {
-		return nil, nil, err
+// createERC20Transaction creates an ERC20 transaction
+func (e *ERC20Runner) createERC20Transaction(account *account, feeData *feeData,
+	chainID *big.Int) *types.Transaction {
+	if e.cfg.DynamicTxs {
+		return types.NewTx(types.NewDynamicFeeTx(
+			types.WithNonce(account.nonce),
+			types.WithTo(&e.erc20Token),
+			types.WithFrom(account.key.Address()),
+			types.WithGasFeeCap(feeData.gasFeeCap),
+			types.WithGasTipCap(feeData.gasTipCap),
+			types.WithChainID(chainID),
+			types.WithInput(e.txInput),
+		))
 	}
 
-	feeData, err := getFeeData(e.client, e.cfg.DynamicTxs)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	sendErrs := make([]error, 0)
-	checkFeeDataNum := e.cfg.TxsPerUser / 5
-
-	for i := 0; i < e.cfg.TxsPerUser; i++ {
-		input, err := e.erc20TokenArtifact.Abi.Methods["transfer"].Encode(map[string]interface{}{
-			"receiver":  receiverAddr,
-			"numTokens": big.NewInt(1),
-		})
-		if err != nil {
-			return nil, nil, err
-		}
-
-		if i%checkFeeDataNum == 0 {
-			feeData, err = getFeeData(e.client, e.cfg.DynamicTxs)
-			if err != nil {
-				return nil, nil, err
-			}
-		}
-
-		if e.cfg.DynamicTxs {
-			_, err = txRelayer.SendTransaction(types.NewTx(types.NewDynamicFeeTx(
-				types.WithNonce(account.nonce),
-				types.WithTo(&e.erc20Token),
-				types.WithFrom(account.key.Address()),
-				types.WithGasFeeCap(feeData.gasFeeCap),
-				types.WithGasTipCap(feeData.gasTipCap),
-				types.WithChainID(chainID),
-				types.WithInput(input),
-			)), account.key)
-		} else {
-			_, err = txRelayer.SendTransaction(types.NewTx(types.NewLegacyTx(
-				types.WithNonce(account.nonce),
-				types.WithTo(&e.erc20Token),
-				types.WithGasPrice(feeData.gasPrice),
-				types.WithFrom(account.key.Address()),
-				types.WithInput(input),
-			)), account.key)
-		}
-
-		if err != nil {
-			sendErrs = append(sendErrs, err)
-		}
-
-		account.nonce++
-		_ = bar.Add(1)
-	}
-
-	return txRelayer.GetTxnHashes(), sendErrs, nil
+	return types.NewTx(types.NewLegacyTx(
+		types.WithNonce(account.nonce),
+		types.WithTo(&e.erc20Token),
+		types.WithGasPrice(feeData.gasPrice),
+		types.WithFrom(account.key.Address()),
+		types.WithInput(e.txInput),
+	))
 }

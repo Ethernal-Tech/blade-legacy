@@ -2,6 +2,7 @@ package runner
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -48,6 +49,8 @@ type BaseLoadTestRunner struct {
 
 	resultsCollectedCh chan *stats
 	done               chan error
+
+	batchSender *TransactionBatchSender
 }
 
 // NewBaseLoadTestRunner creates a new instance of BaseLoadTestRunner with the provided LoadTestConfig.
@@ -82,6 +85,7 @@ func NewBaseLoadTestRunner(cfg LoadTestConfig) (*BaseLoadTestRunner, error) {
 		client:             client,
 		resultsCollectedCh: make(chan *stats),
 		done:               make(chan error),
+		batchSender:        newTransactionBatchSender(cfg.JSONRPCUrl),
 	}, nil
 }
 
@@ -667,8 +671,7 @@ func (r *BaseLoadTestRunner) saveResultsToJSONFile(
 // The transaction hashes are appended to the allTxnHashes slice.
 // Finally, the function prints the time taken to send the transactions
 // and returns the transaction hashes and nil error.
-func (r *BaseLoadTestRunner) sendTransactions(
-	sendFn func(*account, *big.Int, *progressbar.ProgressBar) ([]types.Hash, []error, error)) ([]types.Hash, error) {
+func (r *BaseLoadTestRunner) sendTransactions(createTxnFn func(*account, *feeData, *big.Int) *types.Transaction) ([]types.Hash, error) {
 	fmt.Println("=============================================================")
 
 	chainID, err := r.client.ChainID()
@@ -691,6 +694,11 @@ func (r *BaseLoadTestRunner) sendTransactions(
 
 	g, ctx := errgroup.WithContext(context.Background())
 
+	sendFn := r.sendTransactionsForUser
+	if r.cfg.BatchSize > 1 {
+		sendFn = r.sendTransactionsForUserInBatches
+	}
+
 	for _, vu := range r.vus {
 		vu := vu
 
@@ -700,7 +708,7 @@ func (r *BaseLoadTestRunner) sendTransactions(
 				return ctx.Err()
 
 			default:
-				txnHashes, sendErrors, err := sendFn(vu, chainID, bar)
+				txnHashes, sendErrors, err := sendFn(vu, chainID, bar, createTxnFn)
 				if err != nil {
 					return err
 				}
@@ -726,6 +734,125 @@ func (r *BaseLoadTestRunner) sendTransactions(
 	}
 
 	return allTxnHashes, nil
+}
+
+// sendTransactionsForUser sends ERC20 token transactions for a given user account.
+// It takes an account pointer and a chainID as input parameters.
+// It returns a slice of transaction hashes and an error if any.
+func (r *BaseLoadTestRunner) sendTransactionsForUser(account *account, chainID *big.Int,
+	bar *progressbar.ProgressBar, createTxnFn func(*account, *feeData, *big.Int) *types.Transaction,
+) ([]types.Hash, []error, error) {
+	txRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithClient(r.client),
+		txrelayer.WithChainID(chainID),
+		txrelayer.WithCollectTxnHashes(),
+		txrelayer.WithNoWaiting(),
+		txrelayer.WithEstimateGasFallback(),
+		txrelayer.WithoutNonceGet(),
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	feeData, err := getFeeData(r.client, r.cfg.DynamicTxs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	sendErrs := make([]error, 0)
+	checkFeeDataNum := r.cfg.TxsPerUser / 5
+
+	for i := 0; i < r.cfg.TxsPerUser; i++ {
+		if i%checkFeeDataNum == 0 {
+			feeData, err = getFeeData(r.client, r.cfg.DynamicTxs)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		_, err = txRelayer.SendTransaction(createTxnFn(account, feeData, chainID), account.key)
+		if err != nil {
+			sendErrs = append(sendErrs, err)
+		}
+
+		account.nonce++
+		_ = bar.Add(1)
+	}
+
+	return txRelayer.GetTxnHashes(), sendErrs, nil
+}
+
+// sendTransactionsForUserInBatches sends user transactions in batches to the rpc node
+func (r *BaseLoadTestRunner) sendTransactionsForUserInBatches(account *account, chainID *big.Int,
+	bar *progressbar.ProgressBar, createTxnFn func(*account, *feeData, *big.Int) *types.Transaction,
+) ([]types.Hash, []error, error) {
+	signer := crypto.NewLondonSigner(chainID.Uint64())
+
+	numOfBatches := int(math.Ceil(float64(r.cfg.TxsPerUser) / float64(r.cfg.BatchSize)))
+	txHashes := make([]types.Hash, 0, r.cfg.TxsPerUser)
+	sendErrs := make([]error, 0)
+	totalTxs := 0
+	gas := uint64(0)
+
+	feeData, err := getFeeData(r.client, r.cfg.DynamicTxs)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	txnExample := createTxnFn(account, feeData, chainID)
+	if txnExample.Gas() == 0 {
+		// estimate gas initially
+		gasLimit, err := r.client.EstimateGas(txrelayer.ConvertTxnToCallMsg(txnExample))
+		if err != nil {
+			gasLimit = txrelayer.DefaultGasLimit
+		}
+
+		gas = gasLimit * 2 // double it just in case
+	} else {
+		gas = txnExample.Gas()
+	}
+
+	for i := 0; i < numOfBatches; i++ {
+		batchTxs := make([]string, 0, r.cfg.BatchSize)
+
+		feeData, err := getFeeData(r.client, r.cfg.DynamicTxs)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for j := 0; j < r.cfg.BatchSize; j++ {
+			if totalTxs >= r.cfg.TxsPerUser {
+				break
+			}
+
+			txn := createTxnFn(account, feeData, chainID)
+			txn.SetGas(gas)
+
+			signedTxn, err := signer.SignTxWithCallback(txn,
+				func(hash types.Hash) (sig []byte, err error) {
+					return account.key.Sign(hash.Bytes())
+				})
+			if err != nil {
+				sendErrs = append(sendErrs, err)
+
+				continue
+			}
+
+			batchTxs = append(batchTxs, "0x"+hex.EncodeToString(signedTxn.MarshalRLP()))
+			account.nonce++
+			totalTxs++
+		}
+
+		hashes, err := r.batchSender.SendBatch(batchTxs)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		txHashes = append(txHashes, hashes...)
+		bar.Add(len(batchTxs))
+	}
+
+	return txHashes, sendErrs, nil
 }
 
 // getFeeData retrieves fee data based on the provided JSON-RPC Ethereum client and dynamicTxs flag.

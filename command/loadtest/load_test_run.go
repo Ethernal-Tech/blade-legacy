@@ -105,6 +105,13 @@ func setFlags(cmd *cobra.Command) {
 		"waits for tx pool to empty before collecting results",
 	)
 
+	cmd.Flags().IntVar(
+		&params.batchSize,
+		batchSizeFlag,
+		1,
+		"size of a batch of transactions to send to rpc node",
+	)
+
 	_ = cmd.MarkFlagRequired(mnemonicFlag)
 	_ = cmd.MarkFlagRequired(loadTestTypeFlag)
 }
@@ -124,6 +131,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		TxPoolTimeout:        params.txPoolTimeout,
 		VUs:                  params.vus,
 		TxsPerUser:           params.txsPerUser,
+		BatchSize:            params.batchSize,
 		DynamicTxs:           params.dynamicTxs,
 		ResultsToJSON:        params.toJSON,
 		WaitForTxPoolToEmpty: params.waitForTxPoolToEmpty,
