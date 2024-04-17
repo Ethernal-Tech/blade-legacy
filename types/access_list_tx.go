@@ -171,6 +171,7 @@ func (t *TxAccessList) String() string {
 
 	for _, accessEntry := range *t {
 		buf.WriteString(fmt.Sprintf("address=%s", accessEntry.Address))
+
 		for i, storageKey := range accessEntry.StorageKeys {
 			if i == 0 {
 				buf.WriteString("\n")
