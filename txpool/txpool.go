@@ -13,7 +13,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/peer"
 	"google.golang.org/grpc"
 
-	"github.com/0xPolygon/polygon-edge/blockchain"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/network"
 	"github.com/0xPolygon/polygon-edge/state"
@@ -473,27 +472,15 @@ func (p *TxPool) Demote(tx *types.Transaction) {
 	p.eventManager.signalEvent(proto.EventType_DEMOTED, tx.Hash())
 }
 
-// ResetWithHeaders processes the transactions from the new
-// headers to sync the pool with the new state.
-func (p *TxPool) ResetWithHeaders(headers ...*types.Header) {
-	// process the txs in the event
-	// to make sure the pool is up-to-date
-	p.processEvent(&blockchain.Event{
-		NewChain: headers,
-	})
-}
-
-// ResetWithFullBlock processes the transactions from the new
+// ResetWithBlock processes the transactions from the new
 // full blocks to sync the pool with the new state.
-func (p *TxPool) ResetWithFullBlock(fullBlock *types.FullBlock) {
+func (p *TxPool) ResetWithBlock(block *types.Block) {
 	// process the txs in the event
 	// to make sure the pool is up-to-date
-	p.processFullBlock(fullBlock)
-}
+	// Grab the latest state root now that the block has been inserted
+	stateRoot := p.store.Header().StateRoot
+	stateNonces := make(map[types.Address]uint64)
 
-// collectNoncesFromFinalizedBlock extracts the latest nonces from the newly finalized block
-func (p *TxPool) collectNoncesFromFinalizedBlock(stateRoot types.Hash,
-	stateNonces map[types.Address]uint64, block *types.Block) {
 	// remove mined txs from the lookup map
 	p.index.remove(block.Transactions...)
 
@@ -524,14 +511,8 @@ func (p *TxPool) collectNoncesFromFinalizedBlock(stateRoot types.Hash,
 		// update the result map
 		stateNonces[addr] = latestNonce
 	}
-}
 
-// processFinalizedBlocks updates the pool with the latest state
-func (p *TxPool) processFinalizedBlocks(stateNonces map[types.Address]uint64, headers ...*types.Header) {
-	// update base fee
-	if ln := len(headers); ln > 0 {
-		p.SetBaseFee(headers[ln-1])
-	}
+	p.SetBaseFee(block.Header)
 
 	// reset accounts with the new state
 	p.resetAccounts(stateNonces)
@@ -540,39 +521,6 @@ func (p *TxPool) processFinalizedBlocks(stateNonces map[types.Address]uint64, he
 		// only non-validator cleanup inactive accounts
 		p.updateAccountSkipsCounts(stateNonces)
 	}
-}
-
-// processFullBlock collects the latest nonces for each account contained
-// in the received full block. Resets all known accounts with the new nonce.
-func (p *TxPool) processFullBlock(fullBlock *types.FullBlock) {
-	// Grab the latest state root now that the block has been inserted
-	stateRoot := p.store.Header().StateRoot
-	stateNonces := make(map[types.Address]uint64)
-
-	p.collectNoncesFromFinalizedBlock(stateRoot, stateNonces, fullBlock.Block)
-	p.processFinalizedBlocks(stateNonces, fullBlock.Block.Header)
-}
-
-// processEvent collects the latest nonces for each account contained
-// in the received event. Resets all known accounts with the new nonce.
-func (p *TxPool) processEvent(event *blockchain.Event) {
-	// Grab the latest state root now that the block has been inserted
-	stateRoot := p.store.Header().StateRoot
-	stateNonces := make(map[types.Address]uint64)
-
-	// discover latest (next) nonces for all accounts
-	for _, header := range event.NewChain {
-		block, ok := p.store.GetBlockByHash(header.Hash, true)
-		if !ok {
-			p.logger.Error("could not find block in store", "hash", header.Hash.String())
-
-			continue
-		}
-
-		p.collectNoncesFromFinalizedBlock(stateRoot, stateNonces, block)
-	}
-
-	p.processFinalizedBlocks(stateNonces, event.NewChain...)
 }
 
 // validateTx ensures the transaction conforms to specific

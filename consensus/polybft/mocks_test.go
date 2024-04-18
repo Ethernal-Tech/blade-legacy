@@ -356,7 +356,7 @@ func (tp *txPoolMock) SetSealing(v bool) {
 	tp.Called(v)
 }
 
-func (tp *txPoolMock) ResetWithFullBlock(fullBlock *types.FullBlock) {
+func (tp *txPoolMock) ResetWithBlock(fullBlock *types.Block) {
 	tp.Called(fullBlock)
 }
 

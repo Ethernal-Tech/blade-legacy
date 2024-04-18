@@ -47,7 +47,7 @@ type txPoolInterface interface {
 	Drop(*types.Transaction)
 	Demote(*types.Transaction)
 	SetSealing(bool)
-	ResetWithFullBlock(*types.FullBlock)
+	ResetWithBlock(*types.Block)
 }
 
 // epochMetadata is the static info for epoch currently being processed
@@ -280,7 +280,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	}
 
 	// after the block has been written we reset the txpool so that the old transactions are removed
-	c.config.txPool.ResetWithFullBlock(fullBlock)
+	c.config.txPool.ResetWithBlock(fullBlock.Block)
 
 	var (
 		epoch = c.epoch
