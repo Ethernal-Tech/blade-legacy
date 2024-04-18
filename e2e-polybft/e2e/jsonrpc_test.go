@@ -326,31 +326,31 @@ func TestE2E_JsonRPC(t *testing.T) {
 	t.Run("eth_createAccessList", func(t *testing.T) {
 		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
 		require.True(t, deployTxn.Succeed())
-		receipt := deployTxn.Receipt()
+		receiver := types.Address(deployTxn.Receipt().ContractAddress)
 
-		target := types.Address(receipt.ContractAddress)
-		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
-
-		gasPrice, err := newEthClient.GasPrice()
-		require.NoError(t, err)
-
-		// setValueFn := contractsapi.TestSimple.Abi.GetMethod("setValue")
-		// newVal := big.NewInt(0)
-
-		// output, err := setValueFn.Encode([]interface{}{newVal})
-		// require.NoError(t, err)
-		// require.NotNil(t, output)
-
-		txn := &bladeRPC.CallMsg{
-			From:       preminedAcct.Address(),
-			To:         &target,
-			Gas:        92100,
-			GasPrice:   new(big.Int).SetUint64(gasPrice),
-			Data:       input,
-			AccessList: deployTxn.Txn().AccessList(),
+		newAccessList := make(types.TxAccessList, 1)
+		newAccessList[0] = types.AccessTuple{
+			Address:     receiver,
+			StorageKeys: []types.Hash{types.EmptyCodeHash},
 		}
 
-		accessListResult, err := newEthClient.CreateAccessList(txn, bladeRPC.LatestBlockNumberOrHash)
+		setValueFn := contractsapi.TestSimple.Abi.GetMethod("setValue")
+
+		newVal := big.NewInt(1)
+
+		inputValue, err := setValueFn.Encode([]interface{}{newVal})
+		require.NoError(t, err)
+
+		txtype := uint64(types.DynamicFeeTxType)
+		msg := &bladeRPC.CallMsg{
+			From:       preminedAcct.Address(),
+			To:         &receiver,
+			Data:       inputValue,
+			Type:       txtype,
+			AccessList: newAccessList,
+		}
+
+		accessListResult, err := newEthClient.CreateAccessList(msg, bladeRPC.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.NotNil(t, accessListResult)
 
@@ -361,10 +361,20 @@ func TestE2E_JsonRPC(t *testing.T) {
 		isDone := false
 
 		for _, accessTuple := range accessListResult.Accesslist {
-			if ethgo.Address(accessTuple.Address) == receipt.ContractAddress {
-				isDone = true
+			if ethgo.Address(accessTuple.Address) == ethgo.Address(receiver) {
+				if len(accessTuple.StorageKeys) != 0 {
+					for _, sKeys := range accessTuple.StorageKeys {
+						if sKeys == newAccessList[0].StorageKeys[0] {
+							isDone = true
 
-				break
+							break
+						}
+					}
+
+					if isDone {
+						break
+					}
+				}
 			}
 		}
 
