@@ -483,6 +483,76 @@ func (p *TxPool) ResetWithHeaders(headers ...*types.Header) {
 	})
 }
 
+// ResetWithFullBlock processes the transactions from the new
+// full blocks to sync the pool with the new state.
+func (p *TxPool) ResetWithFullBlock(fullBlock *types.FullBlock) {
+	// process the txs in the event
+	// to make sure the pool is up-to-date
+	p.processFullBlock(fullBlock)
+}
+
+// collectNoncesFromFinalizedBlock extracts the latest nonces from the newly finalized block
+func (p *TxPool) collectNoncesFromFinalizedBlock(stateRoot types.Hash,
+	stateNonces map[types.Address]uint64, block *types.Block) {
+	// remove mined txs from the lookup map
+	p.index.remove(block.Transactions...)
+
+	// Extract latest nonces
+	for _, tx := range block.Transactions {
+		var err error
+
+		addr := tx.From()
+		if addr == types.ZeroAddress {
+			// From field is not set, extract the signer
+			if addr, err = p.signer.Sender(tx); err != nil {
+				p.logger.Error(
+					fmt.Sprintf("unable to extract signer for transaction, %v", err),
+				)
+
+				continue
+			}
+		}
+
+		// skip already processed accounts
+		if _, processed := stateNonces[addr]; processed {
+			continue
+		}
+
+		// fetch latest nonce from the state
+		latestNonce := p.store.GetNonce(stateRoot, addr)
+
+		// update the result map
+		stateNonces[addr] = latestNonce
+	}
+}
+
+// processFinalizedBlocks updates the pool with the latest state
+func (p *TxPool) processFinalizedBlocks(stateNonces map[types.Address]uint64, headers ...*types.Header) {
+	// update base fee
+	if ln := len(headers); ln > 0 {
+		p.SetBaseFee(headers[ln-1])
+	}
+
+	// reset accounts with the new state
+	p.resetAccounts(stateNonces)
+
+	if !p.sealing.Load() {
+		// only non-validator cleanup inactive accounts
+		p.updateAccountSkipsCounts(stateNonces)
+	}
+}
+
+// processFullBlock collects the latest nonces for each account contained
+// in the received full block. Resets all known accounts with the new nonce.
+func (p *TxPool) processFullBlock(fullBlock *types.FullBlock) {
+	// Grab the latest state root now that the block has been inserted
+	stateRoot := p.store.Header().StateRoot
+	stateNonces := make(map[types.Address]uint64)
+
+	p.collectNoncesFromFinalizedBlock(stateRoot, stateNonces, fullBlock.Block)
+	p.processFinalizedBlocks(stateNonces, fullBlock.Block.Header)
+}
+
 // processEvent collects the latest nonces for each account contained
 // in the received event. Resets all known accounts with the new nonce.
 func (p *TxPool) processEvent(event *blockchain.Event) {
@@ -499,50 +569,10 @@ func (p *TxPool) processEvent(event *blockchain.Event) {
 			continue
 		}
 
-		// remove mined txs from the lookup map
-		p.index.remove(block.Transactions...)
-
-		// Extract latest nonces
-		for _, tx := range block.Transactions {
-			var err error
-
-			addr := tx.From()
-			if addr == types.ZeroAddress {
-				// From field is not set, extract the signer
-				if addr, err = p.signer.Sender(tx); err != nil {
-					p.logger.Error(
-						fmt.Sprintf("unable to extract signer for transaction, %v", err),
-					)
-
-					continue
-				}
-			}
-
-			// skip already processed accounts
-			if _, processed := stateNonces[addr]; processed {
-				continue
-			}
-
-			// fetch latest nonce from the state
-			latestNonce := p.store.GetNonce(stateRoot, addr)
-
-			// update the result map
-			stateNonces[addr] = latestNonce
-		}
+		p.collectNoncesFromFinalizedBlock(stateRoot, stateNonces, block)
 	}
 
-	// update base fee
-	if ln := len(event.NewChain); ln > 0 {
-		p.SetBaseFee(event.NewChain[ln-1])
-	}
-
-	// reset accounts with the new state
-	p.resetAccounts(stateNonces)
-
-	if !p.sealing.Load() {
-		// only non-validator cleanup inactive accounts
-		p.updateAccountSkipsCounts(stateNonces)
-	}
+	p.processFinalizedBlocks(stateNonces, event.NewChain...)
 }
 
 // validateTx ensures the transaction conforms to specific

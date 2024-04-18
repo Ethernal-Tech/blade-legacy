@@ -3693,6 +3693,60 @@ func TestResetWithHeadersSetsBaseFee(t *testing.T) {
 	assert.Equal(t, blocks[len(blocks)-1].Header.BaseFee, pool.GetBaseFee())
 }
 
+func TestResetWithFullBlockSetsBaseFee(t *testing.T) {
+	t.Parallel()
+
+	blocks := []*types.FullBlock{
+		{
+			Block: &types.Block{
+				Header: &types.Header{
+					BaseFee: 100,
+					Hash:    types.Hash{1},
+				},
+			},
+		},
+		{
+			Block: &types.Block{
+				Header: &types.Header{
+					BaseFee: 1000,
+					Hash:    types.Hash{1},
+				},
+			},
+		},
+		{
+			Block: &types.Block{
+				Header: &types.Header{
+					BaseFee: 2000,
+					Hash:    types.Hash{1},
+				},
+			},
+		},
+	}
+
+	store := NewDefaultMockStore(blocks[0].Block.Header)
+	store.getBlockByHashFn = func(h types.Hash, b bool) (*types.Block, bool) {
+		for _, b := range blocks {
+			if b.Block.Header.Hash == h {
+				return b.Block, true
+			}
+		}
+
+		return nil, false
+	}
+
+	pool, err := newTestPool(store)
+	require.NoError(t, err)
+
+	pool.SetBaseFee(blocks[0].Block.Header)
+	require.Equal(t, blocks[0].Block.Header.BaseFee, pool.GetBaseFee())
+
+	pool.ResetWithFullBlock(blocks[len(blocks)-1])
+	require.Equal(t, blocks[len(blocks)-1].Block.Header.BaseFee, pool.GetBaseFee())
+
+	pool.ResetWithFullBlock(blocks[len(blocks)-2])
+	require.Equal(t, blocks[len(blocks)-2].Block.Header.BaseFee, pool.GetBaseFee())
+}
+
 func TestAddTx_TxReplacement(t *testing.T) {
 	t.Parallel()
 

@@ -230,7 +230,9 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 			"state root", stateBlock.Block.Header.StateRoot,
 			"proposal hash", checkpointHash.String(),
 			"txs count", len(stateBlock.Block.Transactions),
-			"txs", buf.String())
+			"txs", buf.String(),
+			"finsihedIn", time.Since(start),
+		)
 	}
 
 	f.target = stateBlock
@@ -321,6 +323,8 @@ func (f *fsm) ValidateCommit(signerAddr []byte, seal []byte, proposalHash []byte
 
 // Validate validates a raw proposal (used if non-proposer)
 func (f *fsm) Validate(proposal []byte) error {
+	start := time.Now().UTC()
+
 	var block types.Block
 	if err := block.UnmarshalRLP(proposal); err != nil {
 		return fmt.Errorf("failed to validate, cannot decode block data. Error: %w", err)
@@ -414,7 +418,9 @@ func (f *fsm) Validate(proposal []byte) error {
 			"block num", block.Number(),
 			"state root", block.Header.StateRoot,
 			"proposer", types.BytesToHash(block.Header.Miner),
-			"proposal hash", checkpointHash)
+			"proposal hash", checkpointHash,
+			"finishedIn", time.Since(start),
+		)
 	}
 
 	f.target = stateBlock
