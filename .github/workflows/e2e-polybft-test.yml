@@ -4,7 +4,7 @@ on: # yamllint disable-line rule:truthy
   workflow_call:
     outputs:
       workflow_output:
-        description: "E2E PolyBFT Tests output"
+        description: E2E PolyBFT Tests output
         value: ${{ jobs.e2e_polybft.outputs.e2e_polybft_output_failure }} 
 
 jobs:

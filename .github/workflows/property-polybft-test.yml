@@ -4,7 +4,7 @@ on: # yamllint disable-line rule:truthy
   workflow_call:
     outputs:
       workflow_output:
-        description: "Property PolyBFT Tests output"
+        description: Property PolyBFT Tests output
         value: ${{ jobs.polybft_property.outputs.property_output_failure }} 
 
 jobs:

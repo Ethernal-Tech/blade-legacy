@@ -4,7 +4,7 @@ on: # yamllint disable-line rule:truthy
   workflow_call:
     outputs:
       workflow_output:
-        description: "E2E Legacy Tests output"
+        description: E2E Legacy Tests output
         value: ${{ jobs.e2e_legacy.outputs.e2e_legacy_output_failure }}
 
 jobs:

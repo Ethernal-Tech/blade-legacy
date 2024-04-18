@@ -4,7 +4,7 @@ on: # yamllint disable-line rule:truthy
   workflow_call:
     outputs:
       workflow_output:
-        description: "Unit Tests output"
+        description: Unit Tests output
         value: ${{ jobs.unit_test.outputs.test_output_failure }}
 
 jobs:

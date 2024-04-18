@@ -76,10 +76,10 @@ on: # yamllint disable-line rule:truthy
         required: true
     outputs:
       terraform_output:
-        description: "Terraform output"
+        description: Terraform output
         value: ${{ jobs.deploy_network.outputs.terraform_output }}
       ansible_output:
-        description: "Ansible output"
+        description: Ansible output
         value: ${{ jobs.deploy_network.outputs.ansible_output }}
     secrets:
       AWS_ROLE_ARN:
@@ -115,7 +115,7 @@ jobs:
       - name: Check state file
         id: check_state_file
         if: contains(steps.retrieve_state.outputs.retrieve_state_output, 'download')
-        run: echo "resources=$(cat state.json | jq -r ".resources" | jq length)" >> $GITHUB_OUTPUT
+        run: echo "resources=$(cat state.json | jq -r '.resources' | jq length)" >> $GITHUB_OUTPUT
       - name: Set RPC URL
         id: rpc_url
         if: contains(steps.retrieve_state.outputs.retrieve_state_output, 'download')

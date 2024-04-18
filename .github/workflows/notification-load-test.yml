@@ -7,64 +7,68 @@ on: # yamllint disable-line rule:truthy
         description: The environment to run against
         type: string
         required: true
-      scenario:
-        description: The scenario to run
+      type:
+        description: The type of load test to run
         type: string
         required: true
-      timeout:
-        description: Time Out
+      dynamic:
+        description: Indicates whether the load test should generate dynamic transactions
+        type: boolean
+        required: true
+      vus:
+        description: The number of Virtual Users
         type: string
         required: true
-      rate:
-        description: Rate
+      txs_per_user:
+        description: The number of transactions per Virtual User
         type: string
         required: true
-      timeUnit:
-        description: Time Unit
+      txpool_timeout:
+        description: The timeout for waiting for the transaction pool to empty
         type: string
         required: true
-      duration:
-        description: Duration
+      wait_txpool:
+        description: Waits for transaction pool to empty before collecting results
+        type: boolean
+        required: true
+      receipts_timeout:
+        description: The timeout for waiting for transaction receipts
         type: string
         required: true
-      preAllocatedVUs:
-        description: Preallocated VUs
+      total_time:
+        description: Total Time
         type: string
         required: true
-      maxVUs:
-        description: Max VUs
+      total_txs:
+        description: Total Transactions
         type: string
         required: true
-      tps_avg:
-        description: "Average Transactions Per Second"
+      total_blocks:
+        description: Total Blocks
         type: string
         required: true
-      tps_max:
-        description: "Maximum Transactions Per Second"
+      avg_txs_per_second:
+        description: Average Transactions Per Second
         type: string
         required: true
-      iterations:
-        description: "Number Of Transactions"
+      max_txs_per_second:
+        description: Maximum Transactions Per Second
         type: string
         required: true
-      dropped_iterations:
-        description: "Number Of Dropped Transactions"
+      total_gas_used:
+        description: Total Gas Used
         type: string
         required: true
-      block:
-        description: "Block Number"
+      avg_gas_per_tx:
+        description: Average Gas Used Per Transaction
         type: string
         required: true
-      ttm:
-        description: "Time To Mine"
+      avg_gas_utilization:
+        description: Average Gas Utilization
         type: string
         required: true
-      gas_avg:
-        description: "Average Gas Used"
-        type: string
-        required: true
-      gas_max:
-        description: "Maximum Gas Used"
+      max_gas_utilization:
+        description: Maximum Gas Utilization
         type: string
         required: true
     secrets:
@@ -94,7 +98,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Load Test: ${{ inputs.scenario }}"
+                    "text": "Load Test: ${{ inputs.type }}"
                   }
                 },
                 {
@@ -145,27 +149,27 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Time Out: *${{ inputs.timeout }}*"
+                      "text": "Dynamic Fee TXs: *${{ inputs.dynamic }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Rate: *${{ inputs.rate }}*"
+                      "text": "VUs: *${{ inputs.dynamic }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Time Unit: *${{ inputs.timeUnit }}*"
+                      "text": "TXs/VU: *${{ inputs.txs_per_user }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Duration: *${{ inputs.duration }}*"
+                      "text": "TX Pool Timeout: *${{ inputs.txpool_timeout }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Preallocated VUs: *${{ inputs.preAllocatedVUs }}*"
+                      "text": "Wait TX Pool To Empty: *${{ inputs.wait_txpool }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Max VUs: *${{ inputs.maxVUs }}*"
+                      "text": "Receipts Timeout: *${{ inputs.receipts_timeout }}*"
                     }
                   ]
                 },
@@ -177,35 +181,39 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "*Average TPS*\n${{ inputs.tps_avg }}"
+                      "text": "*Total Time*\n${{ inputs.total_time }}s"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Max TPS*\n${{ inputs.tps_max }}"
+                      "text": "*Total Transactions*\n${{ inputs.total_txs }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Average Gas Used*\n${{ inputs.gas_avg }}"
+                      "text": "*Total Blocks*\n${{ inputs.total_blocks }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Max Gas Used*\n${{ inputs.gas_max }}"
+                      "text": "*Average TPS*\n${{ inputs.avg_txs_per_second }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Transactions*\n${{ inputs.iterations }}"
+                      "text": "*Max TPS*\n${{ inputs.max_txs_per_second }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Dropped Transactions*\n${{ inputs.dropped_iterations }}"
+                      "text": "*Total Gas Used*\n${{ inputs.total_gas_used }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Block Number*\n${{ inputs.block }}"
+                      "text": "*Average GPT*\n${{ inputs.avg_gas_per_tx }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Time to Mine (ms)*\n${{ inputs.ttm }}"
+                      "text": "*Average Gas Utilization*\n${{ inputs.avg_gas_utilization }}%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Maximum Gas Utilization*\n${{ inputs.max_gas_utilization }}%"
                     }
                   ]
                 }
