@@ -472,8 +472,8 @@ func (p *TxPool) Demote(tx *types.Transaction) {
 	p.eventManager.signalEvent(proto.EventType_DEMOTED, tx.Hash())
 }
 
-// ResetWithBlock processes the transactions from the new
-// full blocks to sync the pool with the new state.
+// ResetWithBlock processes the transactions from the newly
+// finalized block to sync the pool with the new state
 func (p *TxPool) ResetWithBlock(block *types.Block) {
 	// process the txs in the event
 	// to make sure the pool is up-to-date
