@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type PlaceholderStorage func(t *testing.T) (*Storage, func())
+type PlaceholderStorage func(t *testing.T) (*Storage, func(), string)
 
 var (
 	addr1 = types.StringToAddress("1")
@@ -57,7 +57,7 @@ func TestStorage(t *testing.T, m PlaceholderStorage) {
 func testCanonicalChain(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	var cases = []struct {
@@ -107,7 +107,7 @@ func testCanonicalChain(t *testing.T, m PlaceholderStorage) {
 func testDifficulty(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	var cases = []struct {
@@ -151,7 +151,7 @@ func testDifficulty(t *testing.T, m PlaceholderStorage) {
 func testHead(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	for i := uint64(0); i < 5; i++ {
@@ -188,7 +188,7 @@ func testHead(t *testing.T, m PlaceholderStorage) {
 func testForks(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	var cases = []struct {
@@ -217,7 +217,7 @@ func testForks(t *testing.T, m PlaceholderStorage) {
 func testHeader(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	header := &types.Header{
@@ -247,7 +247,7 @@ func testHeader(t *testing.T, m PlaceholderStorage) {
 func testBody(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	header := &types.Header{
@@ -321,7 +321,7 @@ func testBody(t *testing.T, m PlaceholderStorage) {
 func testReceipts(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	batch := s.NewWriter()
@@ -391,7 +391,7 @@ func testReceipts(t *testing.T, m PlaceholderStorage) {
 func testWriteCanonicalHeader(t *testing.T, m PlaceholderStorage) {
 	t.Helper()
 
-	s, closeFn := m(t)
+	s, closeFn, _ := m(t)
 	defer closeFn()
 
 	h := &types.Header{

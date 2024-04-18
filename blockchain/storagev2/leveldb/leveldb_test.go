@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -18,10 +19,10 @@ import (
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
-func newStorage(t *testing.T) (*storagev2.Storage, func()) {
+func newStorage(t *testing.T) (*storagev2.Storage, func(), string) {
 	t.Helper()
 
-	path, err := os.MkdirTemp("/tmp", "minimal_storage")
+	path, err := os.MkdirTemp("", "leveldbV2")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,31 +42,7 @@ func newStorage(t *testing.T) (*storagev2.Storage, func()) {
 		}
 	}
 
-	return s, closeFn
-}
-
-func newStorageP(t *testing.T) (*storagev2.Storage, func(), string) {
-	t.Helper()
-
-	p, err := os.MkdirTemp("", "leveldbV2-test")
-	require.NoError(t, err)
-
-	require.NoError(t, os.MkdirAll(p, 0755))
-
-	s, err := NewLevelDBStorage(p, hclog.NewNullLogger())
-	require.NoError(t, err)
-
-	closeFn := func() {
-		require.NoError(t, s.Close())
-
-		if err := s.Close(); err != nil {
-			t.Fatal(err)
-		}
-
-		require.NoError(t, os.RemoveAll(p))
-	}
-
-	return s, closeFn, p
+	return s, closeFn, path
 }
 
 func countLdbFilesInPath(path string) int {
@@ -79,27 +56,22 @@ func countLdbFilesInPath(path string) int {
 	return len(files)
 }
 
-func dirSize(t *testing.T, path string) int64 {
-	t.Helper()
-
+func dbSize(path string) (int64, error) {
 	var size int64
 
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
-			t.Fail()
+			return err
 		}
 
-		if !info.IsDir() {
+		if info != nil && !info.IsDir() && strings.Contains(info.Name(), ".ldb") {
 			size += info.Size()
 		}
 
 		return err
 	})
-	if err != nil {
-		t.Log(err)
-	}
 
-	return size
+	return size, err
 }
 
 func writeBlock(t *testing.T, s *storagev2.Storage, b *types.FullBlock) {
@@ -171,13 +143,16 @@ func TestStorage(t *testing.T) {
 }
 
 func TestWriteReadFullBlockInParallel(t *testing.T) {
-	s, _, path := newStorageP(t)
-	defer s.Close()
+	s, cleanUpFn, path := newStorage(t)
+	defer func() {
+		s.Close()
+		cleanUpFn()
+	}()
 
 	var wg sync.WaitGroup
 
 	blockCount := 100
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*2)
 
 	signchan := make(chan os.Signal, 1)
 	signal.Notify(signchan, syscall.SIGINT)
@@ -208,8 +183,9 @@ insertloop:
 		}
 	}
 
-	size := dirSize(t, path)
+	size, err := dbSize(path)
+	require.NoError(t, err)
 	t.Logf("\tldb file count: %d", countLdbFilesInPath(path))
-	t.Logf("\tdir size %d MBs", size/(1*opt.MiB))
+	t.Logf("\tdb size %d MBs", size/(1*opt.MiB))
 	wg.Wait()
 }

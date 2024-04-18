@@ -10,7 +10,7 @@ import (
 	"github.com/0xPolygon/go-ibft/messages"
 	"github.com/0xPolygon/go-ibft/messages/proto"
 	"github.com/armon/go-metrics"
-	hcf "github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-hclog"
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -101,7 +101,7 @@ type fsm struct {
 	proposerCommitmentToRegister *CommitmentMessageSigned
 
 	// logger instance
-	logger hcf.Logger
+	logger hclog.Logger
 
 	// target is the block being computed
 	target *types.FullBlock
@@ -192,7 +192,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		EventRoot:             f.exitEventRootHash,
 	}
 
-	f.logger.Debug("[Build Proposal]", "Current validators hash", currentValidatorsHash,
+	f.logger.Trace("[FSM.BuildProposal]", "Current validators hash", currentValidatorsHash,
 		"Next validators hash", nextValidatorsHash)
 
 	stateBlock, err := f.blockBuilder.Build(func(h *types.Header) {
@@ -204,15 +204,35 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		return nil, err
 	}
 
-	if f.logger.IsDebug() {
+	if f.logger.GetLevel() <= hclog.Debug {
 		checkpointHash, err := extra.Checkpoint.Hash(f.backend.GetChainID(), f.Height(), stateBlock.Block.Hash())
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}
 
-		f.logger.Debug("[FSM Build Proposal]",
-			"txs", len(stateBlock.Block.Transactions),
-			"proposal hash", checkpointHash.String())
+		var buf bytes.Buffer
+
+		for i, tx := range stateBlock.Block.Transactions {
+			if f.logger.IsDebug() {
+				buf.WriteString(tx.Hash().String())
+			} else if f.logger.IsTrace() {
+				buf.WriteString(tx.String())
+			}
+
+			if i != len(stateBlock.Block.Transactions)-1 {
+				buf.WriteString("\n")
+			}
+		}
+
+		f.logger.Debug("[FSM.BuildProposal]",
+			"block num", stateBlock.Block.Number(),
+			"round", currentRound,
+			"state root", stateBlock.Block.Header.StateRoot,
+			"proposal hash", checkpointHash.String(),
+			"txs count", len(stateBlock.Block.Transactions),
+			"txs", buf.String(),
+			"finsihedIn", time.Since(start),
+		)
 	}
 
 	f.target = stateBlock
@@ -303,6 +323,8 @@ func (f *fsm) ValidateCommit(signerAddr []byte, seal []byte, proposalHash []byte
 
 // Validate validates a raw proposal (used if non-proposer)
 func (f *fsm) Validate(proposal []byte) error {
+	start := time.Now().UTC()
+
 	var block types.Block
 	if err := block.UnmarshalRLP(proposal); err != nil {
 		return fmt.Errorf("failed to validate, cannot decode block data. Error: %w", err)
@@ -378,7 +400,7 @@ func (f *fsm) Validate(proposal []byte) error {
 			return fmt.Errorf("failed to retrieve validators:%w", err)
 		}
 
-		f.logger.Trace("[FSM Validate]", "Block", block.Number(), "parent validators", validators)
+		f.logger.Trace("[FSM.Validate]", "block num", block.Number(), "parent validators", validators)
 	}
 
 	stateBlock, err := f.backend.ProcessBlock(f.parent, &block)
@@ -392,7 +414,13 @@ func (f *fsm) Validate(proposal []byte) error {
 			return fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}
 
-		f.logger.Debug("[FSM Validate]", "txs", len(block.Transactions), "proposal hash", checkpointHash)
+		f.logger.Debug("[FSM.Validate]",
+			"block num", block.Number(),
+			"state root", block.Header.StateRoot,
+			"proposer", types.BytesToHash(block.Header.Miner),
+			"proposal hash", checkpointHash,
+			"finishedIn", time.Since(start),
+		)
 	}
 
 	f.target = stateBlock

@@ -16,10 +16,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newStorage(t *testing.T) (*storagev2.Storage, func()) {
+func newStorage(t *testing.T) (*storagev2.Storage, func(), string) {
 	t.Helper()
 
-	path, err := os.MkdirTemp("/tmp", "minimal_storage")
+	path, err := os.MkdirTemp("/tmp", "mdbx")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -39,36 +39,10 @@ func newStorage(t *testing.T) (*storagev2.Storage, func()) {
 		}
 	}
 
-	return s, closeFn
+	return s, closeFn, path
 }
 
-func newStorageP(t *testing.T) (*storagev2.Storage, func(), string) {
-	t.Helper()
-
-	p, err := os.MkdirTemp("", "mdbx-test")
-	require.NoError(t, err)
-
-	require.NoError(t, os.MkdirAll(p, 0755))
-
-	s, err := NewMdbxStorage(p, hclog.NewNullLogger())
-	require.NoError(t, err)
-
-	closeFn := func() {
-		require.NoError(t, s.Close())
-
-		if err := s.Close(); err != nil {
-			t.Fatal(err)
-		}
-
-		require.NoError(t, os.RemoveAll(p))
-	}
-
-	return s, closeFn, p
-}
-
-func dbSize(t *testing.T, path string) int64 {
-	t.Helper()
-
+func dbSize(path string) (int64, error) {
 	var size int64
 
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
@@ -82,9 +56,8 @@ func dbSize(t *testing.T, path string) int64 {
 
 		return nil
 	})
-	require.NoError(t, err)
 
-	return size
+	return size, err
 }
 
 func TestStorage(t *testing.T) {
@@ -92,8 +65,11 @@ func TestStorage(t *testing.T) {
 }
 
 func TestWriteFullBlock(t *testing.T) {
-	s, _, path := newStorageP(t)
-	defer s.Close()
+	s, cleanUpFn, path := newStorage(t)
+	defer func() {
+		s.Close()
+		cleanUpFn()
+	}()
 
 	count := 100
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*45)
@@ -130,9 +106,11 @@ insertloop:
 			batchWriter.PutCanonicalHash(uint64(i), b.Block.Hash())
 			require.NoError(t, batchWriter.WriteBatch())
 
-			size := dbSize(t, path)
 			t.Logf("writing block %d", i)
-			t.Logf("\tdir size %d MBs", size/1_000_000)
 		}
 	}
+
+	size, err := dbSize(path)
+	require.NoError(t, err)
+	t.Logf("\tdb size %d MBs", size/1048576)
 }

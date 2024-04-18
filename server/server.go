@@ -12,19 +12,23 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
-	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/leveldb"
-	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/memory"
-	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
-	"github.com/0xPolygon/polygon-edge/forkmanager"
-	"github.com/0xPolygon/polygon-edge/gasprice"
+	"github.com/hashicorp/go-hclog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 
 	"github.com/0xPolygon/polygon-edge/archive"
 	"github.com/0xPolygon/polygon-edge/blockchain"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/leveldb"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/memory"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
+	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/forkmanager"
+	"github.com/0xPolygon/polygon-edge/gasprice"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/progress"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
@@ -39,10 +43,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/txpool"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/0xPolygon/polygon-edge/validate"
-	"github.com/hashicorp/go-hclog"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"google.golang.org/grpc"
+	"github.com/0xPolygon/polygon-edge/versioning"
 )
 
 var (
@@ -146,7 +147,21 @@ func NewServer(config *Config) (*Server, error) {
 		restoreProgression: progress.NewProgressionWrapper(progress.ChainSyncRestore),
 	}
 
-	m.logger.Info("Data dir", "path", config.DataDir)
+	m.logger.Info("data dir", "path", config.DataDir)
+	m.logger.Info("version metadata",
+		"version", versioning.Version,
+		"commit", versioning.Commit,
+		"branch", versioning.Branch,
+		"build time", versioning.BuildTime)
+
+	if m.logger.IsDebug() {
+		chainConfigJSON, err := json.MarshalIndent(config.Chain, "", "\t")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal chain config to JSON: %w", err)
+		}
+
+		m.logger.Debug(fmt.Sprintf("chain configuration %s", string(chainConfigJSON)))
+	}
 
 	var dirPaths = []string{
 		"blockchain",
@@ -203,7 +218,7 @@ func NewServer(config *Config) (*Server, error) {
 	st := itrie.NewState(stateStorage)
 	m.state = st
 
-	m.executor = state.NewExecutor(config.Chain.Params, st, logger)
+	m.executor = state.NewExecutor(config.Chain.Params, st, logger.Named("executor"))
 
 	// custom write genesis hook per consensus engine
 	engineName := m.config.Chain.Params.GetEngine()
@@ -869,8 +884,10 @@ func (s *Server) setupJSONRPC() error {
 		BlockRangeLimit:          s.config.JSONRPC.BlockRangeLimit,
 		ConcurrentRequestsDebug:  s.config.JSONRPC.ConcurrentRequestsDebug,
 		WebSocketReadLimit:       s.config.JSONRPC.WebSocketReadLimit,
+		UseTLS:                   s.config.UseTLS,
 		TLSCertFile:              s.config.TLSCertFile,
 		TLSKeyFile:               s.config.TLSKeyFile,
+		SecretsManager:           s.secretsManager,
 	}
 
 	srv, err := jsonrpc.NewJSONRPC(s.logger, conf)

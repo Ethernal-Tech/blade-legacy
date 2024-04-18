@@ -11,6 +11,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -78,8 +79,18 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
 
-	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPCAddress),
-		txrelayer.WithReceiptsTimeout(params.txTimeout))
+	client, err := jsonrpc.NewEthClient(params.jsonRPCAddress)
+	if err != nil {
+		outputter.SetError(fmt.Errorf("failed to initialize eth client: %w", err))
+
+		return
+	}
+
+	txRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithClient(client),
+		txrelayer.WithReceiptsTimeout(params.txTimeout),
+		txrelayer.WithoutNonceGet(),
+	)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize tx relayer: %w", err))
 
@@ -89,6 +100,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	deployerKey, err := helper.DecodePrivateKey(params.deployerPrivateKey)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize deployer private key: %w", err))
+
+		return
+	}
+
+	senderNonce, err := client.GetNonce(deployerKey.Address(), jsonrpc.PendingBlockNumberOrHash)
+	if err != nil {
+		outputter.SetError(fmt.Errorf("failed to get deployer nonce: %w", err))
 
 		return
 	}
@@ -107,6 +125,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 			default:
 				fundAddr := params.addresses[i]
 				txn := helper.CreateTransaction(types.ZeroAddress, &fundAddr, nil, params.amountValues[i], true)
+				txn.SetNonce(senderNonce + uint64(i))
 
 				var (
 					receipt *ethgo.Receipt

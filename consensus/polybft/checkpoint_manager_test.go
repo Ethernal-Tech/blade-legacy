@@ -499,6 +499,10 @@ func (d *dummyTxRelayer) Client() *jsonrpc.EthClient {
 	return nil
 }
 
+func (d *dummyTxRelayer) GetTxnHashes() []types.Hash {
+	return nil
+}
+
 func getBlockNumberCheckpointSubmitInput(t *testing.T, input []byte) uint64 {
 	t.Helper()
 

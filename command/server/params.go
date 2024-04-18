@@ -37,6 +37,7 @@ const (
 	devFlag                      = "dev"
 	corsOriginFlag               = "access-control-allow-origins"
 	logFileLocationFlag          = "log-to"
+	useTLSFlag                   = "use-tls"
 	tlsCertFileLocationFlag      = "tls-cert-file"
 	tlsKeyFileLocationFlag       = "tls-key-file"
 
@@ -185,6 +186,7 @@ func (p *serverParams) generateConfig() *server.Config {
 		LogLevel:           hclog.LevelFromString(p.rawConfig.LogLevel),
 		JSONLogFormat:      p.rawConfig.JSONLogFormat,
 		LogFilePath:        p.logFileLocation,
+		UseTLS:             p.rawConfig.UseTLS,
 		TLSCertFile:        p.rawConfig.TLSCertFile,
 		TLSKeyFile:         p.rawConfig.TLSKeyFile,
 

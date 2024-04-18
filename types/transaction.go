@@ -123,6 +123,16 @@ type TxData interface {
 	copy() TxData
 }
 
+func (tx *Transaction) String() string {
+	v, r, s := tx.RawSignatureValues()
+
+	return fmt.Sprintf("[%s] Nonce: %d, GasPrice: %d, GasTipCap: %d, GasFeeCap: %d, "+
+		"Gas: %d, To: %s, Value: %d, Input: %x, V: %d, R: %d, S: %s, Hash: %s, From: %s, AccessList: %s",
+		tx.Type(), tx.Nonce(), tx.GasPrice(), tx.GasTipCap(), tx.GasFeeCap(),
+		tx.Gas(), tx.To(), tx.Value(), tx.Input(),
+		v, r, s, tx.Hash(), tx.From(), tx.AccessList())
+}
+
 func (t *Transaction) Type() TxType {
 	return t.Inner.transactionType()
 }

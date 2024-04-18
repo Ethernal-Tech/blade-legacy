@@ -250,3 +250,17 @@ func (e *EthClient) GetLogs(filter *ethgo.LogFilter) ([]*ethgo.Log, error) {
 
 	return out, nil
 }
+
+// TxPoolStatus returns the transaction pool status (pending and queued transactions)
+func (e *EthClient) TxPoolStatus() (*StatusResponse, error) {
+	var out StatusResponse
+	if err := e.client.Call("txpool_status", &out); err != nil {
+		return nil, err
+	}
+
+	return &out, nil
+}
+
+func (e *EthClient) Close() error {
+	return e.client.Close()
+}

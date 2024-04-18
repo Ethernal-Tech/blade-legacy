@@ -73,6 +73,8 @@ var (
 	TestRewardToken        *contracts.Artifact
 	Wrapper                *contracts.Artifact
 	NumberPersister        *contracts.Artifact
+	ZexCoinERC20           *contracts.Artifact
+	ZexNFT                 *contracts.Artifact
 
 	contractArtifacts map[string]*contracts.Artifact
 )
@@ -330,6 +332,16 @@ func init() {
 		log.Fatal(err)
 	}
 
+	ZexCoinERC20, err = contracts.DecodeArtifact(readTestContractContent("ZexCoinERC20.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ZexNFT, err = contracts.DecodeArtifact(readTestContractContent("ZexNFT.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	contractArtifacts = map[string]*contracts.Artifact{
 		"CheckpointManager":               CheckpointManager,
 		"ExitHelper":                      ExitHelper,
@@ -381,6 +393,8 @@ func init() {
 		"RootERC20":                       RootERC20,
 		"TestSimple":                      TestSimple,
 		"TestRewardToken":                 TestRewardToken,
+		"ZexCoinERC20":                    ZexCoinERC20,
+		"ZexNFT":                          ZexNFT,
 	}
 }
 

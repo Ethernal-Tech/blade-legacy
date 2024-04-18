@@ -1,6 +1,7 @@
 package polybft
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -157,6 +158,8 @@ func (b *BlockBuilder) WriteTx(tx *types.Transaction) error {
 
 // Fill fills the block with transactions from the txpool
 func (b *BlockBuilder) Fill() {
+	var buf bytes.Buffer
+
 	blockTimer := time.NewTimer(b.params.BlockTime)
 
 	b.params.TxPool.Prepare()
@@ -168,6 +171,10 @@ write:
 		default:
 			tx := b.params.TxPool.Peek()
 
+			if b.params.Logger.IsTrace() && tx != nil {
+				_, _ = buf.WriteString(tx.String())
+			}
+
 			// execute transactions one by one
 			finished, err := b.writeTxPoolTransaction(tx)
 			if err != nil {
@@ -178,6 +185,10 @@ write:
 				break write
 			}
 		}
+	}
+
+	if b.params.Logger.IsDebug() {
+		b.params.Logger.Debug("[BlockBuilder.Fill]", "block number", b.header.Number, "block txs", buf.String())
 	}
 
 	//	wait for the timer to expire

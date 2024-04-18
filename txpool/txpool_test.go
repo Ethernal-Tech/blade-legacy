@@ -2030,12 +2030,12 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		assert.Equal(t, slotsRequired(tx), pool.gauge.read())
 		checkTxExistence(t, pool, tx.Hash(), true)
 
-		// set 9 to skips in order to drop transaction next
-		accountMap.skips = 9
+		// set 999 to skips in order to drop transaction next
+		accountMap.skips = maxAccountSkips - 1
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2065,12 +2065,12 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		assert.Equal(t, slotsRequired(tx), pool.gauge.read())
 		checkTxExistence(t, pool, tx.Hash(), true)
 
-		// set 9 to skips in order to drop transaction next
-		accountMap.skips = 9
+		// set 999 to skips in order to drop transaction next
+		accountMap.skips = maxAccountSkips - 1
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2100,12 +2100,12 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		assert.Equal(t, slotsRequired(tx), pool.gauge.read())
 		checkTxExistence(t, pool, tx.Hash(), true)
 
-		// set 9 to skips in order to drop transaction next
+		// set 5 to skips in order to drop transaction next
 		accountMap.skips = 5
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			addr1: 1,
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2167,7 +2167,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		accountMap.setNonce(storeNonce + 3)
 		accountMap.skips = maxAccountSkips - 1
 
-		pool.updateAccountSkipsCounts(map[types.Address]uint64{})
+		pool.updateAccountSkipsCounts(map[types.Address]uint64{}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -3646,7 +3646,7 @@ func TestAddTxsInOrder(t *testing.T) {
 	}
 }
 
-func TestResetWithHeadersSetsBaseFee(t *testing.T) {
+func TestResetWithBlockSetsBaseFee(t *testing.T) {
 	t.Parallel()
 
 	blocks := []*types.Block{
@@ -3665,7 +3665,7 @@ func TestResetWithHeadersSetsBaseFee(t *testing.T) {
 		{
 			Header: &types.Header{
 				BaseFee: 2000,
-				Hash:    types.Hash{2},
+				Hash:    types.Hash{1},
 			},
 		},
 	}
@@ -3685,12 +3685,13 @@ func TestResetWithHeadersSetsBaseFee(t *testing.T) {
 	require.NoError(t, err)
 
 	pool.SetBaseFee(blocks[0].Header)
+	require.Equal(t, blocks[0].Header.BaseFee, pool.GetBaseFee())
 
-	pool.ResetWithHeaders()
-	assert.Equal(t, blocks[0].Header.BaseFee, pool.GetBaseFee())
+	pool.ResetWithBlock(blocks[len(blocks)-1])
+	require.Equal(t, blocks[len(blocks)-1].Header.BaseFee, pool.GetBaseFee())
 
-	pool.ResetWithHeaders(blocks[len(blocks)-2].Header, blocks[len(blocks)-1].Header)
-	assert.Equal(t, blocks[len(blocks)-1].Header.BaseFee, pool.GetBaseFee())
+	pool.ResetWithBlock(blocks[len(blocks)-2])
+	require.Equal(t, blocks[len(blocks)-2].Header.BaseFee, pool.GetBaseFee())
 }
 
 func TestAddTx_TxReplacement(t *testing.T) {

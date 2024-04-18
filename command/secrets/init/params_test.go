@@ -28,8 +28,9 @@ func Test_initKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	ip := &initParams{
-		generatesAccount: false,
-		generatesNetwork: false,
+		generatesAccount:     false,
+		generatesNetwork:     false,
+		generatesJSONTLSCert: false,
 	}
 
 	_, err = ip.initKeys(sm)
@@ -38,6 +39,8 @@ func Test_initKeys(t *testing.T) {
 	assert.False(t, fileExists(path.Join(dir, "consensus/validator.key")))
 	assert.False(t, fileExists(path.Join(dir, "consensus/validator-bls.key")))
 	assert.False(t, fileExists(path.Join(dir, "libp2p/libp2p.key")))
+	assert.False(t, fileExists(path.Join(dir, "jsontls/jsontls.pem")))
+	assert.False(t, fileExists(path.Join(dir, "jsontls/jsontls.key")))
 
 	ip.generatesAccount = true
 	res, err := ip.initKeys(sm)
@@ -47,6 +50,8 @@ func Test_initKeys(t *testing.T) {
 	assert.True(t, fileExists(path.Join(dir, "consensus/validator.key")))
 	assert.True(t, fileExists(path.Join(dir, "consensus/validator-bls.key")))
 	assert.False(t, fileExists(path.Join(dir, "libp2p/libp2p.key")))
+	assert.False(t, fileExists(path.Join(dir, "jsontls/jsontls.pem")))
+	assert.False(t, fileExists(path.Join(dir, "jsontls/jsontls.key")))
 
 	ip.generatesNetwork = true
 	res, err = ip.initKeys(sm)
@@ -54,6 +59,16 @@ func Test_initKeys(t *testing.T) {
 	assert.Len(t, res, 1)
 
 	assert.True(t, fileExists(path.Join(dir, "libp2p/libp2p.key")))
+	assert.False(t, fileExists(path.Join(dir, "jsontls/jsontls.pem")))
+	assert.False(t, fileExists(path.Join(dir, "jsontls/jsontls.key")))
+
+	ip.generatesJSONTLSCert = true
+	res, err = ip.initKeys(sm)
+	require.NoError(t, err)
+	assert.Len(t, res, 2)
+
+	assert.True(t, fileExists(path.Join(dir, "jsontls/jsontls.pem")))
+	assert.True(t, fileExists(path.Join(dir, "jsontls/jsontls.key")))
 }
 
 func fileExists(filename string) bool {
@@ -78,9 +93,10 @@ func Test_getResult(t *testing.T) {
 	require.NoError(t, err)
 
 	ip := &initParams{
-		generatesAccount: true,
-		generatesNetwork: true,
-		printPrivateKey:  true,
+		generatesAccount:     true,
+		generatesNetwork:     true,
+		generatesJSONTLSCert: true,
+		printPrivateKey:      true,
 	}
 
 	_, err = ip.initKeys(sm)

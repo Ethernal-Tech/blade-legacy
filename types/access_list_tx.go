@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
@@ -163,6 +164,24 @@ func (t *TxAccessList) unmarshalJSON(v *fastjson.Value) error {
 	}
 
 	return nil
+}
+
+func (t *TxAccessList) String() string {
+	var buf bytes.Buffer
+
+	for _, accessEntry := range *t {
+		_, _ = buf.WriteString(fmt.Sprintf("address=%s", accessEntry.Address))
+
+		for i, storageKey := range accessEntry.StorageKeys {
+			if i == 0 {
+				_, _ = buf.WriteString("\n")
+			}
+
+			_, _ = buf.WriteString(fmt.Sprintf("\tstorage key=%s", storageKey))
+		}
+	}
+
+	return buf.String()
 }
 
 type AccessListTxn struct {

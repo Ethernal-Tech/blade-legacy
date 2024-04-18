@@ -47,7 +47,7 @@ type txPoolInterface interface {
 	Drop(*types.Transaction)
 	Demote(*types.Transaction)
 	SetSealing(bool)
-	ResetWithHeaders(...*types.Header)
+	ResetWithBlock(*types.Block)
 }
 
 // epochMetadata is the static info for epoch currently being processed
@@ -157,9 +157,15 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 		eventProvider:      NewEventProvider(config.blockchain),
 	}
 
-	bridgeManager, err := newBridgeManager(runtime, config, runtime.eventProvider, log)
-	if err != nil {
-		return nil, err
+	var bridgeManager BridgeManager
+
+	if runtime.IsBridgeEnabled() {
+		bridgeManager, err = newBridgeManager(runtime, config, runtime.eventProvider, log)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bridgeManager = &dummyBridgeManager{}
 	}
 
 	runtime.bridgeManager = bridgeManager
@@ -274,7 +280,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	}
 
 	// after the block has been written we reset the txpool so that the old transactions are removed
-	c.config.txPool.ResetWithHeaders(fullBlock.Block.Header)
+	c.config.txPool.ResetWithBlock(fullBlock.Block)
 
 	var (
 		epoch = c.epoch

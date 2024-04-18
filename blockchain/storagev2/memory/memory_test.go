@@ -9,7 +9,7 @@ import (
 func TestStorage(t *testing.T) {
 	t.Helper()
 
-	f := func(t *testing.T) (*storagev2.Storage, func()) {
+	f := func(t *testing.T) (*storagev2.Storage, func(), string) {
 		t.Helper()
 
 		s, err := NewMemoryStorage()
@@ -17,10 +17,10 @@ func TestStorage(t *testing.T) {
 		if err != nil {
 			t.Logf("\t Error opening MemoryDB -> %s", err.Error())
 
-			return nil, func() {}
+			return nil, func() {}, ""
 		}
 
-		return s, func() {}
+		return s, func() {}, ""
 	}
 	storagev2.TestStorage(t, f)
 }

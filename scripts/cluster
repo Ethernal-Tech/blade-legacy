@@ -59,7 +59,7 @@ function initPolybftConsensus() {
 
 function createGenesis() {
   ./blade genesis $genesis_params \
-    --block-gas-limit 10000000 \
+    --block-gas-limit 50000000 \
     --premine 0x85da99c8a7c2c95964c8efd687e95e632fc533d6 \
     --premine 0x0000000000000000000000000000000000000000 \
     --epoch-size 10 \
@@ -67,7 +67,8 @@ function createGenesis() {
     --native-token-config "Blade:BLADE:18:true" \
     --blade-admin $address1 \
     --proxy-contracts-admin 0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed \
-    --base-fee-config 1000000000
+    --base-fee-config 1000000000 \
+    --burn-contract "0:0x0000000000000000000000000000000000000000"
 }
 
 function initBridge() {
@@ -127,11 +128,13 @@ function startNodes() {
       ./blade server --data-dir "$data_dir" --chain genesis.json \
         --grpc-address ":$grpc_port" --libp2p ":$libp2p_port" --jsonrpc ":$jsonrpc_port" \
         --num-block-confirmations 2 $relayer_arg \
+        --json-rpc-batch-request-limit 0 \
         --log-level DEBUG 2>&1 | tee $log_file &
     else
       ./blade server --data-dir "$data_dir" --chain genesis.json \
         --grpc-address ":$grpc_port" --libp2p ":$libp2p_port" --jsonrpc ":$jsonrpc_port" \
         --num-block-confirmations 2 $relayer_arg \
+        --json-rpc-batch-request-limit 0 \
         --log-level DEBUG &
     fi
 
@@ -169,7 +172,7 @@ rm -rf test-chain-*
 rm -f genesis.json
 
 # Build binary
-go build -o blade .
+make build
 
 # If --docker flag is set run docker environment otherwise run from binary
 case "$2" in

@@ -537,3 +537,7 @@ func (d *dummyStakeTxRelayer) SendTransactionLocal(txn *types.Transaction) (*eth
 func (d *dummyStakeTxRelayer) Client() *jsonrpc.EthClient {
 	return nil
 }
+
+func (d *dummyStakeTxRelayer) GetTxnHashes() []types.Hash {
+	return nil
+}

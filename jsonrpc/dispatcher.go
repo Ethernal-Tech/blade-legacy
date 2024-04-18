@@ -398,7 +398,7 @@ func (d *Dispatcher) Handle(reqBody []byte) ([]byte, error) {
 }
 
 func (d *Dispatcher) handleReq(req Request) ([]byte, Error) {
-	d.logger.Debug("request", "method", req.Method, "id", req.ID)
+	d.logger.Trace("request", "method", req.Method, "id", req.ID)
 
 	service, fd, ferr := d.getFnHandler(req)
 	if ferr != nil {
