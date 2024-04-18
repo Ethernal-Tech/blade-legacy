@@ -771,9 +771,7 @@ func (p *TxPool) pruneAccountsWithNonceHoles() {
 // successful, an account is created for this address
 // (only once) and an enqueueRequest is signaled.
 func (p *TxPool) addTx(origin txOrigin, tx *types.Transaction) error {
-	if p.logger.IsDebug() {
-		p.logger.Debug("add tx", "origin", origin.String(), "hash", tx.Hash().String(), "type", tx.Type())
-	}
+	p.logger.Trace("add tx", "origin", origin.String(), "hash", tx.Hash().String(), "type", tx.Type())
 
 	// validate incoming tx
 	if err := p.validateTx(tx); err != nil {
@@ -887,9 +885,7 @@ func (p *TxPool) addTx(origin txOrigin, tx *types.Transaction) error {
 func (p *TxPool) invokePromotion(tx *types.Transaction, callPromote bool) {
 	p.eventManager.signalEvent(proto.EventType_ADDED, tx.Hash())
 
-	if p.logger.IsDebug() {
-		p.logger.Debug("enqueue request", "hash", tx.Hash().String())
-	}
+	p.logger.Trace("enqueue request", "hash", tx.Hash().String())
 
 	p.eventManager.signalEvent(proto.EventType_ENQUEUED, tx.Hash())
 
@@ -910,9 +906,7 @@ func (p *TxPool) handlePromoteRequest(req promoteRequest) {
 
 	// promote enqueued txs
 	promoted, pruned := account.promote()
-	if p.logger.IsDebug() {
-		p.logger.Debug("promote request", "promoted", promoted, "addr", addr.String())
-	}
+	p.logger.Trace("promote request", "promoted", promoted, "addr", addr.String())
 
 	p.index.remove(pruned...)
 	p.gauge.decrease(slotsRequired(pruned...))

@@ -171,7 +171,7 @@ write:
 		default:
 			tx := b.params.TxPool.Peek()
 
-			if b.params.Logger.IsDebug() && tx != nil {
+			if b.params.Logger.IsTrace() && tx != nil {
 				_, _ = buf.WriteString(tx.String())
 			}
 
