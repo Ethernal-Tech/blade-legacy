@@ -519,7 +519,7 @@ func (p *TxPool) ResetWithBlock(block *types.Block) {
 
 	if !p.sealing.Load() {
 		// only non-validator cleanup inactive accounts
-		p.updateAccountSkipsCounts(stateNonces)
+		p.updateAccountSkipsCounts(stateNonces, stateRoot)
 	}
 }
 
@@ -1027,8 +1027,7 @@ func (p *TxPool) resetAccounts(stateNonces map[types.Address]uint64) {
 
 // updateAccountSkipsCounts update the accounts' skips,
 // the number of the consecutive blocks that doesn't have the account's transactions
-func (p *TxPool) updateAccountSkipsCounts(latestActiveAccounts map[types.Address]uint64) {
-	stateRoot := p.store.Header().StateRoot
+func (p *TxPool) updateAccountSkipsCounts(latestActiveAccounts map[types.Address]uint64, stateRoot types.Hash) {
 	p.accounts.Range(
 		func(key, value interface{}) bool {
 			address, _ := key.(types.Address)

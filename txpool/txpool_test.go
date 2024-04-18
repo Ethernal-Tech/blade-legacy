@@ -2035,7 +2035,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2070,7 +2070,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2105,7 +2105,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			addr1: 1,
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2167,7 +2167,7 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		accountMap.setNonce(storeNonce + 3)
 		accountMap.skips = maxAccountSkips - 1
 
-		pool.updateAccountSkipsCounts(map[types.Address]uint64{})
+		pool.updateAccountSkipsCounts(map[types.Address]uint64{}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
