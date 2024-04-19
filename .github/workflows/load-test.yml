@@ -204,10 +204,11 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
+      - name: Build Blade
+        run: make build
       - name: Start Load Test
         id: load_test_results
         run: |
-          make build
           ./blade load-test --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --name "results" --type ${{ inputs.type }} ${{ inputs.dynamic == true && '--dynamic' || '' }} --vus ${{ inputs.vus }} --txs-per-user ${{ inputs.txs_per_user }} --batch-size ${{ inputs.batch_size }} --txpool-timeout ${{ inputs.txpool_timeout }} ${{ inputs.wait_txpool == true && '--txpool-timeout' || '' }} --receipts-timeout ${{ inputs.receipts_timeout }} --to-json
           echo "total_time=$(cat results_${{ inputs.type }}.json | jq -r '.totalTime')" >> $GITHUB_OUTPUT
           echo "total_txs=$(cat results_${{ inputs.type }}.json | jq -r '.totalTxs')" >> $GITHUB_OUTPUT

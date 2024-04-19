@@ -40,6 +40,7 @@ on: # yamllint disable-line rule:truthy
         description: Gossip Message Size
         type: string
         default: "1048576"
+        required: true
       notification:
         description: Notification
         type: boolean
