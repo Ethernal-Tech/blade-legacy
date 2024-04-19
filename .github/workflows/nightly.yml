@@ -50,6 +50,7 @@ jobs:
       max_enqueued: "20000000"
       is_london_fork_active: true
       is_bridge_active: false
+      gossip_msg_size: "4194304"
       notification: false
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -129,6 +130,7 @@ jobs:
       max_enqueued: "20000000"
       is_london_fork_active: true
       is_bridge_active: false
+      gossip_msg_size: "4194304"
       logs: true
       build_blade_output: ${{ needs.ci.outputs.build_blade }}
       lint_output: ${{ needs.ci.outputs.lint }}

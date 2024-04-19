@@ -31,6 +31,10 @@ on: # yamllint disable-line rule:truthy
         description: With Bridge
         type: boolean
         required: true
+      gossip_msg_size:
+        description: Gossip Message Size
+        type: string
+        required: true
       deploy_network_terraform_output:
         description: Deploy Network - Terraform output
         type: string
@@ -168,6 +172,10 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "London: *${{ inputs.is_london_fork_active }}*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "Gossip Message Size: *${{ inputs.gossip_msg_size }}*"
                     },
                     {
                       "type": "mrkdwn",

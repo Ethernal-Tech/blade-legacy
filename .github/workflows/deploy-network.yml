@@ -36,6 +36,10 @@ on: # yamllint disable-line rule:truthy
         description: With Bridge
         type: boolean
         default: true
+      gossip_msg_size:
+        description: Gossip Message Size
+        type: string
+        default: "1048576"
       notification:
         description: Notification
         type: boolean
@@ -69,6 +73,10 @@ on: # yamllint disable-line rule:truthy
       is_bridge_active:
         description: With Bridge
         type: boolean
+        required: true
+      gossip_msg_size:
+        description: Gossip Message Size
+        type: string
         required: true
       notification:
         description: Notification
@@ -182,8 +190,9 @@ jobs:
           sed 's/blade_tag: .*/blade_tag: ${{ github.sha }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/is_bridge_active: .*/is_bridge_active: ${{ inputs.is_bridge_active }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/is_london_fork_active: .*/is_london_fork_active: ${{ inputs.is_london_fork_active }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
-          sed 's/--json-rpc-batch-request-limit .*/--json-rpc-batch-request-limit 0 \/g' roles/blade/templates/blade.service > roles/blade/templates/blade.service.tmp && mv roles/blade/templates/blade.service.tmp roles/blade/templates/blade.service
-          sed 's/INFO/${{ vars.LOG_LEVEL }}/g' roles/blade/templates/blade.service > roles/blade/templates/blade.service.tmp && mv roles/blade/templates/blade.service.tmp roles/blade/templates/blade.service
+          sed 's/gossip_msg_size: .*/gossip_msg_size: ${{ inputs.gossip_msg_size }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
+          sed 's/json_rpc_batch_request_limit: .*/json_rpc_batch_request_limit: 0/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
+          sed 's/log_level: .*/log_level: ${{ vars.LOG_LEVEL }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
       - name: Setup Ansible
         working-directory: ansible
         run: |
@@ -220,6 +229,7 @@ jobs:
       max_enqueued: ${{ inputs.max_enqueued }}
       is_london_fork_active: ${{ inputs.is_london_fork_active }}
       is_bridge_active: ${{ inputs.is_bridge_active }}
+      gossip_msg_size: ${{ inputs.gossip_msg_size }}
       deploy_network_terraform_output: ${{ needs.deploy_network.outputs.terraform_output }}
       deploy_network_ansible_output: ${{ needs.deploy_network.outputs.ansible_output }}
       rpc_url: ${{ needs.check_network.outputs.rpc_url || needs.deploy_network.outputs.rpc_url }}
