@@ -35,6 +35,10 @@ on: # yamllint disable-line rule:truthy
         description: The timeout for waiting for transaction receipts
         type: string
         required: true
+      batch_size:
+        description: Batch size
+        type: string
+        required: true
       total_time:
         description: Total Time
         type: string
@@ -162,6 +166,10 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "TX Pool Timeout: *${{ inputs.txpool_timeout }}*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "Batch Size: *${{ inputs.batch_size }}*"
                     },
                     {
                       "type": "mrkdwn",

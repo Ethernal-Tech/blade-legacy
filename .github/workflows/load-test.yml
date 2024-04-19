@@ -36,6 +36,10 @@ on: # yamllint disable-line rule:truthy
         description: The timeout for waiting for transaction receipts
         type: string
         default: "30s"
+      batch_size:
+        description: Batch size
+        type: string
+        default: "1"
       notification:
         description: Notification
         type: boolean
@@ -72,6 +76,10 @@ on: # yamllint disable-line rule:truthy
         required: true
       receipts_timeout:
         description: The timeout for waiting for transaction receipts
+        type: string
+        required: true
+      batch_size:
+        description: Batch size
         type: string
         required: true
       notification:
@@ -200,7 +208,7 @@ jobs:
         id: load_test_results
         run: |
           make build
-          ./blade load-test --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --name "results" --type ${{ inputs.type }} ${{ inputs.dynamic == true && '--dynamic' || '' }} --vus ${{ inputs.vus }} --txs-per-user ${{ inputs.txs_per_user }} --txpool-timeout ${{ inputs.txpool_timeout }} ${{ inputs.wait_txpool == true && '--txpool-timeout' || '' }} --receipts-timeout ${{ inputs.receipts_timeout }} --to-json
+          ./blade load-test --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --name "results" --type ${{ inputs.type }} ${{ inputs.dynamic == true && '--dynamic' || '' }} --vus ${{ inputs.vus }} --txs-per-user ${{ inputs.txs_per_user }} --batch-size ${{ inputs.batch_size }} --txpool-timeout ${{ inputs.txpool_timeout }} ${{ inputs.wait_txpool == true && '--txpool-timeout' || '' }} --receipts-timeout ${{ inputs.receipts_timeout }} --to-json
           echo "total_time=$(cat results_${{ inputs.type }}.json | jq -r '.totalTime')" >> $GITHUB_OUTPUT
           echo "total_txs=$(cat results_${{ inputs.type }}.json | jq -r '.totalTxs')" >> $GITHUB_OUTPUT
           echo "total_blocks=$(cat results_${{ inputs.type }}.json | jq -r '.totalBlocks')" >> $GITHUB_OUTPUT
@@ -228,6 +236,7 @@ jobs:
       txpool_timeout: ${{ inputs.txpool_timeout }}
       wait_txpool: ${{ inputs.wait_txpool }}
       receipts_timeout: ${{ inputs.receipts_timeout }}
+      batch_size: ${{ inputs.batch_size }}
       total_time: ${{ needs.load_test_scenario.outputs.total_time }}
       total_txs: ${{ needs.load_test_scenario.outputs.total_txs }}
       total_blocks: ${{ needs.load_test_scenario.outputs.total_blocks }}

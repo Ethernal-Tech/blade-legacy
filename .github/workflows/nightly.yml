@@ -48,7 +48,7 @@ jobs:
       block_time: "2"
       max_slots: "20000000"
       max_enqueued: "20000000"
-      is_london_fork_active: false
+      is_london_fork_active: true
       is_bridge_active: false
       notification: false
     secrets:
@@ -63,11 +63,12 @@ jobs:
       environment: nightly
       type: EOA
       dynamic: false
-      vus: "500"
-      txs_per_user: "4200"
+      vus: "100"
+      txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
       receipts_timeout: "30s"
+      batch_size: "10000"
       notification: false
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -86,11 +87,12 @@ jobs:
       environment: nightly
       type: ERC20
       dynamic: false
-      vus: "7"
-      txs_per_user: "210000"
+      vus: "100"
+      txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: true
       receipts_timeout: "30s"
+      batch_size: "10000"
       notification: false
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
@@ -125,7 +127,7 @@ jobs:
       block_time: "2"
       max_slots: "20000000"
       max_enqueued: "20000000"
-      is_london_fork_active: false
+      is_london_fork_active: true
       is_bridge_active: false
       logs: true
       build_blade_output: ${{ needs.ci.outputs.build_blade }}
@@ -154,11 +156,12 @@ jobs:
       environment: nightly
       type: EOA
       dynamic: false
-      vus: "500"
-      txs_per_user: "4200"
+      vus: "100"
+      txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
       receipts_timeout: "30s"
+      batch_size: "10000"
       total_time: ${{ needs.load_test_multiple_eoa.outputs.total_time }}
       total_txs: ${{ needs.load_test_multiple_eoa.outputs.total_txs }}
       total_blocks: ${{ needs.load_test_multiple_eoa.outputs.total_blocks }}
@@ -179,11 +182,12 @@ jobs:
       environment: nightly
       type: ERC20
       dynamic: false
-      vus: "7"
-      txs_per_user: "210000"
+      vus: "100"
+      txs_per_user: "10000"
       txpool_timeout: "60m0s"
-      wait_txpool: true
+      wait_txpool: false
       receipts_timeout: "30s"
+      batch_size: "10000"
       total_time: ${{ needs.load_test_multiple_erc20.outputs.total_time }}
       total_txs: ${{ needs.load_test_multiple_erc20.outputs.total_txs }}
       total_blocks: ${{ needs.load_test_multiple_erc20.outputs.total_blocks }}
