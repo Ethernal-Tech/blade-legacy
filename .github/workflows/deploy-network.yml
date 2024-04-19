@@ -182,6 +182,7 @@ jobs:
           sed 's/blade_tag: .*/blade_tag: ${{ github.sha }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/is_bridge_active: .*/is_bridge_active: ${{ inputs.is_bridge_active }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/is_london_fork_active: .*/is_london_fork_active: ${{ inputs.is_london_fork_active }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
+          sed 's/--json-rpc-batch-request-limit .*/--json-rpc-batch-request-limit 0 \/g' roles/blade/templates/blade.service > roles/blade/templates/blade.service.tmp && mv roles/blade/templates/blade.service.tmp roles/blade/templates/blade.service
           sed 's/INFO/${{ vars.LOG_LEVEL }}/g' roles/blade/templates/blade.service > roles/blade/templates/blade.service.tmp && mv roles/blade/templates/blade.service.tmp roles/blade/templates/blade.service
       - name: Setup Ansible
         working-directory: ansible
