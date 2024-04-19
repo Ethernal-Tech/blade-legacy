@@ -40,6 +40,7 @@ const (
 	useTLSFlag                   = "use-tls"
 	tlsCertFileLocationFlag      = "tls-cert-file"
 	tlsKeyFileLocationFlag       = "tls-key-file"
+	gossipMessageSizeFlag        = "gossip-msg-size"
 
 	relayerFlag = "relayer"
 
@@ -166,15 +167,16 @@ func (p *serverParams) generateConfig() *server.Config {
 			PrometheusAddr: p.prometheusAddress,
 		},
 		Network: &network.Config{
-			NoDiscover:       p.rawConfig.Network.NoDiscover,
-			Addr:             p.libp2pAddress,
-			NatAddr:          p.natAddress,
-			DNS:              p.dnsAddress,
-			DataDir:          p.rawConfig.DataDir,
-			MaxPeers:         p.rawConfig.Network.MaxPeers,
-			MaxInboundPeers:  p.rawConfig.Network.MaxInboundPeers,
-			MaxOutboundPeers: p.rawConfig.Network.MaxOutboundPeers,
-			Chain:            p.genesisConfig,
+			NoDiscover:        p.rawConfig.Network.NoDiscover,
+			Addr:              p.libp2pAddress,
+			NatAddr:           p.natAddress,
+			DNS:               p.dnsAddress,
+			DataDir:           p.rawConfig.DataDir,
+			MaxPeers:          p.rawConfig.Network.MaxPeers,
+			MaxInboundPeers:   p.rawConfig.Network.MaxInboundPeers,
+			MaxOutboundPeers:  p.rawConfig.Network.MaxOutboundPeers,
+			Chain:             p.genesisConfig,
+			GossipMessageSize: p.rawConfig.Network.GossipMessageSize,
 		},
 		DataDir:            p.rawConfig.DataDir,
 		Seal:               p.rawConfig.ShouldSeal,

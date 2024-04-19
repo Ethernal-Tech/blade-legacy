@@ -9,6 +9,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/network"
 	"github.com/hashicorp/hcl"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"gopkg.in/yaml.v3"
 )
 
@@ -53,13 +54,14 @@ type Telemetry struct {
 
 // Network defines the network configuration params
 type Network struct {
-	NoDiscover       bool   `json:"no_discover" yaml:"no_discover"`
-	Libp2pAddr       string `json:"libp2p_addr" yaml:"libp2p_addr"`
-	NatAddr          string `json:"nat_addr" yaml:"nat_addr"`
-	DNSAddr          string `json:"dns_addr" yaml:"dns_addr"`
-	MaxPeers         int64  `json:"max_peers,omitempty" yaml:"max_peers,omitempty"`
-	MaxOutboundPeers int64  `json:"max_outbound_peers,omitempty" yaml:"max_outbound_peers,omitempty"`
-	MaxInboundPeers  int64  `json:"max_inbound_peers,omitempty" yaml:"max_inbound_peers,omitempty"`
+	NoDiscover        bool   `json:"no_discover" yaml:"no_discover"`
+	Libp2pAddr        string `json:"libp2p_addr" yaml:"libp2p_addr"`
+	NatAddr           string `json:"nat_addr" yaml:"nat_addr"`
+	DNSAddr           string `json:"dns_addr" yaml:"dns_addr"`
+	MaxPeers          int64  `json:"max_peers,omitempty" yaml:"max_peers,omitempty"`
+	MaxOutboundPeers  int64  `json:"max_outbound_peers,omitempty" yaml:"max_outbound_peers,omitempty"`
+	MaxInboundPeers   int64  `json:"max_inbound_peers,omitempty" yaml:"max_inbound_peers,omitempty"`
+	GossipMessageSize int    `json:"gossip_msg_size" yaml:"gossip_msg_size"`
 }
 
 // TxPool defines the TxPool configuration params
@@ -133,6 +135,7 @@ func DefaultConfig() *Config {
 				defaultNetworkConfig.Addr.IP,
 				defaultNetworkConfig.Addr.Port,
 			),
+			GossipMessageSize: pubsub.DefaultMaxMessageSize,
 		},
 		Telemetry:  &Telemetry{},
 		ShouldSeal: true,

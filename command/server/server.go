@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/server/config"
 	"github.com/0xPolygon/polygon-edge/command/server/export"
 	"github.com/0xPolygon/polygon-edge/server"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/spf13/cobra"
 )
 
@@ -160,6 +161,13 @@ func setFlags(cmd *cobra.Command) {
 	// override default usage value
 	cmd.Flag(maxOutboundPeersFlag).DefValue = fmt.Sprintf("%d", defaultConfig.Network.MaxOutboundPeers)
 	cmd.MarkFlagsMutuallyExclusive(maxPeersFlag, maxOutboundPeersFlag)
+
+	cmd.Flags().IntVar(
+		&params.rawConfig.Network.GossipMessageSize,
+		gossipMessageSizeFlag,
+		pubsub.DefaultMaxMessageSize,
+		"the maximum size of a gossip message",
+	)
 
 	cmd.Flags().Uint64Var(
 		&params.rawConfig.TxPool.PriceLimit,
