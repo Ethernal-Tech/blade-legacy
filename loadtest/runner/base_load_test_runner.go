@@ -767,7 +767,7 @@ func (r *BaseLoadTestRunner) sendTransactionsForUser(account *account, chainID *
 	checkFeeDataNum := r.cfg.TxsPerUser / 5
 
 	for i := 0; i < r.cfg.TxsPerUser; i++ {
-		if i%checkFeeDataNum == 0 {
+		if checkFeeDataNum > 0 && i%checkFeeDataNum == 0 {
 			feeData, err = getFeeData(r.client, r.cfg.DynamicTxs)
 			if err != nil {
 				return nil, nil, err
