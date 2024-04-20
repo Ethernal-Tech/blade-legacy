@@ -375,7 +375,7 @@ func (t *Transition) Write(txn *types.Transaction) error {
 		}
 
 		txn.SetFrom(from)
-		t.logger.Debug("[Transition.Write]", "recovered sender", from)
+		t.logger.Trace("[Transition.Write]", "recovered sender", from)
 	}
 
 	// Make a local copy and apply the transaction
