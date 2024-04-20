@@ -42,7 +42,7 @@ func NewMixedTxRunner(cfg LoadTestConfig) (*MixedTxRunner, error) {
 		ERC20Runner:        &ERC20Runner{BaseLoadTestRunner: runner},
 		ERC721Runner:       &ERC721Runner{BaseLoadTestRunner: runner},
 		EOARunner:          &EOARunner{BaseLoadTestRunner: runner},
-		rand:               rand.New(rand.NewSource(time.Now().UnixNano())),
+		rand:               rand.New(rand.NewSource(time.Now().UTC().UnixNano())),
 	}, nil
 }
 
