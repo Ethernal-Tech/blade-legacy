@@ -1,15 +1,16 @@
 package runner
 
 import (
+	"crypto/rand"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
+
+var three = big.NewInt(3)
 
 // MixedTxRunner represents a load test runner for sending every type of transaction
 // in a single load test
@@ -19,7 +20,6 @@ type MixedTxRunner struct {
 	*ERC721Runner
 	*EOARunner
 
-	rand *rand.Rand
 	lock sync.Mutex
 
 	numOfEOATxs    int
@@ -42,7 +42,6 @@ func NewMixedTxRunner(cfg LoadTestConfig) (*MixedTxRunner, error) {
 		ERC20Runner:        &ERC20Runner{BaseLoadTestRunner: runner},
 		ERC721Runner:       &ERC721Runner{BaseLoadTestRunner: runner},
 		EOARunner:          &EOARunner{BaseLoadTestRunner: runner},
-		rand:               rand.New(rand.NewSource(time.Now().UTC().UnixNano())),
 	}, nil
 }
 
@@ -116,7 +115,9 @@ func (m *MixedTxRunner) Run() error {
 // createTransaction creates a transaction for the mixed load test
 func (m *MixedTxRunner) createTransaction(account *account, feeData *feeData, chainID *big.Int) *types.Transaction {
 	// Randomly choose a transaction type
-	switch m.rand.Intn(3) {
+	r, _ := rand.Int(rand.Reader, three)
+
+	switch r.Uint64() {
 	case 0:
 		m.lock.Lock()
 		m.numOfERC20Txs++
