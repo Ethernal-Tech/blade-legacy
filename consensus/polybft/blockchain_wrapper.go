@@ -1,7 +1,6 @@
 package polybft
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -89,43 +88,13 @@ func (p *blockchainWrapper) CommitBlock(block *types.FullBlock) error {
 
 // ProcessBlock builds a final block from given 'block' on top of 'parent'
 func (p *blockchainWrapper) ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error) {
-	p.logger.Debug("[BlockchainWrapper.ProcessBlock]",
-		"block number", block.Number(), "block hash", block.Hash(),
-		"parent state root", parent.StateRoot, "block state root", block.Header.StateRoot)
-
 	header := block.Header.Copy()
 	start := time.Now().UTC()
 
-	transition, err := p.executor.BeginTxn(parent.StateRoot, header, types.BytesToAddress(header.Miner))
+	transition, err := p.executor.ProcessBlock(parent.StateRoot, block, types.Address(header.Miner))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to process block: %w", err)
 	}
-
-	var buf bytes.Buffer
-
-	for i, t := range block.Transactions {
-		if err := transition.Write(t); err != nil {
-			p.logger.Error("failed to write transaction to the block", "tx", t, "err", err)
-
-			return nil, fmt.Errorf("failed to write transaction %s to the block: %w", t.Hash(), err)
-		}
-
-		if p.logger.GetLevel() <= hclog.Debug {
-			if p.logger.IsTrace() {
-				_, _ = buf.WriteString(t.String())
-			}
-
-			if p.logger.IsDebug() {
-				_, _ = buf.WriteString(t.Hash().String())
-			}
-
-			if i != len(block.Transactions)-1 {
-				_, _ = buf.WriteString("\n")
-			}
-		}
-	}
-
-	p.logger.Debug("[BlockchainWrapper.ProcessBlock]", "txs count", len(block.Transactions), "txs", buf.String())
 
 	_, root, err := transition.Commit()
 	if err != nil {

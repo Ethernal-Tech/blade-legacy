@@ -134,16 +134,22 @@ func (e *Executor) ProcessBlock(
 	block *types.Block,
 	blockCreator types.Address,
 ) (*Transition, error) {
-	e.logger.Debug("[BlockchainWrapper.ProcessBlock]",
-		"block number", block.Number(), "block hash", block.Hash(),
-		"parent state root", parentRoot, "block state root", block.Header.StateRoot)
+	e.logger.Debug("[Executor.ProcessBlock] started...",
+		"block number", block.Number(),
+		"block hash", block.Hash(),
+		"parent state root", parentRoot,
+		"block state root", block.Header.StateRoot,
+		"txs count", len(block.Transactions))
 
 	txn, err := e.BeginTxn(parentRoot, block.Header, blockCreator)
 	if err != nil {
 		return nil, err
 	}
 
-	var buf bytes.Buffer
+	var (
+		buf    bytes.Buffer
+		logLvl = e.logger.GetLevel()
+	)
 
 	for i, t := range block.Transactions {
 		if t.Gas() > block.Header.GasLimit {
@@ -156,7 +162,7 @@ func (e *Executor) ProcessBlock(
 			return nil, err
 		}
 
-		if e.logger.GetLevel() <= hclog.Debug {
+		if logLvl <= hclog.Debug {
 			if e.logger.IsTrace() {
 				_, _ = buf.WriteString(t.String())
 			}
@@ -171,8 +177,13 @@ func (e *Executor) ProcessBlock(
 		}
 	}
 
-	if e.logger.IsDebug() {
-		e.logger.Debug("[Executor.ProcessBlock]", "txs count", len(block.Transactions), "txs", buf.String())
+	var (
+		logMsg  = "[Executor.ProcessBlock] finished."
+		logArgs = []interface{}{"txs count", len(block.Transactions), "txs", buf.String()}
+	)
+
+	if logLvl <= hclog.Debug {
+		e.logger.Log(logLvl, logMsg, logArgs...)
 	}
 
 	return txn, nil
@@ -364,7 +375,7 @@ func (t *Transition) Write(txn *types.Transaction) error {
 		}
 
 		txn.SetFrom(from)
-		t.logger.Debug("[Transition.Write]", "recovered sender", from)
+		t.logger.Trace("[Transition.Write]", "recovered sender", from)
 	}
 
 	// Make a local copy and apply the transaction
