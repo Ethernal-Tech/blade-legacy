@@ -360,6 +360,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 			if accessEntry.Address == contractAddr {
 				require.Len(t, accessEntry.StorageKeys, 1)
 				require.Equal(t, accessEntry.StorageKeys[0], types.ZeroHash)
+
 				foundContractAddr = true
 
 				break
