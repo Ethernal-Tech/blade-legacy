@@ -370,12 +370,16 @@ func ConvertTxnToCallMsg(txn *types.Transaction) *jsonrpc.CallMsg {
 	}
 
 	return &jsonrpc.CallMsg{
-		From:     txn.From(),
-		To:       txn.To(),
-		Data:     txn.Input(),
-		GasPrice: gasPrice,
-		Value:    txn.Value(),
-		Gas:      txn.Gas(),
+		From:       txn.From(),
+		To:         txn.To(),
+		Data:       txn.Input(),
+		GasPrice:   gasPrice,
+		Type:       uint64(txn.Type()),
+		GasFeeCap:  txn.GasFeeCap(),
+		GasTipCap:  txn.GasTipCap(),
+		Value:      txn.Value(),
+		Gas:        txn.Gas(),
+		AccessList: txn.AccessList(),
 	}
 }
 

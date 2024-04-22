@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"crypto/tls"
+	"fmt"
 	"math/big"
 	"net/http"
 	"testing"
@@ -15,7 +16,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/helper/tests"
-	bladeRPC "github.com/0xPolygon/polygon-edge/jsonrpc"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
+	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -33,69 +35,69 @@ func TestE2E_JsonRPC(t *testing.T) {
 		framework.WithEpochSize(int(epochSize)),
 		framework.WithPremine(preminedAcct.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
-		framework.WithHTTPS(),
-		framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
+		// framework.WithHTTPS(),
+		// framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
 	)
 	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
 
-	newEthClient, err := bladeRPC.NewEthClient(cluster.Servers[0].JSONRPCAddr())
+	ethClient, err := jsonrpc.NewEthClient(cluster.Servers[0].JSONRPCAddr())
 	require.NoError(t, err)
 
 	t.Run("eth_blockNumber", func(t *testing.T) {
 		require.NoError(t, cluster.WaitForBlock(epochSize, 15*time.Second))
 
-		blockNumber, err := newEthClient.BlockNumber()
+		blockNumber, err := ethClient.BlockNumber()
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, blockNumber, epochSize)
 
 		require.NoError(t, cluster.WaitForBlock(blockNumber+1, 5*time.Second))
 
-		blockNumber, err = newEthClient.BlockNumber()
+		blockNumber, err = ethClient.BlockNumber()
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, blockNumber, epochSize)
 	})
 
 	t.Run("eth_getBlock", func(t *testing.T) {
-		blockByNumber, err := newEthClient.GetBlockByNumber(bladeRPC.BlockNumber(epochSize), false)
+		blockByNumber, err := ethClient.GetBlockByNumber(jsonrpc.BlockNumber(epochSize), false)
 		require.NoError(t, err)
 		require.NotNil(t, blockByNumber)
 		require.Equal(t, epochSize, blockByNumber.Number())
 		require.Empty(t, len(blockByNumber.Transactions)) // since we did not ask for the full block
 
-		blockByNumber, err = newEthClient.GetBlockByNumber(bladeRPC.BlockNumber(epochSize), true)
+		blockByNumber, err = ethClient.GetBlockByNumber(jsonrpc.BlockNumber(epochSize), true)
 		require.NoError(t, err)
 		require.Equal(t, epochSize, blockByNumber.Number())
 		// since we asked for the full block, and epoch ending block has a transaction
 		require.Equal(t, 1, len(blockByNumber.Transactions))
 
-		blockByHash, err := newEthClient.GetBlockByHash(blockByNumber.Hash(), false)
+		blockByHash, err := ethClient.GetBlockByHash(blockByNumber.Hash(), false)
 		require.NoError(t, err)
 		require.NotNil(t, blockByHash)
 		require.Equal(t, epochSize, blockByHash.Number())
 		require.Equal(t, blockByNumber.Hash(), blockByHash.Hash())
 
-		blockByHash, err = newEthClient.GetBlockByHash(blockByNumber.Hash(), true)
+		blockByHash, err = ethClient.GetBlockByHash(blockByNumber.Hash(), true)
 		require.NoError(t, err)
 		require.Equal(t, blockByNumber.Hash(), blockByHash.Hash())
 		// since we asked for the full block, and epoch ending block has a transaction
 		require.Equal(t, 1, len(blockByHash.Transactions))
 
 		// get latest block
-		latestBlock, err := newEthClient.GetBlockByNumber(bladeRPC.LatestBlockNumber, false)
+		latestBlock, err := ethClient.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
 		require.NoError(t, err)
 		require.NotNil(t, latestBlock)
 		require.GreaterOrEqual(t, latestBlock.Number(), epochSize)
 
 		// get pending block
-		pendingBlock, err := newEthClient.GetBlockByNumber(bladeRPC.PendingBlockNumber, false)
+		pendingBlock, err := ethClient.GetBlockByNumber(jsonrpc.PendingBlockNumber, false)
 		require.NoError(t, err)
 		require.NotNil(t, pendingBlock)
 		require.GreaterOrEqual(t, pendingBlock.Number(), latestBlock.Number())
 
 		// get earliest block
-		earliestBlock, err := newEthClient.GetBlockByNumber(bladeRPC.EarliestBlockNumber, false)
+		earliestBlock, err := ethClient.GetBlockByNumber(jsonrpc.EarliestBlockNumber, false)
 		require.NoError(t, err)
 		require.NotNil(t, earliestBlock)
 		require.Equal(t, uint64(0), earliestBlock.Number())
@@ -107,7 +109,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
 
-		code, err := newEthClient.GetCode(target, bladeRPC.LatestBlockNumberOrHash)
+		code, err := ethClient.GetCode(target, jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.NotEmpty(t, code)
 	})
@@ -124,7 +126,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		target := types.Address(txn.Receipt().ContractAddress)
 
-		resp, err := newEthClient.GetStorageAt(target, types.Hash{}, bladeRPC.LatestBlockNumberOrHash)
+		resp, err := ethClient.GetStorageAt(target, types.Hash{}, jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", resp.String())
 
@@ -138,7 +140,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		txn = cluster.SendTxn(t, key1, types.NewTx(types.NewLegacyTx(types.WithInput(input), types.WithTo(&target))))
 		require.True(t, txn.Succeed())
 
-		resp, err = newEthClient.GetStorageAt(target, types.Hash{}, bladeRPC.LatestBlockNumberOrHash)
+		resp, err = ethClient.GetStorageAt(target, types.Hash{}, jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000001", resp.String())
 	})
@@ -147,32 +149,32 @@ func TestE2E_JsonRPC(t *testing.T) {
 		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
 		require.True(t, txn.Succeed())
 
-		ethTxn, err := newEthClient.GetTransactionByHash(types.Hash(txn.Receipt().TransactionHash))
+		ethTxn, err := ethClient.GetTransactionByHash(types.Hash(txn.Receipt().TransactionHash))
 		require.NoError(t, err)
 
 		require.Equal(t, ethTxn.From(), preminedAcct.Address())
 
-		receipt, err := newEthClient.GetTransactionReceipt(ethTxn.Hash())
+		receipt, err := ethClient.GetTransactionReceipt(ethTxn.Hash())
 		require.NoError(t, err)
 		require.NotNil(t, receipt)
 		require.Equal(t, ethTxn.Hash(), types.Hash(receipt.TransactionHash))
 	})
 
 	t.Run("eth_getTransactionCount", func(t *testing.T) {
-		nonce, err := newEthClient.GetNonce(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
+		nonce, err := ethClient.GetNonce(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, nonce, uint64(0)) // since we used this account in previous tests
 
 		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
 		require.True(t, txn.Succeed())
 
-		newNonce, err := newEthClient.GetNonce(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
+		newNonce, err := ethClient.GetNonce(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, nonce+1, newNonce)
 	})
 
 	t.Run("eth_getBalance", func(t *testing.T) {
-		balance, err := newEthClient.GetBalance(preminedAcct.Address(), bladeRPC.LatestBlockNumberOrHash)
+		balance, err := ethClient.GetBalance(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.True(t, balance.Cmp(big.NewInt(0)) >= 0)
 
@@ -183,7 +185,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		txn := cluster.Transfer(t, preminedAcct, receiver, tokens)
 		require.True(t, txn.Succeed())
 
-		newBalance, err := newEthClient.GetBalance(receiver, bladeRPC.LatestBlockNumberOrHash)
+		newBalance, err := ethClient.GetBalance(receiver, jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, tokens, newBalance)
 	})
@@ -195,7 +197,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		target := types.Address(deployTxn.Receipt().ContractAddress)
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
-		estimatedGas, err := newEthClient.EstimateGas(&bladeRPC.CallMsg{
+		estimatedGas, err := ethClient.EstimateGas(&jsonrpc.CallMsg{
 			From: preminedAcct.Address(),
 			To:   &target,
 			Data: input,
@@ -205,7 +207,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_gasPrice", func(t *testing.T) {
-		gasPrice, err := newEthClient.GasPrice()
+		gasPrice, err := ethClient.GasPrice()
 		require.NoError(t, err)
 		require.Greater(t, gasPrice, uint64(0)) // london fork is enabled, so gas price should be greater than 0
 	})
@@ -220,23 +222,23 @@ func TestE2E_JsonRPC(t *testing.T) {
 		acctZeroBalance, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		resp, err := newEthClient.Call(&bladeRPC.CallMsg{
+		resp, err := ethClient.Call(&jsonrpc.CallMsg{
 			From: types.Address(acctZeroBalance.Address()),
 			To:   &target,
 			Data: input,
-		}, bladeRPC.LatestBlockNumber, nil)
+		}, jsonrpc.LatestBlockNumber, nil)
 		require.NoError(t, err)
 		require.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000000", resp)
 	})
 
 	t.Run("eth_chainID", func(t *testing.T) {
-		chainID, err := newEthClient.ChainID()
+		chainID, err := ethClient.ChainID()
 		require.NoError(t, err)
 		require.Equal(t, big.NewInt(100), chainID) // default chainID
 	})
 
 	t.Run("eth_maxPriorityFeePerGas", func(t *testing.T) {
-		maxPriorityFeePerGas, err := newEthClient.MaxPriorityFeePerGas()
+		maxPriorityFeePerGas, err := ethClient.MaxPriorityFeePerGas()
 		require.NoError(t, err)
 		// london fork is enabled, so maxPriorityFeePerGas should be greater than 0
 		require.True(t, maxPriorityFeePerGas.Cmp(big.NewInt(0)) > 0)
@@ -246,10 +248,10 @@ func TestE2E_JsonRPC(t *testing.T) {
 		receiver := types.StringToAddress("0xDEADFFFF")
 		tokenAmount := ethgo.Ether(1)
 
-		chainID, err := newEthClient.ChainID()
+		chainID, err := ethClient.ChainID()
 		require.NoError(t, err)
 
-		gasPrice, err := newEthClient.GasPrice()
+		gasPrice, err := ethClient.GasPrice()
 		require.NoError(t, err)
 
 		newAccountKey, newAccountAddr := tests.GenerateKeyAndAddr(t)
@@ -257,7 +259,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		transferTxn := cluster.Transfer(t, preminedAcct, newAccountAddr, tokenAmount)
 		require.True(t, transferTxn.Succeed())
 
-		newAccountBalance, err := newEthClient.GetBalance(newAccountAddr, bladeRPC.LatestBlockNumberOrHash)
+		newAccountBalance, err := ethClient.GetBalance(newAccountAddr, jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, tokenAmount, newAccountBalance)
 
@@ -276,7 +278,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		data := signedTxn.MarshalRLPTo(nil)
 
-		hash, err := newEthClient.SendRawTransaction(data)
+		hash, err := ethClient.SendRawTransaction(data)
 		require.NoError(t, err)
 		require.NotEqual(t, types.ZeroHash, hash)
 	})
@@ -289,7 +291,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.True(t, txn.Succeed())
 		txReceipt := txn.Receipt()
 
-		header, err := newEthClient.GetHeaderByNumber(bladeRPC.BlockNumber(txReceipt.BlockNumber))
+		header, err := ethClient.GetHeaderByNumber(jsonrpc.BlockNumber(txReceipt.BlockNumber))
 		require.NoError(t, err)
 
 		require.Equal(t, txReceipt.BlockNumber, header.Number)
@@ -304,7 +306,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.True(t, txn.Succeed())
 		txReceipt := txn.Receipt()
 
-		header, err := newEthClient.GetHeaderByHash(types.Hash(txReceipt.BlockHash))
+		header, err := ethClient.GetHeaderByHash(types.Hash(txReceipt.BlockHash))
 		require.NoError(t, err)
 
 		require.Equal(t, txReceipt.BlockNumber, header.Number)
@@ -316,7 +318,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.True(t, txn.Succeed())
 		receipt := txn.Receipt()
 
-		receipts, err := newEthClient.GetBlockReceipts(bladeRPC.BlockNumber(receipt.BlockNumber))
+		receipts, err := ethClient.GetBlockReceipts(jsonrpc.BlockNumber(receipt.BlockNumber))
 
 		require.NoError(t, err)
 		require.NotNil(t, receipts)
@@ -329,59 +331,42 @@ func TestE2E_JsonRPC(t *testing.T) {
 	t.Run("eth_createAccessList", func(t *testing.T) {
 		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
 		require.True(t, deployTxn.Succeed())
-		receiver := types.Address(deployTxn.Receipt().ContractAddress)
-
-		newAccessList := make(types.TxAccessList, 1)
-		newAccessList[0] = types.AccessTuple{
-			Address:     receiver,
-			StorageKeys: []types.Hash{types.EmptyCodeHash},
-		}
+		contractAddr := types.Address(deployTxn.Receipt().ContractAddress)
 
 		setValueFn := contractsapi.TestSimple.Abi.GetMethod("setValue")
 
-		newVal := big.NewInt(1)
-
-		inputValue, err := setValueFn.Encode([]interface{}{newVal})
+		inputValue, err := setValueFn.Encode([]interface{}{big.NewInt(20)})
 		require.NoError(t, err)
 
-		txtype := uint64(types.DynamicFeeTxType)
-		msg := &bladeRPC.CallMsg{
-			From:       preminedAcct.Address(),
-			To:         &receiver,
-			Data:       inputValue,
-			Type:       txtype,
-			AccessList: newAccessList,
-		}
+		tx := types.NewTx(
+			types.NewDynamicFeeTx(
+				types.WithFrom(preminedAcct.Address()),
+				types.WithTo(&contractAddr),
+				types.WithInput(inputValue),
+			))
+		msg := txrelayer.ConvertTxnToCallMsg(tx)
 
-		accessListResult, err := newEthClient.CreateAccessList(msg, bladeRPC.LatestBlockNumberOrHash)
+		aclResult, err := ethClient.CreateAccessList(msg, jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
-		require.NotNil(t, accessListResult)
+		require.NotNil(t, aclResult)
 
-		require.NoError(t, accessListResult.Error)
-		require.NotEqual(t, 0, len(accessListResult.Accesslist))
-		require.GreaterOrEqual(t, accessListResult.GasUsed, uint64(0))
+		require.NoError(t, aclResult.Error)
+		require.NotEmpty(t, aclResult.Accesslist)
+		require.Greater(t, aclResult.GasUsed, uint64(0))
 
-		isDone := false
+		foundContractAddr := false
 
-		for _, accessTuple := range accessListResult.Accesslist {
-			if ethgo.Address(accessTuple.Address) == ethgo.Address(receiver) {
-				if len(accessTuple.StorageKeys) != 0 {
-					for _, sKeys := range accessTuple.StorageKeys {
-						if sKeys == newAccessList[0].StorageKeys[0] {
-							isDone = true
+		for _, accessEntry := range aclResult.Accesslist {
+			if accessEntry.Address == contractAddr {
+				require.Len(t, accessEntry.StorageKeys, 1)
+				require.Equal(t, accessEntry.StorageKeys[0], types.ZeroHash)
+				foundContractAddr = true
 
-							break
-						}
-					}
-
-					if isDone {
-						break
-					}
-				}
+				break
 			}
 		}
 
-		require.Equal(t, true, isDone)
+		require.True(t, foundContractAddr, fmt.Sprintf("contract address %s was not found in the access list", contractAddr))
 	})
 }
 
