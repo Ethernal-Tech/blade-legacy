@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/0xPolygon/go-ibft/core"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 
@@ -29,9 +30,10 @@ import (
 )
 
 const (
-	minSyncPeers = 2
-	pbftProto    = "/pbft/0.2"
-	bridgeProto  = "/bridge/0.2"
+	minSyncPeers                = 2
+	pbftProto                   = "/pbft/0.2"
+	bridgeProto                 = "/bridge/0.2"
+	baseRoundTimeoutScaleFactor = 2
 )
 
 // polybftBackend is an interface defining polybft methods needed by fsm and sync tracker
@@ -506,6 +508,13 @@ func (p *Polybft) Initialize() error {
 	}
 
 	p.ibft = newIBFTConsensusWrapper(p.logger, p.runtime, p)
+	// if block time is greater than default base round timeout,
+	// set base round timeout as twice the block time
+	blockTime := time.Duration(int64(p.config.BlockTime)) * time.Second
+	if blockTime >= core.DefaultBaseRoundTimeout {
+		baseRoundTimeout := int64(blockTime.Seconds() * baseRoundTimeoutScaleFactor)
+		p.ibft.SetBaseRoundTimeout(time.Duration(baseRoundTimeout) * time.Second)
+	}
 
 	if err = p.subscribeToIbftTopic(); err != nil {
 		return fmt.Errorf("IBFT topic subscription failed: %w", err)
