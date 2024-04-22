@@ -475,7 +475,7 @@ func (p *TxPool) Demote(tx *types.Transaction) {
 // ResetWithBlock processes the transactions from the newly
 // finalized block to sync the pool with the new state
 func (p *TxPool) ResetWithBlock(block *types.Block) {
-	// process the txs in the event
+	// process the txs in the block
 	// to make sure the pool is up-to-date
 	// Grab the latest state root now that the block has been inserted
 	stateRoot := p.store.Header().StateRoot
