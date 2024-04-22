@@ -35,8 +35,8 @@ func TestE2E_JsonRPC(t *testing.T) {
 		framework.WithEpochSize(int(epochSize)),
 		framework.WithPremine(preminedAcct.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
-		// framework.WithHTTPS(),
-		// framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
+		framework.WithHTTPS(),
+		framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
 	)
 	defer cluster.Stop()
 
