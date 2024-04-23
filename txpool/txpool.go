@@ -189,6 +189,9 @@ type TxPool struct {
 
 	// localPeerID is the peer ID of the local node that is running the txpool
 	localPeerID peer.ID
+
+	// localProposed contains all txs added to the block during last proposal prepared by local node
+	localProposed []*types.Transaction
 }
 
 // NewTxPool returns a new pool for processing incoming transactions.
@@ -383,6 +386,9 @@ func (p *TxPool) Pop(tx *types.Transaction) {
 	if tx := account.promoted.peek(); tx != nil {
 		p.executables.push(tx)
 	}
+
+	// update local proposed txs
+	p.localProposed = append(p.localProposed, tx)
 }
 
 // Drop clears the entire account associated with the given transaction
@@ -520,6 +526,27 @@ func (p *TxPool) ResetWithBlock(block *types.Block) {
 	if !p.sealing.Load() {
 		// only non-validator cleanup inactive accounts
 		p.updateAccountSkipsCounts(stateNonces, stateRoot)
+	}
+}
+
+// ReinjectProposed clears localProposed slice and returns txs to the pool
+// if local node was proposer for the previous failed round
+func (p *TxPool) ReinjectProposed(reinject bool) {
+	p.logger.Info("ReinjectProposed", "reinject", reinject, "localProposed length", len(p.localProposed))
+
+	// if local node was previous proposer
+	if len(p.localProposed) > 0 {
+		if reinject {
+			// return txs to the pool
+			for _, tx := range p.localProposed {
+				if err := p.addTx(local, tx); err != nil {
+					p.logger.Error("ReinjectProposed", "tx hash", tx.Hash(), "error", err)
+				}
+			}
+		}
+
+		// clear proposed txs
+		p.localProposed = nil
 	}
 }
 
