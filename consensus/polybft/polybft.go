@@ -508,13 +508,6 @@ func (p *Polybft) Initialize() error {
 	}
 
 	p.ibft = newIBFTConsensusWrapper(p.logger, p.runtime, p)
-	// if block time is greater than default base round timeout,
-	// set base round timeout as twice the block time
-	blockTime := time.Duration(int64(p.config.BlockTime)) * time.Second
-	if blockTime >= core.DefaultBaseRoundTimeout {
-		baseRoundTimeout := int64(blockTime.Seconds() * baseRoundTimeoutScaleFactor)
-		p.ibft.SetBaseRoundTimeout(time.Duration(baseRoundTimeout) * time.Second)
-	}
 
 	if err = p.subscribeToIbftTopic(); err != nil {
 		return fmt.Errorf("IBFT topic subscription failed: %w", err)
@@ -669,6 +662,14 @@ func (p *Polybft) startConsensusProtocol() {
 				p.logger.Error("failed to create fsm", "block number", latestHeader.Number, "error", err)
 
 				continue
+			}
+
+			// if block time is greater than default base round timeout,
+			// set base round timeout as twice the block time
+			blockTime := time.Duration(int64(p.config.BlockTime)) * time.Second
+			if blockTime >= core.DefaultBaseRoundTimeout {
+				baseRoundTimeout := int64(blockTime.Seconds() * baseRoundTimeoutScaleFactor)
+				p.ibft.SetBaseRoundTimeout(time.Duration(baseRoundTimeout) * time.Second)
 			}
 
 			sequenceCh, stopSequence = p.ibft.runSequence(latestHeader.Number + 1)
