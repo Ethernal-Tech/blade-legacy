@@ -304,7 +304,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.load_test_erc20_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC721*"
+                      "text": "${{ inputs.load_test_erc721_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC721*"
                     }
                   ]
                 }
