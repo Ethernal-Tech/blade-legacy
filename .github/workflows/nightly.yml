@@ -56,14 +56,14 @@ jobs:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
       VAULT_PASSWORD: ${{ secrets.VAULT_PASSWORD }}
-  load_test_multiple_eoa:
+  load_test_eoa:
     name: Load Test EOA
     uses: ./.github/workflows/load-test.yml
     needs: deploy_network
     with:
       environment: nightly
       type: EOA
-      dynamic: false
+      dynamic: true
       vus: "100"
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
@@ -80,18 +80,42 @@ jobs:
       AWS_LOADTESTRUNNER_MNEMONIC: ${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  load_test_multiple_erc20:
+  load_test_erc20:
     name: Load Test ERC20
     uses: ./.github/workflows/load-test.yml
-    needs: [deploy_network, load_test_multiple_eoa]
+    needs: [deploy_network, load_test_eoa]
     with:
       environment: nightly
       type: ERC20
-      dynamic: false
+      dynamic: true
       vus: "100"
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
-      wait_txpool: true
+      wait_txpool: false
+      receipts_timeout: "30s"
+      batch_size: "10000"
+      notification: false
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
+      AWS_LOADTESTRUNNER_AMI_ID: ${{ secrets.AWS_LOADTESTRUNNER_AMI_ID }}
+      AWS_LOADTESTRUNNER_SUBNET_ID: ${{ secrets.AWS_LOADTESTRUNNER_SUBNET_ID }}
+      AWS_LOADTESTRUNNER_SG_ID: ${{ secrets.AWS_LOADTESTRUNNER_SG_ID }}
+      AWS_LOADTESTRUNNER_MNEMONIC: ${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  load_test_erc721:
+    name: Load Test ERC721
+    uses: ./.github/workflows/load-test.yml
+    needs: [deploy_network, load_test_eoa, load_test_erc20]
+    with:
+      environment: nightly
+      type: ERC721
+      dynamic: true
+      vus: "100"
+      txs_per_user: "10000"
+      txpool_timeout: "60m0s"
+      wait_txpool: false
       receipts_timeout: "30s"
       batch_size: "10000"
       notification: false
@@ -107,7 +131,7 @@ jobs:
   destroy_network:
     name: Destroy Network
     uses: ./.github/workflows/destroy-network.yml
-    needs: [check, deploy_network, load_test_multiple_eoa, load_test_multiple_erc20]
+    needs: [check, deploy_network, load_test_eoa, load_test_erc20, load_test_erc721]
     if: (always() && (needs.check.outputs.new_commit_count > 0 || inputs.force_run))
     with:
       environment: nightly
@@ -120,7 +144,7 @@ jobs:
   notification_nightly:
     name: Nightly Notification
     uses: ./.github/workflows/notification-nightly.yml
-    needs: [ci, deploy_network, load_test_multiple_eoa, load_test_multiple_erc20, destroy_network]
+    needs: [ci, deploy_network, load_test_eoa, load_test_erc20, load_test_erc721, destroy_network]
     if: success() || failure()
     with:
       environment: nightly
@@ -142,62 +166,89 @@ jobs:
       benchmark_test_output: ${{ needs.ci.outputs.benchmark_test }}
       deploy_network_terraform_output: ${{ needs.deploy_network.outputs.terraform_output }}
       deploy_network_ansible_output: ${{ needs.deploy_network.outputs.ansible_output }}
-      load_test_multiple_eoa_output: ${{ needs.load_test_multiple_eoa.outputs.load_test_output }}
-      load_test_multiple_erc20_output: ${{ needs.load_test_multiple_erc20.outputs.load_test_output }}
+      load_test_eoa_output: ${{ needs.load_test_eoa.outputs.load_test_output }}
+      load_test_erc20_output: ${{ needs.load_test_erc20.outputs.load_test_output }}
+      load_test_erc721_output: ${{ needs.load_test_erc721.outputs.load_test_output }}
       destroy_network_logs_output: ${{ needs.destroy_network.outputs.logs_output }}
       destroy_network_terraform_output: ${{ needs.destroy_network.outputs.terraform_output }}
     secrets:
       AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  notification_load_test_multiple_eoa:
+  notification_load_test_eoa:
     name: Load Test EOA Notification
     uses: ./.github/workflows/notification-load-test.yml
-    needs: [load_test_multiple_eoa, notification_nightly]
-    if: (always() && needs.load_test_multiple_eoa.outputs.load_test_output == 'true')
+    needs: [load_test_eoa, notification_nightly]
+    if: (always() && needs.load_test_eoa.outputs.load_test_output == 'true')
     with:
       environment: nightly
       type: EOA
-      dynamic: false
+      dynamic: true
       vus: "100"
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
       receipts_timeout: "30s"
       batch_size: "10000"
-      total_time: ${{ needs.load_test_multiple_eoa.outputs.total_time }}
-      total_txs: ${{ needs.load_test_multiple_eoa.outputs.total_txs }}
-      total_blocks: ${{ needs.load_test_multiple_eoa.outputs.total_blocks }}
-      avg_txs_per_second: ${{ needs.load_test_multiple_eoa.outputs.avg_txs_per_second }}
-      max_txs_per_second: ${{ needs.load_test_multiple_eoa.outputs.max_txs_per_second }}
-      total_gas_used: ${{ needs.load_test_multiple_eoa.outputs.total_gas_used }}
-      avg_gas_per_tx: ${{ needs.load_test_multiple_eoa.outputs.avg_gas_per_tx }}
-      avg_gas_utilization: ${{ needs.load_test_multiple_eoa.outputs.avg_gas_utilization }}
-      max_gas_utilization: ${{ needs.load_test_multiple_eoa.outputs.max_gas_utilization }}
+      total_time: ${{ needs.load_test_eoa.outputs.total_time }}
+      total_txs: ${{ needs.load_test_eoa.outputs.total_txs }}
+      total_blocks: ${{ needs.load_test_eoa.outputs.total_blocks }}
+      avg_txs_per_second: ${{ needs.load_test_eoa.outputs.avg_txs_per_second }}
+      max_txs_per_second: ${{ needs.load_test_eoa.outputs.max_txs_per_second }}
+      total_gas_used: ${{ needs.load_test_eoa.outputs.total_gas_used }}
+      avg_gas_per_tx: ${{ needs.load_test_eoa.outputs.avg_gas_per_tx }}
+      avg_gas_utilization: ${{ needs.load_test_eoa.outputs.avg_gas_utilization }}
+      max_gas_utilization: ${{ needs.load_test_eoa.outputs.max_gas_utilization }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-  notification_load_test_multiple_erc20:
+  notification_load_test_erc20:
     name: Load Test ERC20 Notification
     uses: ./.github/workflows/notification-load-test.yml
-    needs: [load_test_multiple_erc20, notification_nightly, notification_load_test_multiple_eoa]
-    if: (always() && needs.load_test_multiple_erc20.outputs.load_test_output == 'true')
+    needs: [load_test_erc20, notification_nightly, notification_load_test_eoa]
+    if: (always() && needs.load_test_erc20.outputs.load_test_output == 'true')
     with:
       environment: nightly
       type: ERC20
-      dynamic: false
+      dynamic: true
       vus: "100"
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
       receipts_timeout: "30s"
       batch_size: "10000"
-      total_time: ${{ needs.load_test_multiple_erc20.outputs.total_time }}
-      total_txs: ${{ needs.load_test_multiple_erc20.outputs.total_txs }}
-      total_blocks: ${{ needs.load_test_multiple_erc20.outputs.total_blocks }}
-      avg_txs_per_second: ${{ needs.load_test_multiple_erc20.outputs.avg_txs_per_second }}
-      max_txs_per_second: ${{ needs.load_test_multiple_erc20.outputs.max_txs_per_second }}
-      total_gas_used: ${{ needs.load_test_multiple_erc20.outputs.total_gas_used }}
-      avg_gas_per_tx: ${{ needs.load_test_multiple_erc20.outputs.avg_gas_per_tx }}
-      avg_gas_utilization: ${{ needs.load_test_multiple_erc20.outputs.avg_gas_utilization }}
-      max_gas_utilization: ${{ needs.load_test_multiple_erc20.outputs.max_gas_utilization }}
+      total_time: ${{ needs.load_test_erc20.outputs.total_time }}
+      total_txs: ${{ needs.load_test_erc20.outputs.total_txs }}
+      total_blocks: ${{ needs.load_test_erc20.outputs.total_blocks }}
+      avg_txs_per_second: ${{ needs.load_test_erc20.outputs.avg_txs_per_second }}
+      max_txs_per_second: ${{ needs.load_test_erc20.outputs.max_txs_per_second }}
+      total_gas_used: ${{ needs.load_test_erc20.outputs.total_gas_used }}
+      avg_gas_per_tx: ${{ needs.load_test_erc20.outputs.avg_gas_per_tx }}
+      avg_gas_utilization: ${{ needs.load_test_erc20.outputs.avg_gas_utilization }}
+      max_gas_utilization: ${{ needs.load_test_erc20.outputs.max_gas_utilization }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  notification_load_test_erc721:
+    name: Load Test ERC721 Notification
+    uses: ./.github/workflows/notification-load-test.yml
+    needs: [load_test_erc721, notification_nightly, notification_load_test_eoa, notification_load_test_erc20]
+    if: (always() && needs.load_test_erc721.outputs.load_test_output == 'true')
+    with:
+      environment: nightly
+      type: ERC721
+      dynamic: true
+      vus: "100"
+      txs_per_user: "10000"
+      txpool_timeout: "60m0s"
+      wait_txpool: false
+      receipts_timeout: "30s"
+      batch_size: "10000"
+      total_time: ${{ needs.load_test_erc721.outputs.total_time }}
+      total_txs: ${{ needs.load_test_erc721.outputs.total_txs }}
+      total_blocks: ${{ needs.load_test_erc721.outputs.total_blocks }}
+      avg_txs_per_second: ${{ needs.load_test_erc721.outputs.avg_txs_per_second }}
+      max_txs_per_second: ${{ needs.load_test_erc721.outputs.max_txs_per_second }}
+      total_gas_used: ${{ needs.load_test_erc721.outputs.total_gas_used }}
+      avg_gas_per_tx: ${{ needs.load_test_erc721.outputs.avg_gas_per_tx }}
+      avg_gas_utilization: ${{ needs.load_test_erc721.outputs.avg_gas_utilization }}
+      max_gas_utilization: ${{ needs.load_test_erc721.outputs.max_gas_utilization }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

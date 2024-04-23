@@ -89,34 +89,34 @@ on: # yamllint disable-line rule:truthy
     outputs:
       load_test_output:
         description: Load Test output
-        value: ${{ jobs.load_test_scenario.outputs.test_output_success }}
+        value: ${{ jobs.load_test.outputs.test_output_success }}
       total_time:
         description: Total Time
-        value: ${{ jobs.load_test_scenario.outputs.total_time }}
+        value: ${{ jobs.load_test.outputs.total_time }}
       total_txs:
         description: Total Transactions
-        value: ${{ jobs.load_test_scenario.outputs.total_txs }}
+        value: ${{ jobs.load_test.outputs.total_txs }}
       total_blocks:
         description: Total Blocks
-        value: ${{ jobs.load_test_scenario.outputs.total_blocks }}
+        value: ${{ jobs.load_test.outputs.total_blocks }}
       avg_txs_per_second:
         description: Average Transactions Per Second
-        value: ${{ jobs.load_test_scenario.outputs.avg_txs_per_second }}
+        value: ${{ jobs.load_test.outputs.avg_txs_per_second }}
       max_txs_per_second:
         description: Maximum Transactions Per Second
-        value: ${{ jobs.load_test_scenario.outputs.max_txs_per_second }}
+        value: ${{ jobs.load_test.outputs.max_txs_per_second }}
       total_gas_used:
         description: Total Gas Used
-        value: ${{ jobs.load_test_scenario.outputs.total_gas_used }}
+        value: ${{ jobs.load_test.outputs.total_gas_used }}
       avg_gas_per_tx:
         description: Average Gas Used Per Transaction
-        value: ${{ jobs.load_test_scenario.outputs.avg_gas_per_tx }}
+        value: ${{ jobs.load_test.outputs.avg_gas_per_tx }}
       avg_gas_utilization:
         description: Average Gas Utilization
-        value: ${{ jobs.load_test_scenario.outputs.avg_gas_utilization }}
+        value: ${{ jobs.load_test.outputs.avg_gas_utilization }}
       max_gas_utilization:
         description: Maximum Gas Utilization
-        value: ${{ jobs.load_test_scenario.outputs.max_gas_utilization }}
+        value: ${{ jobs.load_test.outputs.max_gas_utilization }}
     secrets:
       AWS_ROLE_ARN:
         required: true
@@ -186,8 +186,12 @@ jobs:
           subnet-id: ${{ secrets.AWS_LOADTESTRUNNER_SUBNET_ID }}
           security-group-id: ${{ secrets.AWS_LOADTESTRUNNER_SG_ID }}
           github-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-  load_test_scenario:
-    name: Run Load Test - ${{ inputs.type }}
+          aws-resource-tags: >
+            [
+              {"Key": "Name", "Value": "LoadTestRunner"}
+            ]
+  load_test:
+    name: Run Load Test
     runs-on: ${{ needs.load_test_runner.outputs.load_test_runner_label }}
     needs: [check_network, load_test_runner]
     outputs:
@@ -204,12 +208,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
+      - name: Install make and jq
+        run: sudo apt-get -y install make jq
+      - name: Install Golang
+        run: |
+          rm -rf /usr/local/go
+          sudo wget https://go.dev/dl/go1.21.6.linux-amd64.tar.gz -O /opt/go1.21.6.linux-amd64.tar.gz
+          sudo chmod 0755 /opt/go1.21.6.linux-amd64.tar.gz
+          sudo tar -C /usr/local/ -xzf /opt/go1.21.6.linux-amd64.tar.gz
+          sudo ln -s /usr/local/go/bin/go /usr/local/bin/go
+          echo GOPATH="/home/ubuntu/go" >> $GITHUB_ENV
+          echo GOCACHE="/home/ubuntu/.cache/go-build" >> $GITHUB_ENV
+          echo GOMODCACHE="/home/ubuntu/.cache/go-mod" >> $GITHUB_ENV
       - name: Build Blade
         run: make build
       - name: Start Load Test
         id: load_test_results
         run: |
-          ./blade load-test --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --name "results" --type ${{ inputs.type }} ${{ inputs.dynamic == true && '--dynamic' || '' }} --vus ${{ inputs.vus }} --txs-per-user ${{ inputs.txs_per_user }} --batch-size ${{ inputs.batch_size }} --txpool-timeout ${{ inputs.txpool_timeout }} ${{ inputs.wait_txpool == true && '--txpool-timeout' || '' }} --receipts-timeout ${{ inputs.receipts_timeout }} --to-json
+          ./blade load-test --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --name "results" --type ${{ inputs.type }} ${{ inputs.dynamic == true && '--dynamic' || '' }} --vus ${{ inputs.vus }} --txs-per-user ${{ inputs.txs_per_user }} --batch-size ${{ inputs.batch_size }} --txpool-timeout ${{ inputs.txpool_timeout }} ${{ inputs.wait_txpool == true && '--wait-txpool' || '' }} --receipts-timeout ${{ inputs.receipts_timeout }} --to-json
           echo "total_time=$(cat results_${{ inputs.type }}.json | jq -r '.totalTime')" >> $GITHUB_OUTPUT
           echo "total_txs=$(cat results_${{ inputs.type }}.json | jq -r '.totalTxs')" >> $GITHUB_OUTPUT
           echo "total_blocks=$(cat results_${{ inputs.type }}.json | jq -r '.totalBlocks')" >> $GITHUB_OUTPUT
@@ -225,9 +241,9 @@ jobs:
         run: echo "test_output=true" >> $GITHUB_OUTPUT
   notification:
     name: Load Test Notification
-    needs: load_test_scenario
+    needs: load_test
     uses: ./.github/workflows/notification-load-test.yml
-    if: (always() && inputs.notification && needs.load_test_scenario.outputs.test_output_success == 'true')
+    if: (always() && inputs.notification && needs.load_test.outputs.test_output_success == 'true')
     with:
       environment: ${{ inputs.environment }}
       type: ${{ inputs.type }}
@@ -238,21 +254,21 @@ jobs:
       wait_txpool: ${{ inputs.wait_txpool }}
       receipts_timeout: ${{ inputs.receipts_timeout }}
       batch_size: ${{ inputs.batch_size }}
-      total_time: ${{ needs.load_test_scenario.outputs.total_time }}
-      total_txs: ${{ needs.load_test_scenario.outputs.total_txs }}
-      total_blocks: ${{ needs.load_test_scenario.outputs.total_blocks }}
-      avg_txs_per_second: ${{ needs.load_test_scenario.outputs.avg_txs_per_second }}
-      max_txs_per_second: ${{ needs.load_test_scenario.outputs.max_txs_per_second }}
-      total_gas_used: ${{ needs.load_test_scenario.outputs.total_gas_used }}
-      avg_gas_per_tx: ${{ needs.load_test_scenario.outputs.avg_gas_per_tx }}
-      avg_gas_utilization: ${{ needs.load_test_scenario.outputs.avg_gas_utilization }}
-      max_gas_utilization: ${{ needs.load_test_scenario.outputs.max_gas_utilization }}
+      total_time: ${{ needs.load_test.outputs.total_time }}
+      total_txs: ${{ needs.load_test.outputs.total_txs }}
+      total_blocks: ${{ needs.load_test.outputs.total_blocks }}
+      avg_txs_per_second: ${{ needs.load_test.outputs.avg_txs_per_second }}
+      max_txs_per_second: ${{ needs.load_test.outputs.max_txs_per_second }}
+      total_gas_used: ${{ needs.load_test.outputs.total_gas_used }}
+      avg_gas_per_tx: ${{ needs.load_test.outputs.avg_gas_per_tx }}
+      avg_gas_utilization: ${{ needs.load_test.outputs.avg_gas_utilization }}
+      max_gas_utilization: ${{ needs.load_test.outputs.max_gas_utilization }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   destroy_load_test_runner:
     name: Destroy Load Test Runner
     environment: ${{ inputs.environment }}
-    needs: [load_test_runner, load_test_scenario]
+    needs: [load_test_runner, load_test]
     if: always()
     runs-on: ubuntu-latest
     steps:

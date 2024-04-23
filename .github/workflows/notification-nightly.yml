@@ -79,12 +79,16 @@ on: # yamllint disable-line rule:truthy
         description: Deploy Network - Ansible output
         type: string
         required: true
-      load_test_multiple_eoa_output:
-        description: Load Test multiple_EOA output
+      load_test_eoa_output:
+        description: Load Test EOA output
         type: string
         required: true
-      load_test_multiple_erc20_output:
-        description: Load Test multiple_ERC20 output
+      load_test_erc20_output:
+        description: Load Test ERC20 output
+        type: string
+        required: true
+      load_test_erc721_output:
+        description: Load Test ERC721 output
         type: string
         required: true
       destroy_network_logs_output:
@@ -139,7 +143,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_multiple_eoa_output == 'true' && inputs.load_test_multiple_erc20_output == 'true' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc721_output == 'true' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
                     {
@@ -292,11 +296,15 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.load_test_multiple_eoa_output == 'true' && env.succeed_job || env.failed_job }} *Load Test EOA*"
+                      "text": "${{ inputs.load_test_eoa_output == 'true' && env.succeed_job || env.failed_job }} *Load Test EOA*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.load_test_multiple_erc20_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC20*"
+                      "text": "${{ inputs.load_test_erc20_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC20*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.load_test_erc20_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC721*"
                     }
                   ]
                 }

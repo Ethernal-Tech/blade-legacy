@@ -157,7 +157,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "VUs: *${{ inputs.dynamic }}*"
+                      "text": "VUs: *${{ inputs.vus }}*"
                     },
                     {
                       "type": "mrkdwn",
@@ -189,10 +189,6 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "*Total Time*\n${{ inputs.total_time }}s"
-                    },
-                    {
-                      "type": "mrkdwn",
                       "text": "*Total Transactions*\n${{ inputs.total_txs }}"
                     },
                     {
@@ -209,11 +205,11 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Total Gas Used*\n${{ inputs.total_gas_used }}"
+                      "text": "*Average GPT*\n${{ inputs.avg_gas_per_tx }}"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "*Average GPT*\n${{ inputs.avg_gas_per_tx }}"
+                      "text": "*Total Gas Used*\n${{ inputs.total_gas_used }}"
                     },
                     {
                       "type": "mrkdwn",
@@ -222,6 +218,10 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "*Maximum Gas Utilization*\n${{ inputs.max_gas_utilization }}%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Total Time*\n${{ inputs.total_time }}s"
                     }
                   ]
                 }
