@@ -1005,6 +1005,11 @@ func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.V
 	return message
 }
 
+// StartRound starts a new round with the specified view
+func (c *consensusRuntime) StartRound(view *proto.View) error {
+	return nil
+}
+
 // BuildRoundChangeMessage builds a ROUND_CHANGE message based on the passed in proposal
 func (c *consensusRuntime) BuildRoundChangeMessage(
 	proposal *proto.Proposal,
