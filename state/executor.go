@@ -46,6 +46,8 @@ type Executor struct {
 
 	PostHook        func(txn *Transition)
 	GenesisPostHook func(*Transition) error
+
+	IsL1OriginatedToken bool
 }
 
 // NewExecutor creates a new executor
@@ -243,6 +245,8 @@ func (e *Executor) BeginTxn(
 	t.ctx = txCtx
 	t.gasPool = uint64(txCtx.GasLimit)
 
+	t.isL1OriginatedToken = e.IsL1OriginatedToken
+
 	// enable contract deployment allow list (if any)
 	if e.config.ContractDeployerAllowList != nil {
 		t.deploymentAllowList = addresslist.NewAddressList(t, contracts.AllowListContractsAddr)
@@ -308,6 +312,8 @@ type Transition struct {
 	journalRevisions []runtime.JournalRevision
 
 	accessList *runtime.AccessList
+
+	isL1OriginatedToken bool
 }
 
 func NewTransition(logger hclog.Logger, config chain.ForksInTime, snap Snapshot, radix *Txn) *Transition {
@@ -741,13 +747,13 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	t.state.AddBalance(t.ctx.Coinbase, coinbaseFee)
 
 	//nolint:godox
-	// TODO - burning of base fee should not be done in the EVM
-	// Burn some amount if the london hardfork is applied.
+	// Burn some amount if the london hardfork is applied and token is non mintable.
 	// Basically, burn amount is just transferred to the current burn contract.
-	// if t.config.London && msg.Type() != types.StateTxType {
-	// 	burnAmount := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), t.ctx.BaseFee)
-	// 	t.state.AddBalance(t.ctx.BurnContract, burnAmount)
-	// }
+	if t.isL1OriginatedToken && t.config.London && msg.Type() != types.StateTxType {
+		burnAmount := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), t.ctx.BaseFee)
+		t.state.AddBalance(t.ctx.BurnContract, burnAmount)
+		t.logger.Debug("[Transition.apply] Burned some amount", "amount", burnAmount)
+	}
 
 	// return gas to the pool
 	t.addGasPool(result.GasLeft)

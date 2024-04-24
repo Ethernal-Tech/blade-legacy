@@ -226,6 +226,15 @@ func NewServer(config *Config) (*Server, error) {
 		m.executor.GenesisPostHook = factory(m.config.Chain, engineName)
 	}
 
+	if factory, exists := isL1OriginatedTokenCheckFactory[ConsensusType(engineName)]; exists {
+		isL1OriginatedToken, err := factory(m.config.Chain.Params)
+		if err != nil {
+			return nil, err
+		}
+
+		m.executor.IsL1OriginatedToken = isL1OriginatedToken
+	}
+
 	// apply allow list contracts deployer genesis data
 	if m.config.Chain.Params.ContractDeployerAllowList != nil {
 		addresslist.ApplyGenesisAllocs(m.config.Chain.Genesis, contracts.AllowListContractsAddr,

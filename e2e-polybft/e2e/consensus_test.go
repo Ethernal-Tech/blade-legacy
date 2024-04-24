@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 	"path"
@@ -515,21 +516,31 @@ func TestE2E_Consensus_CustomRewardToken(t *testing.T) {
 // and check if balance of sender, receiver, burn contract and miner is updates correctly
 // in accordance with EIP-1559 specifications
 func TestE2E_Consensus_EIP1559Check(t *testing.T) {
-	t.Skip("TODO - since we removed burn from evm, this should be fixed after the burn solution")
-
 	sender, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
+	senderKeyRaw, err := sender.MarshallPrivateKey()
+	require.NoError(t, err)
+
 	recipient := types.StringToAddress("1234")
+	burnContractAddr := types.StringToAddress("0xDeadBeef")
 
 	// sender must have premined some native tokens
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithPremine(types.Address(sender.Address())),
-		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
+		framework.WithBridge(),
+		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
+		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: burnContractAddr}),
 		framework.WithSecretsCallback(func(a []types.Address, config *framework.TestClusterConfig) {
 			for range a {
 				config.StakeAmounts = append(config.StakeAmounts, command.DefaultPremineBalance)
 			}
+
+			// do premine to reward wallet address
+			config.Premine = append(config.Premine,
+				fmt.Sprintf("%s:%s:%s",
+					sender.Address(),
+					command.DefaultPremineBalance.String(),
+					hex.EncodeToString(senderKeyRaw)))
 		}),
 	)
 	defer cluster.Stop()
@@ -581,7 +592,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	for i, txn := range txns {
 		senderInitialBalance, _ := client.GetBalance(sender.Address(), jsonrpc.LatestBlockNumberOrHash)
 		receiverInitialBalance, _ := client.GetBalance(recipient, jsonrpc.LatestBlockNumberOrHash)
-		burnContractInitialBalance, _ := client.GetBalance(types.ZeroAddress, jsonrpc.LatestBlockNumberOrHash)
+		burnContractInitialBalance, _ := client.GetBalance(burnContractAddr, jsonrpc.LatestBlockNumberOrHash)
 
 		receipt, err := relayer.SendTransaction(txn, sender)
 		require.NoError(t, err)
@@ -600,12 +611,12 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 
 		senderFinalBalance, _ := client.GetBalance(sender.Address(), jsonrpc.LatestBlockNumberOrHash)
 		receiverFinalBalance, _ := client.GetBalance(recipient, jsonrpc.LatestBlockNumberOrHash)
-		burnContractFinalBalance, _ := client.GetBalance(types.ZeroAddress, jsonrpc.LatestBlockNumberOrHash)
+		burnContractFinalBalance, _ := client.GetBalance(burnContractAddr, jsonrpc.LatestBlockNumberOrHash)
 
 		diffReceiverBalance := new(big.Int).Sub(receiverFinalBalance, receiverInitialBalance)
 		require.Equal(t, sendAmount, diffReceiverBalance, "Receiver balance should be increased by send amount")
 
-		if i == 1 && bytes.Equal(prevMiner, block.Header.Miner) {
+		if i == 1 && !bytes.Equal(prevMiner, block.Header.Miner) {
 			initialMinerBalance = big.NewInt(0)
 		}
 

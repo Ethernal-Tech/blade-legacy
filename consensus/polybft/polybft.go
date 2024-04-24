@@ -439,6 +439,16 @@ func ForkManagerFactory(forks *chain.Forks) error {
 	return nil
 }
 
+// IsL1OriginatedTokenCheck checks if the token is originated from L1
+func IsL1OriginatedTokenCheck(config *chain.Params) (bool, error) {
+	polyBFTConfig, err := GetPolyBFTConfig(config)
+	if err != nil {
+		return false, err
+	}
+
+	return polyBFTConfig.IsBridgeEnabled() && !polyBFTConfig.NativeTokenConfig.IsMintable, nil
+}
+
 // Initialize initializes the consensus (e.g. setup data)
 func (p *Polybft) Initialize() error {
 	p.logger.Info("initializing polybft...")
