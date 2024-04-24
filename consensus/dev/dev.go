@@ -102,10 +102,10 @@ func (d *Dev) run() {
 		header := d.blockchain.Header()
 		if err := d.writeNewBlock(header); err != nil {
 			d.logger.Error("failed to mine block", "err", err)
-			d.txpool.ReinjectProposed(true)
+			d.txpool.ReinsertProposed(true)
 		}
 
-		d.txpool.ReinjectProposed(false)
+		d.txpool.ReinsertProposed(false)
 	}
 }
 

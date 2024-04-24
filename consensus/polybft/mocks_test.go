@@ -360,8 +360,8 @@ func (tp *txPoolMock) ResetWithBlock(fullBlock *types.Block) {
 	tp.Called(fullBlock)
 }
 
-func (tp *txPoolMock) ReinjectProposed(reinject bool) {
-	tp.Called(reinject)
+func (tp *txPoolMock) ReinsertProposed(reinsert bool) {
+	tp.Called(reinsert)
 }
 
 var _ syncer.Syncer = (*syncerMock)(nil)

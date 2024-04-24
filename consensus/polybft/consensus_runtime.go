@@ -48,7 +48,7 @@ type txPoolInterface interface {
 	Demote(*types.Transaction)
 	SetSealing(bool)
 	ResetWithBlock(*types.Block)
-	ReinjectProposed(bool)
+	ReinsertProposed(bool)
 }
 
 // epochMetadata is the static info for epoch currently being processed

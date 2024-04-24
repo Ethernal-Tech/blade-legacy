@@ -529,18 +529,18 @@ func (p *TxPool) ResetWithBlock(block *types.Block) {
 	}
 }
 
-// ReinjectProposed clears localProposed slice and returns txs to the pool
+// ReinsertProposed clears localProposed slice and reinserts txs to the pool
 // if local node was proposer for the previous failed round
-func (p *TxPool) ReinjectProposed(reinject bool) {
-	p.logger.Info("ReinjectProposed", "reinject", reinject, "localProposed length", len(p.localProposed))
+func (p *TxPool) ReinsertProposed(reinsert bool) {
+	p.logger.Info("ReinsertProposed", "reinsert", reinsert, "localProposed length", len(p.localProposed))
 
 	// if local node was previous proposer
 	if len(p.localProposed) > 0 {
-		if reinject {
+		if reinsert {
 			// return txs to the pool
 			for _, tx := range p.localProposed {
 				if err := p.addTx(local, tx); err != nil {
-					p.logger.Error("ReinjectProposed", "tx hash", tx.Hash(), "error", err)
+					p.logger.Error("ReinsertProposed", "tx hash", tx.Hash(), "error", err)
 				}
 			}
 		}
