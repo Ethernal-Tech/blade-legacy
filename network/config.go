@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/secrets"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/multiformats/go-multiaddr"
 )
 
@@ -35,7 +36,8 @@ func DefaultConfig() *Config {
 		// The default ratio for outbound / max peer connections is 0.20
 		MaxPeers: 40,
 		// The default ratio for outbound / inbound connections is 0.25
-		MaxInboundPeers:  32,
-		MaxOutboundPeers: 8,
+		MaxInboundPeers:   32,
+		MaxOutboundPeers:  8,
+		GossipMessageSize: pubsub.DefaultMaxMessageSize,
 	}
 }
