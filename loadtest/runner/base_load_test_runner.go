@@ -831,7 +831,9 @@ func (r *BaseLoadTestRunner) sendTransactionsForUserInBatches(account *account, 
 			}
 
 			txn := createTxnFn(account, feeData, chainID)
-			txn.SetGas(gas)
+			if txn.Gas() == 0 {
+				txn.SetGas(gas)
+			}
 
 			signedTxn, err := signer.SignTxWithCallback(txn,
 				func(hash types.Hash) (sig []byte, err error) {

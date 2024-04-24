@@ -364,18 +364,33 @@ func (t *TxRelayerImpl) waitForReceipt(hash types.Hash) (*ethgo.Receipt, error) 
 
 // ConvertTxnToCallMsg converts txn instance to call message
 func ConvertTxnToCallMsg(txn *types.Transaction) *jsonrpc.CallMsg {
-	gasPrice := big.NewInt(0)
-	if txn.GasPrice() != nil {
-		gasPrice = gasPrice.Set(txn.GasPrice())
+
+	var (
+		gasPrice  *big.Int
+		gasFeeCap *big.Int
+		gasTipCap *big.Int
+	)
+
+	if txn.Type() != types.DynamicFeeTxType {
+		if txn.GasPrice() != nil {
+			gasPrice = new(big.Int).Set(txn.GasPrice())
+		}
+	} else {
+		gasFeeCap = txn.GasFeeCap()
+		gasTipCap = txn.GasTipCap()
 	}
 
 	return &jsonrpc.CallMsg{
-		From:     txn.From(),
-		To:       txn.To(),
-		Data:     txn.Input(),
-		GasPrice: gasPrice,
-		Value:    txn.Value(),
-		Gas:      txn.Gas(),
+		From:       txn.From(),
+		To:         txn.To(),
+		Data:       txn.Input(),
+		GasPrice:   gasPrice,
+		GasFeeCap:  gasFeeCap,
+		GasTipCap:  gasTipCap,
+		Type:       uint64(txn.Type()),
+		Value:      txn.Value(),
+		Gas:        txn.Gas(),
+		AccessList: txn.AccessList(),
 	}
 }
 

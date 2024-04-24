@@ -241,6 +241,10 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 
 	txn := types.NewTxWithType(txType)
 
+	if arg.AccessList != nil {
+		txn.SetAccessList(*arg.AccessList)
+	}
+
 	switch txType {
 	case types.LegacyTxType:
 		txn.SetGasPrice(new(big.Int).SetBytes(*arg.GasPrice))

@@ -97,6 +97,38 @@ func (e *EthClient) SendRawTransaction(data []byte) (types.Hash, error) {
 	return hash, err
 }
 
+// GetHeaderByHash returns the requested header by hash.
+func (e *EthClient) GetHeaderByHash(hash types.Hash) (*types.Header, error) {
+	var header types.Header
+	err := e.client.Call("eth_getHeaderByHash", &header, hash)
+
+	return &header, err
+}
+
+// GetBlockReceipts returns all transaction receipts for a given block.
+func (e *EthClient) GetBlockReceipts(blockNumber BlockNumber) ([]*ethgo.Receipt, error) {
+	var receipts []*ethgo.Receipt
+	err := e.client.Call("eth_getBlockReceipts", &receipts, blockNumber)
+
+	return receipts, err
+}
+
+// CreateAccessList creates a EIP-2930 type AccessList for the given transaction.
+func (e *EthClient) CreateAccessList(msg *CallMsg, blockNumber BlockNumberOrHash) (*accessListResult, error) {
+	var accessListResult accessListResult
+	err := e.client.Call("eth_createAccessList", &accessListResult, msg, blockNumber.String())
+
+	return &accessListResult, err
+}
+
+// GetHeaderByNumber returns the requested canonical block header.
+func (e *EthClient) GetHeaderByNumber(blockNumber BlockNumber) (*types.Header, error) {
+	var header types.Header
+	err := e.client.Call("eth_getHeaderByNumber", &header, blockNumber)
+
+	return &header, err
+}
+
 // SendTransaction creates new message call transaction or a contract creation
 func (e *EthClient) SendTransaction(txn *types.Transaction) (types.Hash, error) {
 	var hash types.Hash
