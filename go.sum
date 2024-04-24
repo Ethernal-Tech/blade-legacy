@@ -17,8 +17,8 @@ dmitri.shuralyov.com/html/belt v0.0.0-20180602232347-f7d459c86be0/go.mod h1:JLBr
 dmitri.shuralyov.com/service/change v0.0.0-20181023043359-a85b471d5412/go.mod h1:a1inKt/atXimZ4Mv927x+r7UpyzRUf4emIoiiSC2TN4=
 dmitri.shuralyov.com/state v0.0.0-20180228185332-28bcc343414c/go.mod h1:0PRwlb0D6DFvNNtx+9ybjezNCa8XF0xaYcETyp6rHWU=
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
-github.com/0xPolygon/go-ibft v0.4.1-0.20230717081138-628065cf23b6 h1:EL/37sEjeLmQ2RTd9xMLLOuMXY6fMV/zB8a5X0BJUMM=
-github.com/0xPolygon/go-ibft v0.4.1-0.20230717081138-628065cf23b6/go.mod h1:0W1BnkhtXa2K59PzTPoQvbKOnI+G6QliXIHpQWNeiAM=
+github.com/0xPolygon/go-ibft v0.4.1-0.20240424084119-1e0f56f229a2 h1:wyIdL/UIsNJKtj6Ty8ALBAe/LIbDn1IuClStvmiY2hY=
+github.com/0xPolygon/go-ibft v0.4.1-0.20240424084119-1e0f56f229a2/go.mod h1:FPdz+s0jyQzW4pZK+HMnhz2b8ebsg5FaSVFTjvQi8ls=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 h1:UQHMgLO+TxOElx5B5HZ4hJQsoJ/PvUvKRhJHDQXO8P8=
 github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1/go.mod h1:xomTg63KZ2rFqZQzSB4Vz2SUXa1BpHTVz9L5PTmPC4E=
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
