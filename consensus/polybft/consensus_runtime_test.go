@@ -1012,7 +1012,7 @@ func TestConsensusRuntime_StartRound_RoundZero(t *testing.T) {
 	}
 
 	view := &proto.View{}
-	runtime.StartRound(view)
+	require.NoError(t, runtime.StartRound(view))
 }
 
 func TestConsensusRuntime_StartRound_RoundNotZero(t *testing.T) {
@@ -1027,7 +1027,7 @@ func TestConsensusRuntime_StartRound_RoundNotZero(t *testing.T) {
 	}
 
 	view := &proto.View{Round: 1}
-	runtime.StartRound(view)
+	require.NoError(t, runtime.StartRound(view))
 }
 
 func createTestBlocks(t *testing.T, numberOfBlocks, defaultEpochSize uint64,

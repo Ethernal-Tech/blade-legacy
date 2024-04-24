@@ -1034,13 +1034,15 @@ func (c *consensusRuntime) BuildRoundChangeMessage(
 }
 
 // StartRound notifies about new round start
-func (c *consensusRuntime) StartRound(view *proto.View) {
+func (c *consensusRuntime) StartRound(view *proto.View) error {
 	var reinsert bool
 	if view.Round > 0 {
 		reinsert = true
 	}
 
 	c.config.txPool.ReinsertProposed(reinsert)
+
+	return nil
 }
 
 // getFirstBlockOfEpoch returns the first block of epoch in which provided header resides
