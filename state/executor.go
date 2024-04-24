@@ -752,7 +752,6 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	if t.isL1OriginatedToken && t.config.London && msg.Type() != types.StateTxType {
 		burnAmount := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), t.ctx.BaseFee)
 		t.state.AddBalance(t.ctx.BurnContract, burnAmount)
-		t.logger.Debug("[Transition.apply] Burned some amount", "amount", burnAmount)
 	}
 
 	// return gas to the pool
