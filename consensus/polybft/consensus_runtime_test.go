@@ -1000,6 +1000,36 @@ func TestConsensusRuntime_BuildPrepareMessage(t *testing.T) {
 	assert.Equal(t, signedMsg, runtime.BuildPrepareMessage(proposalHash, view))
 }
 
+func TestConsensusRuntime_StartRound_RoundZero(t *testing.T) {
+	txPool := new(txPoolMock)
+	txPool.On("ReinsertProposed", false).Once()
+
+	runtime := &consensusRuntime{
+		config: &runtimeConfig{
+			txPool: txPool,
+		},
+		logger: hclog.NewNullLogger(),
+	}
+
+	view := &proto.View{}
+	runtime.StartRound(view)
+}
+
+func TestConsensusRuntime_StartRound_RoundNotZero(t *testing.T) {
+	txPool := new(txPoolMock)
+	txPool.On("ReinsertProposed", true).Once()
+
+	runtime := &consensusRuntime{
+		config: &runtimeConfig{
+			txPool: txPool,
+		},
+		logger: hclog.NewNullLogger(),
+	}
+
+	view := &proto.View{Round: 1}
+	runtime.StartRound(view)
+}
+
 func createTestBlocks(t *testing.T, numberOfBlocks, defaultEpochSize uint64,
 	validatorSet validator.AccountSet) (*types.Header, *testHeadersMap) {
 	t.Helper()
