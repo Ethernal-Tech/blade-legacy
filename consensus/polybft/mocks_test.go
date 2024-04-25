@@ -167,6 +167,10 @@ func (p *polybftBackendMock) GetValidatorsWithTx(blockNumber uint64, parents []*
 	panic("polybftBackendMock.GetValidatorsWithTx doesn't support such combination of arguments") //nolint:gocritic
 }
 
+func (p *polybftBackendMock) SetBlockTime(blockTime time.Duration) {
+	p.Called(blockTime)
+}
+
 var _ blockBuilder = (*blockBuilderMock)(nil)
 
 type blockBuilderMock struct {

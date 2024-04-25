@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0xPolygon/go-ibft/core"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 
@@ -30,9 +29,11 @@ import (
 )
 
 const (
-	minSyncPeers                = 2
-	pbftProto                   = "/pbft/0.2"
-	bridgeProto                 = "/bridge/0.2"
+	minSyncPeers = 2
+	pbftProto    = "/pbft/0.2"
+	bridgeProto  = "/bridge/0.2"
+	// baseRoundTimeoutScaleFactor represents scaling factor,
+	// that is used to calculate the round 0 timeout for the go-ibft
 	baseRoundTimeoutScaleFactor = 2
 )
 
@@ -45,6 +46,9 @@ type polybftBackend interface {
 	// Function expects that db tx is already open
 	GetValidatorsWithTx(blockNumber uint64, parents []*types.Header,
 		dbTx *bolt.Tx) (validator.AccountSet, error)
+
+	// SetBlockTime updates the block time
+	SetBlockTime(blockTime time.Duration)
 }
 
 // Factory is the factory function to create a discovery consensus
@@ -664,14 +668,6 @@ func (p *Polybft) startConsensusProtocol() {
 				continue
 			}
 
-			// if block time is greater than default base round timeout,
-			// set base round timeout as twice the block time
-			blockTime := time.Duration(int64(p.config.BlockTime)) * time.Second
-			if blockTime >= core.DefaultBaseRoundTimeout {
-				baseRoundTimeout := int64(blockTime.Seconds() * baseRoundTimeoutScaleFactor)
-				p.ibft.SetBaseRoundTimeout(time.Duration(baseRoundTimeout) * time.Second)
-			}
-
 			sequenceCh, stopSequence = p.ibft.runSequence(latestHeader.Number + 1)
 		}
 
@@ -774,6 +770,11 @@ func (p *Polybft) GetValidators(blockNumber uint64, parents []*types.Header) (va
 func (p *Polybft) GetValidatorsWithTx(blockNumber uint64, parents []*types.Header,
 	dbTx *bolt.Tx) (validator.AccountSet, error) {
 	return p.validatorsCache.GetSnapshot(blockNumber, parents, dbTx)
+}
+
+func (p *Polybft) SetBlockTime(blockTime time.Duration) {
+	baseRoundTimeout := int64(blockTime.Seconds() * baseRoundTimeoutScaleFactor)
+	p.ibft.SetBaseRoundTimeout(time.Duration(baseRoundTimeout) * time.Second)
 }
 
 // ProcessHeaders updates the snapshot based on the verified headers
