@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 
+	"github.com/0xPolygon/go-ibft/core"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -773,8 +774,11 @@ func (p *Polybft) GetValidatorsWithTx(blockNumber uint64, parents []*types.Heade
 }
 
 func (p *Polybft) SetBlockTime(blockTime time.Duration) {
-	baseRoundTimeout := int64(blockTime.Seconds() * baseRoundTimeoutScaleFactor)
-	p.ibft.SetBaseRoundTimeout(time.Duration(baseRoundTimeout) * time.Second)
+	// if block time is greater than default base round timeout,
+	// set base round timeout as twice the block time
+	if blockTime >= core.DefaultBaseRoundTimeout {
+		p.ibft.SetBaseRoundTimeout(blockTime * baseRoundTimeoutScaleFactor)
+	}
 }
 
 // ProcessHeaders updates the snapshot based on the verified headers

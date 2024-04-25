@@ -10,7 +10,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/0xPolygon/go-ibft/core"
 	"github.com/0xPolygon/go-ibft/messages"
 	"github.com/0xPolygon/go-ibft/messages/proto"
 	hcf "github.com/hashicorp/go-hclog"
@@ -558,12 +557,7 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		return nil, err
 	}
 
-	// if block time is greater than default base round timeout,
-	// set base round timeout as twice the block time
-	blockTime := currentPolyConfig.BlockTime.Duration
-	if blockTime >= core.DefaultBaseRoundTimeout {
-		c.config.polybftBackend.SetBlockTime(blockTime)
-	}
+	c.config.polybftBackend.SetBlockTime(currentPolyConfig.BlockTime.Duration)
 
 	return &epochMetadata{
 		Number:              epochNumber,
