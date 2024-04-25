@@ -206,6 +206,7 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 
 	polybftBackendMock := new(polybftBackendMock)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validatorSet).Times(3)
+	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
 	txPool := new(txPoolMock)
 	txPool.On("ResetWithBlock", mock.Anything).Once()
@@ -480,6 +481,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 
 	polybftBackendMock := new(polybftBackendMock)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validators).Times(3)
+	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
 	tmpDir := t.TempDir()
 	config := &runtimeConfig{
