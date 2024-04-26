@@ -827,7 +827,7 @@ func (c *TestCluster) InitTestServer(t *testing.T,
 
 	// watch the server for stop signals. It is important to fix the specific
 	// 'node' reference since 'TestServer' creates a new one if restarted.
-	go func(node *node) {
+	go func(node *Node) {
 		<-node.Wait()
 
 		if !node.ExitResult().Signaled {

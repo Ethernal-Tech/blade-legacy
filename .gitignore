@@ -32,3 +32,4 @@ node_modules
 vendor/
 coverage.out
 
+e2e-docker-tmp

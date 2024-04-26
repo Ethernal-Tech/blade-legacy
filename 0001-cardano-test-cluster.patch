@@ -1,0 +1,3041 @@
+From 80b217e914648b20b5a0b1bf5f6c96215e3b887b Mon Sep 17 00:00:00 2001
+From: Igor Crevar <crewce@gmail.com>
+Date: Wed, 10 Jan 2024 16:32:03 +0100
+Subject: [PATCH] cardano test cluster
+
+Blockfrost
+
+Small fixes
+
+tmp dir
+
+small fix
+
+Dockerize clusters
+
+Reset db-sync if it's stuck
+
+Removed lines for relay node config
+---
+ .gitignore                                    |   1 +
+ e2e-polybft/blockfrost/blockfrost.go          | 460 ++++++++++
+ e2e-polybft/blockfrost/docker-files/README.md |  37 +
+ .../docker-files/dbsync_config.json           |  72 ++
+ .../docker-files/docker-compose.yml           | 120 +++
+ .../blockfrost/docker-files/node_config.yaml  | 304 +++++++
+ .../files/alonzo-babbage-test-genesis.json    | 371 ++++++++
+ .../cardanofw/files/byron.genesis.spec.json   |  23 +
+ .../cardanofw/files/configuration.yaml        | 305 +++++++
+ .../files/conway-babbage-test-genesis.json    |  37 +
+ e2e-polybft/cardanofw/test-cardano-cluster.go | 831 ++++++++++++++++++
+ e2e-polybft/cardanofw/test-cardano-server.go  |  92 ++
+ e2e-polybft/cardanofw/test-cardano-stats.go   |  35 +
+ e2e-polybft/e2e/cardano_test.go               |  91 ++
+ e2e-polybft/framework/node.go                 |  16 +-
+ e2e-polybft/framework/test-bridge.go          |   4 +-
+ e2e-polybft/framework/test-cluster.go         |   2 +-
+ e2e-polybft/framework/test-server.go          |   4 +-
+ 18 files changed, 2792 insertions(+), 13 deletions(-)
+ create mode 100644 e2e-polybft/blockfrost/blockfrost.go
+ create mode 100644 e2e-polybft/blockfrost/docker-files/README.md
+ create mode 100644 e2e-polybft/blockfrost/docker-files/dbsync_config.json
+ create mode 100644 e2e-polybft/blockfrost/docker-files/docker-compose.yml
+ create mode 100644 e2e-polybft/blockfrost/docker-files/node_config.yaml
+ create mode 100644 e2e-polybft/cardanofw/files/alonzo-babbage-test-genesis.json
+ create mode 100644 e2e-polybft/cardanofw/files/byron.genesis.spec.json
+ create mode 100644 e2e-polybft/cardanofw/files/configuration.yaml
+ create mode 100644 e2e-polybft/cardanofw/files/conway-babbage-test-genesis.json
+ create mode 100644 e2e-polybft/cardanofw/test-cardano-cluster.go
+ create mode 100644 e2e-polybft/cardanofw/test-cardano-server.go
+ create mode 100644 e2e-polybft/cardanofw/test-cardano-stats.go
+ create mode 100644 e2e-polybft/e2e/cardano_test.go
+
+diff --git a/.gitignore b/.gitignore
+index 3e2948e5..165777f8 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -32,3 +32,4 @@ node_modules
+ vendor/
+ coverage.out
+ 
++e2e-docker-tmp
+\ No newline at end of file
+diff --git a/e2e-polybft/blockfrost/blockfrost.go b/e2e-polybft/blockfrost/blockfrost.go
+new file mode 100644
+index 00000000..4b11ad2c
+--- /dev/null
++++ b/e2e-polybft/blockfrost/blockfrost.go
+@@ -0,0 +1,460 @@
++package blockfrost
++
++import (
++	"bufio"
++	"bytes"
++	"errors"
++	"fmt"
++	"io"
++	"os"
++	"os/exec"
++	"path"
++	"path/filepath"
++	"strings"
++	"sync"
++	"time"
++
++	"github.com/0xPolygon/polygon-edge/e2e-polybft/cardanofw"
++	"github.com/0xPolygon/polygon-edge/helper/common"
++)
++
++type BlockFrost struct {
++	Id          int
++	RootDir     string
++	ClusterName string
++}
++
++type PostgresConfig struct {
++	User     string
++	Password string
++	Db       string
++}
++
++func NewBlockFrost(cluster *cardanofw.TestCardanoCluster, id int) (*BlockFrost, error) {
++	clusterName := fmt.Sprintf("cluster-%d-blockfrost", id)
++	dockerDir := path.Join("../../e2e-docker-tmp", clusterName)
++	err := os.RemoveAll(dockerDir)
++	if err != nil {
++		return nil, err
++	}
++	if err := common.CreateDirSafe(dockerDir, 0750); err != nil {
++		return nil, err
++	}
++
++	err = resolvePostgresFiles(dockerDir)
++	if err != nil {
++		return nil, err
++	}
++
++	err = resolveGenesisFiles(cluster.Config.TmpDir, dockerDir)
++	if err != nil {
++		return nil, err
++	}
++
++	postgresPort := 6000 + id
++	blockfrostPort := 12000 + id
++
++	err = resolveConfigFiles(cluster.Config.TmpDir, dockerDir)
++	if err != nil {
++		return nil, err
++	}
++
++	err = resolveDockerCompose(dockerDir, postgresPort, blockfrostPort, cluster.Config.Id)
++	if err != nil {
++		return nil, err
++	}
++
++	return &BlockFrost{
++		Id:          id,
++		RootDir:     dockerDir,
++		ClusterName: clusterName,
++	}, nil
++}
++
++func (bf *BlockFrost) Start() error {
++	dockerFile := filepath.Join(bf.RootDir, "docker-compose.yml")
++
++	runCommand("docker-compose", []string{"-f", dockerFile, "up", "-d"})
++
++	return nil
++}
++
++func (bf *BlockFrost) Stop() error {
++	dockerFile := filepath.Join(bf.RootDir, "docker-compose.yml")
++
++	runCommand("docker-compose", []string{"-f", dockerFile, "down"})
++
++	// remove volumes
++	runCommand("docker", []string{"volume", "rm",
++		fmt.Sprintf("%s_db-sync-data", bf.ClusterName),
++		fmt.Sprintf("%s_postgres", bf.ClusterName)})
++
++	return nil
++}
++
++func resolvePostgresFiles(dockerDir string) error {
++	secretsPath := path.Join(dockerDir, "secrets")
++	if err := common.CreateDirSafe(secretsPath, 0750); err != nil {
++		return err
++	}
++
++	postgresConfig := getPostgresConfig()
++
++	dbFile := filepath.Join(secretsPath, "postgres_db")
++	if err := os.WriteFile(dbFile, []byte(postgresConfig.Db), 0644); err != nil {
++		return err
++	}
++
++	pwFile := filepath.Join(secretsPath, "postgres_password")
++	if err := os.WriteFile(pwFile, []byte(postgresConfig.Password), 0644); err != nil {
++		return err
++	}
++
++	userFile := filepath.Join(secretsPath, "postgres_user")
++	if err := os.WriteFile(userFile, []byte(postgresConfig.User), 0644); err != nil {
++		return err
++	}
++
++	return nil
++}
++
++func resolveGenesisFiles(rootDir string, dockerDir string) error {
++	nodeGenesis := path.Join(rootDir, "genesis")
++
++	dockerGenesis := path.Join(dockerDir, "genesis")
++	if err := common.CreateDirSafe(dockerGenesis, 0750); err != nil {
++		return err
++	}
++
++	copyDirectory(nodeGenesis, dockerGenesis)
++
++	return nil
++}
++
++func resolveConfigFiles(rootDir string, dockerDir string) error {
++	configPath := path.Join(dockerDir, "config")
++	if err := common.CreateDirSafe(configPath, 0750); err != nil {
++		return err
++	}
++
++	// DBSync config
++	dbsyncPath := path.Join(configPath, "dbsync")
++	if err := common.CreateDirSafe(dbsyncPath, 0750); err != nil {
++		return err
++	}
++
++	dbsyncConfigSrc := "../blockfrost/docker-files/dbsync_config.json"
++	dbsyncConfig := filepath.Join(dbsyncPath, "config.json")
++	copyFile(dbsyncConfigSrc, dbsyncConfig)
++
++	nodeConfigSrc := "../blockfrost/docker-files/node_config.yaml"
++	nodeConfig := filepath.Join(dbsyncPath, "config.yaml")
++	copyFile(nodeConfigSrc, nodeConfig)
++	// replaceLine(nodeConfig, "hasEKG: 12788", fmt.Sprintf("hasEKG: %d", ekgPort))
++
++	byronGenesis := filepath.Join(rootDir, "genesis/byron/genesis.json")
++	byronHash, err := runCommand("cardano-cli", []string{"byron", "genesis", "print-genesis-hash", "--genesis-json", byronGenesis})
++	if err != nil {
++		return err
++	}
++	appendToFile(nodeConfig, fmt.Sprintf("ByronGenesisHash: %s", byronHash))
++
++	shelleyGenesis := filepath.Join(rootDir, "genesis/shelley/genesis.json")
++	shelleyHash, err := runCommand("cardano-cli", []string{"shelley", "genesis", "hash", "--genesis", shelleyGenesis})
++	if err != nil {
++		return err
++	}
++	appendToFile(nodeConfig, fmt.Sprintf("ShelleyGenesisHash: %s", shelleyHash))
++
++	alonzoGenesis := filepath.Join(rootDir, "genesis/shelley/genesis.alonzo.json")
++	alonzoHash, err := runCommand("cardano-cli", []string{"alonzo", "genesis", "hash", "--genesis", alonzoGenesis})
++	if err != nil {
++		return err
++	}
++	appendToFile(nodeConfig, fmt.Sprintf("AlonzoGenesisHash: %s", alonzoHash))
++
++	conwayGenesis := filepath.Join(rootDir, "genesis/shelley/genesis.conway.json")
++	conwayHash, err := runCommand("cardano-cli", []string{"conway", "genesis", "hash", "--genesis", conwayGenesis})
++	if err != nil {
++		return err
++	}
++	appendToFile(nodeConfig, fmt.Sprintf("ConwayGenesisHash: %s", conwayHash))
++
++	return nil
++}
++
++func resolveDockerCompose(dockerDir string, postgresPort int, blockfrostPort int, clusterId int) error {
++	dockerFileSrc := "../blockfrost/docker-files/docker-compose.yml"
++	dockerFile := filepath.Join(dockerDir, "docker-compose.yml")
++	copyFile(dockerFileSrc, dockerFile)
++
++	replaceLine(dockerFile, "      - ../../e2e-docker-tmp/cluster-1:/node-data", fmt.Sprintf("      - ../../e2e-docker-tmp/cluster-%d:/node-data", clusterId))
++
++	replaceLine(dockerFile, "      - ${POSTGRES_PORT:-5432}:5432", fmt.Sprintf("      - ${POSTGRES_PORT:-%d}:5432", postgresPort))
++	// replaceLine(dockerFile, "      - POSTGRES_PORT=5432", fmt.Sprintf("      - POSTGRES_PORT=%d", postgresPort))
++
++	replaceLine(dockerFile, "      - ${POSTGRES_PORT:-3000}:3000", fmt.Sprintf("      - ${POSTGRES_PORT:-%d}:%d", blockfrostPort, blockfrostPort))
++	replaceLine(dockerFile, "      - BLOCKFROST_CONFIG_SERVER_PORT=3000", fmt.Sprintf("      - BLOCKFROST_CONFIG_SERVER_PORT=%d", blockfrostPort))
++
++	return nil
++}
++
++func GetTopology(topologyFile string) (string, error) {
++	port, err := GetFirstPortFromTopologyFile(topologyFile)
++	if err != nil {
++		return "", err
++	}
++
++	topologyBase := `
++{
++	"Producers": [
++		{
++			"addr": "cluster-1-node-1",
++			"port": %s,
++			"valency": 1
++		}
++	]
++}`
++
++	topology := fmt.Sprintf(topologyBase, port)
++	return topology, nil
++}
++
++func getPostgresConfig() *PostgresConfig {
++	user := os.Getenv("POSTGRES_USER")
++	if user == "" {
++		// fallback
++		user = "postgres"
++	}
++
++	password := os.Getenv("POSTGRES_PASSWORD")
++	if password == "" {
++		// fallback
++		password = "password"
++	}
++
++	dbName := os.Getenv("POSTGRES_DB")
++	if dbName == "" {
++		// fallback
++		dbName = "testdb"
++	}
++
++	return &PostgresConfig{
++		User:     user,
++		Password: password,
++		Db:       dbName,
++	}
++}
++
++// It was used for relay node, might be useful again in the future
++func GetFirstPortFromTopologyFile(topologyFile string) (string, error) {
++	file, err := os.Open(topologyFile)
++	if err != nil {
++		fmt.Println("Error opening file:", err)
++		return "", nil
++	}
++	defer file.Close()
++
++	scanner := bufio.NewScanner(file)
++	for scanner.Scan() {
++		line := scanner.Text()
++
++		if strings.Contains(line, `"port"`) {
++			parts := strings.Split(line, ":")
++			if len(parts) >= 2 {
++				port := strings.TrimSpace(strings.Trim(parts[1], ","))
++				return port, nil
++			}
++		}
++	}
++
++	err = scanner.Err()
++	return "", err
++}
++
++func copyFile(src, dst string) error {
++	sourceFile, err := os.Open(src)
++	if err != nil {
++		return err
++	}
++	defer sourceFile.Close()
++
++	destFile, err := os.Create(dst)
++	if err != nil {
++		return err
++	}
++	defer destFile.Close()
++
++	_, err = io.Copy(destFile, sourceFile)
++	if err != nil {
++		return err
++	}
++
++	return nil
++}
++
++func copyDirectory(srcDir, dstDir string) error {
++	files, err := os.ReadDir(srcDir)
++	if err != nil {
++		return err
++	}
++
++	for _, file := range files {
++		srcFile := filepath.Join(srcDir, file.Name())
++		dstFile := filepath.Join(dstDir, file.Name())
++
++		if file.IsDir() {
++			err = os.MkdirAll(dstFile, os.ModePerm)
++			if err != nil {
++				return err
++			}
++			err = copyDirectory(srcFile, dstFile)
++			if err != nil {
++				return err
++			}
++		} else {
++			err = copyFile(srcFile, dstFile)
++			if err != nil {
++				return err
++			}
++		}
++	}
++
++	return nil
++}
++
++func appendToFile(filePath string, line string) {
++	// Open file in append mode
++	file, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0644)
++	if err != nil {
++		fmt.Println("Error opening file:", err)
++		return
++	}
++	defer file.Close()
++
++	// Create a writer
++	writer := bufio.NewWriter(file)
++
++	// Write the line to the file
++	_, err = writer.WriteString(line)
++	if err != nil {
++		fmt.Println("Error writing to file:", err)
++		return
++	}
++
++	// Flush the buffer to ensure the line is written to the file
++	err = writer.Flush()
++	if err != nil {
++		fmt.Println("Error flushing writer:", err)
++		return
++	}
++}
++
++func replaceLine(filePath string, search string, replace string) error {
++	file, err := os.OpenFile(filePath, os.O_RDWR, 0644)
++	if err != nil {
++		return err
++	}
++	defer file.Close()
++
++	tempFile, err := os.CreateTemp("", "tempFile")
++	if err != nil {
++		return err
++	}
++	defer tempFile.Close()
++
++	scanner := bufio.NewScanner(file)
++	for scanner.Scan() {
++		line := scanner.Text()
++		if strings.Contains(line, search) {
++			line = strings.Replace(line, search, replace, 1)
++		}
++		tempFile.WriteString(line + "\n")
++	}
++
++	if err := scanner.Err(); err != nil {
++		return err
++	}
++
++	if err := os.Rename(tempFile.Name(), filePath); err != nil {
++		return err
++	}
++
++	return nil
++}
++
++func runCommand(binary string, args []string, envVariables ...string) (string, error) {
++	var (
++		stdErrBuffer bytes.Buffer
++		stdOutBuffer bytes.Buffer
++	)
++
++	cmd := exec.Command(binary, args...)
++	cmd.Stderr = &stdErrBuffer
++	cmd.Stdout = &stdOutBuffer
++	cmd.Env = append(os.Environ(), envVariables...)
++
++	err := cmd.Run()
++	if stdErrBuffer.Len() > 0 {
++		return "", errors.New(stdErrBuffer.String())
++	} else if err != nil {
++		return "", err
++	}
++
++	return stdOutBuffer.String(), nil
++}
++
++func ResetDbSync(startAfter int) error {
++	time.Sleep(time.Duration(startAfter) * time.Second)
++	found := false
++	var wg sync.WaitGroup
++
++	for !found {
++		time.Sleep(2 * time.Second)
++
++		args := []string{"ps", "--format", "{{.Names}}", "--filter", "name=db-sync"}
++		res, _ := runCommand("docker", args)
++		containers := strings.Split(res, "\n")
++
++		if len(containers) == 0 {
++			continue
++		}
++
++		found = true
++
++		for _, cName := range containers {
++			if cName == "" {
++				continue
++			}
++
++			wg.Add(1)
++			containerName := cName
++
++			go func() {
++				args := []string{"logs", containerName}
++
++				for i := 0; i < 6; i++ {
++					res, _ := runCommand("docker", args)
++					logs := strings.Split(res, "\n")
++					lastLog := logs[len(logs)-2] // last is empty string so we take one before last
++
++					if strings.Contains(lastLog, "Creating Indexes. This may take a while.") {
++						args := []string{"restart", containerName}
++						runCommand("docker", args)
++						i = 0
++						continue
++					}
++
++					time.Sleep(20 * time.Second)
++				}
++
++				wg.Done()
++				_ = args
++			}()
++		}
++	}
++
++	wg.Wait()
++
++	return nil
++}
+diff --git a/e2e-polybft/blockfrost/docker-files/README.md b/e2e-polybft/blockfrost/docker-files/README.md
+new file mode 100644
+index 00000000..453d17c5
+--- /dev/null
++++ b/e2e-polybft/blockfrost/docker-files/README.md
+@@ -0,0 +1,37 @@
++# Apex vector testnet relay
++
++## Prerequisites:
++
++* intel based linux system (this was tested on)
++* docker with compose
++* network
++
++## Start procedure
++
++Run:
++
++```
++docker compose up -d
++```
++
++To check the tip (at the moment it is about 10 min to sync, will definitely vary over time):
++
++```
++docker exec -it vector2-testnet-apex-relay-1 cardano-cli query tip --testnet-magic 1177 --socket-path /ipc/node.socket
++```
++
++To check the blockfrost point a browser to `localhost` port `3000`, for example:
++
++```
++http://localhost:3000
++http://localhost:3000/epochs/latest
++```
++
++## Remove procedure
++
++To remove containers and volumes, images will be left for fast restart:
++
++```
++docker compose down
++docker volume rm vector2-testnet_db-sync-data vector2-testnet_node-db vector2-testnet_node-ipc vector2-testnet_postgres
++```
+diff --git a/e2e-polybft/blockfrost/docker-files/dbsync_config.json b/e2e-polybft/blockfrost/docker-files/dbsync_config.json
+new file mode 100644
+index 00000000..2a5d8b42
+--- /dev/null
++++ b/e2e-polybft/blockfrost/docker-files/dbsync_config.json
+@@ -0,0 +1,72 @@
++{
++  "EnableLogMetrics": false,
++  "EnableLogging": true,
++  "NetworkName": "testnet",
++  "NodeConfigFile": "/config/config.yaml",
++  "PrometheusPort": 8080,
++  "RequiresNetworkMagic": "RequiresMagic",
++  "defaultBackends": ["KatipBK"],
++  "defaultScribes": [["StdoutSK", "stdout"]],
++  "minSeverity": "Info",
++  "options": {
++    "cfokey": { "value": "Release-1.0.0" },
++    "mapBackends": {},
++    "mapSeverity": {
++      "db-sync-node": "Info",
++      "db-sync-node.Mux": "Error",
++      "db-sync-node.Subscription": "Error"
++    },
++    "mapSubtrace": {
++      "#ekgview": {
++        "contents": [
++          [
++            {
++              "contents": "cardano.epoch-validation.benchmark",
++              "tag": "Contains"
++            },
++            [{ "contents": ".monoclock.basic.", "tag": "Contains" }]
++          ],
++          [
++            {
++              "contents": "cardano.epoch-validation.benchmark",
++              "tag": "Contains"
++            },
++            [{ "contents": "diff.RTS.cpuNs.timed.", "tag": "Contains" }]
++          ],
++          [
++            {
++              "contents": "#ekgview.#aggregation.cardano.epoch-validation.benchmark",
++              "tag": "StartsWith"
++            },
++            [{ "contents": "diff.RTS.gcNum.timed.", "tag": "Contains" }]
++          ]
++        ],
++        "subtrace": "FilterTrace"
++      },
++      "#messagecounters.aggregation": { "subtrace": "NoTrace" },
++      "#messagecounters.ekgview": { "subtrace": "NoTrace" },
++      "#messagecounters.katip": { "subtrace": "NoTrace" },
++      "#messagecounters.monitoring": { "subtrace": "NoTrace" },
++      "#messagecounters.switchboard": { "subtrace": "NoTrace" },
++      "benchmark": {
++        "contents": ["GhcRtsStats", "MonotonicClock"],
++        "subtrace": "ObservableTrace"
++      },
++      "cardano.epoch-validation.utxo-stats": { "subtrace": "NoTrace" }
++    }
++  },
++  "rotation": {
++    "rpKeepFilesNum": 10,
++    "rpLogLimitBytes": 5000000,
++    "rpMaxAgeHours": 24
++  },
++  "setupBackends": ["AggregationBK", "KatipBK"],
++  "setupScribes": [
++    {
++      "scFormat": "ScText",
++      "scKind": "StdoutSK",
++      "scName": "stdout",
++      "scRotation": null
++    }
++  ]
++}
+diff --git a/e2e-polybft/blockfrost/docker-files/docker-compose.yml b/e2e-polybft/blockfrost/docker-files/docker-compose.yml
+new file mode 100644
+index 00000000..6b6d29c9
+--- /dev/null
++++ b/e2e-polybft/blockfrost/docker-files/docker-compose.yml
+@@ -0,0 +1,120 @@
++version: "3.9"
++
++services:
++  postgres:
++    image: postgres:14.10-alpine
++    environment:
++      - POSTGRES_LOGGING=true
++      - POSTGRES_DB_FILE=/run/secrets/postgres_db
++      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
++      - POSTGRES_USER_FILE=/run/secrets/postgres_user
++    secrets:
++      - postgres_password
++      - postgres_user
++      - postgres_db
++    ports:
++      - ${POSTGRES_PORT:-5432}:5432
++    volumes:
++      - postgres:/var/lib/postgresql/data
++    restart: on-failure
++    healthcheck:
++      # Use pg_isready to check postgres is running. Substitute different
++      # user `postgres` if you've setup differently to config/pgpass-mainnet
++      test: ["CMD-SHELL", "pg_isready -U postgres"]
++      interval: 10s
++      timeout: 5s
++      retries: 5
++    command: ${POSTGRES_ARGS:--c maintenance_work_mem=1GB -c max_parallel_maintenance_workers=4}
++    logging:
++      driver: "json-file"
++      options:
++        max-size: "200k"
++        max-file: "10"
++
++  db-sync:
++    image: ghcr.io/intersectmbo/cardano-db-sync:13.2.0.1
++    environment:
++      - DISABLE_LEDGER=${DISABLE_LEDGER:-}
++      - POSTGRES_HOST=postgres
++      - POSTGRES_PORT=5432
++      - RESTORE_SNAPSHOT=${RESTORE_SNAPSHOT:-}
++      - RESTORE_RECREATE_DB=N
++      - EXTRA_DB_SYNC_ARGS=--config /config/config.json --socket-path /node-data/node-spo1/node.socket
++    depends_on:
++      postgres:
++        condition: service_healthy
++    secrets:
++      - postgres_password
++      - postgres_user
++      - postgres_db
++    volumes:
++      - ../../e2e-docker-tmp/cluster-1:/node-data
++      - db-sync-data:/var/lib/cexplorer
++      - ./config/dbsync:/config
++    entrypoint: [
++      "/nix/store/4c3sz8s85sk74vl0h6r9pgqjz838bhg8-entrypoint/bin/entrypoint",
++      "--config",
++      "/config/config.json",
++      "--socket-path",
++      "/node-data/node-spo1/node.socket"
++     ]
++    restart: on-failure
++    logging:
++      driver: "json-file"
++      options:
++        max-size: "200k"
++        max-file: "10"
++
++  blockfrost:
++    image: blockfrost/backend-ryo:v1.7.0
++    environment:
++      - BLOCKFROST_CONFIG_SERVER_LISTEN_ADDRESS=0.0.0.0
++      - PGPASSWORD_FILE=/run/secrets/postgres_password
++      - NODE_ENV=testnet
++      - BLOCKFROST_CONFIG_SERVER_PORT=3000
++      - BLOCKFROST_CONFIG_SERVER_DEBUG=true
++      - BLOCKFROST_CONFIG_SERVER_PROMETHEUS_METRICS=false
++      - BLOCKFROST_CONFIG_DBSYNC_HOST=postgres
++      - BLOCKFROST_CONFIG_DBSYNC_USER_FILE=/run/secrets/postgres_user
++      - BLOCKFROST_CONFIG_DBSYNC_DATABASE_FILE=/run/secrets/postgres_db
++      - BLOCKFROST_CONFIG_DBSYNC_MAX_CONN=10
++      - BLOCKFROST_CONFIG_NETWORK=testnet
++      - BLOCKFROST_CONFIG_TOKEN_REGISTRY_URL=https://tokens.cardano.org
++    depends_on:
++      db-sync:
++        condition: service_started
++    entrypoint:
++      - '/nix/store/7q1b1bsmxi91zci6g8714rcljl620y7f-bash-5.2-p15/bin/bash'
++      - '-c'
++      - |
++        export PATH=$$PATH:/nix/store/f11ibsj5vmqcy8ihfa8mzvpfs4af7cw5-coreutils-9.1/bin;
++        export PGPASSWORD=$$(cat $$PGPASSWORD_FILE);
++        export BLOCKFROST_CONFIG_DBSYNC_USER=$$(cat $$BLOCKFROST_CONFIG_DBSYNC_USER_FILE);
++        export BLOCKFROST_CONFIG_DBSYNC_DATABASE=$$(cat $$BLOCKFROST_CONFIG_DBSYNC_DATABASE_FILE);
++        /nix/store/y52li35j2ldsh5ax4xzq8zdnr3hpb3rc-blockfrost-backend-ryo/bin/blockfrost-backend-ryo
++    ports:
++      - ${POSTGRES_PORT:-3000}:3000
++    secrets:
++      - postgres_password
++      - postgres_user
++      - postgres_db
++    volumes:
++      - ./config/blockfrost:/app/config
++    restart: on-failure
++    logging:
++      driver: "json-file"
++      options:
++        max-size: "200k"
++        max-file: "10"
++
++secrets:
++  postgres_db:
++    file: ./secrets/postgres_db
++  postgres_password:
++    file: ./secrets/postgres_password
++  postgres_user:
++    file: ./secrets/postgres_user
++
++volumes:
++  db-sync-data:
++  postgres:
+diff --git a/e2e-polybft/blockfrost/docker-files/node_config.yaml b/e2e-polybft/blockfrost/docker-files/node_config.yaml
+new file mode 100644
+index 00000000..7a1ec1bf
+--- /dev/null
++++ b/e2e-polybft/blockfrost/docker-files/node_config.yaml
+@@ -0,0 +1,304 @@
++##########################################################
++###############          Mainnet                 #########
++############### Cardano Byron Node Configuration #########
++##########################################################
++
++
++##### Locations #####
++
++ByronGenesisFile: /node-data/genesis/byron/genesis.json
++ShelleyGenesisFile: /node-data/genesis/shelley/genesis.json
++AlonzoGenesisFile: /node-data/genesis/shelley/genesis.alonzo.json
++ConwayGenesisFile: /node-data/genesis/shelley/genesis.conway.json
++SocketPath: db/node.socket
++
++##### Blockfetch Protocol
++PBftSignatureThreshold: 0.6
++
++# The maximum number of used peers during bulk sync.
++MaxConcurrencyBulkSync: 1
++# The maximum number of used peers when fetching newly forged blocks.
++MaxConcurrencyDeadline: 2
++
++#TODO: These parameters cannot yet be used in the config file, only on the CLI:
++#DatabasePath: db/
++#Topology: configuration/mainnet-topology.json
++#Port 7776
++
++##### Core protocol parameters #####
++
++# This is the instance of the Ouroboros family that we are running.
++# "RealPBFT" is the real (permissive) OBFT protocol, which is what we use on
++# mainnet in Byron era.
++Protocol: Cardano
++PBftSignatureThreshold: 0.6
++
++# The mainnet does not include the network magic into addresses. Testnets do.
++RequiresNetworkMagic: RequiresMagic
++
++
++##### Update system parameters #####
++
++# This protocol version number gets used by block producing nodes as part
++# of the system for agreeing on and synchronising protocol updates.
++LastKnownBlockVersion-Major: 6
++LastKnownBlockVersion-Minor: 0
++LastKnownBlockVersion-Alt: 0
++
++# In the Byron era some software versions are also published on the chain.
++# We do this only for Byron compatibility now.
++ApplicationName: cardano-sl
++ApplicationVersion: 1
++
++
++##### Logging configuration #####
++
++# Enable or disable logging overall
++TurnOnLogging: True
++
++# Enable the collection of various OS metrics such as memory and CPU use.
++# These metrics are traced in the context name: 'cardano.node.metrics' and can
++# be directed to the logs or monitoring backends.
++TurnOnLogMetrics: True
++
++# Global logging severity filter. Messages must have at least this severity to
++# pass. Typical values would be Warning, Notice, Info or Debug.
++minSeverity: Debug
++
++# Log items can be rendered with more or less verbose detail.
++# Verbosity ranges from MinimalVerbosity, NormalVerbosity to MaximalVerbosity
++TracingVerbosity: NormalVerbosity
++
++# The system supports a number of backends for logging and monitoring.
++# This setting lists the backends that will be available to use in the
++# configuration below. The logging backend is called Katip.
++setupBackends:
++  - KatipBK
++
++# This specifies the default backends that trace output is sent to if it
++# is not specifically configured to be sent to other backends.
++defaultBackends:
++  - KatipBK
++
++# EKG is a simple metrics monitoring system. Uncomment the following to enable
++# this backend and listen on the given local port and point your web browser to
++# http://localhost:12788/
++hasEKG: 12788
++
++# The Prometheus monitoring system exports EKG metrics. Uncomment the following
++# to listen on the given port. Output is provided on
++# http://localhost:12789/metrics
++# hasPrometheus:
++#   - "127.0.0.1"
++#   - 12789
++
++# To enable the legacy 'TraceForwarder' backend, uncomment the following setting. Log
++# items are then forwarded based on an entry in 'mapBackends' to a separate
++# process running a 'TraceAcceptor'.
++# Example using UNIX pipes:
++# traceForwardTo:
++#   tag: RemotePipe
++#   contents: "logs/pipe"
++#
++# Example using Windows named pipes:
++# traceForwardTo:
++#   tag: RemotePipe
++#   contents: "\\\\.\\pipe\\acceptor"
++#
++# Example using network socket:
++# traceForwardTo:
++#   tag: RemoteSocket
++#   contents:
++#     - "127.0.0.1"
++#     - "2997"
++
++# For the Katip logging backend we must set up outputs (called scribes)
++# The available types of scribe are:
++#   FileSK for files
++#   StdoutSK/StderrSK for stdout/stderr
++#   JournalSK for systemd's journal system
++#   DevNullSK ignores all output
++# The scribe output format can be ScText or ScJson. Log rotation settings can
++# be specified in the defaults below or overridden on a per-scribe basis here.
++setupScribes:
++  - scKind: FileSK
++    scName: "logs/mainnet.log"
++    scFormat: ScText
++
++  - scKind: StdoutSK
++    scName: stdout
++    scFormat: ScText
++
++# For the Katip logging backend this specifies the default scribes that trace
++# output is sent to if it is not configured to be sent to other scribes.
++defaultScribes:
++  - - FileSK
++    - "logs/mainnet.log"
++  - - StdoutSK
++    - stdout
++
++# The default file rotation settings for katip scribes, unless overridden
++# in the setupScribes above for specific scribes.
++rotation:
++  rpLogLimitBytes: 5000000
++  rpKeepFilesNum:  3
++  rpMaxAgeHours:   24
++
++
++##### Coarse grained logging control #####
++
++# Trace output from whole subsystems can be enabled/disabled using the following
++# settings. This provides fairly coarse grained control, but it is relatively
++# efficient at filtering out unwanted trace output.
++
++# Trace BlockFetch client.
++TraceBlockFetchClient: False
++
++# Trace BlockFetch decisions made by the BlockFetch client.
++TraceBlockFetchDecisions: False
++
++# Trace BlockFetch protocol messages.
++TraceBlockFetchProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Serialised Trace BlockFetch protocol messages.
++TraceBlockFetchProtocolSerialised: False
++PBftSignatureThreshold: 0.6
++
++# Trace BlockFetch server.
++TraceBlockFetchServer: False
++
++# Trace BlockchainTime.
++TraceBlockchainTime: False
++
++# Verbose tracer of ChainDB
++TraceChainDb: True
++
++# Trace ChainSync client.
++TraceChainSyncClient: False
++
++# Trace ChainSync server (blocks).
++TraceChainSyncBlockServer: False
++
++# Trace ChainSync server (headers).
++TraceChainSyncHeaderServer: False
++
++# Trace ChainSync protocol messages.
++TraceChainSyncProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Trace DNS Resolver messages.
++TraceDNSResolver: True
++
++# Trace DNS Subscription messages.
++TraceDNSSubscription: True
++
++# Trace error policy resolution.
++TraceErrorPolicy: True
++
++# Trace local error policy resolution.
++TraceLocalErrorPolicy: True
++
++# Trace block forging.
++TraceForge: True
++
++# Trace Handshake protocol messages.
++TraceHandshake: False
++
++# Trace IP Subscription messages.
++TraceIpSubscription: True
++
++# Trace local root peers
++TraceLocalRootPeers: True
++
++# Trace public root peers
++TracePublicRootPeers: True 
++
++# Trace peer selection
++TracePeerSelection: True
++
++# Debug peer selection
++TraceDebugPeerSelection: False
++
++# Trace peer selection actions (demotion / promotion between cold / warm and
++# hot peers).
++TracePeerSelectionActions: True
++
++# Trace connection manager
++TraceConnectionManager: True
++
++# Trace server
++TraceServer: True
++
++# Trace local connection manager
++TraceLocalConnectionManager: False
++
++# Trace local server
++TraceLocalServer: False
++
++# Trace local ChainSync protocol messages.
++TraceLocalChainSyncProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Trace local Handshake protocol messages.
++TraceLocalHandshake: False
++
++# Trace local TxSubmission protocol messages.
++TraceLocalTxSubmissionProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Trace local TxSubmission server.
++TraceLocalTxSubmissionServer: False
++
++# Trace mempool.
++TraceMempool: True
++
++# Trace Mux Events.
++TraceMux: False
++
++# Trace TxSubmission server (inbound transactions).
++TraceTxInbound: False
++
++# Trace TxSubmission client (outbound transactions).
++TraceTxOutbound: False
++
++# Trace TxSubmission protocol messages.
++TraceTxSubmissionProtocol: False
++PBftSignatureThreshold: 0.6
++
++
++##### Fine grained logging control #####
++
++# It is also possible to have more fine grained control over filtering of
++# trace output, and to match and route trace output to particular backends.
++# This is less efficient than the coarse trace filters above but provides
++# much more precise control.
++
++options:
++
++  # This routes metrics matching specific names to particular backends.
++  # This overrides the 'defaultBackends' listed above. And note that it is
++  # an override and not an extension so anything matched here will not
++  # go to the default backend, only to the explicitly listed backends.
++  mapBackends:
++    cardano.node.metrics:
++      - EKGViewBK
++
++  # redirects traced values to a specific scribe which is identified by its
++  # type and its name, separated by "::":
++  mapScribes:
++    cardano.node.metrics:
++      - "FileSK::logs/mainnet.log"
++
++  # apply a filter on message severity on messages in a specific named context.
++  # this filter is applied additionally to the global 'minSeverity' and thus
++  # needs to be at least as high.
++  mapSeverity:
++    cardano.node.ChainDB: Notice
++    cardano.node.DnsSubscription: Debug
++TestShelleyHardForkAtEpoch: 0
++TestAllegraHardForkAtEpoch: 0
++TestMaryHardForkAtEpoch: 0
++TestAlonzoHardForkAtEpoch: 0
++TestBabbageHardForkAtEpoch: 0
++ExperimentalProtocolsEnabled: True
+diff --git a/e2e-polybft/cardanofw/files/alonzo-babbage-test-genesis.json b/e2e-polybft/cardanofw/files/alonzo-babbage-test-genesis.json
+new file mode 100644
+index 00000000..5ef1a390
+--- /dev/null
++++ b/e2e-polybft/cardanofw/files/alonzo-babbage-test-genesis.json
+@@ -0,0 +1,371 @@
++{
++    "lovelacePerUTxOWord": 34482,
++    "executionPrices": {
++        "prSteps": {
++            "numerator": 721,
++            "denominator": 10000000
++        },
++        "prMem": {
++            "numerator": 577,
++            "denominator": 10000
++        }
++    },
++    "maxTxExUnits": {
++        "exUnitsMem": 16000000,
++        "exUnitsSteps": 10000000000
++    },
++    "maxBlockExUnits": {
++        "exUnitsMem": 80000000,
++        "exUnitsSteps": 40000000000
++    },
++    "maxValueSize": 5000,
++    "collateralPercentage": 150,
++    "maxCollateralInputs": 3,
++    "costModels": {
++        "PlutusV1": {
++            "sha2_256-memory-arguments": 4,
++            "equalsString-cpu-arguments-constant": 1000,
++            "cekDelayCost-exBudgetMemory": 100,
++            "lessThanEqualsByteString-cpu-arguments-intercept": 103599,
++            "divideInteger-memory-arguments-minimum": 1,
++            "appendByteString-cpu-arguments-slope": 621,
++            "blake2b-cpu-arguments-slope": 29175,
++            "iData-cpu-arguments": 150000,
++            "encodeUtf8-cpu-arguments-slope": 1000,
++            "unBData-cpu-arguments": 150000,
++            "multiplyInteger-cpu-arguments-intercept": 61516,
++            "cekConstCost-exBudgetMemory": 100,
++            "nullList-cpu-arguments": 150000,
++            "equalsString-cpu-arguments-intercept": 150000,
++            "trace-cpu-arguments": 150000,
++            "mkNilData-memory-arguments": 32,
++            "lengthOfByteString-cpu-arguments": 150000,
++            "cekBuiltinCost-exBudgetCPU": 29773,
++            "bData-cpu-arguments": 150000,
++            "subtractInteger-cpu-arguments-slope": 0,
++            "unIData-cpu-arguments": 150000,
++            "consByteString-memory-arguments-intercept": 0,
++            "divideInteger-memory-arguments-slope": 1,
++            "divideInteger-cpu-arguments-model-arguments-slope": 118,
++            "listData-cpu-arguments": 150000,
++            "headList-cpu-arguments": 150000,
++            "chooseData-memory-arguments": 32,
++            "equalsInteger-cpu-arguments-intercept": 136542,
++            "sha3_256-cpu-arguments-slope": 82363,
++            "sliceByteString-cpu-arguments-slope": 5000,
++            "unMapData-cpu-arguments": 150000,
++            "lessThanInteger-cpu-arguments-intercept": 179690,
++            "mkCons-cpu-arguments": 150000,
++            "appendString-memory-arguments-intercept": 0,
++            "modInteger-cpu-arguments-model-arguments-slope": 118,
++            "ifThenElse-cpu-arguments": 1,
++            "mkNilPairData-cpu-arguments": 150000,
++            "lessThanEqualsInteger-cpu-arguments-intercept": 145276,
++            "addInteger-memory-arguments-slope": 1,
++            "chooseList-memory-arguments": 32,
++            "constrData-memory-arguments": 32,
++            "decodeUtf8-cpu-arguments-intercept": 150000,
++            "equalsData-memory-arguments": 1,
++            "subtractInteger-memory-arguments-slope": 1,
++            "appendByteString-memory-arguments-intercept": 0,
++            "lengthOfByteString-memory-arguments": 4,
++            "headList-memory-arguments": 32,
++            "listData-memory-arguments": 32,
++            "consByteString-cpu-arguments-intercept": 150000,
++            "unIData-memory-arguments": 32,
++            "remainderInteger-memory-arguments-minimum": 1,
++            "bData-memory-arguments": 32,
++            "lessThanByteString-cpu-arguments-slope": 248,
++            "encodeUtf8-memory-arguments-intercept": 0,
++            "cekStartupCost-exBudgetCPU": 100,
++            "multiplyInteger-memory-arguments-intercept": 0,
++            "unListData-memory-arguments": 32,
++            "remainderInteger-cpu-arguments-model-arguments-slope": 118,
++            "cekVarCost-exBudgetCPU": 29773,
++            "remainderInteger-memory-arguments-slope": 1,
++            "cekForceCost-exBudgetCPU": 29773,
++            "sha2_256-cpu-arguments-slope": 29175,
++            "equalsInteger-memory-arguments": 1,
++            "indexByteString-memory-arguments": 1,
++            "addInteger-memory-arguments-intercept": 1,
++            "chooseUnit-cpu-arguments": 150000,
++            "sndPair-cpu-arguments": 150000,
++            "cekLamCost-exBudgetCPU": 29773,
++            "fstPair-cpu-arguments": 150000,
++            "quotientInteger-memory-arguments-minimum": 1,
++            "decodeUtf8-cpu-arguments-slope": 1000,
++            "lessThanInteger-memory-arguments": 1,
++            "lessThanEqualsInteger-cpu-arguments-slope": 1366,
++            "fstPair-memory-arguments": 32,
++            "modInteger-memory-arguments-intercept": 0,
++            "unConstrData-cpu-arguments": 150000,
++            "lessThanEqualsInteger-memory-arguments": 1,
++            "chooseUnit-memory-arguments": 32,
++            "sndPair-memory-arguments": 32,
++            "addInteger-cpu-arguments-intercept": 197209,
++            "decodeUtf8-memory-arguments-slope": 8,
++            "equalsData-cpu-arguments-intercept": 150000,
++            "mapData-cpu-arguments": 150000,
++            "mkPairData-cpu-arguments": 150000,
++            "quotientInteger-cpu-arguments-constant": 148000,
++            "consByteString-memory-arguments-slope": 1,
++            "cekVarCost-exBudgetMemory": 100,
++            "indexByteString-cpu-arguments": 150000,
++            "unListData-cpu-arguments": 150000,
++            "equalsInteger-cpu-arguments-slope": 1326,
++            "cekStartupCost-exBudgetMemory": 100,
++            "subtractInteger-cpu-arguments-intercept": 197209,
++            "divideInteger-cpu-arguments-model-arguments-intercept": 425507,
++            "divideInteger-memory-arguments-intercept": 0,
++            "cekForceCost-exBudgetMemory": 100,
++            "blake2b-cpu-arguments-intercept": 2477736,
++            "remainderInteger-cpu-arguments-constant": 148000,
++            "tailList-cpu-arguments": 150000,
++            "encodeUtf8-cpu-arguments-intercept": 150000,
++            "equalsString-cpu-arguments-slope": 1000,
++            "lessThanByteString-memory-arguments": 1,
++            "multiplyInteger-cpu-arguments-slope": 11218,
++            "appendByteString-cpu-arguments-intercept": 396231,
++            "lessThanEqualsByteString-cpu-arguments-slope": 248,
++            "modInteger-memory-arguments-slope": 1,
++            "addInteger-cpu-arguments-slope": 0,
++            "equalsData-cpu-arguments-slope": 10000,
++            "decodeUtf8-memory-arguments-intercept": 0,
++            "chooseList-cpu-arguments": 150000,
++            "constrData-cpu-arguments": 150000,
++            "equalsByteString-memory-arguments": 1,
++            "cekApplyCost-exBudgetCPU": 29773,
++            "quotientInteger-memory-arguments-slope": 1,
++            "verifySignature-cpu-arguments-intercept": 3345831,
++            "unMapData-memory-arguments": 32,
++            "mkCons-memory-arguments": 32,
++            "sliceByteString-memory-arguments-slope": 1,
++            "sha3_256-memory-arguments": 4,
++            "ifThenElse-memory-arguments": 1,
++            "mkNilPairData-memory-arguments": 32,
++            "equalsByteString-cpu-arguments-slope": 247,
++            "appendString-cpu-arguments-intercept": 150000,
++            "quotientInteger-cpu-arguments-model-arguments-slope": 118,
++            "cekApplyCost-exBudgetMemory": 100,
++            "equalsString-memory-arguments": 1,
++            "multiplyInteger-memory-arguments-slope": 1,
++            "cekBuiltinCost-exBudgetMemory": 100,
++            "remainderInteger-memory-arguments-intercept": 0,
++            "sha2_256-cpu-arguments-intercept": 2477736,
++            "remainderInteger-cpu-arguments-model-arguments-intercept": 425507,
++            "lessThanEqualsByteString-memory-arguments": 1,
++            "tailList-memory-arguments": 32,
++            "mkNilData-cpu-arguments": 150000,
++            "chooseData-cpu-arguments": 150000,
++            "unBData-memory-arguments": 32,
++            "blake2b-memory-arguments": 4,
++            "iData-memory-arguments": 32,
++            "nullList-memory-arguments": 32,
++            "cekDelayCost-exBudgetCPU": 29773,
++            "subtractInteger-memory-arguments-intercept": 1,
++            "lessThanByteString-cpu-arguments-intercept": 103599,
++            "consByteString-cpu-arguments-slope": 1000,
++            "appendByteString-memory-arguments-slope": 1,
++            "trace-memory-arguments": 32,
++            "divideInteger-cpu-arguments-constant": 148000,
++            "cekConstCost-exBudgetCPU": 29773,
++            "encodeUtf8-memory-arguments-slope": 8,
++            "quotientInteger-cpu-arguments-model-arguments-intercept": 425507,
++            "mapData-memory-arguments": 32,
++            "appendString-cpu-arguments-slope": 1000,
++            "modInteger-cpu-arguments-constant": 148000,
++            "verifySignature-cpu-arguments-slope": 1,
++            "unConstrData-memory-arguments": 32,
++            "quotientInteger-memory-arguments-intercept": 0,
++            "equalsByteString-cpu-arguments-constant": 150000,
++            "sliceByteString-memory-arguments-intercept": 0,
++            "mkPairData-memory-arguments": 32,
++            "equalsByteString-cpu-arguments-intercept": 112536,
++            "appendString-memory-arguments-slope": 1,
++            "lessThanInteger-cpu-arguments-slope": 497,
++            "modInteger-cpu-arguments-model-arguments-intercept": 425507,
++            "modInteger-memory-arguments-minimum": 1,
++            "sha3_256-cpu-arguments-intercept": 0,
++            "verifySignature-memory-arguments": 1,
++            "cekLamCost-exBudgetMemory": 100,
++            "sliceByteString-cpu-arguments-intercept": 150000
++        },
++        "PlutusV2": {
++            "addInteger-cpu-arguments-intercept": 205665,
++            "addInteger-cpu-arguments-slope": 812,
++            "addInteger-memory-arguments-intercept": 1,
++            "addInteger-memory-arguments-slope": 1,
++            "appendByteString-cpu-arguments-intercept": 1000,
++            "appendByteString-cpu-arguments-slope": 571,
++            "appendByteString-memory-arguments-intercept": 0,
++            "appendByteString-memory-arguments-slope": 1,
++            "appendString-cpu-arguments-intercept": 1000,
++            "appendString-cpu-arguments-slope": 24177,
++            "appendString-memory-arguments-intercept": 4,
++            "appendString-memory-arguments-slope": 1,
++            "bData-cpu-arguments": 1000,
++            "bData-memory-arguments": 32,
++            "blake2b_256-cpu-arguments-intercept": 117366,
++            "blake2b_256-cpu-arguments-slope": 10475,
++            "blake2b_256-memory-arguments": 4,
++            "cekApplyCost-exBudgetCPU": 23000,
++            "cekApplyCost-exBudgetMemory": 100,
++            "cekBuiltinCost-exBudgetCPU": 23000,
++            "cekBuiltinCost-exBudgetMemory": 100,
++            "cekConstCost-exBudgetCPU": 23000,
++            "cekConstCost-exBudgetMemory": 100,
++            "cekDelayCost-exBudgetCPU": 23000,
++            "cekDelayCost-exBudgetMemory": 100,
++            "cekForceCost-exBudgetCPU": 23000,
++            "cekForceCost-exBudgetMemory": 100,
++            "cekLamCost-exBudgetCPU": 23000,
++            "cekLamCost-exBudgetMemory": 100,
++            "cekStartupCost-exBudgetCPU": 100,
++            "cekStartupCost-exBudgetMemory": 100,
++            "cekVarCost-exBudgetCPU": 23000,
++            "cekVarCost-exBudgetMemory": 100,
++            "chooseData-cpu-arguments": 19537,
++            "chooseData-memory-arguments": 32,
++            "chooseList-cpu-arguments": 175354,
++            "chooseList-memory-arguments": 32,
++            "chooseUnit-cpu-arguments": 46417,
++            "chooseUnit-memory-arguments": 4,
++            "consByteString-cpu-arguments-intercept": 221973,
++            "consByteString-cpu-arguments-slope": 511,
++            "consByteString-memory-arguments-intercept": 0,
++            "consByteString-memory-arguments-slope": 1,
++            "constrData-cpu-arguments": 89141,
++            "constrData-memory-arguments": 32,
++            "decodeUtf8-cpu-arguments-intercept": 497525,
++            "decodeUtf8-cpu-arguments-slope": 14068,
++            "decodeUtf8-memory-arguments-intercept": 4,
++            "decodeUtf8-memory-arguments-slope": 2,
++            "divideInteger-cpu-arguments-constant": 196500,
++            "divideInteger-cpu-arguments-model-arguments-intercept": 453240,
++            "divideInteger-cpu-arguments-model-arguments-slope": 220,
++            "divideInteger-memory-arguments-intercept": 0,
++            "divideInteger-memory-arguments-minimum": 1,
++            "divideInteger-memory-arguments-slope": 1,
++            "encodeUtf8-cpu-arguments-intercept": 1000,
++            "encodeUtf8-cpu-arguments-slope": 28662,
++            "encodeUtf8-memory-arguments-intercept": 4,
++            "encodeUtf8-memory-arguments-slope": 2,
++            "equalsByteString-cpu-arguments-constant": 245000,
++            "equalsByteString-cpu-arguments-intercept": 216773,
++            "equalsByteString-cpu-arguments-slope": 62,
++            "equalsByteString-memory-arguments": 1,
++            "equalsData-cpu-arguments-intercept": 1060367,
++            "equalsData-cpu-arguments-slope": 12586,
++            "equalsData-memory-arguments": 1,
++            "equalsInteger-cpu-arguments-intercept": 208512,
++            "equalsInteger-cpu-arguments-slope": 421,
++            "equalsInteger-memory-arguments": 1,
++            "equalsString-cpu-arguments-constant": 187000,
++            "equalsString-cpu-arguments-intercept": 1000,
++            "equalsString-cpu-arguments-slope": 52998,
++            "equalsString-memory-arguments": 1,
++            "fstPair-cpu-arguments": 80436,
++            "fstPair-memory-arguments": 32,
++            "headList-cpu-arguments": 43249,
++            "headList-memory-arguments": 32,
++            "iData-cpu-arguments": 1000,
++            "iData-memory-arguments": 32,
++            "ifThenElse-cpu-arguments": 80556,
++            "ifThenElse-memory-arguments": 1,
++            "indexByteString-cpu-arguments": 57667,
++            "indexByteString-memory-arguments": 4,
++            "lengthOfByteString-cpu-arguments": 1000,
++            "lengthOfByteString-memory-arguments": 10,
++            "lessThanByteString-cpu-arguments-intercept": 197145,
++            "lessThanByteString-cpu-arguments-slope": 156,
++            "lessThanByteString-memory-arguments": 1,
++            "lessThanEqualsByteString-cpu-arguments-intercept": 197145,
++            "lessThanEqualsByteString-cpu-arguments-slope": 156,
++            "lessThanEqualsByteString-memory-arguments": 1,
++            "lessThanEqualsInteger-cpu-arguments-intercept": 204924,
++            "lessThanEqualsInteger-cpu-arguments-slope": 473,
++            "lessThanEqualsInteger-memory-arguments": 1,
++            "lessThanInteger-cpu-arguments-intercept": 208896,
++            "lessThanInteger-cpu-arguments-slope": 511,
++            "lessThanInteger-memory-arguments": 1,
++            "listData-cpu-arguments": 52467,
++            "listData-memory-arguments": 32,
++            "mapData-cpu-arguments": 64832,
++            "mapData-memory-arguments": 32,
++            "mkCons-cpu-arguments": 65493,
++            "mkCons-memory-arguments": 32,
++            "mkNilData-cpu-arguments": 22558,
++            "mkNilData-memory-arguments": 32,
++            "mkNilPairData-cpu-arguments": 16563,
++            "mkNilPairData-memory-arguments": 32,
++            "mkPairData-cpu-arguments": 76511,
++            "mkPairData-memory-arguments": 32,
++            "modInteger-cpu-arguments-constant": 196500,
++            "modInteger-cpu-arguments-model-arguments-intercept": 453240,
++            "modInteger-cpu-arguments-model-arguments-slope": 220,
++            "modInteger-memory-arguments-intercept": 0,
++            "modInteger-memory-arguments-minimum": 1,
++            "modInteger-memory-arguments-slope": 1,
++            "multiplyInteger-cpu-arguments-intercept": 69522,
++            "multiplyInteger-cpu-arguments-slope": 11687,
++            "multiplyInteger-memory-arguments-intercept": 0,
++            "multiplyInteger-memory-arguments-slope": 1,
++            "nullList-cpu-arguments": 60091,
++            "nullList-memory-arguments": 32,
++            "quotientInteger-cpu-arguments-constant": 196500,
++            "quotientInteger-cpu-arguments-model-arguments-intercept": 453240,
++            "quotientInteger-cpu-arguments-model-arguments-slope": 220,
++            "quotientInteger-memory-arguments-intercept": 0,
++            "quotientInteger-memory-arguments-minimum": 1,
++            "quotientInteger-memory-arguments-slope": 1,
++            "remainderInteger-cpu-arguments-constant": 196500,
++            "remainderInteger-cpu-arguments-model-arguments-intercept": 453240,
++            "remainderInteger-cpu-arguments-model-arguments-slope": 220,
++            "remainderInteger-memory-arguments-intercept": 0,
++            "remainderInteger-memory-arguments-minimum": 1,
++            "remainderInteger-memory-arguments-slope": 1,
++            "serialiseData-cpu-arguments-intercept": 1159724,
++            "serialiseData-cpu-arguments-slope": 392670,
++            "serialiseData-memory-arguments-intercept": 0,
++            "serialiseData-memory-arguments-slope": 2,
++            "sha2_256-cpu-arguments-intercept": 806990,
++            "sha2_256-cpu-arguments-slope": 30482,
++            "sha2_256-memory-arguments": 4,
++            "sha3_256-cpu-arguments-intercept": 1927926,
++            "sha3_256-cpu-arguments-slope": 82523,
++            "sha3_256-memory-arguments": 4,
++            "sliceByteString-cpu-arguments-intercept": 265318,
++            "sliceByteString-cpu-arguments-slope": 0,
++            "sliceByteString-memory-arguments-intercept": 4,
++            "sliceByteString-memory-arguments-slope": 0,
++            "sndPair-cpu-arguments": 85931,
++            "sndPair-memory-arguments": 32,
++            "subtractInteger-cpu-arguments-intercept": 205665,
++            "subtractInteger-cpu-arguments-slope": 812,
++            "subtractInteger-memory-arguments-intercept": 1,
++            "subtractInteger-memory-arguments-slope": 1,
++            "tailList-cpu-arguments": 41182,
++            "tailList-memory-arguments": 32,
++            "trace-cpu-arguments": 212342,
++            "trace-memory-arguments": 32,
++            "unBData-cpu-arguments": 31220,
++            "unBData-memory-arguments": 32,
++            "unConstrData-cpu-arguments": 32696,
++            "unConstrData-memory-arguments": 32,
++            "unIData-cpu-arguments": 43357,
++            "unIData-memory-arguments": 32,
++            "unListData-cpu-arguments": 32247,
++            "unListData-memory-arguments": 32,
++            "unMapData-cpu-arguments": 38314,
++            "unMapData-memory-arguments": 32,
++            "verifyEcdsaSecp256k1Signature-cpu-arguments": 35892428,
++            "verifyEcdsaSecp256k1Signature-memory-arguments": 10,
++            "verifyEd25519Signature-cpu-arguments-intercept": 9462713,
++            "verifyEd25519Signature-cpu-arguments-slope": 1021,
++            "verifyEd25519Signature-memory-arguments": 10,
++            "verifySchnorrSecp256k1Signature-cpu-arguments-intercept": 38887044,
++            "verifySchnorrSecp256k1Signature-cpu-arguments-slope": 32947,
++            "verifySchnorrSecp256k1Signature-memory-arguments": 10
++        }
++    }
++}
+diff --git a/e2e-polybft/cardanofw/files/byron.genesis.spec.json b/e2e-polybft/cardanofw/files/byron.genesis.spec.json
+new file mode 100644
+index 00000000..3bf15b5c
+--- /dev/null
++++ b/e2e-polybft/cardanofw/files/byron.genesis.spec.json
+@@ -0,0 +1,23 @@
++{
++  "heavyDelThd":     "300000000000",
++  "maxBlockSize":    "2000000",
++  "maxTxSize":       "4096",
++  "maxHeaderSize":   "2000000",
++  "maxProposalSize": "700",
++  "mpcThd": "20000000000000",
++  "scriptVersion": 0,
++  "slotDuration": "1000",
++  "softforkRule": {
++    "initThd": "900000000000000",
++    "minThd": "600000000000000",
++    "thdDecrement": "50000000000000"
++  },
++  "txFeePolicy": {
++    "multiplier": "43946000000",
++    "summand": "155381000000000"
++  },
++  "unlockStakeEpoch": "18446744073709551615",
++  "updateImplicit": "10000",
++  "updateProposalThd": "100000000000000",
++  "updateVoteThd": "1000000000000"
++}
+diff --git a/e2e-polybft/cardanofw/files/configuration.yaml b/e2e-polybft/cardanofw/files/configuration.yaml
+new file mode 100644
+index 00000000..fb47be54
+--- /dev/null
++++ b/e2e-polybft/cardanofw/files/configuration.yaml
+@@ -0,0 +1,305 @@
++##########################################################
++###############          Mainnet                 #########
++############### Cardano Byron Node Configuration #########
++##########################################################
++
++
++##### Locations #####
++
++ByronGenesisFile: /node-data/genesis/byron/genesis.json
++ShelleyGenesisFile: /node-data/genesis/shelley/genesis.json
++AlonzoGenesisFile: /node-data/genesis/shelley/genesis.alonzo.json
++ConwayGenesisFile: /node-data/genesis/shelley/genesis.conway.json
++# SocketPath: db/node.socket
++
++##### Blockfetch Protocol
++PBftSignatureThreshold: 0.6
++
++# The maximum number of used peers during bulk sync.
++MaxConcurrencyBulkSync: 1
++# The maximum number of used peers when fetching newly forged blocks.
++MaxConcurrencyDeadline: 2
++
++#TODO: These parameters cannot yet be used in the config file, only on the CLI:
++#DatabasePath: db/
++#Topology: configuration/mainnet-topology.json
++#Port 7776
++
++##### Core protocol parameters #####
++
++# This is the instance of the Ouroboros family that we are running.
++# "RealPBFT" is the real (permissive) OBFT protocol, which is what we use on
++# mainnet in Byron era.
++Protocol: Cardano
++PBftSignatureThreshold: 0.6
++
++# The mainnet does not include the network magic into addresses. Testnets do.
++RequiresNetworkMagic: RequiresMagic
++
++
++##### Update system parameters #####
++
++# This protocol version number gets used by block producing nodes as part
++# of the system for agreeing on and synchronising protocol updates.
++LastKnownBlockVersion-Major: 6
++LastKnownBlockVersion-Minor: 0
++LastKnownBlockVersion-Alt: 0
++
++# In the Byron era some software versions are also published on the chain.
++# We do this only for Byron compatibility now.
++ApplicationName: cardano-sl
++ApplicationVersion: 1
++
++
++##### Logging configuration #####
++
++# Enable or disable logging overall
++TurnOnLogging: True
++
++# Enable the collection of various OS metrics such as memory and CPU use.
++# These metrics are traced in the context name: 'cardano.node.metrics' and can
++# be directed to the logs or monitoring backends.
++TurnOnLogMetrics: True
++
++# Global logging severity filter. Messages must have at least this severity to
++# pass. Typical values would be Warning, Notice, Info or Debug.
++minSeverity: Debug
++
++# Log items can be rendered with more or less verbose detail.
++# Verbosity ranges from MinimalVerbosity, NormalVerbosity to MaximalVerbosity
++TracingVerbosity: NormalVerbosity
++
++# The system supports a number of backends for logging and monitoring.
++# This setting lists the backends that will be available to use in the
++# configuration below. The logging backend is called Katip.
++setupBackends:
++  - KatipBK
++
++# This specifies the default backends that trace output is sent to if it
++# is not specifically configured to be sent to other backends.
++defaultBackends:
++  - KatipBK
++
++# EKG is a simple metrics monitoring system. Uncomment the following to enable
++# this backend and listen on the given local port and point your web browser to
++# http://localhost:12788/
++hasEKG: 12788
++
++# The Prometheus monitoring system exports EKG metrics. Uncomment the following
++# to listen on the given port. Output is provided on
++# http://localhost:12789/metrics
++# hasPrometheus:
++#   - "127.0.0.1"
++#   - 12789
++
++# To enable the legacy 'TraceForwarder' backend, uncomment the following setting. Log
++# items are then forwarded based on an entry in 'mapBackends' to a separate
++# process running a 'TraceAcceptor'.
++# Example using UNIX pipes:
++# traceForwardTo:
++#   tag: RemotePipe
++#   contents: "logs/pipe"
++#
++# Example using Windows named pipes:
++# traceForwardTo:
++#   tag: RemotePipe
++#   contents: "\\\\.\\pipe\\acceptor"
++#
++# Example using network socket:
++# traceForwardTo:
++#   tag: RemoteSocket
++#   contents:
++#     - "127.0.0.1"
++#     - "2997"
++
++# For the Katip logging backend we must set up outputs (called scribes)
++# The available types of scribe are:
++#   FileSK for files
++#   StdoutSK/StderrSK for stdout/stderr
++#   JournalSK for systemd's journal system
++#   DevNullSK ignores all output
++# The scribe output format can be ScText or ScJson. Log rotation settings can
++# be specified in the defaults below or overridden on a per-scribe basis here.
++setupScribes:
++  - scKind: FileSK
++    scName: "logs/mainnet.log"
++    scFormat: ScText
++
++  - scKind: StdoutSK
++    scName: stdout
++    scFormat: ScText
++
++# For the Katip logging backend this specifies the default scribes that trace
++# output is sent to if it is not configured to be sent to other scribes.
++defaultScribes:
++  - - FileSK
++    - "logs/mainnet.log"
++  - - StdoutSK
++    - stdout
++
++# The default file rotation settings for katip scribes, unless overridden
++# in the setupScribes above for specific scribes.
++rotation:
++  rpLogLimitBytes: 5000000
++  rpKeepFilesNum:  3
++  rpMaxAgeHours:   24
++
++
++##### Coarse grained logging control #####
++
++# Trace output from whole subsystems can be enabled/disabled using the following
++# settings. This provides fairly coarse grained control, but it is relatively
++# efficient at filtering out unwanted trace output.
++
++# Trace BlockFetch client.
++TraceBlockFetchClient: False
++
++# Trace BlockFetch decisions made by the BlockFetch client.
++TraceBlockFetchDecisions: False
++
++# Trace BlockFetch protocol messages.
++TraceBlockFetchProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Serialised Trace BlockFetch protocol messages.
++TraceBlockFetchProtocolSerialised: False
++PBftSignatureThreshold: 0.6
++
++# Trace BlockFetch server.
++TraceBlockFetchServer: False
++
++# Trace BlockchainTime.
++TraceBlockchainTime: False
++
++# Verbose tracer of ChainDB
++TraceChainDb: True
++
++# Trace ChainSync client.
++TraceChainSyncClient: False
++
++# Trace ChainSync server (blocks).
++TraceChainSyncBlockServer: False
++
++# Trace ChainSync server (headers).
++TraceChainSyncHeaderServer: False
++
++# Trace ChainSync protocol messages.
++TraceChainSyncProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Trace DNS Resolver messages.
++TraceDNSResolver: True
++
++# Trace DNS Subscription messages.
++TraceDNSSubscription: True
++
++# Trace error policy resolution.
++TraceErrorPolicy: True
++
++# Trace local error policy resolution.
++TraceLocalErrorPolicy: True
++
++# Trace block forging.
++TraceForge: True
++
++# Trace Handshake protocol messages.
++TraceHandshake: False
++
++# Trace IP Subscription messages.
++TraceIpSubscription: True
++
++# Trace local root peers
++TraceLocalRootPeers: True
++
++# Trace public root peers
++TracePublicRootPeers: True 
++
++# Trace peer selection
++TracePeerSelection: True
++
++# Debug peer selection
++TraceDebugPeerSelection: False
++
++# Trace peer selection actions (demotion / promotion between cold / warm and
++# hot peers).
++TracePeerSelectionActions: True
++
++# Trace connection manager
++TraceConnectionManager: True
++
++# Trace server
++TraceServer: True
++
++# Trace local connection manager
++TraceLocalConnectionManager: False
++
++# Trace local server
++TraceLocalServer: False
++
++# Trace local ChainSync protocol messages.
++TraceLocalChainSyncProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Trace local Handshake protocol messages.
++TraceLocalHandshake: False
++
++# Trace local TxSubmission protocol messages.
++TraceLocalTxSubmissionProtocol: False
++PBftSignatureThreshold: 0.6
++
++# Trace local TxSubmission server.
++TraceLocalTxSubmissionServer: False
++
++# Trace mempool.
++TraceMempool: True
++
++# Trace Mux Events.
++TraceMux: False
++
++# Trace TxSubmission server (inbound transactions).
++TraceTxInbound: False
++
++# Trace TxSubmission client (outbound transactions).
++TraceTxOutbound: False
++
++# Trace TxSubmission protocol messages.
++TraceTxSubmissionProtocol: False
++PBftSignatureThreshold: 0.6
++
++
++##### Fine grained logging control #####
++
++# It is also possible to have more fine grained control over filtering of
++# trace output, and to match and route trace output to particular backends.
++# This is less efficient than the coarse trace filters above but provides
++# much more precise control.
++
++options:
++
++  # This routes metrics matching specific names to particular backends.
++  # This overrides the 'defaultBackends' listed above. And note that it is
++  # an override and not an extension so anything matched here will not
++  # go to the default backend, only to the explicitly listed backends.
++  mapBackends:
++    cardano.node.metrics:
++      - EKGViewBK
++
++  # redirects traced values to a specific scribe which is identified by its
++  # type and its name, separated by "::":
++  mapScribes:
++    cardano.node.metrics:
++      - "FileSK::logs/mainnet.log"
++
++  # apply a filter on message severity on messages in a specific named context.
++  # this filter is applied additionally to the global 'minSeverity' and thus
++  # needs to be at least as high.
++  mapSeverity:
++    cardano.node.ChainDB: Notice
++    cardano.node.DnsSubscription: Debug
++TestShelleyHardForkAtEpoch: 0
++TestAllegraHardForkAtEpoch: 0
++TestMaryHardForkAtEpoch: 0
++TestAlonzoHardForkAtEpoch: 0
++TestBabbageHardForkAtEpoch: 0
++# TestConwayHardForkAtEpoch: 0
++ExperimentalProtocolsEnabled: True
+diff --git a/e2e-polybft/cardanofw/files/conway-babbage-test-genesis.json b/e2e-polybft/cardanofw/files/conway-babbage-test-genesis.json
+new file mode 100644
+index 00000000..078d33b1
+--- /dev/null
++++ b/e2e-polybft/cardanofw/files/conway-babbage-test-genesis.json
+@@ -0,0 +1,37 @@
++{
++  "poolVotingThresholds": {
++    "pvtCommitteeNormal": 0.51,
++    "pvtCommitteeNoConfidence": 0.51,
++    "pvtHardForkInitiation": 0.51,
++    "pvtMotionNoConfidence": 0.51
++  },
++  "dRepVotingThresholds": {
++    "dvtMotionNoConfidence": 0.51,
++    "dvtCommitteeNormal": 0.51,
++    "dvtCommitteeNoConfidence": 0.51,
++    "dvtUpdateToConstitution": 0.51,
++    "dvtHardForkInitiation": 0.51,
++    "dvtPPNetworkGroup": 0.51,
++    "dvtPPEconomicGroup": 0.51,
++    "dvtPPTechnicalGroup": 0.51,
++    "dvtPPGovGroup": 0.51,
++    "dvtTreasuryWithdrawal": 0.51
++  },
++  "committeeMinSize": 0,
++  "committeeMaxTermLength": 60,
++  "govActionLifetime": 14,
++  "govActionDeposit": 0,
++  "dRepDeposit": 0,
++  "dRepActivity": 0,
++  "constitution": {
++    "anchor": {
++      "url": "",
++      "dataHash": "0000000000000000000000000000000000000000000000000000000000000000"
++    }
++  },
++  "committee": {
++    "members": {
++    },
++    "quorum": 0
++  }
++}
+diff --git a/e2e-polybft/cardanofw/test-cardano-cluster.go b/e2e-polybft/cardanofw/test-cardano-cluster.go
+new file mode 100644
+index 00000000..c82dc6b0
+--- /dev/null
++++ b/e2e-polybft/cardanofw/test-cardano-cluster.go
+@@ -0,0 +1,831 @@
++package cardanofw
++
++import (
++	"bufio"
++	"bytes"
++	"embed"
++	"encoding/json"
++	"fmt"
++	"io"
++	"math/big"
++	"os"
++	"os/exec"
++	"path"
++	"path/filepath"
++	"strconv"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
++	"github.com/0xPolygon/polygon-edge/helper/common"
++)
++
++//go:embed files/*
++var cardanoFiles embed.FS
++
++const hostIP = "cluster-%d-node-%d"
++
++func resolveCardanoNodeBinary() string {
++	bin := os.Getenv("CARDANO_NODE_BINARY")
++	if bin != "" {
++		return bin
++	}
++	// fallback
++	return "cardano-node"
++}
++
++func resolveCardanoCliBinary() string {
++	bin := os.Getenv("CARDANO_CLI_BINARY")
++	if bin != "" {
++		return bin
++	}
++	// fallback
++	return "cardano-cli"
++}
++
++type TestCardanoClusterConfig struct {
++	t *testing.T
++
++	Id             int
++	NetworkMagic   int
++	SecurityParam  int
++	NodesCount     int
++	Port           int
++	InitialSupply  *big.Int
++	BlockTimeMilis int
++	StartTimeDelay time.Duration
++
++	WithLogs   bool
++	WithStdout bool
++	LogsDir    string
++	TmpDir     string
++	Binary     string
++
++	logsDirOnce sync.Once
++}
++
++func (c *TestCardanoClusterConfig) Dir(name string) string {
++	return filepath.Join(c.TmpDir, name)
++}
++
++func (c *TestCardanoClusterConfig) GetStdout(name string, custom ...io.Writer) io.Writer {
++	writers := []io.Writer{}
++
++	if c.WithLogs {
++		c.logsDirOnce.Do(func() {
++			if err := c.initLogsDir(); err != nil {
++				c.t.Fatal("GetStdout init logs dir", "err", err)
++			}
++		})
++
++		f, err := os.OpenFile(filepath.Join(c.LogsDir, name+".log"), os.O_RDWR|os.O_APPEND|os.O_CREATE, 0600)
++		if err != nil {
++			c.t.Log("GetStdout open file error", "err", err)
++		} else {
++			writers = append(writers, f)
++
++			c.t.Cleanup(func() {
++				if err := f.Close(); err != nil {
++					c.t.Log("GetStdout close file error", "err", err)
++				}
++			})
++		}
++	}
++
++	if c.WithStdout {
++		writers = append(writers, os.Stdout)
++	}
++
++	if len(custom) > 0 {
++		writers = append(writers, custom...)
++	}
++
++	if len(writers) == 0 {
++		return io.Discard
++	}
++
++	return io.MultiWriter(writers...)
++}
++
++func (c *TestCardanoClusterConfig) initLogsDir() error {
++	if c.LogsDir == "" {
++		logsDir := path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().Unix()), c.t.Name())
++		if err := common.CreateDirSafe(logsDir, 0750); err != nil {
++			return err
++		}
++
++		c.t.Logf("logs enabled for e2e test: %s", logsDir)
++		c.LogsDir = logsDir
++	}
++
++	return nil
++}
++
++type TestCardanoCluster struct {
++	Config  *TestCardanoClusterConfig
++	Servers []*TestCardanoServer
++
++	once         sync.Once
++	failCh       chan struct{}
++	executionErr error
++}
++
++type CardanoClusterOption func(*TestCardanoClusterConfig)
++
++func WithNodesCount(num int) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.NodesCount = num
++	}
++}
++
++func WithBlockTime(blockTimeMilis int) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.BlockTimeMilis = blockTimeMilis
++	}
++}
++
++func WithStartTimeDelay(delay time.Duration) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.StartTimeDelay = delay
++	}
++}
++
++func WithPort(port int) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.Port = port
++	}
++}
++
++func WithLogsDir(logsDir string) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.LogsDir = logsDir
++	}
++}
++
++func WithNetworkMagic(networkMagic int) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.NetworkMagic = networkMagic
++	}
++}
++
++func WithId(id int) CardanoClusterOption {
++	return func(h *TestCardanoClusterConfig) {
++		h.Id = id
++	}
++}
++
++func NewCardanoTestCluster(t *testing.T, opts ...CardanoClusterOption) (*TestCardanoCluster, error) {
++	//var err error
++
++	config := &TestCardanoClusterConfig{
++		t:          t,
++		WithLogs:   true, // strings.ToLower(os.Getenv(e)) == "true"
++		WithStdout: true, // strings.ToLower(os.Getenv(envStdoutEnabled)) == "true"
++		Binary:     resolveCardanoCliBinary(),
++
++		NetworkMagic:   42,
++		SecurityParam:  10,
++		NodesCount:     3,
++		InitialSupply:  new(big.Int).SetUint64(12000000),
++		StartTimeDelay: time.Second * 30,
++		BlockTimeMilis: 2000,
++		Port:           3000,
++	}
++
++	startTime := time.Now().UTC().Add(config.StartTimeDelay)
++
++	for _, opt := range opts {
++		opt(config)
++	}
++
++	clusterName := fmt.Sprintf("cluster-%d", config.Id)
++	config.TmpDir = path.Join("../../e2e-docker-tmp", clusterName)
++	err := os.RemoveAll(config.TmpDir)
++	if err != nil {
++		return nil, err
++	}
++	if err := common.CreateDirSafe(config.TmpDir, 0750); err != nil {
++		return nil, err
++	}
++
++	cluster := &TestCardanoCluster{
++		Servers: []*TestCardanoServer{},
++		Config:  config,
++		failCh:  make(chan struct{}),
++		once:    sync.Once{},
++	}
++
++	// init genesis
++	if err := cluster.InitGenesis(startTime.Unix()); err != nil {
++		return nil, err
++	}
++
++	// copy config files
++	if err := cluster.CopyConfigFilesStep1(); err != nil {
++		return nil, err
++	}
++
++	// genesis create staked - babbage
++	if err := cluster.GenesisCreateStaked(startTime); err != nil {
++		return nil, err
++	}
++
++	// final step before starting nodes
++	if err := cluster.CopyConfigFilesAndInitDirectoriesStep2(); err != nil {
++		return nil, err
++	}
++
++	if err := cluster.GenerateDockerComposeFiles(); err != nil {
++		return nil, err
++	}
++
++	cluster.StartDocker()
++
++	return cluster, nil
++}
++
++func (c *TestCardanoCluster) StartDocker() error {
++	dockerFile := filepath.Join(c.Config.TmpDir, "docker-compose.yml")
++
++	var b bytes.Buffer
++	stdOut := c.Config.GetStdout("docker-compose", &b)
++
++	err := c.runCommand("docker-compose", []string{"-f", dockerFile, "up", "-d"}, stdOut)
++	if err != nil {
++		return err
++	}
++
++	return nil
++}
++
++func (c *TestCardanoCluster) StopDocker() error {
++	dockerFile := filepath.Join(c.Config.TmpDir, "docker-compose.yml")
++
++	var b bytes.Buffer
++	stdOut := c.Config.GetStdout("docker-compose", &b)
++
++	err := c.runCommand("docker-compose", []string{"-f", dockerFile, "down"}, stdOut)
++	if err != nil {
++		return err
++	}
++
++	return nil
++}
++
++func (c *TestCardanoCluster) NewTestServer(t *testing.T, id int, port int) error {
++
++	srv, err := NewCardanoTestServer(t, &TestCardanoServerConfig{
++		ID:         id,
++		Port:       port,
++		StdOut:     c.Config.GetStdout(fmt.Sprintf("node-%d", id)),
++		ConfigFile: c.Config.Dir("configuration.yaml"),
++		NodeDir:    c.Config.Dir(fmt.Sprintf("node-spo%d", id)),
++		Binary:     resolveCardanoNodeBinary(),
++	})
++	if err != nil {
++		return err
++	}
++
++	// watch the server for stop signals. It is important to fix the specific
++	// 'node' reference since 'TestServer' creates a new one if restarted.
++	go func(node *framework.Node) {
++		<-node.Wait()
++
++		if !node.ExitResult().Signaled {
++			c.Fail(fmt.Errorf("server id = %d, port = %d has stopped unexpectedly", id, port))
++		}
++	}(srv.node)
++
++	c.Servers = append(c.Servers, srv)
++
++	return err
++}
++
++func (c *TestCardanoCluster) Fail(err error) {
++	c.once.Do(func() {
++		c.executionErr = err
++		close(c.failCh)
++	})
++}
++
++func (c *TestCardanoCluster) Stop() {
++	for _, srv := range c.Servers {
++		if srv.IsRunning() {
++			srv.Stop()
++		}
++	}
++}
++
++func (c *TestCardanoCluster) WaitForReady(timeout time.Duration) error {
++	return c.WaitUntil(timeout, time.Second*2, func() (bool, error) {
++		_, ready, err := c.Stats()
++
++		return ready, err
++	})
++}
++
++func (c *TestCardanoCluster) GetSockets() []string {
++	sockets := make([]string, len(c.Servers))
++	for i, srv := range c.Servers {
++		sockets[i] = srv.SocketPath()
++	}
++
++	return sockets
++}
++
++func (c *TestCardanoCluster) Stats() ([]*TestCardanoStats, bool, error) {
++	blocks := make([]*TestCardanoStats, len(c.Servers))
++	ready := make([]bool, len(c.Servers))
++	errors := make([]error, len(c.Servers))
++	wg := sync.WaitGroup{}
++
++	for i := range c.Servers {
++		id, srv := i, c.Servers[i]
++		if !srv.IsRunning() {
++			ready[id] = true
++
++			continue
++		}
++
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++
++			var b bytes.Buffer
++
++			stdOut := c.Config.GetStdout(fmt.Sprintf("cardano-stats-%d", srv.ID()), &b)
++			args := []string{
++				"query", "tip",
++				"--testnet-magic", strconv.Itoa(c.Config.NetworkMagic),
++				"--socket-path", srv.SocketPath(),
++			}
++
++			if err := c.runCommand(c.Config.Binary, args, stdOut); err != nil {
++				if strings.Contains(err.Error(), "Network.Socket.connect") && strings.Contains(err.Error(), "does not exist (No such file or directory)") {
++					c.Config.t.Log("socket error", "path", srv.SocketPath(), "err", err)
++
++					return
++				}
++
++				ready[id], errors[id] = true, err
++
++				return
++			}
++
++			stat, err := NewTestCardanoStats(b.Bytes())
++			if err != nil {
++
++				ready[id], errors[id] = true, err
++			}
++
++			ready[id], blocks[id] = true, stat
++		}()
++	}
++
++	wg.Wait()
++
++	for i, err := range errors {
++		if err != nil {
++			return nil, true, err
++		} else if !ready[i] {
++			return nil, false, nil
++		}
++	}
++
++	return blocks, true, nil
++}
++
++func (c *TestCardanoCluster) WaitUntil(timeout, frequency time.Duration, handler func() (bool, error)) error {
++	ticker := time.NewTicker(frequency)
++	defer ticker.Stop()
++
++	timer := time.NewTimer(timeout)
++	defer timer.Stop()
++
++	for {
++		select {
++		case <-timer.C:
++			return fmt.Errorf("timeout")
++		case <-c.failCh:
++			return c.executionErr
++		case <-ticker.C:
++		}
++
++		finish, err := handler()
++		if err != nil {
++			return err
++		} else if finish {
++			return nil
++		}
++	}
++}
++
++func (c *TestCardanoCluster) WaitForBlock(n uint64, timeout time.Duration, frequency time.Duration) error {
++	return c.WaitUntil(timeout, frequency, func() (bool, error) {
++		blocks, ready, err := c.Stats()
++		if err != nil {
++			return false, err
++		} else if !ready {
++			return false, nil
++		}
++
++		c.Config.t.Log("WaitForBlock", "blocks", blocks)
++
++		for _, bn := range blocks {
++			if bn != nil && bn.Block < n {
++				return false, nil
++			}
++		}
++
++		return true, nil
++	})
++}
++
++func (c *TestCardanoCluster) WaitForBlockWithState(n uint64, timeout time.Duration) error {
++	servers := c.Servers
++	countRunningServers := c.RunningServersCount()
++	blockState := make(map[uint64]map[int]string, countRunningServers)
++
++	return c.WaitUntil(timeout, time.Millisecond*200, func() (bool, error) {
++		blocks, ready, err := c.Stats()
++		if err != nil {
++			return false, err
++		} else if !ready {
++			return false, nil
++		}
++
++		c.Config.t.Log("WaitForBlockWithState", "blocks", blocks)
++
++		for i, bn := range blocks {
++			serverID := servers[i].ID()
++			// bn == nil -> server is stopped + dont remember smaller than n blocks
++			if bn == nil || bn.Block < n {
++				continue
++			}
++
++			if mp, exists := blockState[bn.Block]; exists {
++				mp[serverID] = bn.Hash
++			} else {
++				blockState[bn.Block] = map[int]string{
++					serverID: bn.Hash,
++				}
++			}
++		}
++
++		// for all running servers there must be at least one block >= n
++		// that all servers have with same hash
++		for _, mp := range blockState {
++			if len(mp) != countRunningServers {
++				continue
++			}
++
++			hash, ok := "", true
++
++			for _, h := range mp {
++				if hash == "" {
++					hash = h
++				} else if h != hash {
++					ok = false
++
++					break
++				}
++			}
++
++			if ok {
++				return true, nil
++			}
++		}
++
++		return false, nil
++	})
++}
++
++// runCommand executes command with given arguments
++func (c *TestCardanoCluster) runCommand(binary string, args []string, stdout io.Writer, envVariables ...string) error {
++	var stdErr bytes.Buffer
++
++	cmd := exec.Command(binary, args...)
++	cmd.Stderr = &stdErr
++	cmd.Stdout = stdout
++	cmd.Env = append(os.Environ(), envVariables...)
++	// fmt.Printf("$ %s %s\n", binary, strings.Join(args, " "))
++
++	if err := cmd.Run(); err != nil {
++		if stdErr.Len() > 0 {
++			return fmt.Errorf("failed to execute command: %s", stdErr.String())
++		}
++
++		return fmt.Errorf("failed to execute command: %w", err)
++	}
++
++	if stdErr.Len() > 0 {
++		return fmt.Errorf("error during command execution: %s", stdErr.String())
++	}
++
++	return nil
++}
++
++func (c *TestCardanoCluster) InitGenesis(startTime int64) error {
++	var b bytes.Buffer
++
++	fnContent, err := cardanoFiles.ReadFile("files/byron.genesis.spec.json")
++	if err != nil {
++		return err
++	}
++
++	fnContent, err = updateJson(fnContent, func(mp map[string]interface{}) {
++		mp["slotDuration"] = strconv.Itoa(c.Config.BlockTimeMilis)
++	})
++	if err != nil {
++		return err
++	}
++
++	protParamsFile := c.Config.Dir("byron.genesis.spec.json")
++	if err := os.WriteFile(protParamsFile, fnContent, 0644); err != nil {
++		return err
++	}
++
++	args := []string{
++		"byron", "genesis", "genesis",
++		"--protocol-magic", strconv.Itoa(c.Config.NetworkMagic),
++		"--start-time", strconv.FormatInt(startTime, 10),
++		"--k", strconv.Itoa(c.Config.SecurityParam),
++		"--n-poor-addresses", "0",
++		"--n-delegate-addresses", strconv.Itoa(c.Config.NodesCount),
++		"--total-balance", c.Config.InitialSupply.String(),
++		"--delegate-share", "1",
++		"--avvm-entry-count", "0",
++		"--avvm-entry-balance", "0",
++		"--protocol-parameters-file", protParamsFile,
++		"--genesis-output-dir", c.Config.Dir("byron-gen-command"),
++	}
++	stdOut := c.Config.GetStdout("cardano-genesis", &b)
++
++	return c.runCommand(c.Config.Binary, args, stdOut)
++}
++
++func (c *TestCardanoCluster) CopyConfigFilesStep1() error {
++	items := [][2]string{
++		{"alonzo-babbage-test-genesis.json", "genesis.alonzo.spec.json"},
++		{"conway-babbage-test-genesis.json", "genesis.conway.spec.json"},
++		{"configuration.yaml", "configuration.yaml"},
++	}
++	for _, it := range items {
++		fnContent, err := cardanoFiles.ReadFile("files/" + it[0])
++		if err != nil {
++			return err
++		}
++
++		protParamsFile := c.Config.Dir(it[1])
++		if err := os.WriteFile(protParamsFile, fnContent, 0644); err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
++func (c *TestCardanoCluster) CopyConfigFilesAndInitDirectoriesStep2() error {
++	if err := common.CreateDirSafe(c.Config.Dir("genesis/byron"), 0750); err != nil {
++		return err
++	}
++
++	if err := common.CreateDirSafe(c.Config.Dir("genesis/shelley"), 0750); err != nil {
++		return err
++	}
++
++	err := updateJsonFile(
++		c.Config.Dir("byron-gen-command/genesis.json"),
++		c.Config.Dir("genesis/byron/genesis.json"),
++		func(mp map[string]interface{}) {
++			// mp["protocolConsts"].(map[string]interface{})["protocolMagic"] = 42
++		})
++	if err != nil {
++		return err
++	}
++
++	err = updateJsonFile(
++		c.Config.Dir("genesis.json"),
++		c.Config.Dir("genesis/shelley/genesis.json"),
++		func(mp map[string]interface{}) {
++			mp["slotLength"] = 0.1
++			mp["activeSlotsCoeff"] = 0.1
++			mp["securityParam"] = 10
++			mp["epochLength"] = 500
++			mp["maxLovelaceSupply"] = 1000000000000
++			mp["updateQuorum"] = 2
++			prParams := getMapFromInterfaceKey(mp, "protocolParams")
++			getMapFromInterfaceKey(prParams, "protocolVersion")["major"] = 7
++			prParams["minFeeA"] = 44
++			prParams["minFeeB"] = 155381
++			prParams["minUTxOValue"] = 1000000
++			prParams["decentralisationParam"] = 0.7
++			prParams["rho"] = 0.1
++			prParams["tau"] = 0.1
++		})
++	if err != nil {
++		return err
++	}
++
++	if err := os.Rename(c.Config.Dir("genesis.alonzo.json"), c.Config.Dir("genesis/shelley/genesis.alonzo.json")); err != nil {
++		return err
++	}
++
++	if err := os.Rename(c.Config.Dir("genesis.conway.json"), c.Config.Dir("genesis/shelley/genesis.conway.json")); err != nil {
++		return err
++	}
++
++	for i := 0; i < c.Config.NodesCount; i++ {
++		nodeID := i + 1
++		if err := common.CreateDirSafe(c.Config.Dir(fmt.Sprintf("node-spo%d", nodeID)), 0750); err != nil {
++			return err
++		}
++
++		producers := make([]map[string]interface{}, 0, c.Config.NodesCount-1)
++		for pid := 0; pid < c.Config.NodesCount; pid++ {
++			if i != pid {
++				producers = append(producers, map[string]interface{}{
++					"addr":    fmt.Sprintf(hostIP, c.Config.Id, pid),
++					"valency": 1,
++					"port":    c.Config.Port + pid,
++				})
++			}
++		}
++
++		topologyJsonContent, err := json.MarshalIndent(map[string]interface{}{
++			"Producers": producers,
++		}, "", "    ")
++		if err != nil {
++			return err
++		}
++
++		if err := os.WriteFile(c.Config.Dir(fmt.Sprintf("node-spo%d/topology.json", nodeID)), topologyJsonContent, 0644); err != nil {
++			return err
++		}
++
++		// keys
++		if err := os.Rename(
++			c.Config.Dir(fmt.Sprintf("pools/vrf%d.skey", nodeID)),
++			c.Config.Dir(fmt.Sprintf("node-spo%d/vrf.skey", nodeID))); err != nil {
++			return err
++		}
++
++		if err := os.Rename(
++			c.Config.Dir(fmt.Sprintf("pools/opcert%d.cert", nodeID)),
++			c.Config.Dir(fmt.Sprintf("node-spo%d/opcert.cert", nodeID))); err != nil {
++			return err
++		}
++
++		if err := os.Rename(
++			c.Config.Dir(fmt.Sprintf("pools/kes%d.skey", nodeID)),
++			c.Config.Dir(fmt.Sprintf("node-spo%d/kes.skey", nodeID))); err != nil {
++			return err
++		}
++
++		// byron related
++		if err := os.Rename(
++			c.Config.Dir(fmt.Sprintf("byron-gen-command/delegate-keys.%03d.key", i)),
++			c.Config.Dir(fmt.Sprintf("node-spo%d/byron-delegate.key", nodeID))); err != nil {
++			return err
++		}
++
++		if err := os.Rename(
++			c.Config.Dir(fmt.Sprintf("byron-gen-command/delegation-cert.%03d.json", i)),
++			c.Config.Dir(fmt.Sprintf("node-spo%d/byron-delegation.cert", nodeID))); err != nil {
++			return err
++		}
++	}
++
++	return nil
++}
++
++func (c *TestCardanoCluster) GenerateDockerComposeFiles() error {
++	filePath := c.Config.Dir("docker-compose.yml")
++
++	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0644)
++	if err != nil {
++		return err
++	}
++	defer file.Close()
++
++	writer := bufio.NewWriter(file)
++
++	writer.WriteString("version: \"3.9\"\n\n")
++	writer.WriteString("services:\n")
++	for node := 1; node <= c.Config.NodesCount; node++ {
++		writer.WriteString(fmt.Sprintf("  cluster-%d-node-%d:\n", c.Config.Id, node))
++		writer.WriteString("    image: ghcr.io/intersectmbo/cardano-node:8.7.3\n")
++		writer.WriteString("    environment:\n")
++		writer.WriteString("      - CARDANO_BLOCK_PRODUCER=true\n")
++		writer.WriteString("      - CARDANO_CONFIG=/node-data/configuration.yaml\n")
++		writer.WriteString(fmt.Sprintf("      - CARDANO_TOPOLOGY=/node-data/node-spo%d/topology.json\n", node))
++		writer.WriteString(fmt.Sprintf("      - CARDANO_DATABASE_PATH=/node-data/node-spo%d/db\n", node))
++		writer.WriteString(fmt.Sprintf("      - CARDANO_SOCKET_PATH=/node-data/node-spo%d/node.socket\n", node))
++		writer.WriteString(fmt.Sprintf("      - CARDANO_SHELLEY_KES_KEY=/node-data/node-spo%d/kes.skey\n", node))
++		writer.WriteString(fmt.Sprintf("      - CARDANO_SHELLEY_VRF_KEY=/node-data/node-spo%d/vrf.skey\n", node))
++		writer.WriteString(fmt.Sprintf("      - CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=/node-data/node-spo%d/opcert.cert\n", node))
++		writer.WriteString(fmt.Sprintf("      - CARDANO_LOG_DIR=/node-data/node-spo%d/node.log\n", node))
++		writer.WriteString("      - CARDANO_BIND_ADDR=0.0.0.0\n")
++		writer.WriteString("      - CARDANO_PORT=7532\n")
++		writer.WriteString("    command:\n")
++		writer.WriteString("      - run\n")
++		writer.WriteString("    volumes:\n")
++		writer.WriteString(fmt.Sprintf("      - %s:/node-data\n", c.Config.Dir("")))
++		writer.WriteString("    restart: on-failure\n")
++		writer.WriteString("    logging:\n")
++		writer.WriteString("      driver: \"json-file\"\n")
++		writer.WriteString("      options:\n")
++		writer.WriteString("        max-size: \"200k\"\n")
++		writer.WriteString("        max-file: \"10\"\n")
++		writer.WriteString("\n")
++	}
++
++	err = writer.Flush()
++	if err != nil {
++		return err
++	}
++
++	return nil
++}
++
++// Because in Babbage the overlay schedule and decentralization parameter are deprecated,
++// we must use the "create-staked" cli command to create SPOs in the ShelleyGenesis
++func (c *TestCardanoCluster) GenesisCreateStaked(startTime time.Time) error {
++	var b bytes.Buffer
++
++	exprectedErr := fmt.Sprintf("%d genesis keys, %d non-delegating UTxO keys, %d stake pools, %d delegating UTxO keys, %d delegation map entries",
++		c.Config.NodesCount, c.Config.NodesCount, c.Config.NodesCount, c.Config.NodesCount, c.Config.NodesCount)
++	args := []string{
++		"genesis", "create-staked",
++		"--genesis-dir", c.Config.Dir(""),
++		"--testnet-magic", strconv.Itoa(c.Config.NetworkMagic),
++		"--start-time", startTime.Format("2006-01-02T15:04:05Z"),
++		"--supply", "2000000000000",
++		"--supply-delegated", "240000000002",
++		"--gen-genesis-keys", strconv.Itoa(c.Config.NodesCount),
++		"--gen-pools", strconv.Itoa(c.Config.NodesCount),
++		"--gen-stake-delegs", strconv.Itoa(c.Config.NodesCount),
++		"--gen-utxo-keys", strconv.Itoa(c.Config.NodesCount),
++	}
++	stdOut := c.Config.GetStdout("cardano-genesis-create-staked", &b)
++
++	err := c.runCommand(c.Config.Binary, args, stdOut)
++	if strings.Contains(err.Error(), exprectedErr) {
++		return nil
++	}
++
++	return err
++}
++
++func (c *TestCardanoCluster) RunningServersCount() int {
++	cnt := 0
++
++	for _, srv := range c.Servers {
++		if srv.IsRunning() {
++			cnt++
++		}
++	}
++
++	return cnt
++}
++
++func updateJson(content []byte, callback func(mp map[string]interface{})) ([]byte, error) {
++	// Parse []byte into a map
++	var data map[string]interface{}
++	if err := json.Unmarshal(content, &data); err != nil {
++		return nil, err
++	}
++
++	callback(data)
++
++	return json.MarshalIndent(data, "", "    ") // The second argument is the prefix, and the third is the indentation
++}
++
++func updateJsonFile(fn1 string, fn2 string, callback func(mp map[string]interface{})) error {
++	bytes, err := os.ReadFile(fn1)
++	if err != nil {
++		return err
++	}
++
++	bytes, err = updateJson(bytes, callback)
++	if err != nil {
++		return err
++	}
++
++	return os.WriteFile(fn2, bytes, 0644)
++}
++
++func getMapFromInterfaceKey(mp map[string]interface{}, key string) map[string]interface{} {
++	var prParams map[string]interface{}
++
++	if v, exists := mp[key]; !exists {
++		prParams = map[string]interface{}{}
++		mp[key] = prParams
++	} else {
++		prParams = v.(map[string]interface{})
++	}
++
++	return prParams
++}
+diff --git a/e2e-polybft/cardanofw/test-cardano-server.go b/e2e-polybft/cardanofw/test-cardano-server.go
+new file mode 100644
+index 00000000..c652ded5
+--- /dev/null
++++ b/e2e-polybft/cardanofw/test-cardano-server.go
+@@ -0,0 +1,92 @@
++package cardanofw
++
++import (
++	"fmt"
++	"io"
++	"strconv"
++	"testing"
++
++	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
++)
++
++type TestCardanoServerConfig struct {
++	ID         int
++	NodeDir    string
++	ConfigFile string
++	Binary     string
++	Port       int
++	StdOut     io.Writer
++}
++
++type TestCardanoServer struct {
++	t *testing.T
++
++	config *TestCardanoServerConfig
++	node   *framework.Node
++}
++
++func NewCardanoTestServer(t *testing.T, config *TestCardanoServerConfig) (*TestCardanoServer, error) {
++	if config.Binary == "" {
++		config.Binary = resolveCardanoNodeBinary()
++	}
++
++	srv := &TestCardanoServer{
++		t:      t,
++		config: config,
++	}
++
++	return srv, srv.Start()
++}
++
++func (t *TestCardanoServer) IsRunning() bool {
++	return t.node != nil
++}
++
++func (t *TestCardanoServer) Stop() error {
++	if err := t.node.Stop(); err != nil {
++		return err
++	}
++
++	t.node = nil
++
++	return nil
++}
++
++func (t *TestCardanoServer) Start() error {
++	// Build arguments
++	args := []string{
++		"run",
++		"--config", t.config.ConfigFile,
++		"--topology", fmt.Sprintf("%s/topology.json", t.config.NodeDir),
++		"--database-path", fmt.Sprintf("%s/db", t.config.NodeDir),
++		"--socket-path", t.SocketPath(),
++		"--shelley-kes-key", fmt.Sprintf("%s/kes.skey", t.config.NodeDir),
++		"--shelley-vrf-key", fmt.Sprintf("%s/vrf.skey", t.config.NodeDir),
++		"--byron-delegation-certificate", fmt.Sprintf("%s/byron-delegation.cert", t.config.NodeDir),
++		"--byron-signing-key", fmt.Sprintf("%s/byron-delegate.key", t.config.NodeDir),
++		"--shelley-operational-certificate", fmt.Sprintf("%s/opcert.cert", t.config.NodeDir),
++		"--port", strconv.Itoa(t.config.Port),
++	}
++
++	node, err := framework.NewNode(t.config.Binary, args, t.config.StdOut)
++	if err != nil {
++		return err
++	}
++
++	t.node = node
++
++	return nil
++}
++
++func (t TestCardanoServer) ID() int {
++	return t.config.ID
++}
++
++func (t TestCardanoServer) SocketPath() string {
++	// socketPath handle for windows \\.\pipe\
++	return fmt.Sprintf("%s/node.sock", t.config.NodeDir)
++}
++
++func (t TestCardanoServer) Port() int {
++	return t.config.Port
++}
+diff --git a/e2e-polybft/cardanofw/test-cardano-stats.go b/e2e-polybft/cardanofw/test-cardano-stats.go
+new file mode 100644
+index 00000000..eb4a6767
+--- /dev/null
++++ b/e2e-polybft/cardanofw/test-cardano-stats.go
+@@ -0,0 +1,35 @@
++package cardanofw
++
++import (
++	"encoding/json"
++	"fmt"
++)
++
++type TestCardanoStats struct {
++	Block           uint64 `json:"block"`
++	Epoch           uint64 `json:"epoch"`
++	Era             string `json:"era"`
++	Hash            string `json:"hash"`
++	Slot            uint64 `json:"slot"`
++	SlotInEpoch     uint64 `json:"slotInEpoch"`
++	SlotsToEpochEnd uint64 `json:"slotsToEpochEnd"`
++	SyncProgress    string `json:"syncProgress"`
++}
++
++func NewTestCardanoStats(bytes []byte) (*TestCardanoStats, error) {
++	var testCardanoStats TestCardanoStats
++
++	if err := json.Unmarshal(bytes, &testCardanoStats); err != nil {
++		return nil, err
++	}
++
++	return &testCardanoStats, nil
++}
++
++func (tcs *TestCardanoStats) String() string {
++	if tcs == nil {
++		return "{ nil }"
++	}
++
++	return fmt.Sprintf("{ Block: %d, Hash: %s }", tcs.Block, tcs.Hash)
++}
+diff --git a/e2e-polybft/e2e/cardano_test.go b/e2e-polybft/e2e/cardano_test.go
+new file mode 100644
+index 00000000..e1b1306c
+--- /dev/null
++++ b/e2e-polybft/e2e/cardano_test.go
+@@ -0,0 +1,91 @@
++package e2e
++
++import (
++	"fmt"
++	"path"
++	"strings"
++	"sync"
++	"testing"
++	"time"
++
++	"github.com/0xPolygon/polygon-edge/e2e-polybft/blockfrost"
++	"github.com/0xPolygon/polygon-edge/e2e-polybft/cardanofw"
++	"github.com/0xPolygon/polygon-edge/helper/common"
++	"github.com/stretchr/testify/assert"
++)
++
++// Download Cardano executables from https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3 and unpack tar.gz file
++// Add directory where unpacked files are located to the $PATH (in example bellow `~/Apps/cardano`)
++// eq add line `export PATH=$PATH:~/Apps/cardano` to  `~/.bashrc`
++func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
++	const (
++		clusterCnt = 2
++	)
++
++	var (
++		errors      [clusterCnt]error
++		wg          sync.WaitGroup
++		baseLogsDir string = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().Unix()), t.Name())
++	)
++
++	go blockfrost.ResetDbSync(15)
++
++	for i := 0; i < clusterCnt; i++ {
++		id := i
++		wg.Add(1)
++
++		go func() {
++			defer wg.Done()
++
++			logsDir := fmt.Sprintf("%s/%d", baseLogsDir, id)
++			if err := common.CreateDirSafe(logsDir, 0750); err != nil {
++				errors[id] = err
++
++				return
++			}
++
++			cluster, err := cardanofw.NewCardanoTestCluster(t,
++				cardanofw.WithId(id+1),
++				cardanofw.WithNodesCount(4),
++				cardanofw.WithStartTimeDelay(time.Second*5),
++				cardanofw.WithPort(5000+id*100),
++				cardanofw.WithLogsDir(logsDir),
++				cardanofw.WithNetworkMagic(42+id))
++			if err != nil {
++				errors[id] = err
++
++				return
++			}
++
++			defer cluster.StopDocker()
++
++			t.Log("Waiting for sockets to be ready", "id", id+1, "sockets", strings.Join(cluster.GetSockets(), ", "))
++			if errors[id] = cluster.WaitForReady(time.Second * 100); errors[id] != nil {
++				return
++			}
++
++			t.Log("Waiting for blocks", "id", id+1)
++
++			t.Log("starting blockfrost")
++			bf, err := blockfrost.NewBlockFrost(cluster, id+1)
++			if err != nil {
++				errors[id] = err
++				return
++			}
++
++			if errors[id] = bf.Start(); errors[id] != nil {
++				return
++			}
++
++			defer bf.Stop()
++
++			errors[id] = cluster.WaitForBlockWithState(10, time.Second*300)
++		}()
++	}
++
++	wg.Wait()
++
++	for i := 0; i < clusterCnt; i++ {
++		assert.NoError(t, errors[i])
++	}
++}
+diff --git a/e2e-polybft/framework/node.go b/e2e-polybft/framework/node.go
+index 37241dfe..21575734 100644
+--- a/e2e-polybft/framework/node.go
++++ b/e2e-polybft/framework/node.go
+@@ -7,14 +7,14 @@ import (
+ 	"sync/atomic"
+ )
+ 
+-type node struct {
++type Node struct {
+ 	shuttingDown atomic.Bool
+ 	cmd          *exec.Cmd
+ 	doneCh       chan struct{}
+ 	exitResult   *exitResult
+ }
+ 
+-func newNode(binary string, args []string, stdout io.Writer) (*node, error) {
++func NewNode(binary string, args []string, stdout io.Writer) (*Node, error) {
+ 	cmd := exec.Command(binary, args...)
+ 	cmd.Stdout = stdout
+ 	cmd.Stderr = stdout
+@@ -23,7 +23,7 @@ func newNode(binary string, args []string, stdout io.Writer) (*node, error) {
+ 		return nil, err
+ 	}
+ 
+-	n := &node{
++	n := &Node{
+ 		cmd:    cmd,
+ 		doneCh: make(chan struct{}),
+ 	}
+@@ -32,15 +32,15 @@ func newNode(binary string, args []string, stdout io.Writer) (*node, error) {
+ 	return n, nil
+ }
+ 
+-func (n *node) ExitResult() *exitResult {
++func (n *Node) ExitResult() *exitResult {
+ 	return n.exitResult
+ }
+ 
+-func (n *node) Wait() <-chan struct{} {
++func (n *Node) Wait() <-chan struct{} {
+ 	return n.doneCh
+ }
+ 
+-func (n *node) run() {
++func (n *Node) run() {
+ 	err := n.cmd.Wait()
+ 
+ 	n.exitResult = &exitResult{
+@@ -51,11 +51,11 @@ func (n *node) run() {
+ 	n.cmd = nil
+ }
+ 
+-func (n *node) IsShuttingDown() bool {
++func (n *Node) IsShuttingDown() bool {
+ 	return n.shuttingDown.Load()
+ }
+ 
+-func (n *node) Stop() error {
++func (n *Node) Stop() error {
+ 	if n.cmd == nil {
+ 		// the server is already stopped
+ 		return nil
+diff --git a/e2e-polybft/framework/test-bridge.go b/e2e-polybft/framework/test-bridge.go
+index 329468e7..c53d60e7 100644
+--- a/e2e-polybft/framework/test-bridge.go
++++ b/e2e-polybft/framework/test-bridge.go
+@@ -26,7 +26,7 @@ import (
+ type TestBridge struct {
+ 	t             *testing.T
+ 	clusterConfig *TestClusterConfig
+-	node          *node
++	node          *Node
+ }
+ 
+ func NewTestBridge(t *testing.T, clusterConfig *TestClusterConfig) (*TestBridge, error) {
+@@ -55,7 +55,7 @@ func (t *TestBridge) Start() error {
+ 
+ 	stdout := t.clusterConfig.GetStdout("bridge")
+ 
+-	bridgeNode, err := newNode(t.clusterConfig.Binary, args, stdout)
++	bridgeNode, err := NewNode(t.clusterConfig.Binary, args, stdout)
+ 	if err != nil {
+ 		return err
+ 	}
+diff --git a/e2e-polybft/framework/test-cluster.go b/e2e-polybft/framework/test-cluster.go
+index 9e41a1d6..570c9fcd 100644
+--- a/e2e-polybft/framework/test-cluster.go
++++ b/e2e-polybft/framework/test-cluster.go
+@@ -808,7 +808,7 @@ func (c *TestCluster) InitTestServer(t *testing.T,
+ 
+ 	// watch the server for stop signals. It is important to fix the specific
+ 	// 'node' reference since 'TestServer' creates a new one if restarted.
+-	go func(node *node) {
++	go func(node *Node) {
+ 		<-node.Wait()
+ 
+ 		if !node.ExitResult().Signaled {
+diff --git a/e2e-polybft/framework/test-server.go b/e2e-polybft/framework/test-server.go
+index 22ccfc76..179a3032 100644
+--- a/e2e-polybft/framework/test-server.go
++++ b/e2e-polybft/framework/test-server.go
+@@ -57,7 +57,7 @@ type TestServer struct {
+ 	address       types.Address
+ 	clusterConfig *TestClusterConfig
+ 	config        *TestServerConfig
+-	node          *node
++	node          *Node
+ }
+ 
+ func (t *TestServer) GrpcAddr() string {
+@@ -180,7 +180,7 @@ func (t *TestServer) Start() {
+ 	// Start the server
+ 	stdout := t.clusterConfig.GetStdout(t.config.Name)
+ 
+-	node, err := newNode(t.clusterConfig.Binary, args, stdout)
++	node, err := NewNode(t.clusterConfig.Binary, args, stdout)
+ 	if err != nil {
+ 		t.t.Fatal(err)
+ 	}
+-- 
+2.34.1
+
