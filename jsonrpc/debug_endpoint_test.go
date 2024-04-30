@@ -18,7 +18,7 @@ import (
 type debugEndpointMockStore struct {
 	headerFn            func() *types.Header
 	getHeaderByNumberFn func(uint64) (*types.Header, bool)
-	readTxLookupFn      func(types.Hash) (types.Hash, bool)
+	readTxLookupFn      func(types.Hash) (uint64, bool)
 	getBlockByHashFn    func(types.Hash, bool) (*types.Block, bool)
 	getBlockByNumberFn  func(uint64, bool) (*types.Block, bool)
 	traceBlockFn        func(*types.Block, tracer.Tracer) ([]interface{}, error)
@@ -36,7 +36,7 @@ func (s *debugEndpointMockStore) GetHeaderByNumber(num uint64) (*types.Header, b
 	return s.getHeaderByNumberFn(num)
 }
 
-func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (types.Hash, bool) {
+func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (uint64, bool) {
 	return s.readTxLookupFn(txnHash)
 }
 
@@ -452,13 +452,13 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, testBlock10.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
 					assert.True(t, full)
 
 					return blockWithTx, true
@@ -478,10 +478,10 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTxHash1, hash)
 
-					return types.ZeroHash, false
+					return 0, false
 				},
 			},
 			result: nil,
@@ -492,13 +492,13 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, testBlock10.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
 					assert.True(t, full)
 
 					return nil, false
@@ -512,13 +512,13 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, testBlock10.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
 					assert.True(t, full)
 
 					return testBlock10, true
@@ -532,13 +532,13 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, testBlock10.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
 					assert.True(t, full)
 
 					return &types.Block{
@@ -605,16 +605,16 @@ func TestTraceCall(t *testing.T) {
 			Nonce:     &nonce,
 			Type:      toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
 		}
-		decodedTx = types.NewTx(&types.DynamicFeeTx{
-			Nonce:     uint64(nonce),
-			GasTipCap: new(big.Int).SetBytes([]byte(gasTipCap)),
-			GasFeeCap: new(big.Int).SetBytes([]byte(gasFeeCap)),
-			Gas:       uint64(gas),
-			To:        &to,
-			Value:     new(big.Int).SetBytes([]byte(value)),
-			Input:     data,
-			From:      from,
-		})
+		decodedTx = types.NewTx(types.NewDynamicFeeTx(
+			types.WithGasTipCap(new(big.Int).SetBytes([]byte(gasTipCap))),
+			types.WithGasFeeCap(new(big.Int).SetBytes([]byte(gasFeeCap))),
+			types.WithNonce(uint64(nonce)),
+			types.WithGas(uint64(gas)),
+			types.WithTo(&to),
+			types.WithValue(new(big.Int).SetBytes([]byte(value))),
+			types.WithInput(data),
+			types.WithFrom(from),
+		))
 	)
 
 	decodedTx.ComputeHash()

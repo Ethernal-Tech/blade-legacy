@@ -9,7 +9,7 @@
 
 When deploying with `polybft` consensus, there are some additional dependencies:
 
-* [go 1.20.x](https://go.dev/dl/)
+* [go 1.21.x](https://go.dev/dl/)
 
 ## Local development
 

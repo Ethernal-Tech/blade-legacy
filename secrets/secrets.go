@@ -31,6 +31,12 @@ const (
 
 	// NetworkKey is the libp2p private key secret used for networking
 	NetworkKey = "network-key"
+
+	// JSONTLSKey is the tls private key used for json rpc https endpoint
+	JSONTLSKey = "jsontls-key"
+
+	// JSONTLSCert is the tls certificate used for json rpc https endpoint
+	JSONTLSCert = "jsontls-pem"
 )
 
 // Define constant file names for the local StorageManager
@@ -38,12 +44,15 @@ const (
 	ValidatorKeyLocal    = "validator.key"
 	ValidatorBLSKeyLocal = "validator-bls.key"
 	NetworkKeyLocal      = "libp2p.key"
+	JSONTLSKeyLocal      = "jsontls.key"
+	JSONTLSCertLocal     = "jsontls.pem"
 )
 
 // Define constant folder names for the local StorageManager
 const (
 	ConsensusFolderLocal = "consensus"
 	NetworkFolderLocal   = "libp2p"
+	JSONTLSFolderLocal   = "jsontls"
 )
 
 var (

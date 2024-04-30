@@ -10,6 +10,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/0xPolygon/go-ibft/messages"
+	"github.com/0xPolygon/go-ibft/messages/proto"
+	hcf "github.com/hashicorp/go-hclog"
+	bolt "go.etcd.io/bbolt"
+
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -19,11 +24,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
 	"github.com/0xPolygon/polygon-edge/types"
-	bolt "go.etcd.io/bbolt"
-
-	"github.com/0xPolygon/go-ibft/messages"
-	"github.com/0xPolygon/go-ibft/messages/proto"
-	hcf "github.com/hashicorp/go-hclog"
 )
 
 const (
@@ -47,7 +47,9 @@ type txPoolInterface interface {
 	Drop(*types.Transaction)
 	Demote(*types.Transaction)
 	SetSealing(bool)
-	ResetWithHeaders(...*types.Header)
+	ResetWithBlock(*types.Block)
+	ReinsertProposed()
+	ClearProposed()
 }
 
 // epochMetadata is the static info for epoch currently being processed
@@ -157,9 +159,15 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 		eventProvider:      NewEventProvider(config.blockchain),
 	}
 
-	bridgeManager, err := newBridgeManager(runtime, config, runtime.eventProvider, log)
-	if err != nil {
-		return nil, err
+	var bridgeManager BridgeManager
+
+	if runtime.IsBridgeEnabled() {
+		bridgeManager, err = newBridgeManager(runtime, config, runtime.eventProvider, log)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		bridgeManager = &dummyBridgeManager{}
 	}
 
 	runtime.bridgeManager = bridgeManager
@@ -212,7 +220,6 @@ func (c *consensusRuntime) initStakeManager(logger hcf.Logger, dbTx *bolt.Tx) er
 func (c *consensusRuntime) initGovernanceManager(logger hcf.Logger, dbTx *bolt.Tx) error {
 	governanceManager, err := newGovernanceManager(
 		c.config.genesisParams,
-		c.config.GenesisConfig,
 		logger.Named("governance-manager"),
 		c.state,
 		c.config.blockchain,
@@ -275,7 +282,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	}
 
 	// after the block has been written we reset the txpool so that the old transactions are removed
-	c.config.txPool.ResetWithHeaders(fullBlock.Block.Header)
+	c.config.txPool.ResetWithBlock(fullBlock.Block)
 
 	var (
 		epoch = c.epoch
@@ -551,6 +558,8 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 	if err != nil {
 		return nil, err
 	}
+
+	c.config.polybftBackend.SetBlockTime(currentPolyConfig.BlockTime.Duration)
 
 	return &epochMetadata{
 		Number:              epochNumber,
@@ -1000,6 +1009,26 @@ func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.V
 	return message
 }
 
+// RoundStarts represents the round start callback
+func (c *consensusRuntime) RoundStarts(view *proto.View) error {
+	c.logger.Info("RoundStarts", "height", view.Height, "round", view.Round)
+	if view.Round > 0 {
+		c.config.txPool.ReinsertProposed()
+	} else {
+		c.config.txPool.ClearProposed()
+	}
+
+	return nil
+}
+
+// SequenceCancelled represents sequence cancelled callback
+func (c *consensusRuntime) SequenceCancelled(view *proto.View) error {
+	c.logger.Info("SequenceCancelled", "height", view.Height, "round", view.Round)
+	c.config.txPool.ReinsertProposed()
+
+	return nil
+}
+
 // BuildRoundChangeMessage builds a ROUND_CHANGE message based on the passed in proposal
 func (c *consensusRuntime) BuildRoundChangeMessage(
 	proposal *proto.Proposal,
@@ -1069,19 +1098,4 @@ func (c *consensusRuntime) getCurrentBlockTimeDrift() uint64 {
 	defer c.lock.RUnlock()
 
 	return c.epoch.CurrentClientConfig.BlockTimeDrift
-}
-
-// getSealersForBlock checks who sealed a given block and updates the counter
-func getSealersForBlock(sealersCounter map[types.Address]uint64,
-	blockExtra *Extra, validators validator.AccountSet) error {
-	signers, err := validators.GetFilteredValidators(blockExtra.Parent.Bitmap)
-	if err != nil {
-		return err
-	}
-
-	for _, a := range signers.GetAddresses() {
-		sealersCounter[a]++
-	}
-
-	return nil
 }

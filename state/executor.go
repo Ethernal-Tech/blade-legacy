@@ -1,6 +1,7 @@
 package state
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"math"
@@ -45,6 +46,8 @@ type Executor struct {
 
 	PostHook        func(txn *Transition)
 	GenesisPostHook func(*Transition) error
+
+	IsL1OriginatedToken bool
 }
 
 // NewExecutor creates a new executor
@@ -133,19 +136,56 @@ func (e *Executor) ProcessBlock(
 	block *types.Block,
 	blockCreator types.Address,
 ) (*Transition, error) {
+	e.logger.Debug("[Executor.ProcessBlock] started...",
+		"block number", block.Number(),
+		"block hash", block.Hash(),
+		"parent state root", parentRoot,
+		"block state root", block.Header.StateRoot,
+		"txs count", len(block.Transactions))
+
 	txn, err := e.BeginTxn(parentRoot, block.Header, blockCreator)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, t := range block.Transactions {
+	var (
+		buf    bytes.Buffer
+		logLvl = e.logger.GetLevel()
+	)
+
+	for i, t := range block.Transactions {
 		if t.Gas() > block.Header.GasLimit {
 			continue
 		}
 
 		if err = txn.Write(t); err != nil {
+			e.logger.Error("failed to write transaction to the block", "tx", t, "err", err)
+
 			return nil, err
 		}
+
+		if logLvl <= hclog.Debug {
+			if e.logger.IsTrace() {
+				_, _ = buf.WriteString(t.String())
+			}
+
+			if e.logger.IsDebug() {
+				_, _ = buf.WriteString(t.Hash().String())
+			}
+
+			if i != len(block.Transactions)-1 {
+				_, _ = buf.WriteString("\n")
+			}
+		}
+	}
+
+	var (
+		logMsg  = "[Executor.ProcessBlock] finished."
+		logArgs = []interface{}{"txs count", len(block.Transactions), "txs", buf.String()}
+	)
+
+	if logLvl <= hclog.Debug {
+		e.logger.Log(logLvl, logMsg, logArgs...)
 	}
 
 	return txn, nil
@@ -204,6 +244,8 @@ func (e *Executor) BeginTxn(
 	t.getHash = e.GetHash(header)
 	t.ctx = txCtx
 	t.gasPool = uint64(txCtx.GasLimit)
+
+	t.isL1OriginatedToken = e.IsL1OriginatedToken
 
 	// enable contract deployment allow list (if any)
 	if e.config.ContractDeployerAllowList != nil {
@@ -270,6 +312,8 @@ type Transition struct {
 	journalRevisions []runtime.JournalRevision
 
 	accessList *runtime.AccessList
+
+	isL1OriginatedToken bool
 }
 
 func NewTransition(logger hclog.Logger, config chain.ForksInTime, snap Snapshot, radix *Txn) *Transition {
@@ -337,6 +381,7 @@ func (t *Transition) Write(txn *types.Transaction) error {
 		}
 
 		txn.SetFrom(from)
+		t.logger.Trace("[Transition.Write]", "recovered sender", from)
 	}
 
 	// Make a local copy and apply the transaction
@@ -649,7 +694,8 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 
 	// set up initial access list
 	initialAccessList := runtime.NewAccessList()
-	if t.config.Berlin { // check if berlin fork is activated or not
+	if t.config.Berlin {
+		// populate access list in case Berlin fork is active
 		initialAccessList.PrepareAccessList(msg.From(), msg.To(), t.precompiles.Addrs, msg.AccessList())
 	}
 
@@ -665,6 +711,8 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 
 		result = t.Call2(msg.From(), *(msg.To()), msg.Input(), value, gasLeft)
 	}
+
+	result.AccessList = t.accessList
 
 	refundQuotient := LegacyRefundQuotient
 	if t.config.London {
@@ -699,13 +747,12 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	t.state.AddBalance(t.ctx.Coinbase, coinbaseFee)
 
 	//nolint:godox
-	// TODO - burning of base fee should not be done in the EVM
-	// Burn some amount if the london hardfork is applied.
+	// Burn some amount if the london hardfork is applied and token is non mintable.
 	// Basically, burn amount is just transferred to the current burn contract.
-	// if t.config.London && msg.Type() != types.StateTxType {
-	// 	burnAmount := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), t.ctx.BaseFee)
-	// 	t.state.AddBalance(t.ctx.BurnContract, burnAmount)
-	// }
+	if t.isL1OriginatedToken && t.config.London && msg.Type() != types.StateTxType {
+		burnAmount := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), t.ctx.BaseFee)
+		t.state.AddBalance(t.ctx.BurnContract, burnAmount)
+	}
 
 	// return gas to the pool
 	t.addGasPool(result.GasLeft)
@@ -881,7 +928,6 @@ func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtim
 		}
 	}
 
-	//Berlin: check
 	// we add this to the access-list before taking a snapshot. Even if the creation fails,
 	// the access-list change should not be rolled back according to EIP2929 specs
 	if t.config.Berlin {
@@ -1352,6 +1398,11 @@ func (t *Transition) RevertToSnapshot(snapshot int) error {
 	t.journalRevisions = t.journalRevisions[:idx]
 
 	return nil
+}
+
+// PopulateAccessList populates access list based on the provided access list
+func (t *Transition) PopulateAccessList(from types.Address, to *types.Address, acl types.TxAccessList) {
+	t.accessList.PrepareAccessList(from, to, t.precompiles.Addrs, acl)
 }
 
 func (t *Transition) AddSlotToAccessList(addr types.Address, slot types.Hash) {

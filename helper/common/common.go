@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"math"
 	"math/big"
+	"net"
 	"os"
 	"os/signal"
 	"os/user"
@@ -414,4 +415,28 @@ func (f *UnsafePool[T]) Put(resetFunc func(T) T, obj T) {
 	}
 
 	f.stack = append(f.stack, obj)
+}
+
+// GetFreePort asks the kernel for a free open port that is ready to use
+func GetFreePort() (port int, err error) {
+	var addr *net.TCPAddr
+
+	if addr, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
+		var l *net.TCPListener
+
+		if l, err = net.ListenTCP("tcp", addr); err == nil {
+			defer func(l *net.TCPListener) {
+				_ = l.Close()
+			}(l)
+
+			netAddr, ok := l.Addr().(*net.TCPAddr)
+			if !ok {
+				return 0, errors.New("invalid type assert to TCPAddr")
+			}
+
+			return netAddr.Port, nil
+		}
+	}
+
+	return
 }

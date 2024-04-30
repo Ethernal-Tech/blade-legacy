@@ -212,6 +212,7 @@ func (d *Dispatcher) handleSubscribe(req Request, conn wsConn) (string, Error) {
 		if err != nil {
 			return "", NewInternalError(err.Error())
 		}
+
 		filterID = d.filterManager.NewLogFilter(logQuery, conn)
 	} else if subscribeMethod == "newPendingTransactions" {
 		filterID = d.filterManager.NewPendingTxFilter(conn)
@@ -397,7 +398,7 @@ func (d *Dispatcher) Handle(reqBody []byte) ([]byte, error) {
 }
 
 func (d *Dispatcher) handleReq(req Request) ([]byte, Error) {
-	d.logger.Debug("request", "method", req.Method, "id", req.ID)
+	d.logger.Trace("request", "method", req.Method, "id", req.ID)
 
 	service, fd, ferr := d.getFnHandler(req)
 	if ferr != nil {
@@ -475,7 +476,7 @@ func (d *Dispatcher) registerService(serviceName string, service interface{}) er
 
 	st := reflect.TypeOf(service)
 	if st.Kind() == reflect.Struct {
-		return errors.New(fmt.Sprintf("jsonrpc: service '%s' must be a pointer to struct", serviceName))
+		return fmt.Errorf("jsonrpc: service '%s' must be a pointer to struct", serviceName)
 	}
 
 	funcMap := make(map[string]*funcData)

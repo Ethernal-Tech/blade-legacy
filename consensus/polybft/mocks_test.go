@@ -167,6 +167,10 @@ func (p *polybftBackendMock) GetValidatorsWithTx(blockNumber uint64, parents []*
 	panic("polybftBackendMock.GetValidatorsWithTx doesn't support such combination of arguments") //nolint:gocritic
 }
 
+func (p *polybftBackendMock) SetBlockTime(blockTime time.Duration) {
+	p.Called(blockTime)
+}
+
 var _ blockBuilder = (*blockBuilderMock)(nil)
 
 type blockBuilderMock struct {
@@ -356,8 +360,16 @@ func (tp *txPoolMock) SetSealing(v bool) {
 	tp.Called(v)
 }
 
-func (tp *txPoolMock) ResetWithHeaders(values ...*types.Header) {
-	tp.Called(values)
+func (tp *txPoolMock) ResetWithBlock(fullBlock *types.Block) {
+	tp.Called(fullBlock)
+}
+
+func (tp *txPoolMock) ReinsertProposed() {
+	tp.Called()
+}
+
+func (tp *txPoolMock) ClearProposed() {
+	tp.Called()
 }
 
 var _ syncer.Syncer = (*syncerMock)(nil)

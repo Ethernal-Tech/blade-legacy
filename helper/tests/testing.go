@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
 	"testing"
 	"time"
 
@@ -17,10 +16,11 @@ import (
 	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	txpoolOp "github.com/0xPolygon/polygon-edge/txpool/proto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/assert"
-	"github.com/umbracle/ethgo/jsonrpc"
 	empty "google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -31,7 +31,7 @@ var (
 func GenerateKeyAndAddr(t *testing.T) (*ecdsa.PrivateKey, types.Address) {
 	t.Helper()
 
-	key, err := crypto.GenerateECDSAKey()
+	key, err := crypto.GenerateECDSAPrivateKey()
 
 	assert.NoError(t, err)
 
@@ -51,7 +51,7 @@ func GenerateTestMultiAddr(t *testing.T) multiaddr.Multiaddr {
 	nodeID, err := peer.IDFromPrivateKey(priv)
 	assert.NoError(t, err)
 
-	port, portErr := GetFreePort()
+	port, portErr := common.GetFreePort()
 	if portErr != nil {
 		t.Fatalf("Unable to fetch free port, %v", portErr)
 	}
@@ -130,8 +130,8 @@ func WaitUntilTxPoolEmpty(
 
 func WaitForNonce(
 	ctx context.Context,
-	ethClient *jsonrpc.Eth,
-	addr ethgo.Address,
+	ethClient *jsonrpc.EthClient,
+	addr types.Address,
 	expectedNonce uint64,
 ) (
 	interface{},
@@ -143,7 +143,7 @@ func WaitForNonce(
 	}
 
 	resObj, err := RetryUntilTimeout(ctx, func() (interface{}, bool) {
-		nonce, err := ethClient.GetNonce(addr, ethgo.Latest)
+		nonce, err := ethClient.GetNonce(addr, jsonrpc.LatestBlockNumberOrHash)
 		if err != nil {
 			// error -> stop retrying
 			return result{nonce, err}, false
@@ -171,7 +171,7 @@ func WaitForNonce(
 }
 
 // WaitForReceipt waits transaction receipt
-func WaitForReceipt(ctx context.Context, client *jsonrpc.Eth, hash ethgo.Hash) (*ethgo.Receipt, error) {
+func WaitForReceipt(ctx context.Context, client *jsonrpc.EthClient, hash types.Hash) (*ethgo.Receipt, error) {
 	type result struct {
 		receipt *ethgo.Receipt
 		err     error
@@ -201,30 +201,6 @@ func WaitForReceipt(ctx context.Context, client *jsonrpc.Eth, hash ethgo.Hash) (
 	return data.receipt, data.err
 }
 
-// GetFreePort asks the kernel for a free open port that is ready to use
-func GetFreePort() (port int, err error) {
-	var addr *net.TCPAddr
-
-	if addr, err = net.ResolveTCPAddr("tcp", "localhost:0"); err == nil {
-		var l *net.TCPListener
-
-		if l, err = net.ListenTCP("tcp", addr); err == nil {
-			defer func(l *net.TCPListener) {
-				_ = l.Close()
-			}(l)
-
-			netAddr, ok := l.Addr().(*net.TCPAddr)
-			if !ok {
-				return 0, errors.New("invalid type assert to TCPAddr")
-			}
-
-			return netAddr.Port, nil
-		}
-	}
-
-	return
-}
-
 type GenerateTxReqParams struct {
 	Nonce         uint64
 	ReferenceAddr types.Address
@@ -238,17 +214,16 @@ type GenerateTxReqParams struct {
 func generateTx(params GenerateTxReqParams) (*types.Transaction, error) {
 	signer := crypto.NewEIP155Signer(100)
 
-	signedTx, signErr := signer.SignTx(types.NewTx(&types.LegacyTx{
-		Nonce:    params.Nonce,
-		From:     params.ReferenceAddr,
-		To:       &params.ToAddress,
-		GasPrice: params.GasPrice,
-		Gas:      1000000,
-		Value:    params.Value,
-		Input:    params.Input,
-		V:        big.NewInt(27), // it is necessary to encode in rlp
-	}), params.ReferenceKey)
-
+	signedTx, signErr := signer.SignTx(types.NewTx(types.NewLegacyTx(
+		types.WithGasPrice(params.GasPrice),
+		types.WithNonce(params.Nonce),
+		types.WithFrom(params.ReferenceAddr),
+		types.WithTo(&params.ToAddress),
+		types.WithGas(1000000),
+		types.WithValue(params.Value),
+		types.WithInput(params.Input),
+		types.WithSignatureValues(big.NewInt(27), nil, nil),
+	)), params.ReferenceKey)
 	if signErr != nil {
 		return nil, fmt.Errorf("unable to sign transaction, %w", signErr)
 	}

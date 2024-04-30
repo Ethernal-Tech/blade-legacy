@@ -6,11 +6,6 @@ run:
   # default is true. Enables skipping of directories:
   #   vendor$, third_party$, testdata$, examples$, Godeps$, builtin$
   skip-dirs-use-default: true
-  skip-dirs:
-    - tests
-
-service:
-  golangci-lint-version: 1.49.0
 
 linters:
   disable-all: true
@@ -58,6 +53,8 @@ linters-settings:
 
 issues:
   new-from-rev: origin/develop # report only new issues with reference to develop branch
+  exclude-dirs:
+    - tests
   exclude-rules:
     - path: _test\.go
       linters:

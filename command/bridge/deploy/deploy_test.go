@@ -5,8 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo/jsonrpc"
+	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/testutil"
 
 	"github.com/0xPolygon/polygon-edge/command"
@@ -26,13 +27,13 @@ func TestDeployContracts_NoPanics(t *testing.T) {
 		}
 	})
 
-	client, err := jsonrpc.NewClient(server.HTTPAddr())
+	client, err := jsonrpc.NewEthClient(server.HTTPAddr())
 	require.NoError(t, err)
 
 	testKey, err := helper.DecodePrivateKey("")
 	require.NoError(t, err)
 
-	receipt, err := server.Fund(testKey.Address())
+	receipt, err := server.Fund(ethgo.Address(testKey.Address()))
 	require.NoError(t, err)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 

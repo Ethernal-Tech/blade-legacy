@@ -89,7 +89,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	depositorAddr := depositorKey.Address()
 
-	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(dp.JSONRPCAddr))
+	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(dp.JSONRPCAddr),
+		txrelayer.WithReceiptsTimeout(dp.TxTimeout))
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize tx relayer: %w", err))
 
@@ -267,7 +268,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // createDepositTxn encodes parameters for deposit function on rootchain predicate contract
-func createDepositTxn(sender, receiver types.Address, amount *big.Int) (*ethgo.Transaction, error) {
+func createDepositTxn(sender, receiver types.Address, amount *big.Int) (*types.Transaction, error) {
 	depositToFn := &contractsapi.DepositToRootERC20PredicateFn{
 		RootToken: types.StringToAddress(dp.TokenAddr),
 		Receiver:  receiver,
@@ -279,8 +280,8 @@ func createDepositTxn(sender, receiver types.Address, amount *big.Int) (*ethgo.T
 		return nil, fmt.Errorf("failed to encode provided parameters: %w", err)
 	}
 
-	addr := ethgo.Address(types.StringToAddress(dp.PredicateAddr))
+	addr := types.StringToAddress(dp.PredicateAddr)
 
-	return helper.CreateTransaction(ethgo.Address(sender), &addr,
+	return helper.CreateTransaction(sender, &addr,
 		input, nil, !dp.ChildChainMintable), nil
 }

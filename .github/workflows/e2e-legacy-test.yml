@@ -4,7 +4,7 @@ on: # yamllint disable-line rule:truthy
   workflow_call:
     outputs:
       workflow_output:
-        description: "E2E Legacy Tests output"
+        description: E2E Legacy Tests output
         value: ${{ jobs.e2e_legacy.outputs.e2e_legacy_output_failure }}
 
 jobs:
@@ -25,7 +25,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5.0.0
         with:
-          go-version: 1.20.x
+          go-version: 1.21.x
       - name: Run tests
         run: make test-e2e-legacy
       - name: Run tests failed

@@ -7,36 +7,72 @@ on: # yamllint disable-line rule:truthy
         description: The environment to run against
         type: string
         required: true
-      scenario:
-        description: The scenario to run
+      type:
+        description: The type of load test to run
         type: string
         required: true
-      tps_avg:
-        description: "Average Transactions Per Second"
+      dynamic:
+        description: Indicates whether the load test should generate dynamic transactions
+        type: boolean
+        required: true
+      vus:
+        description: The number of Virtual Users
         type: string
         required: true
-      tps_max:
-        description: "Maximum Transactions Per Second"
+      txs_per_user:
+        description: The number of transactions per Virtual User
         type: string
         required: true
-      iterations:
-        description: "Number Of Transactions"
+      txpool_timeout:
+        description: The timeout for waiting for the transaction pool to empty
         type: string
         required: true
-      block:
-        description: "Block Number"
+      wait_txpool:
+        description: Waits for transaction pool to empty before collecting results
+        type: boolean
+        required: true
+      receipts_timeout:
+        description: The timeout for waiting for transaction receipts
         type: string
         required: true
-      ttm:
-        description: "Time To Mine"
+      batch_size:
+        description: Batch size
         type: string
         required: true
-      gas_avg:
-        description: "Average Gas Used"
+      total_time:
+        description: Total Time
         type: string
         required: true
-      gas_max:
-        description: "Maximum Gas Used"
+      total_txs:
+        description: Total Transactions
+        type: string
+        required: true
+      total_blocks:
+        description: Total Blocks
+        type: string
+        required: true
+      avg_txs_per_second:
+        description: Average Transactions Per Second
+        type: string
+        required: true
+      max_txs_per_second:
+        description: Maximum Transactions Per Second
+        type: string
+        required: true
+      total_gas_used:
+        description: Total Gas Used
+        type: string
+        required: true
+      avg_gas_per_tx:
+        description: Average Gas Used Per Transaction
+        type: string
+        required: true
+      avg_gas_utilization:
+        description: Average Gas Utilization
+        type: string
+        required: true
+      max_gas_utilization:
+        description: Maximum Gas Utilization
         type: string
         required: true
     secrets:
@@ -47,91 +83,145 @@ jobs:
   notification:
     name: Notification
     runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
     steps:
+      - name: Short SHA
+        id: short_sha
+        run: echo "value=`echo ${{ github.sha }} | cut -c1-7`" >> $GITHUB_OUTPUT
       - name: Notify Slack
         uses: slackapi/slack-github-action@v1.25.0
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
-          green_color: '#03C03C'
           succeed_bnt: 'primary'
         with:
           payload: |
             {
-              "attachments": [
+              "blocks": [
                 {
-                  "color": "${{ env.green_color }}",
-                  "blocks": [
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Load Test: ${{ inputs.type }}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
                     {
-                      "type": "header",
+                      "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "Load Test: ${{ inputs.scenario }}"
-                      }
+                        "text": "Workflow Run"
+                      },
+                      "style": "${{ env.succeed_bnt }}",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Triggered by: *${{ github.triggering_actor }}*"
                     },
                     {
-                      "type": "context",
-                      "elements": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "Environment: *${{ inputs.environment }}*"
-                        }
-                      ]
+                      "type": "mrkdwn",
+                      "text": "Commit: *<https://github.com/${{ github.repository }}/tree/${{ github.sha }}|${{ steps.short_sha.outputs.value }}>*"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Environment: *${{ inputs.environment }}*"
                     },
                     {
-                      "type": "context",
-                      "elements": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "Triggered by: *${{ github.triggering_actor }}*"
-                        }
-                      ]
+                      "type": "mrkdwn",
+                      "text": "Instance Type: *${{ vars.AWS_INSTANCE_TYPE }}*"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Dynamic Fee TXs: *${{ inputs.dynamic }}*"
                     },
                     {
-                      "type": "actions",
-                      "elements": [
-                        {
-                          "type": "button",
-                          "text": {
-                            "type": "plain_text",
-                            "text": "Workflow Run"
-                          },
-                          "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-                        }
-                      ]
+                      "type": "mrkdwn",
+                      "text": "VUs: *${{ inputs.vus }}*"
                     },
                     {
-                      "type": "section",
-                      "fields": [
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Average TPS*\n${{ inputs.tps_avg }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Max TPS*\n${{ inputs.tps_max }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Average Gas Used*\n${{ inputs.gas_avg }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Max Gas Used*\n${{ inputs.gas_max }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Transactions*\n${{ inputs.iterations }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Block Number*\n${{ inputs.block }}"
-                        },
-                        {
-                          "type": "mrkdwn",
-                          "text": "*Time to Mine*\n${{ inputs.ttm }}"
-                        }
-                      ]
+                      "type": "mrkdwn",
+                      "text": "TXs/VU: *${{ inputs.txs_per_user }}*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "TX Pool Timeout: *${{ inputs.txpool_timeout }}*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "Batch Size: *${{ inputs.batch_size }}*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "Wait TX Pool To Empty: *${{ inputs.wait_txpool }}*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "Receipts Timeout: *${{ inputs.receipts_timeout }}*"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Total Transactions*\n${{ inputs.total_txs }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Total Blocks*\n${{ inputs.total_blocks }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Average TPS*\n${{ inputs.avg_txs_per_second }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Max TPS*\n${{ inputs.max_txs_per_second }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Average GPT*\n${{ inputs.avg_gas_per_tx }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Total Gas Used*\n${{ inputs.total_gas_used }}"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Average Gas Utilization*\n${{ inputs.avg_gas_utilization }}%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Maximum Gas Utilization*\n${{ inputs.max_gas_utilization }}%"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "*Total Time*\n${{ inputs.total_time }}s"
                     }
                   ]
                 }

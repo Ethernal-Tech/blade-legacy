@@ -14,6 +14,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/any"
 	"github.com/hashicorp/go-hclog"
+	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -108,6 +109,7 @@ func newTestPoolWithSlots(maxSlots uint64, mockStore ...store) (*TxPool, error) 
 type accountState struct {
 	enqueued,
 	promoted,
+	proposed,
 	nextNonce uint64
 }
 
@@ -151,6 +153,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrInvalidTxType", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.StateTxType)
@@ -169,7 +172,9 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrTxTypeNotSupported London hardfork not enabled", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
+
 		pool.forks.RemoveFork(chain.London)
 
 		tx := newTx(defaultAddr, 0, 1, types.DynamicFeeTxType)
@@ -187,6 +192,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrNegativeValue", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -200,6 +206,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrBlockLimitExceeded", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -216,6 +223,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrExtractSignature", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -230,6 +238,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrInvalidSender", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(addr1, 0, 1, types.LegacyTxType)
@@ -246,7 +255,9 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrUnderpriced", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
+
 		pool.priceLimit = 1000000
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType) // gasPrice == 1
@@ -260,7 +271,9 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrInvalidAccountState", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
+
 		pool.store = faultyMockStore{}
 
 		// nonce is 1000000 so ErrNonceTooLow
@@ -276,6 +289,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrTxPoolOverflow", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		// fill the pool
@@ -292,6 +306,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("FillTxPoolToTheLimit", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		// fill the pool leaving only 1 slot
@@ -308,6 +323,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrIntrinsicGas", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -322,6 +338,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrAlreadyKnown", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -339,6 +356,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrAlreadyKnown", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -361,6 +379,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrOversizedData", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -381,6 +400,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrNonceTooLow", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		// faultyMockStore.GetNonce() == 99999
@@ -396,6 +416,7 @@ func TestAddTxErrors(t *testing.T) {
 
 	t.Run("ErrInsufficientFunds", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
 
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
@@ -542,6 +563,7 @@ func TestAddTxHighPressure(t *testing.T) {
 			pool.SetSigner(&mockSigner{})
 
 			pool.getOrCreateAccount(addr1)
+
 			pool.accounts.get(addr1).nextNonce = 5
 
 			//	mock high pressure
@@ -569,6 +591,7 @@ func TestAddTxHighPressure(t *testing.T) {
 			pool.SetSigner(&mockSigner{})
 
 			pool.getOrCreateAccount(addr1)
+
 			pool.accounts.get(addr1).nextNonce = 5
 
 			//	mock high pressure
@@ -600,6 +623,8 @@ func TestAddGossipTx(t *testing.T) {
 		t.Parallel()
 
 		pool, err := newTestPool()
+		pool.localPeerID = peer.ID("test")
+
 		assert.NoError(t, err)
 		pool.SetSigner(signer)
 
@@ -2006,12 +2031,12 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		assert.Equal(t, slotsRequired(tx), pool.gauge.read())
 		checkTxExistence(t, pool, tx.Hash(), true)
 
-		// set 9 to skips in order to drop transaction next
-		accountMap.skips = 9
+		// set 999 to skips in order to drop transaction next
+		accountMap.skips = maxAccountSkips - 1
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2041,12 +2066,12 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		assert.Equal(t, slotsRequired(tx), pool.gauge.read())
 		checkTxExistence(t, pool, tx.Hash(), true)
 
-		// set 9 to skips in order to drop transaction next
-		accountMap.skips = 9
+		// set 999 to skips in order to drop transaction next
+		accountMap.skips = maxAccountSkips - 1
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			// empty
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2076,12 +2101,12 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		assert.Equal(t, slotsRequired(tx), pool.gauge.read())
 		checkTxExistence(t, pool, tx.Hash(), true)
 
-		// set 9 to skips in order to drop transaction next
+		// set 5 to skips in order to drop transaction next
 		accountMap.skips = 5
 
 		pool.updateAccountSkipsCounts(map[types.Address]uint64{
 			addr1: 1,
-		})
+		}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2110,32 +2135,40 @@ func Test_updateAccountSkipsCounts(t *testing.T) {
 		accountMap := pool.accounts.initOnce(addr1, storeNonce)
 		accountMap.enqueued.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce + 2,
-				Hash:  types.StringToHash("0xffa"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce + 2,
+					Hash:  types.StringToHash("0xffa"),
+				},
 			},
 		})
 		accountMap.enqueued.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce + 4,
-				Hash:  types.StringToHash("0xff1"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce + 4,
+					Hash:  types.StringToHash("0xff1"),
+				},
 			},
 		})
 		accountMap.promoted.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce,
-				Hash:  types.StringToHash("0xff2"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce,
+					Hash:  types.StringToHash("0xff2"),
+				},
 			},
 		})
 		accountMap.promoted.push(&types.Transaction{
 			Inner: &types.LegacyTx{
-				Nonce: storeNonce + 1,
-				Hash:  types.StringToHash("0xff3"),
+				BaseTx: &types.BaseTx{
+					Nonce: storeNonce + 1,
+					Hash:  types.StringToHash("0xff3"),
+				},
 			},
 		})
 		accountMap.setNonce(storeNonce + 3)
 		accountMap.skips = maxAccountSkips - 1
 
-		pool.updateAccountSkipsCounts(map[types.Address]uint64{})
+		pool.updateAccountSkipsCounts(map[types.Address]uint64{}, types.Hash{1})
 
 		// make sure the account queue is empty and skips is reset
 		assert.Zero(t, accountMap.enqueued.length())
@@ -2181,7 +2214,9 @@ func Test_TxPool_validateTx(t *testing.T) {
 
 	t.Run("tx input larger than the TxPoolMaxInitCodeSize", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
+
 		pool.forks = chain.AllForksEnabled.Copy()
 
 		input := make([]byte, state.TxPoolMaxInitCodeSize+1)
@@ -2200,7 +2235,9 @@ func Test_TxPool_validateTx(t *testing.T) {
 
 	t.Run("tx input the same as TxPoolMaxInitCodeSize", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
+
 		pool.forks = chain.AllForksEnabled.Copy()
 
 		input := make([]byte, state.TxPoolMaxInitCodeSize)
@@ -2320,7 +2357,9 @@ func Test_TxPool_validateTx(t *testing.T) {
 
 	t.Run("eip-1559 tx placed without eip-1559 fork enabled", func(t *testing.T) {
 		t.Parallel()
+
 		pool := setupPool()
+
 		pool.forks = chain.AllForksEnabled.Copy()
 		pool.forks.RemoveFork(chain.London)
 
@@ -2609,10 +2648,13 @@ func TestResetAccounts_Enqueued(t *testing.T) {
 		// setup prestate
 		totalTx := 0
 		expectedPromoted := uint64(0)
+
 		for addr, txs := range allTxs {
 			expectedPromoted += expected.accounts[addr].promoted
+
 			for _, tx := range txs {
 				totalTx++
+
 				assert.NoError(t, pool.addTx(local, tx))
 			}
 		}
@@ -2704,10 +2746,13 @@ func TestResetAccounts_Enqueued(t *testing.T) {
 		// setup prestate
 		expectedEnqueuedTx := 0
 		expectedPromotedTx := uint64(0)
+
 		for addr, txs := range allTxs {
 			expectedPromotedTx += expected.accounts[addr].promoted
+
 			for _, tx := range txs {
 				expectedEnqueuedTx++
+
 				assert.NoError(t, pool.addTx(local, tx))
 			}
 		}
@@ -2893,6 +2938,7 @@ func TestExecutablesOrder(t *testing.T) {
 			)
 
 			expectedPromotedTx := 0
+
 			for _, txs := range test.allTxs {
 				for _, tx := range txs {
 					expectedPromotedTx++
@@ -2911,8 +2957,10 @@ func TestExecutablesOrder(t *testing.T) {
 			pool.Prepare()
 
 			var successful []*types.Transaction
+
 			for {
 				tx := pool.Peek()
+
 				if tx == nil {
 					break
 				}
@@ -3092,6 +3140,7 @@ func TestRecovery(t *testing.T) {
 			// setup prestate
 			totalTx := 0
 			expectedEnqueued := uint64(0)
+
 			for addr, txs := range test.allTxs {
 				// preset nonce so promotions can happen
 				acc := pool.getOrCreateAccount(addr)
@@ -3102,6 +3151,7 @@ func TestRecovery(t *testing.T) {
 				// send txs
 				for _, sTx := range txs {
 					totalTx++
+
 					assert.NoError(t, pool.addTx(local, sTx.tx))
 				}
 			}
@@ -3114,8 +3164,10 @@ func TestRecovery(t *testing.T) {
 
 			func() {
 				pool.Prepare()
+
 				for {
 					tx := pool.Peek()
+
 					if tx == nil {
 						break
 					}
@@ -3133,6 +3185,213 @@ func TestRecovery(t *testing.T) {
 
 			assert.Equal(t, test.expected.slots, pool.gauge.read())
 			commonAssert(test.expected.accounts, pool)
+		})
+	}
+}
+
+func TestProposed(t *testing.T) {
+	commonAssert := func(accounts map[types.Address]accountState, pool *TxPool) {
+		for addr := range accounts {
+			assert.Equal(t, // proposed
+				accounts[addr].proposed,
+				pool.accounts.get(addr).proposed.length())
+
+			assert.Equal(t, // promoted
+				accounts[addr].promoted,
+				pool.accounts.get(addr).promoted.length())
+		}
+	}
+
+	const (
+		REINSERT = 1
+		CLEAN    = 2
+	)
+
+	testCases := []struct {
+		name       string
+		method     int
+		doPop      bool
+		allTxs     map[types.Address][]*types.Transaction
+		beforeCall result
+		afterCall  result
+	}{
+		{
+			name:   "reinsert with pop",
+			method: REINSERT,
+			doPop:  true,
+			allTxs: map[types.Address][]*types.Transaction{
+				addr1: {
+					newTx(addr1, 0, 1, types.LegacyTxType),
+					newTx(addr1, 1, 1, types.LegacyTxType),
+				},
+			},
+			beforeCall: result{
+				slots: 1,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 1,
+						promoted: 1,
+					},
+				},
+			},
+			afterCall: result{
+				slots: 2,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 0,
+						promoted: 2,
+					},
+				},
+			},
+		},
+		{
+			name:   "reinsert without pop",
+			method: REINSERT,
+			doPop:  false,
+			allTxs: map[types.Address][]*types.Transaction{
+				addr1: {
+					newTx(addr1, 0, 1, types.LegacyTxType),
+					newTx(addr1, 1, 1, types.LegacyTxType),
+				},
+			},
+			beforeCall: result{
+				slots: 2,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 0,
+						promoted: 2,
+					},
+				},
+			},
+			afterCall: result{
+				slots: 2,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 0,
+						promoted: 2,
+					},
+				},
+			},
+		},
+		{
+			name:   "clean with pop",
+			method: CLEAN,
+			doPop:  true,
+			allTxs: map[types.Address][]*types.Transaction{
+				addr1: {
+					newTx(addr1, 0, 1, types.LegacyTxType),
+					newTx(addr1, 1, 1, types.LegacyTxType),
+				},
+			},
+			beforeCall: result{
+				slots: 1,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 1,
+						promoted: 1,
+					},
+				},
+			},
+			afterCall: result{
+				slots: 1,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 0,
+						promoted: 1,
+					},
+				},
+			},
+		},
+		{
+			name:   "clean without pop",
+			method: CLEAN,
+			doPop:  false,
+			allTxs: map[types.Address][]*types.Transaction{
+				addr1: {
+					newTx(addr1, 0, 1, types.LegacyTxType),
+					newTx(addr1, 1, 1, types.LegacyTxType),
+				},
+			},
+			beforeCall: result{
+				slots: 2,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 0,
+						promoted: 2,
+					},
+				},
+			},
+			afterCall: result{
+				slots: 2,
+				accounts: map[types.Address]accountState{
+					addr1: {
+						proposed: 0,
+						promoted: 2,
+					},
+				},
+			},
+		},
+	}
+
+	for _, test := range testCases {
+		test := test
+		t.Run(test.name, func(t *testing.T) {
+			// create pool
+			pool, err := newTestPool()
+			assert.NoError(t, err)
+			pool.SetSigner(&mockSigner{})
+
+			pool.Start()
+			defer pool.Close()
+
+			promoteSubscription := pool.eventManager.subscribe(
+				[]proto.EventType{proto.EventType_PROMOTED},
+			)
+
+			// setup prestate
+			totalTx := 0
+			expectedEnqueued := uint64(0)
+
+			for addr, txs := range test.allTxs {
+				// preset nonce so promotions can happen
+				acc := pool.getOrCreateAccount(addr)
+				acc.setNonce(txs[0].Nonce())
+
+				expectedEnqueued += test.afterCall.accounts[addr].enqueued
+
+				// send txs
+				for _, tx := range txs {
+					totalTx++
+
+					assert.NoError(t, pool.addTx(local, tx))
+				}
+			}
+
+			ctx, cancelFn := context.WithTimeout(context.Background(), time.Second*10)
+			defer cancelFn()
+
+			// All txns should get added
+			assert.Len(t, waitForEvents(ctx, promoteSubscription, totalTx), totalTx)
+
+			pool.Prepare()
+			tx := pool.Peek()
+			assert.NotNil(t, tx)
+
+			if test.doPop {
+				pool.Pop(tx)
+			}
+
+			assert.Equal(t, test.beforeCall.slots, pool.gauge.read())
+			commonAssert(test.beforeCall.accounts, pool)
+
+			if test.method == REINSERT {
+				pool.ReinsertProposed()
+			} else {
+				pool.ClearProposed()
+			}
+
+			assert.Equal(t, test.afterCall.slots, pool.gauge.read())
+			commonAssert(test.afterCall.accounts, pool)
 		})
 	}
 }
@@ -3312,9 +3571,11 @@ func TestGetTxs(t *testing.T) {
 
 			// send txs
 			expectedPromotedTx := 0
+
 			for _, txs := range test.allTxs {
 				nonce := uint64(0)
 				promotable := uint64(0)
+
 				for _, tx := range txs {
 					// send all txs
 					if tx.Nonce() == nonce+promotable {
@@ -3409,6 +3670,7 @@ func TestSetSealing(t *testing.T) {
 
 			// Set initial value
 			pool.sealing.Store(false)
+
 			if test.initialValue {
 				pool.sealing.Store(true)
 			}
@@ -3527,7 +3789,7 @@ func TestAddTxsInOrder(t *testing.T) {
 	addrsTxs := [accountCount]container{}
 
 	for i := 0; i < accountCount; i++ {
-		key, err := crypto.GenerateECDSAKey()
+		key, err := crypto.GenerateECDSAPrivateKey()
 		require.NoError(t, err)
 
 		addrsTxs[i] = container{
@@ -3592,7 +3854,7 @@ func TestAddTxsInOrder(t *testing.T) {
 	}
 }
 
-func TestResetWithHeadersSetsBaseFee(t *testing.T) {
+func TestResetWithBlockSetsBaseFee(t *testing.T) {
 	t.Parallel()
 
 	blocks := []*types.Block{
@@ -3611,7 +3873,7 @@ func TestResetWithHeadersSetsBaseFee(t *testing.T) {
 		{
 			Header: &types.Header{
 				BaseFee: 2000,
-				Hash:    types.Hash{2},
+				Hash:    types.Hash{1},
 			},
 		},
 	}
@@ -3631,12 +3893,13 @@ func TestResetWithHeadersSetsBaseFee(t *testing.T) {
 	require.NoError(t, err)
 
 	pool.SetBaseFee(blocks[0].Header)
+	require.Equal(t, blocks[0].Header.BaseFee, pool.GetBaseFee())
 
-	pool.ResetWithHeaders()
-	assert.Equal(t, blocks[0].Header.BaseFee, pool.GetBaseFee())
+	pool.ResetWithBlock(blocks[len(blocks)-1])
+	require.Equal(t, blocks[len(blocks)-1].Header.BaseFee, pool.GetBaseFee())
 
-	pool.ResetWithHeaders(blocks[len(blocks)-2].Header, blocks[len(blocks)-1].Header)
-	assert.Equal(t, blocks[len(blocks)-1].Header.BaseFee, pool.GetBaseFee())
+	pool.ResetWithBlock(blocks[len(blocks)-2])
+	require.Equal(t, blocks[len(blocks)-2].Header.BaseFee, pool.GetBaseFee())
 }
 
 func TestAddTx_TxReplacement(t *testing.T) {
@@ -3690,6 +3953,7 @@ func TestAddTx_TxReplacement(t *testing.T) {
 
 	pool, err := newTestPool()
 	pool.chainID = big.NewInt(100)
+
 	require.NoError(t, err)
 
 	pool.baseFee = 100
@@ -3764,7 +4028,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 	b.Run("benchmark add one tx", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
 
-		key, err := crypto.GenerateECDSAKey()
+		key, err := crypto.GenerateECDSAPrivateKey()
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -3792,7 +4056,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 	b.Run("benchmark fill account", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
 
-		key, err := crypto.GenerateECDSAKey()
+		key, err := crypto.GenerateECDSAPrivateKey()
 		if err != nil {
 			b.Fatal(err)
 		}

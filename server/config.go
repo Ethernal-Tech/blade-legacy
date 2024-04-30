@@ -42,6 +42,12 @@ type Config struct {
 
 	LogFilePath string
 
+	UseTLS bool
+
+	TLSCertFile string
+
+	TLSKeyFile string
+
 	Relayer bool
 
 	MetricsInterval time.Duration

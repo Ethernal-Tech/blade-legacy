@@ -1,8 +1,16 @@
 package helper
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
+	"encoding/pem"
 	"errors"
 	"fmt"
+	"math/big"
+	"time"
 
 	"github.com/hashicorp/go-hclog"
 	libp2pCrypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -113,6 +121,77 @@ func InitNetworkingPrivateKey(secretsManager secrets.SecretsManager) (libp2pCryp
 	}
 
 	return libp2pKey, keyErr
+}
+
+func genX509KeyPair() ([]byte, []byte, error) {
+	rawValues := []asn1.RawValue{}
+	rawValues = append(rawValues, asn1.RawValue{
+		Bytes: []byte("localhost"),
+		Class: asn1.ClassContextSpecific,
+		Tag:   2, // DNS name
+	})
+
+	asn, err := asn1.Marshal(rawValues)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	now := time.Now().UTC()
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(now.Unix()),
+		Subject: pkix.Name{
+			CommonName: "localhost",
+		},
+		ExtraExtensions: []pkix.Extension{
+			{
+				Id:    asn1.ObjectIdentifier{2, 5, 29, 17},
+				Value: asn,
+			},
+		},
+		NotBefore:    now,
+		NotAfter:     now.AddDate(10, 0, 0), // Valid for 10 years
+		SubjectKeyId: []byte{113, 117, 105, 99, 107, 115, 101, 114, 118, 101},
+		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		KeyUsage: x509.KeyUsageKeyEncipherment |
+			x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+	}
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cert, err := x509.CreateCertificate(rand.Reader, template, template,
+		priv.Public(), priv)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	key := x509.MarshalPKCS1PrivateKey(priv)
+	certBlock := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: cert})
+	keyBlock := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: key})
+
+	return certBlock, keyBlock, nil
+}
+
+func InitJSONTLSCert(secretsManager secrets.SecretsManager) error {
+	// Generate certificate files
+	cert, key, err := genX509KeyPair()
+	if err != nil {
+		return err
+	}
+
+	// Write the certificate file to the secrets manager storage
+	if err = secretsManager.SetSecret(secrets.JSONTLSCert, cert); err != nil {
+		return err
+	}
+
+	// Write the certificate key to the secrets manager storage
+	if err = secretsManager.SetSecret(secrets.JSONTLSKey, key); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // LoadValidatorAddress loads ECDSA key by SecretsManager and returns validator address

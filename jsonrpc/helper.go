@@ -14,6 +14,8 @@ var (
 	ErrNegativeBlockNumber      = errors.New("invalid argument 0: block number must not be negative")
 	ErrFailedFetchGenesis       = errors.New("error fetching genesis block header")
 	ErrNoDataInContractCreation = errors.New("contract creation without data provided")
+	ErrIndexOutOfRange          = errors.New("the index is invalid, it is out of range of expected values")
+	ErrInsufficientFunds        = errors.New("insufficient funds for execution")
 )
 
 type latestHeaderGetter interface {
@@ -41,6 +43,23 @@ func GetNumericBlockNumber(number BlockNumber, store latestHeaderGetter) (uint64
 
 		return uint64(number), nil
 	}
+}
+
+// GetTransactionByBlockAndIndex returns the transaction for the given block and index.
+func GetTransactionByBlockAndIndex(block *types.Block, index argUint64) (interface{}, error) {
+	idx := int(index)
+	size := len(block.Transactions)
+
+	if size == 0 || size < idx {
+		return nil, ErrIndexOutOfRange
+	}
+
+	return toTransaction(
+		block.Transactions[index],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&idx,
+	), nil
 }
 
 type headerGetter interface {
@@ -74,18 +93,18 @@ func GetBlockHeader(number BlockNumber, store headerGetter) (*types.Header, erro
 }
 
 type txLookupAndBlockGetter interface {
-	ReadTxLookup(types.Hash) (types.Hash, bool)
-	GetBlockByHash(types.Hash, bool) (*types.Block, bool)
+	ReadTxLookup(types.Hash) (uint64, bool)
+	GetBlockByNumber(uint64, bool) (*types.Block, bool)
 }
 
 // GetTxAndBlockByTxHash returns the tx and the block including the tx by given tx hash
 func GetTxAndBlockByTxHash(txHash types.Hash, store txLookupAndBlockGetter) (*types.Transaction, *types.Block) {
-	blockHash, ok := store.ReadTxLookup(txHash)
+	blockNum, ok := store.ReadTxLookup(txHash)
 	if !ok {
 		return nil, nil
 	}
 
-	block, ok := store.GetBlockByHash(blockHash, true)
+	block, ok := store.GetBlockByNumber(blockNum, true)
 	if !ok {
 		return nil, nil
 	}
@@ -176,6 +195,7 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 		if err != nil {
 			return nil, err
 		}
+
 		arg.Nonce = argUintPtr(nonce)
 	}
 
@@ -220,6 +240,10 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 	}
 
 	txn := types.NewTxWithType(txType)
+
+	if arg.AccessList != nil {
+		txn.SetAccessList(*arg.AccessList)
+	}
 
 	switch txType {
 	case types.LegacyTxType:

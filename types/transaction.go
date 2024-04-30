@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
 	"github.com/umbracle/fastrlp"
+	"github.com/valyala/fastjson"
 )
 
 const (
@@ -74,49 +75,62 @@ func NewTx(inner TxData) *Transaction {
 func (t *Transaction) InitInnerData(txType TxType) {
 	switch txType {
 	case AccessListTxType:
-		t.Inner = &AccessListTxn{}
+		t.Inner = NewAccessListTx()
 	case StateTxType:
-		t.Inner = &StateTx{}
+		t.Inner = NewStateTx()
 	case LegacyTxType:
-		t.Inner = &LegacyTx{}
+		t.Inner = NewLegacyTx()
 	default:
-		t.Inner = &DynamicFeeTx{}
+		t.Inner = NewDynamicFeeTx()
 	}
 }
 
 type TxData interface {
 	transactionType() TxType
 	chainID() *big.Int
-	nonce() uint64
 	gasPrice() *big.Int
 	gasTipCap() *big.Int
 	gasFeeCap() *big.Int
-	gas() uint64
-	to() *Address
 	value() *big.Int
-	input() []byte
-	accessList() TxAccessList
+	nonce() uint64
+	gas() uint64
 	from() Address
+	to() *Address
+	input() []byte
 	hash() Hash
+	accessList() TxAccessList
 	rawSignatureValues() (v, r, s *big.Int)
 
 	//methods to set transactions fields
-	setSignatureValues(v, r, s *big.Int)
-	setFrom(Address)
-	setGas(uint64)
+
 	setChainID(*big.Int)
 	setGasPrice(*big.Int)
 	setGasFeeCap(*big.Int)
 	setGasTipCap(*big.Int)
-	setValue(*big.Int)
-	setInput([]byte)
-	setTo(address *Address)
-	setNonce(uint64)
+	setValue(value *big.Int)
+	setGas(gas uint64)
+	setNonce(nonce uint64)
+	setFrom(addr Address)
+	setTo(addr *Address)
+	setInput(input []byte)
+	setHash(h Hash)
 	setAccessList(TxAccessList)
-	setHash(Hash)
+	setSignatureValues(v, r, s *big.Int)
 	unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error
 	marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value
+	marshalJSON(a *fastjson.Arena) *fastjson.Value
+	unmarshalJSON(v *fastjson.Value) error
 	copy() TxData
+}
+
+func (tx *Transaction) String() string {
+	v, r, s := tx.RawSignatureValues()
+
+	return fmt.Sprintf("[%s] Nonce: %d, GasPrice: %d, GasTipCap: %d, GasFeeCap: %d, "+
+		"Gas: %d, To: %s, Value: %d, Input: %x, V: %d, R: %d, S: %s, Hash: %s, From: %s, AccessList: %s",
+		tx.Type(), tx.Nonce(), tx.GasPrice(), tx.GasTipCap(), tx.GasFeeCap(),
+		tx.Gas(), tx.To(), tx.Value(), tx.Input(),
+		v, r, s, tx.Hash(), tx.From(), tx.AccessList())
 }
 
 func (t *Transaction) Type() TxType {
@@ -178,6 +192,15 @@ func (t *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 // set methods for transaction fields
 func (t *Transaction) SetSignatureValues(v, r, s *big.Int) {
 	t.Inner.setSignatureValues(v, r, s)
+}
+
+// SplitToRawSignatureValues splits signature to v, r and s components and sets it to the transaction
+func (t *Transaction) SplitToRawSignatureValues(signature, vRaw []byte) {
+	r := new(big.Int).SetBytes(signature[:HashLength])
+	s := new(big.Int).SetBytes(signature[HashLength : 2*HashLength])
+	v := new(big.Int).SetBytes(vRaw)
+
+	t.SetSignatureValues(v, r, s)
 }
 
 func (t *Transaction) SetFrom(addr Address) {
@@ -389,4 +412,84 @@ func NewTxWithType(txType TxType) *Transaction {
 	tx.InitInnerData(txType)
 
 	return tx
+}
+
+type TxOption func(TxData)
+
+func WithGasPrice(gasPrice *big.Int) TxOption {
+	return func(td TxData) {
+		td.setGasPrice(gasPrice)
+	}
+}
+
+func WithNonce(nonce uint64) TxOption {
+	return func(td TxData) {
+		td.setNonce(nonce)
+	}
+}
+
+func WithGas(gas uint64) TxOption {
+	return func(td TxData) {
+		td.setGas(gas)
+	}
+}
+
+func WithTo(to *Address) TxOption {
+	return func(td TxData) {
+		td.setTo(to)
+	}
+}
+
+func WithValue(value *big.Int) TxOption {
+	return func(td TxData) {
+		td.setValue(value)
+	}
+}
+
+func WithInput(input []byte) TxOption {
+	return func(td TxData) {
+		td.setInput(input)
+	}
+}
+
+func WithSignatureValues(v, r, s *big.Int) TxOption {
+	return func(td TxData) {
+		td.setSignatureValues(v, r, s)
+	}
+}
+
+func WithHash(hash Hash) TxOption {
+	return func(td TxData) {
+		td.setHash(hash)
+	}
+}
+
+func WithFrom(from Address) TxOption {
+	return func(td TxData) {
+		td.setFrom(from)
+	}
+}
+
+func WithGasTipCap(gasTipCap *big.Int) TxOption {
+	return func(td TxData) {
+		td.setGasTipCap(gasTipCap)
+	}
+}
+
+func WithGasFeeCap(gasFeeCap *big.Int) TxOption {
+	return func(td TxData) {
+		td.setGasFeeCap(gasFeeCap)
+	}
+}
+
+func WithChainID(chainID *big.Int) TxOption {
+	return func(td TxData) {
+		td.setChainID(chainID)
+	}
+}
+
+func WithAccessList(accessList TxAccessList) TxOption {
+	return func(td TxData) {
+		td.setAccessList(accessList)
+	}
 }

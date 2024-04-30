@@ -160,6 +160,7 @@ func NewServer(logger hclog.Logger, config *Config) (*Server, error) {
 	ps, err := pubsub.NewGossipSub(
 		context.Background(),
 		host, pubsub.WithPeerOutboundQueueSize(peerOutboundBufferSize),
+		pubsub.WithMaxMessageSize(config.GossipMessageSize),
 		pubsub.WithValidateQueueSize(validateBufferSize),
 	)
 	if err != nil {

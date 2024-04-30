@@ -17,13 +17,13 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/server/proto"
 	txpoolProto "github.com/0xPolygon/polygon-edge/txpool/proto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 	"google.golang.org/grpc"
 )
 
@@ -39,6 +39,9 @@ type TestServerConfig struct {
 	Relayer               bool
 	NumBlockConfirmations uint64
 	BridgeJSONRPC         string
+	UseTLS                bool
+	TLSCertFile           string
+	TLSKeyFile            string
 }
 
 type TestServerConfigCallback func(*TestServerConfig)
@@ -65,15 +68,19 @@ func (t *TestServer) GrpcAddr() string {
 }
 
 func (t *TestServer) JSONRPCAddr() string {
-	return fmt.Sprintf("http://%s:%d", hostIP, t.config.JSONRPCPort)
+	if t.config.UseTLS {
+		return fmt.Sprintf("https://localhost:%d", t.config.JSONRPCPort)
+	} else {
+		return fmt.Sprintf("http://%s:%d", hostIP, t.config.JSONRPCPort)
+	}
 }
 
 func (t *TestServer) BridgeJSONRPCAddr() string {
 	return t.config.BridgeJSONRPC
 }
 
-func (t *TestServer) JSONRPC() *jsonrpc.Client {
-	clt, err := jsonrpc.NewClient(t.JSONRPCAddr())
+func (t *TestServer) JSONRPC() *jsonrpc.EthClient {
+	clt, err := jsonrpc.NewEthClient(t.JSONRPCAddr())
 	if err != nil {
 		t.t.Fatal(err)
 	}
@@ -165,6 +172,10 @@ func (t *TestServer) Start() {
 		"--jsonrpc", fmt.Sprintf(":%d", config.JSONRPCPort),
 		// minimal number of child blocks required for the parent block to be considered final
 		"--num-block-confirmations", strconv.FormatUint(config.NumBlockConfirmations, 10),
+		// TLS certificate file
+		"--tls-cert-file", config.TLSCertFile,
+		// TLS key file
+		"--tls-key-file", config.TLSKeyFile,
 	}
 
 	if len(config.LogLevel) > 0 {
@@ -175,6 +186,10 @@ func (t *TestServer) Start() {
 
 	if config.Relayer {
 		args = append(args, "--relayer")
+	}
+
+	if config.UseTLS {
+		args = append(args, "--use-tls")
 	}
 
 	// Start the server
@@ -347,12 +362,12 @@ func (t *TestServer) HasValidatorSealed(firstBlock, lastBlock uint64, validators
 	validatorAddr ethgo.Address) (bool, error) {
 	rpcClient := t.JSONRPC()
 	for i := firstBlock + 1; i <= lastBlock; i++ {
-		block, err := rpcClient.Eth().GetBlockByNumber(ethgo.BlockNumber(i), false)
+		block, err := rpcClient.GetBlockByNumber(jsonrpc.BlockNumber(i), false)
 		if err != nil {
 			return false, err
 		}
 
-		extra, err := polybft.GetIbftExtra(block.ExtraData)
+		extra, err := polybft.GetIbftExtra(block.Header.ExtraData)
 		if err != nil {
 			return false, err
 		}
@@ -370,7 +385,7 @@ func (t *TestServer) HasValidatorSealed(firstBlock, lastBlock uint64, validators
 	return false, nil
 }
 
-func (t *TestServer) WaitForNonZeroBalance(address ethgo.Address, dur time.Duration) (*big.Int, error) {
+func (t *TestServer) WaitForNonZeroBalance(address types.Address, dur time.Duration) (*big.Int, error) {
 	timer := time.NewTimer(dur)
 	defer timer.Stop()
 
@@ -384,7 +399,7 @@ func (t *TestServer) WaitForNonZeroBalance(address ethgo.Address, dur time.Durat
 		case <-timer.C:
 			return nil, fmt.Errorf("timeout occurred while waiting for balance ")
 		case <-ticker.C:
-			balance, err := rpcClient.Eth().GetBalance(address, ethgo.Latest)
+			balance, err := rpcClient.GetBalance(address, jsonrpc.LatestBlockNumberOrHash)
 			if err != nil {
 				return nil, fmt.Errorf("error getting balance")
 			}

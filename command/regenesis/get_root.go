@@ -3,10 +3,11 @@ package regenesis
 import (
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/spf13/cobra"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
+
+	"github.com/0xPolygon/polygon-edge/command"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 )
 
 var (
@@ -14,9 +15,6 @@ var (
 	blockNumber    int64
 )
 
-/*
-./polygon-edge regenesis getroot --rpc "http://localhost:10002"
-*/
 func GetRootCMD() *cobra.Command {
 	getRootCmd := &cobra.Command{
 		Use:   "getroot",
@@ -26,21 +24,21 @@ func GetRootCMD() *cobra.Command {
 		outputter := command.InitializeOutputter(getRootCmd)
 		defer outputter.WriteOutput()
 
-		rpcClient, err := jsonrpc.NewClient(jsonRPCAddress)
+		rpcClient, err := jsonrpc.NewEthClient(jsonRPCAddress)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("connect to client error:%w", err))
 
 			return
 		}
 
-		block, err := rpcClient.Eth().GetBlockByNumber(ethgo.BlockNumber(blockNumber), false)
+		block, err := rpcClient.GetBlockByNumber(jsonrpc.BlockNumber(blockNumber), false)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("get block error:%w", err))
 
 			return
 		}
 
-		_, err = outputter.Write([]byte(fmt.Sprintf("state root %s for block %d\n", block.StateRoot, block.Number)))
+		_, err = outputter.Write([]byte(fmt.Sprintf("state root %s for block %d\n", block.Header.StateRoot, block.Number())))
 		if err != nil {
 			outputter.SetError(fmt.Errorf("get block error:%w", err))
 

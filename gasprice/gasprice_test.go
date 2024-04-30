@@ -9,7 +9,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/0xPolygon/polygon-edge/helper/tests"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -74,7 +73,10 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 				backend := createTestBlocks(t, 10)
 				rand.Seed(time.Now().UTC().UnixNano())
 
-				senderKey, sender := tests.GenerateKeyAndAddr(t)
+				senderKey, err := crypto.GenerateECDSAPrivateKey()
+				require.NoError(t, err)
+
+				sender := crypto.PubKeyToAddress(&senderKey.PublicKey)
 
 				for _, b := range backend.blocks {
 					signer := crypto.NewSigner(backend.Config().Forks.At(b.Number()),
@@ -84,14 +86,14 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 					b.Header.Miner = sender.Bytes()
 
 					for i := 0; i < 3; i++ {
-						tx := types.NewTx(&types.DynamicFeeTx{
-							From:      sender,
-							Value:     ethgo.Ether(1),
-							To:        &types.ZeroAddress,
-							GasTipCap: ethgo.Gwei(uint64(rand.Intn(200))),
-							GasFeeCap: ethgo.Gwei(uint64(rand.Intn(200) + 200)),
-							ChainID:   big.NewInt(backend.Config().ChainID),
-						})
+						tx := types.NewTx(types.NewDynamicFeeTx(
+							types.WithGasTipCap(ethgo.Gwei(uint64(rand.Intn(200)))),
+							types.WithGasFeeCap(ethgo.Gwei(uint64(rand.Intn(200)+200))),
+							types.WithChainID(big.NewInt(backend.Config().ChainID)),
+							types.WithFrom(sender),
+							types.WithValue(ethgo.Ether(1)),
+							types.WithTo(&types.ZeroAddress),
+						))
 
 						tx, err := signer.SignTx(tx, senderKey)
 						require.NoError(t, err)
@@ -217,18 +219,21 @@ func createTestTxs(t *testing.T, backend *backendMock, numOfTxsPerBlock, txCap i
 		b.Transactions = make([]*types.Transaction, numOfTxsPerBlock)
 
 		for i := 0; i < numOfTxsPerBlock; i++ {
-			senderKey, sender := tests.GenerateKeyAndAddr(t)
+			senderKey, err := crypto.GenerateECDSAPrivateKey()
+			require.NoError(t, err)
 
-			tx := types.NewTx(&types.DynamicFeeTx{
-				From:      sender,
-				Value:     ethgo.Ether(1),
-				To:        &types.ZeroAddress,
-				GasTipCap: ethgo.Gwei(uint64(rand.Intn(txCap))),
-				GasFeeCap: ethgo.Gwei(uint64(rand.Intn(txCap) + txCap)),
-				ChainID:   big.NewInt(backend.Config().ChainID),
-			})
+			sender := crypto.PubKeyToAddress(&senderKey.PublicKey)
 
-			tx, err := signer.SignTx(tx, senderKey)
+			tx := types.NewTx(types.NewDynamicFeeTx(
+				types.WithGasTipCap(ethgo.Gwei(uint64(rand.Intn(txCap)))),
+				types.WithGasFeeCap(ethgo.Gwei(uint64(rand.Intn(txCap)+txCap))),
+				types.WithChainID(big.NewInt(backend.Config().ChainID)),
+				types.WithFrom(sender),
+				types.WithValue(ethgo.Ether(1)),
+				types.WithTo(&types.ZeroAddress),
+			))
+
+			tx, err = signer.SignTx(tx, senderKey)
 			require.NoError(t, err)
 
 			b.Transactions[i] = tx

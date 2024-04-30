@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/server/config"
 	"github.com/0xPolygon/polygon-edge/command/server/export"
 	"github.com/0xPolygon/polygon-edge/server"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/spf13/cobra"
 )
 
@@ -161,6 +162,13 @@ func setFlags(cmd *cobra.Command) {
 	cmd.Flag(maxOutboundPeersFlag).DefValue = fmt.Sprintf("%d", defaultConfig.Network.MaxOutboundPeers)
 	cmd.MarkFlagsMutuallyExclusive(maxPeersFlag, maxOutboundPeersFlag)
 
+	cmd.Flags().IntVar(
+		&params.rawConfig.Network.GossipMessageSize,
+		gossipMessageSizeFlag,
+		pubsub.DefaultMaxMessageSize,
+		"the maximum size of a gossip message",
+	)
+
 	cmd.Flags().Uint64Var(
 		&params.rawConfig.TxPool.PriceLimit,
 		priceLimitFlag,
@@ -212,6 +220,27 @@ func setFlags(cmd *cobra.Command) {
 		logFileLocationFlag,
 		defaultConfig.LogFilePath,
 		"write all logs to the file at specified location instead of writing them to console",
+	)
+
+	cmd.Flags().BoolVar(
+		&params.rawConfig.UseTLS,
+		useTLSFlag,
+		defaultConfig.UseTLS,
+		"start json rpc endpoint with tls enabled",
+	)
+
+	cmd.Flags().StringVar(
+		&params.rawConfig.TLSCertFile,
+		tlsCertFileLocationFlag,
+		defaultConfig.TLSCertFile,
+		"path to TLS cert file, if no file is provided then cert file is loaded from secrets manager",
+	)
+
+	cmd.Flags().StringVar(
+		&params.rawConfig.TLSKeyFile,
+		tlsKeyFileLocationFlag,
+		defaultConfig.TLSKeyFile,
+		"path to TLS key file, if no file is provided then key file is loaded from secrets manager",
 	)
 
 	cmd.Flags().BoolVar(

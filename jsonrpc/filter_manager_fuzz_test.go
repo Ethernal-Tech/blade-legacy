@@ -33,21 +33,15 @@ func FuzzGetLogsForQuery(f *testing.F) {
 				Hash:   types.StringToHash(strconv.Itoa(i)),
 			},
 			Transactions: []*types.Transaction{
-				{
-					Inner: &types.LegacyTx{
-						Value: big.NewInt(10),
-					},
-				},
-				{
-					Inner: &types.LegacyTx{
-						Value: big.NewInt(11),
-					},
-				},
-				{
-					Inner: &types.LegacyTx{
-						Value: big.NewInt(12),
-					},
-				},
+				types.NewTx(types.NewLegacyTx(
+					types.WithValue(big.NewInt(10)),
+				)),
+				types.NewTx(types.NewLegacyTx(
+					types.WithValue(big.NewInt(11)),
+				)),
+				types.NewTx(types.NewLegacyTx(
+					types.WithValue(big.NewInt(12)),
+				)),
 			},
 		}
 	}
@@ -96,6 +90,7 @@ func FuzzGetLogsForQuery(f *testing.F) {
 		if len(hash) != types.HashLength {
 			t.Skip()
 		}
+
 		blockHash := types.BytesToHash(hash)
 
 		logQuery := LogQuery{
@@ -151,6 +146,7 @@ func FuzzGetLogFilterFromID(f *testing.F) {
 		if len(address) != types.AddressLength {
 			t.Skip()
 		}
+
 		logFilter := &LogQuery{
 			Addresses: []types.Address{types.BytesToAddress(address)},
 			toBlock:   BlockNumber(toBlock),
@@ -159,6 +155,7 @@ func FuzzGetLogFilterFromID(f *testing.F) {
 		retrivedLogFilter, err := m.GetLogFilterFromID(
 			m.NewLogFilter(logFilter, &MockClosedWSConnection{}),
 		)
+
 		if err != nil {
 			assert.Equal(t, logFilter, retrivedLogFilter.query)
 		}
