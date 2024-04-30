@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -17,7 +18,7 @@ import (
 type debugEndpointMockStore struct {
 	headerFn            func() *types.Header
 	getHeaderByNumberFn func(uint64) (*types.Header, bool)
-	readTxLookupFn      func(types.Hash) (types.Hash, bool)
+	readTxLookupFn      func(types.Hash) (uint64, bool)
 	getBlockByHashFn    func(types.Hash, bool) (*types.Block, bool)
 	getBlockByNumberFn  func(uint64, bool) (*types.Block, bool)
 	traceBlockFn        func(*types.Block, runtime.Tracer) ([]interface{}, error)
@@ -35,7 +36,7 @@ func (s *debugEndpointMockStore) GetHeaderByNumber(num uint64) (*types.Header, b
 	return s.getHeaderByNumberFn(num)
 }
 
-func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (types.Hash, bool) {
+func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (uint64, bool) {
 	return s.readTxLookupFn(txnHash)
 }
 
@@ -371,6 +372,7 @@ func TestTraceBlockByHash(t *testing.T) {
 }
 
 func TestTraceBlock(t *testing.T) {
+	// t.Skip("FIXME")
 	t.Parallel()
 
 	blockBytes := testLatestBlock.MarshalRLP()
@@ -452,14 +454,14 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
-					require.Equal(t, testTxHash1, hash)
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
+					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					require.Equal(t, testBlock10.Hash(), hash)
-					require.True(t, full)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
+					assert.True(t, full)
 
 					return blockWithTx, true
 				},
@@ -478,10 +480,10 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
-					require.Equal(t, testTxHash1, hash)
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
+					assert.Equal(t, testTxHash1, hash)
 
-					return types.ZeroHash, false
+					return 0, false
 				},
 			},
 			result: nil,
@@ -492,14 +494,14 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
-					require.Equal(t, testTxHash1, hash)
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
+					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					require.Equal(t, testBlock10.Hash(), hash)
-					require.True(t, full)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
+					assert.True(t, full)
 
 					return nil, false
 				},
@@ -512,14 +514,14 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
-					require.Equal(t, testTxHash1, hash)
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
+					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					require.Equal(t, testBlock10.Hash(), hash)
-					require.True(t, full)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
+					assert.True(t, full)
 
 					return testBlock10, true
 				},
@@ -532,14 +534,14 @@ func TestTraceTransaction(t *testing.T) {
 			txHash: testTxHash1,
 			config: &TraceConfig{},
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
-					require.Equal(t, testTxHash1, hash)
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
+					assert.Equal(t, testTxHash1, hash)
 
-					return testBlock10.Hash(), true
+					return testBlock10.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					require.Equal(t, testBlock10.Hash(), hash)
-					require.True(t, full)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, testBlock10.Number(), number)
+					assert.True(t, full)
 
 					return &types.Block{
 						Header: testGenesisHeader,
@@ -593,28 +595,28 @@ func TestTraceCall(t *testing.T) {
 		blockNumber = BlockNumber(testBlock10.Number())
 
 		txArg = &txnArgs{
-			From:                 &from,
-			To:                   &to,
-			Gas:                  &gas,
-			GasPrice:             &gasPrice,
-			MaxPriorityFeePerGas: &gasTipCap,
-			MaxFeePerGas:         &gasFeeCap,
-			Value:                &value,
-			Data:                 &data,
-			Input:                &input,
-			Nonce:                &nonce,
-			Type:                 toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
-		}
-		decodedTx = types.NewTx(&types.DynamicFeeTx{
-			Nonce:     uint64(nonce),
-			GasTipCap: new(big.Int).SetBytes([]byte(gasTipCap)),
-			GasFeeCap: new(big.Int).SetBytes([]byte(gasFeeCap)),
-			Gas:       uint64(gas),
+			From:      &from,
 			To:        &to,
-			Value:     new(big.Int).SetBytes([]byte(value)),
-			Input:     data,
-			From:      from,
-		})
+			Gas:       &gas,
+			GasPrice:  &gasPrice,
+			GasTipCap: &gasTipCap,
+			GasFeeCap: &gasFeeCap,
+			Value:     &value,
+			Data:      &data,
+			Input:     &input,
+			Nonce:     &nonce,
+			Type:      toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
+		}
+		decodedTx = types.NewTx(types.NewDynamicFeeTx(
+			types.WithGasTipCap(new(big.Int).SetBytes([]byte(gasTipCap))),
+			types.WithGasFeeCap(new(big.Int).SetBytes([]byte(gasFeeCap))),
+			types.WithNonce(uint64(nonce)),
+			types.WithGas(uint64(gas)),
+			types.WithTo(&to),
+			types.WithValue(new(big.Int).SetBytes([]byte(value))),
+			types.WithInput(data),
+			types.WithFrom(from),
+		))
 	)
 
 	decodedTx.ComputeHash()
@@ -737,7 +739,7 @@ func Test_newTracer(t *testing.T) {
 			EnableReturnData: true,
 			DisableStack:     false,
 			DisableStorage:   false,
-		})
+		}, nil)
 
 		t.Cleanup(func() {
 			cancel()
@@ -750,7 +752,7 @@ func Test_newTracer(t *testing.T) {
 	t.Run("should return error if arg is nil", func(t *testing.T) {
 		t.Parallel()
 
-		tracer, cancel, err := newTracer(nil)
+		tracer, cancel, err := newTracer(nil, nil)
 
 		require.Nil(t, tracer)
 		require.Nil(t, cancel)
@@ -767,7 +769,7 @@ func Test_newTracer(t *testing.T) {
 			DisableStack:     false,
 			DisableStorage:   false,
 			Timeout:          &timeout,
-		})
+		}, nil)
 
 		t.Cleanup(func() {
 			cancel()
@@ -793,7 +795,7 @@ func Test_newTracer(t *testing.T) {
 			DisableStack:     false,
 			DisableStorage:   false,
 			Timeout:          &timeout,
-		})
+		}, nil)
 
 		require.NoError(t, err)
 
@@ -814,7 +816,7 @@ func Test_newTracer(t *testing.T) {
 			DisableStack:      false,
 			DisableStorage:    false,
 			DisableStructLogs: true,
-		})
+		}, nil)
 
 		t.Cleanup(func() {
 			cancel()

@@ -206,9 +206,10 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 
 	polybftBackendMock := new(polybftBackendMock)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validatorSet).Times(3)
+	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
 	txPool := new(txPoolMock)
-	txPool.On("ResetWithHeaders", mock.Anything).Once()
+	txPool.On("ResetWithBlock", mock.Anything).Once()
 
 	snapshot := NewProposerSnapshot(epochSize-1, validatorSet)
 	polybftCfg := &PolyBFTConfig{EpochSize: epochSize}
@@ -480,6 +481,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 
 	polybftBackendMock := new(polybftBackendMock)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validators).Times(3)
+	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
 	tmpDir := t.TempDir()
 	config := &runtimeConfig{
@@ -998,6 +1000,57 @@ func TestConsensusRuntime_BuildPrepareMessage(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, signedMsg, runtime.BuildPrepareMessage(proposalHash, view))
+}
+
+func TestConsensusRuntime_RoundStarts(t *testing.T) {
+	cases := []struct {
+		funcName string
+		round    uint64
+	}{
+		{
+			funcName: "ClearProposed",
+			round:    0,
+		},
+		{
+			funcName: "ReinsertProposed",
+			round:    1,
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+		t.Run(c.funcName, func(t *testing.T) {
+			txPool := new(txPoolMock)
+			txPool.On(c.funcName).Once()
+
+			runtime := &consensusRuntime{
+				config: &runtimeConfig{
+					txPool: txPool,
+				},
+				logger: hclog.NewNullLogger(),
+			}
+
+			view := &proto.View{Round: c.round}
+			require.NoError(t, runtime.RoundStarts(view))
+			txPool.AssertExpectations(t)
+		})
+	}
+}
+
+func TestConsensusRuntime_SequenceCancelled(t *testing.T) {
+	txPool := new(txPoolMock)
+	txPool.On("ReinsertProposed").Once()
+
+	runtime := &consensusRuntime{
+		config: &runtimeConfig{
+			txPool: txPool,
+		},
+		logger: hclog.NewNullLogger(),
+	}
+
+	view := &proto.View{}
+	require.NoError(t, runtime.SequenceCancelled(view))
+	txPool.AssertExpectations(t)
 }
 
 func createTestBlocks(t *testing.T, numberOfBlocks, defaultEpochSize uint64,

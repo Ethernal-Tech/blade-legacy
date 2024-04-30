@@ -14,16 +14,14 @@ import (
 func createTestTransaction(hash types.Hash) *types.Transaction {
 	recipient := types.StringToAddress("2")
 
-	return types.NewTx(&types.LegacyTx{
-		Hash:     hash,
-		From:     types.StringToAddress("1"),
-		To:       &recipient,
-		GasPrice: big.NewInt(400),
-		Value:    big.NewInt(100),
-		V:        big.NewInt(1),
-		R:        big.NewInt(2),
-		S:        big.NewInt(3),
-	})
+	return types.NewTx(types.NewLegacyTx(
+		types.WithGasPrice(big.NewInt(400)),
+		types.WithHash(hash),
+		types.WithFrom(types.StringToAddress("1")),
+		types.WithTo(&recipient),
+		types.WithValue(big.NewInt(100)),
+		types.WithSignatureValues(big.NewInt(1), big.NewInt(2), big.NewInt(3)),
+	))
 }
 
 func createTestHeader(height uint64, setterFn func(h *types.Header)) *types.Header {
@@ -337,13 +335,13 @@ func TestGetTxAndBlockByTxHash(t *testing.T) {
 			name:   "should return tx and block",
 			txHash: testTx1.Hash(),
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTx1.Hash(), hash)
 
-					return blockWithTx.Hash(), true
+					return blockWithTx.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, blockWithTx.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, blockWithTx.Number(), number)
 					assert.True(t, full)
 
 					return blockWithTx, true
@@ -356,26 +354,26 @@ func TestGetTxAndBlockByTxHash(t *testing.T) {
 			name:   "should return nil if ReadTxLookup returns nothing",
 			txHash: testTx1.Hash(),
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTx1.Hash(), hash)
 
-					return types.ZeroHash, false
+					return 0, false
 				},
 			},
 			tx:    nil,
 			block: nil,
 		},
 		{
-			name:   "should return nil if GetBlockByHash returns nothing",
+			name:   "should return nil if GetBlockByNumber returns nothing",
 			txHash: testTx1.Hash(),
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTx1.Hash(), hash)
 
-					return blockWithTx.Hash(), true
+					return blockWithTx.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, blockWithTx.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, blockWithTx.Number(), number)
 					assert.True(t, full)
 
 					return nil, false
@@ -388,13 +386,13 @@ func TestGetTxAndBlockByTxHash(t *testing.T) {
 			name:   "should return nil if the block doesn't include the tx",
 			txHash: testTx1.Hash(),
 			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (types.Hash, bool) {
+				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
 					assert.Equal(t, testTx1.Hash(), hash)
 
-					return blockWithTx.Hash(), true
+					return blockWithTx.Number(), true
 				},
-				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
-					assert.Equal(t, blockWithTx.Hash(), hash)
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					assert.Equal(t, blockWithTx.Number(), number)
 					assert.True(t, full)
 
 					return testBlock10, true
@@ -698,28 +696,28 @@ func TestDecodeTxn(t *testing.T) {
 		{
 			name: "should return mapped transaction",
 			arg: &txnArgs{
-				From:                 &from,
-				To:                   &to,
-				Gas:                  &gas,
-				GasPrice:             &gasPrice,
-				MaxPriorityFeePerGas: &gasTipCap,
-				MaxFeePerGas:         &gasFeeCap,
-				Value:                &value,
-				Input:                &input,
-				Nonce:                &nonce,
-				Type:                 toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
+				From:      &from,
+				To:        &to,
+				Gas:       &gas,
+				GasPrice:  &gasPrice,
+				GasTipCap: &gasTipCap,
+				GasFeeCap: &gasFeeCap,
+				Value:     &value,
+				Input:     &input,
+				Nonce:     &nonce,
+				Type:      toArgUint64Ptr(uint64(types.DynamicFeeTxType)),
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.DynamicFeeTx{
-				From:      from,
-				To:        &to,
-				Gas:       uint64(gas),
-				GasTipCap: new(big.Int).SetBytes([]byte(gasTipCap)),
-				GasFeeCap: new(big.Int).SetBytes([]byte(gasFeeCap)),
-				Value:     new(big.Int).SetBytes([]byte(value)),
-				Input:     input,
-				Nonce:     uint64(nonce),
-			}),
+			expected: types.NewTx(types.NewDynamicFeeTx(
+				types.WithGasTipCap(new(big.Int).SetBytes([]byte(gasTipCap))),
+				types.WithGasFeeCap(new(big.Int).SetBytes([]byte(gasFeeCap))),
+				types.WithValue(new(big.Int).SetBytes([]byte(value))),
+				types.WithInput(input),
+				types.WithNonce(uint64(nonce)),
+				types.WithFrom(from),
+				types.WithTo(&to),
+				types.WithGas(uint64(gas)),
+			)),
 			err: false,
 		},
 		{
@@ -733,15 +731,15 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:    &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.LegacyTx{
-				From:     types.ZeroAddress,
-				To:       &to,
-				Gas:      uint64(gas),
-				Value:    new(big.Int).SetBytes([]byte(value)),
-				GasPrice: new(big.Int).SetBytes([]byte(gasPrice)),
-				Input:    input,
-				Nonce:    uint64(0),
-			}),
+			expected: types.NewTx(types.NewLegacyTx(
+				types.WithGasPrice(new(big.Int).SetBytes([]byte(gasPrice))),
+				types.WithFrom(types.ZeroAddress),
+				types.WithTo(&to),
+				types.WithGas(uint64(gas)),
+				types.WithValue(new(big.Int).SetBytes([]byte(value))),
+				types.WithInput(input),
+				types.WithNonce(0),
+			)),
 			err: false,
 		},
 		{
@@ -766,15 +764,15 @@ func TestDecodeTxn(t *testing.T) {
 					}, nil
 				},
 			},
-			expected: types.NewTx(&types.LegacyTx{
-				From:     from,
-				To:       &to,
-				Gas:      uint64(gas),
-				Value:    new(big.Int).SetBytes([]byte(value)),
-				GasPrice: new(big.Int).SetBytes([]byte(gasPrice)),
-				Input:    input,
-				Nonce:    uint64(stateNonce),
-			}),
+			expected: types.NewTx(types.NewLegacyTx(
+				types.WithGasPrice(new(big.Int).SetBytes([]byte(gasPrice))),
+				types.WithFrom(from),
+				types.WithTo(&to),
+				types.WithGas(uint64(gas)),
+				types.WithValue(new(big.Int).SetBytes([]byte(value))),
+				types.WithInput(input),
+				types.WithNonce(uint64(stateNonce)),
+			)),
 			err: false,
 		},
 		{
@@ -790,15 +788,15 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce:    &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.LegacyTx{
-				From:     from,
-				To:       &to,
-				Gas:      uint64(gas),
-				Value:    new(big.Int).SetBytes([]byte(value)),
-				GasPrice: new(big.Int).SetBytes([]byte(gasPrice)),
-				Input:    data,
-				Nonce:    uint64(nonce),
-			}),
+			expected: types.NewTx(types.NewLegacyTx(
+				types.WithGasPrice(new(big.Int).SetBytes([]byte(gasPrice))),
+				types.WithFrom(from),
+				types.WithTo(&to),
+				types.WithGas(uint64(gas)),
+				types.WithValue(new(big.Int).SetBytes([]byte(value))),
+				types.WithInput(data),
+				types.WithNonce(uint64(nonce)),
+			)),
 			err: false,
 		},
 		{
@@ -809,15 +807,15 @@ func TestDecodeTxn(t *testing.T) {
 				Nonce: &nonce,
 			},
 			store: &debugEndpointMockStore{},
-			expected: types.NewTx(&types.LegacyTx{
-				From:     from,
-				To:       &to,
-				Gas:      uint64(0),
-				Value:    new(big.Int),
-				GasPrice: new(big.Int),
-				Input:    []byte{},
-				Nonce:    uint64(nonce),
-			}),
+			expected: types.NewTx(types.NewLegacyTx(
+				types.WithGasPrice(new(big.Int)),
+				types.WithFrom(from),
+				types.WithTo(&to),
+				types.WithGas(uint64(0)),
+				types.WithValue(new(big.Int)),
+				types.WithInput([]byte{}),
+				types.WithNonce(uint64(nonce)),
+			)),
 			err: false,
 		},
 		{

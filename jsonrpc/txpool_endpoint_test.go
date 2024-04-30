@@ -152,6 +152,132 @@ func TestContentEndpoint(t *testing.T) {
 	})
 }
 
+func TestContentFrom(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns empty ContentAddressResponse if tx pool has no transactions", func(t *testing.T) {
+		t.Parallel()
+
+		mockStore := newMockTxPoolStore()
+		txPoolEndpoint := &TxPool{mockStore}
+		address := types.Address{0x0}
+		result, _ := txPoolEndpoint.ContentFrom(address)
+
+		response := result.(ContentAddressResponse)
+
+		assert.True(t, mockStore.includeQueued)
+		assert.Equal(t, 0, len(response.Pending))
+		assert.Equal(t, 0, len(response.Queued))
+	})
+
+	t.Run("returns the correct data for the correct address", func(t *testing.T) {
+		t.Parallel()
+
+		mockStore := newMockTxPoolStore()
+		address1 := types.Address{0x1}
+		testTx1 := newTestTransaction(2, address1)
+		testTx2 := newTestDynamicFeeTransaction(3, address1)
+		mockStore.pending[address1] = []*types.Transaction{testTx1, testTx2}
+		txPoolEndpoint := &TxPool{mockStore}
+
+		result, _ := txPoolEndpoint.ContentFrom(address1)
+		response := result.(ContentAddressResponse)
+
+		assert.Equal(t, 0, len(response.Queued))
+		assert.Equal(t, 2, len(response.Pending))
+
+		txData := response.Pending[testTx1.Nonce()]
+		assert.NotNil(t, txData)
+		assert.Equal(t, testTx1.Gas(), uint64(txData.Gas))
+		assert.Equal(t, *(testTx1.GasPrice()), big.Int(*txData.GasPrice))
+		assert.Equal(t, *(testTx1.GasFeeCap()), big.Int(*txData.GasPrice))
+		assert.Equal(t, *(testTx1.GasTipCap()), big.Int(*txData.GasPrice))
+		assert.Equal(t, testTx1.To(), txData.To)
+		assert.Equal(t, testTx1.From(), txData.From)
+		assert.Equal(t, *(testTx1.Value()), big.Int(txData.Value))
+		assert.Equal(t, testTx1.Input(), []byte(txData.Input))
+		assert.Equal(t, (*argUint64)(nil), txData.BlockNumber)
+		assert.Equal(t, (*argUint64)(nil), txData.TxIndex)
+
+		txData = response.Pending[testTx2.Nonce()]
+		assert.NotNil(t, txData)
+		assert.Equal(t, (argUint64)(types.DynamicFeeTxType), txData.Type)
+		assert.Equal(t, testTx2.Gas(), uint64(txData.Gas))
+		assert.Nil(t, testTx2.GasPrice())
+		assert.Equal(t, *(testTx2.GasFeeCap()), big.Int(*txData.GasFeeCap))
+		assert.Equal(t, *(testTx2.GasTipCap()), big.Int(*txData.GasTipCap))
+		assert.Equal(t, testTx2.To(), txData.To)
+		assert.Equal(t, testTx2.From(), txData.From)
+		assert.Equal(t, *(testTx2.ChainID()), big.Int(*txData.ChainID))
+		assert.Equal(t, *(testTx2.Value()), big.Int(txData.Value))
+		assert.Equal(t, testTx2.Input(), []byte(txData.Input))
+		assert.Equal(t, (*argUint64)(nil), txData.BlockNumber)
+		assert.Equal(t, (*argUint64)(nil), txData.TxIndex)
+	})
+
+	t.Run("returns correct data for queued transaction", func(t *testing.T) {
+		t.Parallel()
+
+		mockStore := newMockTxPoolStore()
+		address1, address2 := types.Address{0x1}, types.Address{0x2}
+		testTx1 := newTestTransaction(2, address1)
+		testTx2 := newTestDynamicFeeTransaction(1, address2)
+		mockStore.queued[address1] = []*types.Transaction{testTx1}
+		mockStore.queued[address2] = []*types.Transaction{testTx2}
+		txPoolEndpoint := &TxPool{mockStore}
+
+		result, err := txPoolEndpoint.ContentFrom(address2)
+		assert.NoError(t, err)
+
+		response := result.(ContentAddressResponse)
+		assert.Equal(t, 1, len(response.Queued))
+
+		txData := response.Queued[testTx2.Nonce()]
+		assert.NotNil(t, txData)
+		assert.Equal(t, (argUint64)(types.DynamicFeeTxType), txData.Type)
+		assert.Equal(t, testTx2.Gas(), uint64(txData.Gas))
+		assert.Nil(t, testTx2.GasPrice())
+		assert.Equal(t, *(testTx2.GasFeeCap()), big.Int(*txData.GasFeeCap))
+		assert.Equal(t, *(testTx2.GasTipCap()), big.Int(*txData.GasTipCap))
+		assert.Equal(t, testTx2.To(), txData.To)
+		assert.Equal(t, testTx2.From(), txData.From)
+		assert.Equal(t, *(testTx2.ChainID()), big.Int(*txData.ChainID))
+		assert.Equal(t, *(testTx2.Value()), big.Int(txData.Value))
+		assert.Equal(t, testTx2.Input(), []byte(txData.Input))
+		assert.Equal(t, (*argUint64)(nil), txData.BlockNumber)
+		assert.Equal(t, (*argUint64)(nil), txData.TxIndex)
+	})
+
+	t.Run("returns correct ContentAddressResponse data for multiple transactions", func(t *testing.T) {
+		t.Parallel()
+
+		mockStore := newMockTxPoolStore()
+		address1 := types.Address{0x1}
+		testTx1 := newTestTransaction(2, address1)
+		testTx2 := newTestTransaction(4, address1)
+		testTx3 := newTestTransaction(11, address1)
+		address2 := types.Address{0x2}
+		testTx4 := newTestTransaction(7, address2)
+		testTx5 := newTestTransaction(8, address2)
+		mockStore.pending[address1] = []*types.Transaction{testTx1, testTx2}
+		mockStore.pending[address2] = []*types.Transaction{testTx4}
+		mockStore.queued[address1] = []*types.Transaction{testTx3}
+		mockStore.queued[address2] = []*types.Transaction{testTx5}
+		txPoolEndpoint := &TxPool{mockStore}
+
+		result, err := txPoolEndpoint.ContentFrom(address2)
+		assert.NoError(t, err)
+
+		response := result.(ContentAddressResponse)
+
+		assert.True(t, mockStore.includeQueued)
+		assert.Equal(t, 1, len(response.Pending))
+		assert.Equal(t, testTx4.Hash(), response.Pending[testTx4.Nonce()].Hash)
+		assert.Equal(t, 1, len(response.Queued))
+		assert.Equal(t, testTx5.Hash(), response.Queued[testTx5.Nonce()].Hash)
+	})
+}
+
 func TestInspectEndpoint(t *testing.T) {
 	t.Parallel()
 
@@ -294,18 +420,16 @@ func (s *mockTxPoolStore) GetBaseFee() uint64 {
 }
 
 func newTestTransaction(nonce uint64, from types.Address) *types.Transaction {
-	txn := types.NewTx(&types.LegacyTx{
-		Nonce:    nonce,
-		GasPrice: big.NewInt(1),
-		Gas:      nonce * 100,
-		Value:    big.NewInt(200),
-		Input:    []byte{0xff},
-		From:     from,
-		To:       &addr1,
-		V:        big.NewInt(1),
-		R:        big.NewInt(1),
-		S:        big.NewInt(1),
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithGasPrice(big.NewInt(1)),
+		types.WithNonce(nonce),
+		types.WithGas(nonce*100),
+		types.WithValue(big.NewInt(200)),
+		types.WithInput([]byte{0xff}),
+		types.WithFrom(from),
+		types.WithTo(&addr1),
+		types.WithSignatureValues(big.NewInt(1), big.NewInt(1), big.NewInt(1)),
+	))
 
 	txn.ComputeHash()
 
@@ -313,20 +437,18 @@ func newTestTransaction(nonce uint64, from types.Address) *types.Transaction {
 }
 
 func newTestDynamicFeeTransaction(nonce uint64, from types.Address) *types.Transaction {
-	txn := types.NewTx(&types.DynamicFeeTx{
-		Nonce:     nonce,
-		GasTipCap: big.NewInt(2),
-		GasFeeCap: big.NewInt(4),
-		ChainID:   big.NewInt(100),
-		Gas:       nonce * 100,
-		Value:     big.NewInt(200),
-		Input:     []byte{0xff},
-		From:      from,
-		To:        &addr1,
-		V:         big.NewInt(1),
-		R:         big.NewInt(1),
-		S:         big.NewInt(1),
-	})
+	txn := types.NewTx(types.NewDynamicFeeTx(
+		types.WithGasTipCap(big.NewInt(2)),
+		types.WithGasFeeCap(big.NewInt(4)),
+		types.WithChainID(big.NewInt(100)),
+		types.WithNonce(nonce),
+		types.WithGas(nonce*100),
+		types.WithValue(big.NewInt(200)),
+		types.WithInput([]byte{0xff}),
+		types.WithFrom(from),
+		types.WithTo(&addr1),
+		types.WithSignatureValues(big.NewInt(1), big.NewInt(1), big.NewInt(1)),
+	))
 
 	txn.ComputeHash()
 

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/0xPolygon/polygon-edge/command"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
@@ -13,8 +15,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
 )
 
 var (
@@ -64,6 +64,13 @@ func setFlags(cmd *cobra.Command) {
 		polybftsecrets.StakeTokenFlagDesc,
 	)
 
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		helper.TxTimeoutFlag,
+		150*time.Second,
+		helper.TxTimeoutDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 }
 
@@ -83,7 +90,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPC),
-		txrelayer.WithReceiptTimeout(150*time.Millisecond))
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		return err
 	}
@@ -112,9 +119,8 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	stakeManagerAddr := ethgo.Address(contracts.StakeManagerContract)
-
-	txn := bridgeHelper.CreateTransaction(validatorAccount.Ecdsa.Address(), &stakeManagerAddr, encoded, nil, true)
+	txn := bridgeHelper.CreateTransaction(validatorAccount.Ecdsa.Address(),
+		&contracts.StakeManagerContract, encoded, nil, true)
 
 	receipt, err = txRelayer.SendTransaction(txn, validatorAccount.Ecdsa)
 	if err != nil {

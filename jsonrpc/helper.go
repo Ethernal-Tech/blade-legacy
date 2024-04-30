@@ -14,6 +14,8 @@ var (
 	ErrNegativeBlockNumber      = errors.New("invalid argument 0: block number must not be negative")
 	ErrFailedFetchGenesis       = errors.New("error fetching genesis block header")
 	ErrNoDataInContractCreation = errors.New("contract creation without data provided")
+	ErrIndexOutOfRange          = errors.New("the index is invalid, it is out of range of expected values")
+	ErrInsufficientFunds        = errors.New("insufficient funds for execution")
 )
 
 type latestHeaderGetter interface {
@@ -41,6 +43,23 @@ func GetNumericBlockNumber(number BlockNumber, store latestHeaderGetter) (uint64
 
 		return uint64(number), nil
 	}
+}
+
+// GetTransactionByBlockAndIndex returns the transaction for the given block and index.
+func GetTransactionByBlockAndIndex(block *types.Block, index argUint64) (interface{}, error) {
+	idx := int(index)
+	size := len(block.Transactions)
+
+	if size == 0 || size < idx {
+		return nil, ErrIndexOutOfRange
+	}
+
+	return toTransaction(
+		block.Transactions[index],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&idx,
+	), nil
 }
 
 type headerGetter interface {
@@ -74,18 +93,18 @@ func GetBlockHeader(number BlockNumber, store headerGetter) (*types.Header, erro
 }
 
 type txLookupAndBlockGetter interface {
-	ReadTxLookup(types.Hash) (types.Hash, bool)
-	GetBlockByHash(types.Hash, bool) (*types.Block, bool)
+	ReadTxLookup(types.Hash) (uint64, bool)
+	GetBlockByNumber(uint64, bool) (*types.Block, bool)
 }
 
 // GetTxAndBlockByTxHash returns the tx and the block including the tx by given tx hash
 func GetTxAndBlockByTxHash(txHash types.Hash, store txLookupAndBlockGetter) (*types.Transaction, *types.Block, int) {
-	blockHash, ok := store.ReadTxLookup(txHash)
+	blockNum, ok := store.ReadTxLookup(txHash)
 	if !ok {
 		return nil, nil, 0
 	}
 
-	block, ok := store.GetBlockByHash(blockHash, true)
+	block, ok := store.GetBlockByNumber(blockNum, true)
 	if !ok {
 		return nil, nil, 0
 	}
@@ -176,6 +195,7 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 		if err != nil {
 			return nil, err
 		}
+
 		arg.Nonce = argUintPtr(nonce)
 	}
 
@@ -187,12 +207,12 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 		arg.GasPrice = argBytesPtr([]byte{})
 	}
 
-	if arg.MaxPriorityFeePerGas == nil {
-		arg.MaxPriorityFeePerGas = argBytesPtr([]byte{})
+	if arg.GasTipCap == nil {
+		arg.GasTipCap = argBytesPtr([]byte{})
 	}
 
-	if arg.MaxFeePerGas == nil {
-		arg.MaxFeePerGas = argBytesPtr([]byte{})
+	if arg.GasFeeCap == nil {
+		arg.GasFeeCap = argBytesPtr([]byte{})
 	}
 
 	var input []byte
@@ -214,10 +234,6 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 		arg.Gas = argUintPtr(0)
 	}
 
-	if arg.ChainID == nil {
-		arg.ChainID = argBytesPtr([]byte{})
-	}
-
 	txType := types.LegacyTxType
 	if arg.Type != nil {
 		txType = types.TxType(*arg.Type)
@@ -225,12 +241,16 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 
 	txn := types.NewTxWithType(txType)
 
+	if arg.AccessList != nil {
+		txn.SetAccessList(*arg.AccessList)
+	}
+
 	switch txType {
 	case types.LegacyTxType:
 		txn.SetGasPrice(new(big.Int).SetBytes(*arg.GasPrice))
 	case types.DynamicFeeTxType:
-		txn.SetGasTipCap(new(big.Int).SetBytes(*arg.MaxPriorityFeePerGas))
-		txn.SetGasFeeCap(new(big.Int).SetBytes(*arg.MaxFeePerGas))
+		txn.SetGasTipCap(new(big.Int).SetBytes(*arg.GasTipCap))
+		txn.SetGasFeeCap(new(big.Int).SetBytes(*arg.GasFeeCap))
 	}
 
 	txn.SetFrom(*arg.From)
@@ -238,7 +258,10 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 	txn.SetValue(new(big.Int).SetBytes(*arg.Value))
 	txn.SetInput(input)
 	txn.SetNonce(uint64(*arg.Nonce))
-	txn.SetChainID(new(big.Int).SetBytes(*arg.ChainID))
+
+	if arg.ChainID != nil {
+		txn.SetChainID(new(big.Int).SetUint64(uint64(*arg.ChainID)))
+	}
 
 	if arg.To != nil {
 		txn.SetTo(arg.To)

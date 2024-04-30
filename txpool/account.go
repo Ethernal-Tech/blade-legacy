@@ -1,6 +1,7 @@
 package txpool
 
 import (
+	"maps"
 	"sync"
 	"sync/atomic"
 
@@ -19,11 +20,13 @@ type accountsMap struct {
 // Initializes an account for the given address.
 func (m *accountsMap) initOnce(addr types.Address, nonce uint64) *account {
 	a, loaded := m.LoadOrStore(addr, &account{
-		enqueued:    newAccountQueue(),
-		promoted:    newAccountQueue(),
-		nonceToTx:   newNonceToTxLookup(),
-		maxEnqueued: m.maxEnqueuedLimit,
-		nextNonce:   nonce,
+		enqueued:      newAccountQueue(),
+		promoted:      newAccountQueue(),
+		proposed:      newAccountQueue(),
+		nonceToTx:     newNonceToTxLookup(),
+		nonceProposed: newNonceToTxLookup(),
+		maxEnqueued:   m.maxEnqueuedLimit,
+		nextNonce:     nonce,
 	})
 	newAccount := a.(*account) //nolint:forcetypeassert
 
@@ -129,6 +132,78 @@ func (m *accountsMap) allTxs(includeEnqueued bool) (
 	return
 }
 
+func (m *accountsMap) reinsertProposed() uint64 {
+	var count uint64
+
+	m.Range(func(key, value interface{}) bool {
+		accountKey, ok := key.(types.Address)
+		if !ok {
+			return false
+		}
+
+		account := m.get(accountKey)
+
+		account.promoted.lock(true)
+		account.proposed.lock(true)
+		account.nonceToTx.lock()
+		account.nonceProposed.lock()
+
+		defer func() {
+			account.nonceProposed.unlock()
+			account.nonceToTx.unlock()
+			account.proposed.unlock()
+			account.promoted.unlock()
+		}()
+
+		if account.proposed.length() > 0 {
+			for {
+				tx := account.proposed.peek()
+				if tx == nil {
+					break
+				}
+
+				account.promoted.push(tx)
+				account.proposed.pop()
+
+				count++
+			}
+
+			maps.Copy(account.nonceToTx.mapping, account.nonceProposed.mapping)
+			account.nonceProposed.reset()
+		}
+
+		return true
+	})
+
+	return count
+}
+
+func (m *accountsMap) clearProposed() {
+	m.Range(func(key, value interface{}) bool {
+		accountKey, ok := key.(types.Address)
+		if !ok {
+			return false
+		}
+
+		account := m.get(accountKey)
+
+		account.proposed.lock(true)
+		account.nonceProposed.lock()
+
+		defer func() {
+			account.nonceProposed.unlock()
+			account.proposed.unlock()
+		}()
+
+		if account.proposed.length() > 0 {
+			account.proposed.clear()
+			account.nonceProposed.reset()
+		}
+
+		return true
+	})
+}
+
 type nonceToTxLookup struct {
 	mapping map[uint64]*types.Transaction
 	mutex   sync.Mutex
@@ -179,8 +254,8 @@ func (m *nonceToTxLookup) remove(txs ...*types.Transaction) {
 // are ready to be moved to the promoted queue.
 // lock order is important! promoted.lock(true), enqueued.lock(true), nonceToTx.lock()
 type account struct {
-	enqueued, promoted *accountQueue
-	nonceToTx          *nonceToTxLookup
+	enqueued, promoted, proposed *accountQueue
+	nonceToTx, nonceProposed     *nonceToTxLookup
 
 	nextNonce uint64
 	demotions uint64
@@ -226,13 +301,21 @@ func (a *account) reset(nonce uint64, promoteCh chan<- promoteRequest) (
 ) {
 	a.promoted.lock(true)
 	a.enqueued.lock(true)
+	a.proposed.lock(true)
 	a.nonceToTx.lock()
+	a.nonceProposed.lock()
 
 	defer func() {
+		a.nonceProposed.unlock()
 		a.nonceToTx.unlock()
+		a.proposed.unlock()
 		a.enqueued.unlock()
 		a.promoted.unlock()
 	}()
+
+	// prune the proposed txs
+	prunedProposed := a.proposed.prune(nonce)
+	a.nonceProposed.remove(prunedProposed...)
 
 	// prune the promoted txs
 	prunedPromoted = a.promoted.prune(nonce)

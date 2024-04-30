@@ -23,6 +23,8 @@ type ForkManagerFactory func(forks *chain.Forks) error
 
 type ForkManagerInitialParamsFactory func(config *chain.Chain) (*forkmanager.ForkParams, error)
 
+type IsL1OriginatedTokenCheck func(config *chain.Params) (bool, error)
+
 const (
 	DevConsensus     ConsensusType = "dev"
 	PolyBFTConsensus ConsensusType = consensusPolyBFT.ConsensusName
@@ -54,6 +56,10 @@ var forkManagerFactory = map[ConsensusType]ForkManagerFactory{
 
 var forkManagerInitialParamsFactory = map[ConsensusType]ForkManagerInitialParamsFactory{
 	PolyBFTConsensus: consensusPolyBFT.ForkManagerInitialParamsFactory,
+}
+
+var isL1OriginatedTokenCheckFactory = map[ConsensusType]IsL1OriginatedTokenCheck{
+	PolyBFTConsensus: consensusPolyBFT.IsL1OriginatedTokenCheck,
 }
 
 func ConsensusSupported(value string) bool {

@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
@@ -15,6 +14,7 @@ import (
 	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -36,6 +36,7 @@ type exitParams struct {
 	exitID            uint64
 	rootJSONRPCAddr   string
 	childJSONRPCAddr  string
+	txTimeout         time.Duration
 }
 
 var (
@@ -86,6 +87,13 @@ func GetCommand() *cobra.Command {
 		"the JSON RPC child chain endpoint",
 	)
 
+	exitCmd.Flags().DurationVar(
+		&ep.txTimeout,
+		cmdHelper.TxTimeoutFlag,
+		txrelayer.DefaultTimeoutTransactions,
+		cmdHelper.TxTimeoutDesc,
+	)
+
 	_ = exitCmd.MarkFlagRequired(exitHelperFlag)
 
 	return exitCmd
@@ -102,14 +110,15 @@ func run(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	rootTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(ep.rootJSONRPCAddr))
+	rootTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(ep.rootJSONRPCAddr),
+		txrelayer.WithReceiptsTimeout(ep.txTimeout))
 	if err != nil {
 		outputter.SetError(fmt.Errorf("could not create root chain tx relayer: %w", err))
 
 		return
 	}
 
-	childClient, err := jsonrpc.NewClient(ep.childJSONRPCAddr)
+	childClient, err := jsonrpc.NewEthClient(ep.childJSONRPCAddr)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("could not create child chain JSON RPC client: %w", err))
 
@@ -118,9 +127,7 @@ func run(cmd *cobra.Command, _ []string) {
 
 	// acquire proof for given exit event
 	var proof types.Proof
-
-	err = childClient.Call(generateExitProofFn, &proof, fmt.Sprintf("0x%x", ep.exitID))
-	if err != nil {
+	if err = childClient.EndpointCall(generateExitProofFn, &proof, fmt.Sprintf("0x%x", ep.exitID)); err != nil {
 		outputter.SetError(fmt.Errorf("failed to get exit proof (exit id=%d): %w", ep.exitID, err))
 
 		return
@@ -156,7 +163,7 @@ func run(cmd *cobra.Command, _ []string) {
 }
 
 // createExitTxn encodes parameters for exit function on root chain ExitHelper contract
-func createExitTxn(sender ethgo.Address, proof types.Proof) (*ethgo.Transaction,
+func createExitTxn(sender types.Address, proof types.Proof) (*types.Transaction,
 	*contractsapi.L2StateSyncedEvent, error) {
 	exitInput, err := polybft.GetExitInputFromProof(proof)
 	if err != nil {
@@ -180,9 +187,9 @@ func createExitTxn(sender ethgo.Address, proof types.Proof) (*ethgo.Transaction,
 		return nil, nil, fmt.Errorf("failed to encode provided parameters: %w", err)
 	}
 
-	exitHelperAddr := ethgo.Address(types.StringToAddress(ep.exitHelperAddrRaw))
+	exitHelperAddr := types.StringToAddress(ep.exitHelperAddrRaw)
 	txn := helper.CreateTransaction(sender, &exitHelperAddr, input, nil, true)
-	txn.Gas = txrelayer.DefaultGasLimit
+	txn.SetGas(txrelayer.DefaultGasLimit)
 
 	return txn, exitEvent, err
 }

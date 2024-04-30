@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/spf13/cobra"
 	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -19,6 +19,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -111,12 +112,12 @@ var (
 	// initializersMap maps rootchain contract names to initializer function callbacks
 	initializersMap = map[string]func(command.OutputFormatter, txrelayer.TxRelayer,
 		[]*validator.GenesisValidator,
-		*polybft.RootchainConfig, ethgo.Key, int64) error{
+		*polybft.RootchainConfig, crypto.Key, int64) error{
 		getProxyNameForImpl(checkpointManagerName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			if !consensusCfg.NativeTokenConfig.IsMintable {
 				// we can not initialize checkpoint manager at this moment if native token is not mintable
@@ -145,7 +146,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			inputParams := &contractsapi.InitializeExitHelperFn{
 				NewCheckpointManager: config.CheckpointManagerAddress,
@@ -157,7 +158,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			inputParams := &contractsapi.InitializeRootERC20PredicateFn{
 				NewStateSender:         config.StateSenderAddress,
@@ -175,7 +176,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			initParams := &contractsapi.InitializeChildMintableERC20PredicateFn{
 				NewStateSender:        config.StateSenderAddress,
@@ -191,7 +192,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			initParams := &contractsapi.InitializeRootERC721PredicateFn{
 				NewStateSender:          config.StateSenderAddress,
@@ -207,7 +208,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			initParams := &contractsapi.InitializeChildMintableERC721PredicateFn{
 				NewStateSender:         config.StateSenderAddress,
@@ -223,7 +224,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			initParams := &contractsapi.InitializeRootERC1155PredicateFn{
 				NewStateSender:           config.StateSenderAddress,
@@ -239,7 +240,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			initParams := &contractsapi.InitializeChildMintableERC1155PredicateFn{
 				NewStateSender:          config.StateSenderAddress,
@@ -255,7 +256,7 @@ var (
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.RootchainConfig,
-			key ethgo.Key,
+			key crypto.Key,
 			chainID int64) error {
 			gvs := make([]*contractsapi.GenesisAccount, len(genesisValidators))
 			for i := 0; i < len(genesisValidators); i++ {
@@ -336,6 +337,13 @@ func GetCommand() *cobra.Command {
 		helper.ProxyContractsAdminDesc,
 	)
 
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		cmdHelper.TxTimeoutFlag,
+		txrelayer.DefaultTimeoutTransactions,
+		cmdHelper.TxTimeoutDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(helper.TestModeFlag, deployerKeyFlag)
 
 	return cmd
@@ -360,7 +368,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	client, err := jsonrpc.NewClient(params.jsonRPCAddress)
+	client, err := jsonrpc.NewEthClient(params.jsonRPCAddress)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize JSON RPC client for provided IP address: %s: %w",
 			params.jsonRPCAddress, err))
@@ -369,7 +377,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	if consensusCfg.Bridge != nil {
-		code, err := client.Eth().GetCode(ethgo.Address(consensusCfg.Bridge.StateSenderAddr), ethgo.Latest)
+		code, err := client.GetCode(consensusCfg.Bridge.StateSenderAddr, jsonrpc.LatestBlockNumberOrHash)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("failed to check if rootchain contracts are deployed: %w", err))
 
@@ -386,7 +394,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	// set event tracker start blocks for rootchain contract(s) of interest
 	// the block number should be queried before deploying contracts so that no events during deployment
 	// and initialization are missed
-	blockNum, err := client.Eth().BlockNumber()
+	blockNum, err := client.BlockNumber()
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to query rootchain latest block number: %w", err))
 
@@ -426,9 +434,11 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // deployContracts deploys and initializes rootchain smart contracts
-func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, chainID int64,
+func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClient, chainID int64,
 	initialValidators []*validator.GenesisValidator, cmdCtx context.Context) (deploymentResultInfo, error) {
-	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(client), txrelayer.WithWriter(outputter))
+	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(client), txrelayer.WithWriter(outputter),
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
+
 	if err != nil {
 		return deploymentResultInfo{RootchainCfg: nil, CommandResults: nil},
 			fmt.Errorf("failed to initialize tx relayer: %w", err)
@@ -443,7 +453,7 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 	if params.isTestMode {
 		deployerAddr := deployerKey.Address()
 
-		txn := helper.CreateTransaction(ethgo.ZeroAddress, &deployerAddr, nil, ethgo.Ether(1), true)
+		txn := helper.CreateTransaction(types.ZeroAddress, &deployerAddr, nil, ethgo.Ether(1), true)
 		if _, err = txRelayer.SendTransactionLocal(txn); err != nil {
 			return deploymentResultInfo{RootchainCfg: nil, CommandResults: nil}, err
 		}
@@ -464,7 +474,7 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 	if !consensusCfg.NativeTokenConfig.IsMintable {
 		if params.rootERC20TokenAddr != "" {
 			// use existing root chain ERC20 token
-			if err := populateExistingTokenAddr(client.Eth(),
+			if err := populateExistingTokenAddr(client,
 				params.rootERC20TokenAddr, rootERC20Name, rootchainConfig); err != nil {
 				return deploymentResultInfo{RootchainCfg: nil, CommandResults: nil}, err
 			}
@@ -589,7 +599,7 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 					}
 				}
 
-				txn := helper.CreateTransaction(ethgo.ZeroAddress, nil, bytecode, nil, true)
+				txn := helper.CreateTransaction(types.ZeroAddress, nil, bytecode, nil, true)
 
 				receipt, err := txRelayer.SendTransaction(txn, deployerKey)
 				if err != nil {
@@ -687,11 +697,11 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.Client, 
 
 // populateExistingTokenAddr checks whether given token is deployed on the provided address.
 // If it is, then its address is set to the rootchain config, otherwise an error is returned
-func populateExistingTokenAddr(eth *jsonrpc.Eth, tokenAddr, tokenName string,
+func populateExistingTokenAddr(eth *jsonrpc.EthClient, tokenAddr, tokenName string,
 	rootchainCfg *polybft.RootchainConfig) error {
 	addr := types.StringToAddress(tokenAddr)
 
-	code, err := eth.GetCode(ethgo.Address(addr), ethgo.Latest)
+	code, err := eth.GetCode(addr, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		return fmt.Errorf("failed to check is %s token deployed: %w", tokenName, err)
 	} else if code == "0x" {
@@ -711,14 +721,14 @@ func populateExistingTokenAddr(eth *jsonrpc.Eth, tokenAddr, tokenName string,
 // initContract initializes arbitrary contract with given parameters deployed on a given address
 func initContract(cmdOutput command.OutputFormatter, txRelayer txrelayer.TxRelayer,
 	initInputFn contractsapi.StateTransactionInput, contractAddr types.Address,
-	contractName string, deployerKey ethgo.Key) error {
+	contractName string, deployerKey crypto.Key) error {
 	input, err := initInputFn.EncodeAbi()
 	if err != nil {
 		return fmt.Errorf("failed to encode initialization params for %s.initialize. error: %w",
 			contractName, err)
 	}
 
-	if _, err := helper.SendTransaction(txRelayer, ethgo.Address(contractAddr),
+	if _, err := helper.SendTransaction(txRelayer, contractAddr,
 		input, contractName, deployerKey); err != nil {
 		return err
 	}

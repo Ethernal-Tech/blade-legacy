@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"errors"
 	"math/big"
+	"strconv"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/blockchain"
@@ -68,6 +69,59 @@ func TestEth_Block_GetBlockByHash(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestEth_Block_GetHeaderByNumber(t *testing.T) {
+	store := &mockBlockStore{}
+	for i := 0; i < 10; i++ {
+		store.add(newTestBlock(uint64(i), hash1))
+	}
+
+	eth := newTestEthEndpoint(store)
+
+	cases := []struct {
+		description string
+		blockNum    BlockNumber
+		isNotNil    bool
+		err         bool
+	}{
+		{"should be able to get the latest block number", LatestBlockNumber, true, false},
+		{"should be able to get the earliest block number", EarliestBlockNumber, true, false},
+		{"should not be able to get block with negative number", BlockNumber(-50), false, true},
+		{"should be able to get block with number 0", BlockNumber(0), true, false},
+		{"should be able to get block with number 2", BlockNumber(2), true, false},
+		{"should be able to get block with number greater than latest block", BlockNumber(50), false, false},
+	}
+	for _, c := range cases {
+		res, err := eth.GetHeaderByNumber(c.blockNum)
+
+		if c.isNotNil {
+			assert.NotNil(t, res, "expected to return block, but got nil")
+		} else {
+			assert.Nil(t, res, "expected to return nil, but got data")
+		}
+
+		if c.err {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+}
+
+func TestEth_Block_GetHeaderByHash(t *testing.T) {
+	store := &mockBlockStore{}
+	store.add(newTestBlock(1, hash1))
+
+	eth := newTestEthEndpoint(store)
+
+	res, err := eth.GetHeaderByHash(hash1)
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+
+	res, err = eth.GetHeaderByHash(hash2)
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+}
+
 func TestEth_Block_BlockNumber(t *testing.T) {
 	store := &mockBlockStore{}
 	store.add(&types.Block{
@@ -83,13 +137,32 @@ func TestEth_Block_BlockNumber(t *testing.T) {
 	assert.Equal(t, argUintPtr(10), num)
 }
 
+func TestEth_Block_GetBlockTransactionCountByHash(t *testing.T) {
+	store := &mockBlockStore{}
+	block := newTestBlock(1, hash1)
+
+	for i := 0; i < 10; i++ {
+		block.Transactions = append(block.Transactions, []*types.Transaction{
+			types.NewTx(types.NewLegacyTx(types.WithNonce(0), types.WithFrom(addr0)))}...)
+	}
+	store.add(block)
+
+	eth := newTestEthEndpoint(store)
+
+	res, err := eth.GetBlockTransactionCountByHash(block.Header.Hash)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res, "expected to return block, but got nil")
+	assert.Equal(t, "0xa", res)
+}
+
 func TestEth_Block_GetBlockTransactionCountByNumber(t *testing.T) {
 	store := &mockBlockStore{}
 	block := newTestBlock(1, hash1)
 
 	for i := 0; i < 10; i++ {
 		block.Transactions = append(block.Transactions, []*types.Transaction{
-			types.NewTx(&types.LegacyTx{Nonce: 0, From: addr0})}...)
+			types.NewTx(types.NewLegacyTx(types.WithNonce(0), types.WithFrom(addr0)))}...)
 	}
 	store.add(block)
 
@@ -100,6 +173,58 @@ func TestEth_Block_GetBlockTransactionCountByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, res, "expected to return block, but got nil")
 	assert.Equal(t, "0xa", res)
+}
+
+func TestEth_Block_GetTransactionByBlockNumberAndIndex(t *testing.T) {
+	store := &mockBlockStore{}
+	eth := newTestEthEndpoint(store)
+	block := newTestBlock(1, hash1)
+
+	for i := 0; i < 10; i++ {
+		txn := newTestTransaction(uint64(i), addr0)
+		block.Transactions = append(block.Transactions, txn)
+	}
+	store.add(block)
+
+	testIndex := 5
+	res, err := eth.GetTransactionByBlockNumberAndIndex(BlockNumber(block.Header.Number), argUint64(testIndex))
+
+	transaction := toTransaction(
+		block.Transactions[testIndex],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&testIndex,
+	)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res, "expected to return transaction, but got nil")
+	assert.Equal(t, transaction, res)
+}
+
+func TestEth_Block_GetTransactionByBlockHashAndIndex(t *testing.T) {
+	store := &mockBlockStore{}
+	block := newTestBlock(1, hash1)
+
+	for i := 0; i < 10; i++ {
+		txn := newTestTransaction(uint64(i), addr0)
+		block.Transactions = append(block.Transactions, txn)
+	}
+	store.add(block)
+
+	eth := newTestEthEndpoint(store)
+	testIndex := 5
+	res, err := eth.GetTransactionByBlockHashAndIndex(block.Header.Hash, argUint64(testIndex))
+
+	transaction := toTransaction(
+		block.Transactions[testIndex],
+		argUintPtr(block.Number()),
+		argHashPtr(block.Hash()),
+		&testIndex,
+	)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res, "expected to return transaction, but got nil")
+	assert.Equal(t, transaction, res)
 }
 
 func TestEth_GetTransactionByHash(t *testing.T) {
@@ -190,8 +315,10 @@ func TestEth_GetTransactionReceipt(t *testing.T) {
 		eth := newTestEthEndpoint(store)
 		block := newTestBlock(1, hash4)
 		store.add(block)
+
 		txn0 := newTestTransaction(uint64(0), addr0)
 		txn1 := newTestTransaction(uint64(1), addr1)
+
 		block.Transactions = []*types.Transaction{txn0, txn1}
 		receipt1 := &types.Receipt{
 			Logs: []*types.Log{
@@ -216,6 +343,7 @@ func TestEth_GetTransactionReceipt(t *testing.T) {
 			},
 		}
 		receipt1.SetStatus(types.ReceiptSuccess)
+
 		receipt2 := &types.Receipt{
 			Logs: []*types.Log{
 				{
@@ -242,6 +370,68 @@ func TestEth_GetTransactionReceipt(t *testing.T) {
 		assert.Equal(t, uint64(3), uint64(response.Logs[0].LogIndex))
 		assert.Equal(t, uint64(1), uint64(response.Logs[0].TxIndex))
 	})
+}
+
+func TestEth_GetBlockReceipts(t *testing.T) {
+	store := newMockBlockStore()
+	eth := newTestEthEndpoint(store)
+	block := newTestBlock(1, hash4)
+	store.add(block)
+
+	txn0 := newTestTransaction(uint64(0), addr0)
+	txn1 := newTestTransaction(uint64(1), addr1)
+
+	block.Transactions = []*types.Transaction{txn0, txn1}
+	receipt1 := &types.Receipt{
+		Logs: []*types.Log{
+			{
+				// log 0
+				Topics: []types.Hash{
+					hash1,
+				},
+			},
+			{
+				// log 1
+				Topics: []types.Hash{
+					hash2,
+				},
+			},
+			{
+				// log 2
+				Topics: []types.Hash{
+					hash3,
+				},
+			},
+		},
+	}
+	receipt1.SetStatus(types.ReceiptSuccess)
+
+	receipt2 := &types.Receipt{
+		Logs: []*types.Log{
+			{
+				// log 3
+				Topics: []types.Hash{
+					hash4,
+				},
+			},
+		},
+	}
+	receipt2.SetStatus(types.ReceiptSuccess)
+	store.receipts[hash4] = []*types.Receipt{receipt1, receipt2}
+
+	res, err := eth.GetBlockReceipts(1)
+
+	assert.NoError(t, err)
+	assert.NotNil(t, res)
+
+	response := res.([]*receipt)
+	assert.Equal(t, txn1.Hash(), response[1].TxHash)
+	assert.Equal(t, 2, len(response))
+	assert.Equal(t, block.Hash(), response[1].BlockHash)
+	assert.NotNil(t, response[1].Logs)
+	assert.Len(t, response[1].Logs, 1)
+	assert.Equal(t, uint64(3), uint64(response[1].Logs[0].LogIndex))
+	assert.Equal(t, uint64(1), uint64(response[1].Logs[0].TxIndex))
 }
 
 func TestEth_Syncing(t *testing.T) {
@@ -437,6 +627,79 @@ func TestEth_Call(t *testing.T) {
 	})
 }
 
+func TestEth_CreateAccessList(t *testing.T) {
+	store := newMockBlockStore()
+	hashs := make([]types.Hash, 10)
+	latest := LatestBlockNumber
+	blockNum1 := BlockNumber(1)
+	blockNum2 := BlockNumber(2)
+
+	for i := 0; i < 10; i++ {
+		hashs[i] = types.StringToHash(strconv.Itoa(i))
+		block := newTestBlock(uint64(i), hashs[i])
+		block.Header.GasUsed = uint64(i * 10)
+		store.add(block)
+	}
+
+	eth := newTestEthEndpoint(store)
+
+	txn := &txnArgs{
+		From:     &addr0,
+		To:       &addr1,
+		Gas:      argUintPtr(100000),
+		GasPrice: argBytesPtr([]byte{0x64}),
+		Value:    argBytesPtr([]byte{0x64}),
+		Data:     nil,
+		Nonce:    argUintPtr(0),
+	}
+
+	cases := []struct {
+		filter BlockNumberOrHash
+		err    bool
+	}{
+		{
+			// both fields are empty
+			BlockNumberOrHash{},
+			true,
+		},
+		{
+			// return the latest block number
+			BlockNumberOrHash{BlockNumber: &latest},
+			true,
+		},
+		{
+			// specific real block number
+			BlockNumberOrHash{BlockNumber: &blockNum1},
+			true,
+		},
+		{
+			// specific block number (not found)
+			BlockNumberOrHash{BlockNumber: &blockNum2},
+			true,
+		},
+		{
+			// specific block by hash (found). By default all blocks in the mock have hash zero
+			BlockNumberOrHash{BlockHash: &types.ZeroHash},
+			false,
+		},
+		{
+			// specific block by hash (not found)
+			BlockNumberOrHash{BlockHash: &hashs[8]},
+			true,
+		},
+	}
+
+	for _, c := range cases {
+		res, err := eth.CreateAccessList(txn, c.filter)
+		if c.err {
+			assert.NoError(t, err)
+			assert.NotNil(t, res)
+		} else {
+			assert.NoError(t, err)
+		}
+	}
+}
+
 type testStore interface {
 	ethStore
 }
@@ -485,6 +748,24 @@ func (m *mockBlockStore) appendBlocksToStore(blocks []*types.Block) {
 
 		m.blocks = append(m.blocks, block)
 	}
+}
+
+func (m *mockBlockStore) GetHeaderByNumber(num uint64) (*types.Header, bool) {
+	block, ok := m.GetBlockByNumber(num, true)
+	if !ok {
+		return nil, false
+	}
+
+	return block.Header, block.Header != nil
+}
+
+func (m *mockBlockStore) GetHeaderByHash(hash types.Hash) (*types.Header, bool) {
+	block, ok := m.GetBlockByHash(hash, true)
+	if !ok {
+		return nil, false
+	}
+
+	return block.Header, block.Header != nil
 }
 
 func (m *mockBlockStore) setupLogs() {
@@ -586,16 +867,16 @@ func (m *mockBlockStore) Header() *types.Header {
 	return m.blocks[len(m.blocks)-1].Header
 }
 
-func (m *mockBlockStore) ReadTxLookup(txnHash types.Hash) (types.Hash, bool) {
+func (m *mockBlockStore) ReadTxLookup(txnHash types.Hash) (uint64, bool) {
 	for _, block := range m.blocks {
 		for _, txn := range block.Transactions {
 			if txn.Hash() == txnHash {
-				return block.Hash(), true
+				return block.Number(), true
 			}
 		}
 	}
 
-	return types.ZeroHash, false
+	return 0, false
 }
 
 func (m *mockBlockStore) GetPendingTx(txHash types.Hash) (*types.Transaction, bool) {
@@ -629,6 +910,7 @@ func (m *mockBlockStore) ApplyTxn(_ *types.Header, _ *types.Transaction, _ types
 	return &runtime.ExecutionResult{
 		Err:         m.ethCallError,
 		ReturnValue: m.returnValue,
+		AccessList:  runtime.NewAccessList(),
 	}, nil
 }
 

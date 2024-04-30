@@ -141,6 +141,30 @@ func (m *mockHost) GetStorage(a types.Address, h types.Hash) types.Hash {
 	return m.getStorageFunc(a, h)
 }
 
+func (m *mockHost) AddSlotToAccessList(addr types.Address, slot types.Hash) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (m *mockHost) AddAddressToAccessList(addr types.Address) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (m *mockHost) ContainsAccessListAddress(addr types.Address) bool {
+	panic("not implemented") // TODO: Implement
+}
+
+func (m *mockHost) ContainsAccessListSlot(addr types.Address, slot types.Hash) (bool, bool) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (m *mockHost) DeleteAccessListAddress(addr types.Address) {
+	panic("not implemented") // TODO: Implement
+}
+
+func (m *mockHost) DeleteAccessListSlot(addr types.Address, slot types.Hash) {
+	panic("not implemented") // TODO: Implement
+}
+
 func TestStructLogErrorString(t *testing.T) {
 	t.Parallel()
 

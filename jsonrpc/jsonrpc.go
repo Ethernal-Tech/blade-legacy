@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,33 +10,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
+	"github.com/hashicorp/go-hclog"
+
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/secrets"
 	"github.com/0xPolygon/polygon-edge/versioning"
-	"github.com/gorilla/websocket"
-	"github.com/hashicorp/go-hclog"
 )
-
-type serverType int
-
-const (
-	serverIPC serverType = iota
-	serverHTTP
-	serverWS
-)
-
-func (s serverType) String() string {
-	switch s {
-	case serverIPC:
-		return "ipc"
-	case serverHTTP:
-		return "http"
-	case serverWS:
-		return "ws"
-	default:
-		panic("BUG: Not expected") //nolint:gocritic
-	}
-}
 
 // JSONRPC is an API consensus
 type JSONRPC struct {
@@ -73,9 +54,11 @@ type Config struct {
 
 	ConcurrentRequestsDebug uint64
 	WebSocketReadLimit      uint64
-
-	SecretsManager secrets.SecretsManager
-	TxSigner       crypto.TxSigner
+	UseTLS                  bool
+	TLSCertFile             string
+	TLSKeyFile              string
+	SecretsManager          secrets.SecretsManager
+	TxSigner                crypto.TxSigner
 }
 
 // NewJSONRPC returns the JSONRPC http server
@@ -114,7 +97,7 @@ func NewJSONRPC(logger hclog.Logger, config *Config) (*JSONRPC, error) {
 }
 
 func (j *JSONRPC) setupHTTP() error {
-	j.logger.Info("http server started", "addr", j.config.Addr.String())
+	j.logger.Info("http server starting...", "addr", j.config.Addr.String())
 
 	lis, err := net.Listen("tcp", j.config.Addr.String())
 	if err != nil {
@@ -137,13 +120,73 @@ func (j *JSONRPC) setupHTTP() error {
 		ReadHeaderTimeout: 60 * time.Second,
 	}
 
-	go func() {
-		if err := srv.Serve(lis); err != nil {
-			j.logger.Error("closed http connection", "err", err)
+	if j.config.UseTLS {
+		j.logger.Info("configuring http server with tls...")
+
+		if j.config.TLSCertFile != "" && j.config.TLSKeyFile != "" {
+			j.logger.Info("TLS", "cert file", j.config.TLSCertFile)
+			j.logger.Info("TLS", "key file", j.config.TLSKeyFile)
+
+			go func() {
+				if err := srv.ServeTLS(lis, j.config.TLSCertFile, j.config.TLSKeyFile); err != nil {
+					j.logger.Error("closed https connection", "err", err)
+				}
+			}()
+		} else {
+			j.logger.Info("loading tls certificate from secrets manager...")
+
+			cert, err := loadTLSCertificate(j.config.SecretsManager)
+			if err != nil {
+				j.logger.Error("loading tls certificate", "err", err)
+
+				return err
+			}
+
+			srv.TLSConfig = &tls.Config{
+				Certificates: []tls.Certificate{*cert},
+				MinVersion:   tls.VersionTLS12,
+			}
+
+			go func() {
+				if err := srv.ServeTLS(lis, "", ""); err != nil {
+					j.logger.Error("closed https connection", "err", err)
+				}
+			}()
 		}
-	}()
+	} else {
+		go func() {
+			if err := srv.Serve(lis); err != nil {
+				j.logger.Error("closed http connection", "err", err)
+			}
+		}()
+	}
+
+	j.logger.Info("http server started", "addr", j.config.Addr.String())
 
 	return nil
+}
+
+func loadTLSCertificate(manager secrets.SecretsManager) (*tls.Certificate, error) {
+	if manager.HasSecret(secrets.JSONTLSCert) && manager.HasSecret(secrets.JSONTLSKey) {
+		tlsCert, err := manager.GetSecret(secrets.JSONTLSCert)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get a tls cert file from Secrets Manager, %w", err)
+		}
+
+		tlsKey, err := manager.GetSecret(secrets.JSONTLSKey)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get a tls key file from Secrets Manager, %w", err)
+		}
+
+		cert, err := tls.X509KeyPair(tlsCert, tlsKey)
+		if err != nil {
+			return nil, fmt.Errorf("unable to create a tls certificate, %w", err)
+		}
+
+		return &cert, nil
+	}
+
+	return nil, secrets.ErrSecretNotFound
 }
 
 // The middlewareFactory builds a middleware which enables CORS using the provided config.
@@ -165,6 +208,7 @@ func middlewareFactory(config *Config) func(http.Handler) http.Handler {
 					break
 				}
 			}
+
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -317,7 +361,7 @@ func (j *JSONRPC) handleJSONRPCRequest(w http.ResponseWriter, req *http.Request)
 	}
 
 	// log request
-	j.logger.Debug("handle", "request", string(data))
+	j.logger.Trace("handle", "request", string(data))
 
 	resp, err := j.dispatcher.Handle(data)
 	if err != nil {
@@ -326,7 +370,7 @@ func (j *JSONRPC) handleJSONRPCRequest(w http.ResponseWriter, req *http.Request)
 		_, _ = w.Write(resp)
 	}
 
-	j.logger.Debug("handle", "response", string(resp))
+	j.logger.Trace("handle", "response", string(resp))
 }
 
 type GetResponse struct {

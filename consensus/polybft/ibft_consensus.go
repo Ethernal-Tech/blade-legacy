@@ -38,6 +38,6 @@ func (c *IBFTConsensusWrapper) runSequence(height uint64) (<-chan struct{}, func
 	return sequenceDone, func() {
 		// stopSequence terminates the running IBFT sequence gracefully and waits for it to return
 		cancelSequence()
-		<-sequenceDone // waits until c.IBFT.RunSequenc routine finishes
+		<-sequenceDone // waits until c.IBFT.RunSequence routine finishes
 	}
 }

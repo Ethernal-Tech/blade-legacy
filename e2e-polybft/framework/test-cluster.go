@@ -21,14 +21,14 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/ethgo"
 	"github.com/umbracle/ethgo/abi"
-	"github.com/umbracle/ethgo/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 const (
@@ -150,6 +150,10 @@ type TestClusterConfig struct {
 	VotingDelay  uint64
 
 	logsDirOnce sync.Once
+
+	UseTLS      bool
+	TLSCertFile string
+	TLSKeyFile  string
 }
 
 func (c *TestClusterConfig) Dir(name string) string {
@@ -238,8 +242,6 @@ type TestCluster struct {
 	once         sync.Once
 	failCh       chan struct{}
 	executionErr error
-
-	sendTxnLock sync.Mutex
 }
 
 type ClusterOption func(*TestClusterConfig)
@@ -467,6 +469,19 @@ func WithPredeploy(predeployString string) ClusterOption {
 	}
 }
 
+func WithHTTPS() ClusterOption {
+	return func(h *TestClusterConfig) {
+		h.UseTLS = true
+	}
+}
+
+func WithTLSCertificate(certFile string, keyFile string) ClusterOption {
+	return func(h *TestClusterConfig) {
+		h.TLSCertFile = certFile
+		h.TLSKeyFile = keyFile
+	}
+}
+
 func isTrueEnv(e string) bool {
 	return strings.ToLower(os.Getenv(e)) == "true"
 }
@@ -513,7 +528,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			testType = "integration"
 		}
 
-		t.Skip(fmt.Sprintf("%s tests are disabled.", testType))
+		t.Skipf("%s tests are disabled.", testType)
 	}
 
 	config.TmpDir, err = os.MkdirTemp("/tmp", "e2e-polybft-")
@@ -809,6 +824,9 @@ func (c *TestCluster) InitTestServer(t *testing.T,
 		config.Relayer = nodeType.IsSet(Relayer)
 		config.NumBlockConfirmations = c.Config.NumBlockConfirmations
 		config.BridgeJSONRPC = bridgeJSONRPC
+		config.UseTLS = c.Config.UseTLS
+		config.TLSCertFile = c.Config.TLSCertFile
+		config.TLSKeyFile = c.Config.TLSKeyFile
 	})
 
 	// watch the server for stop signals. It is important to fix the specific
@@ -855,7 +873,7 @@ func (c *TestCluster) Stats(t *testing.T) {
 			continue
 		}
 
-		num, err := i.JSONRPC().Eth().BlockNumber()
+		num, err := i.JSONRPC().BlockNumber()
 		t.Log("Stats node", index, "err", err, "block", num, "validator", i.config.Validator)
 	}
 }
@@ -903,7 +921,7 @@ func (c *TestCluster) WaitForBlock(n uint64, timeout time.Duration) error {
 				continue
 			}
 
-			num, err := i.JSONRPC().Eth().BlockNumber()
+			num, err := i.JSONRPC().BlockNumber()
 
 			if err != nil || num < n {
 				ok = false
@@ -991,13 +1009,13 @@ func (c *TestCluster) InitSecrets(prefix string, count int) ([]types.Address, er
 	return result, nil
 }
 
-func (c *TestCluster) ExistsCode(t *testing.T, addr ethgo.Address) bool {
+func (c *TestCluster) ExistsCode(t *testing.T, addr types.Address) bool {
 	t.Helper()
 
-	client, err := jsonrpc.NewClient(c.Servers[0].JSONRPCAddr())
+	client, err := jsonrpc.NewEthClient(c.Servers[0].JSONRPCAddr())
 	require.NoError(t, err)
 
-	code, err := client.Eth().GetCode(addr, ethgo.Latest)
+	code, err := client.GetCode(addr, jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		return false
 	}
@@ -1009,19 +1027,17 @@ func (c *TestCluster) Call(t *testing.T, to types.Address, method *abi.Method,
 	args ...interface{}) map[string]interface{} {
 	t.Helper()
 
-	client, err := jsonrpc.NewClient(c.Servers[0].JSONRPCAddr())
+	client, err := jsonrpc.NewEthClient(c.Servers[0].JSONRPCAddr())
 	require.NoError(t, err)
 
 	input, err := method.Encode(args)
 	require.NoError(t, err)
 
-	toAddr := ethgo.Address(to)
-
-	msg := &ethgo.CallMsg{
-		To:   &toAddr,
+	msg := &jsonrpc.CallMsg{
+		To:   &to,
 		Data: input,
 	}
-	resp, err := client.Eth().Call(msg, ethgo.Latest)
+	resp, err := client.Call(msg, jsonrpc.LatestBlockNumber, nil)
 	require.NoError(t, err)
 
 	data, err := hex.DecodeString(resp[2:])
@@ -1033,99 +1049,72 @@ func (c *TestCluster) Call(t *testing.T, to types.Address, method *abi.Method,
 	return output
 }
 
-func (c *TestCluster) Deploy(t *testing.T, sender ethgo.Key, bytecode []byte) *TestTxn {
+func (c *TestCluster) Deploy(t *testing.T, sender *crypto.ECDSAKey, bytecode []byte) *TestTxn {
 	t.Helper()
 
-	return c.SendTxn(t, sender, &ethgo.Transaction{From: sender.Address(), Input: bytecode})
+	tx := types.NewTx(&types.LegacyTx{
+		BaseTx: &types.BaseTx{
+			From:  sender.Address(),
+			Input: bytecode,
+		},
+	})
+
+	return c.SendTxn(t, sender, tx)
 }
 
-func (c *TestCluster) Transfer(t *testing.T, sender ethgo.Key, target types.Address, value *big.Int) *TestTxn {
+func (c *TestCluster) Transfer(t *testing.T, sender *crypto.ECDSAKey, target types.Address, value *big.Int) *TestTxn {
 	t.Helper()
 
-	targetAddr := ethgo.Address(target)
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(sender.Address()),
+		types.WithValue(value),
+		types.WithTo(&target),
+	))
 
-	return c.SendTxn(t, sender, &ethgo.Transaction{From: sender.Address(), To: &targetAddr, Value: value})
+	return c.SendTxn(t, sender, tx)
 }
 
-func (c *TestCluster) MethodTxn(t *testing.T, sender ethgo.Key, target types.Address, input []byte) *TestTxn {
+func (c *TestCluster) MethodTxn(t *testing.T, sender *crypto.ECDSAKey, target types.Address, input []byte) *TestTxn {
 	t.Helper()
 
-	targetAddr := ethgo.Address(target)
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(sender.Address()),
+		types.WithInput(input),
+		types.WithTo(&target),
+	))
 
-	return c.SendTxn(t, sender, &ethgo.Transaction{From: sender.Address(), To: &targetAddr, Input: input})
+	return c.SendTxn(t, sender, tx)
 }
 
 // SendTxn sends a transaction
-func (c *TestCluster) SendTxn(t *testing.T, sender ethgo.Key, txn *ethgo.Transaction) *TestTxn {
+func (c *TestCluster) SendTxn(t *testing.T, sender *crypto.ECDSAKey, txn *types.Transaction) *TestTxn {
 	t.Helper()
 
-	// since we might use get nonce to query the latest nonce and that value is only
-	// updated if the transaction is on the pool, it is recommended to lock the whole
-	// execution in case we send multiple transactions from the same account and we expect
-	// to get a sequential nonce order.
-	c.sendTxnLock.Lock()
-	defer c.sendTxnLock.Unlock()
-
-	client, err := jsonrpc.NewClient(c.Servers[0].JSONRPCAddr())
+	txRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithIPAddress(c.Servers[0].JSONRPCAddr()),
+		txrelayer.WithReceiptsTimeout(1*time.Minute),
+		txrelayer.WithEstimateGasFallback(),
+	)
 	require.NoError(t, err)
 
-	// initialize transaction values if not set
-	if txn.Nonce == 0 {
-		nonce, err := client.Eth().GetNonce(sender.Address(), ethgo.Latest)
-		require.NoError(t, err)
-
-		txn.Nonce = nonce
+	receipt, err := txRelayer.SendTransaction(txn, sender)
+	if err != nil {
+		t.Errorf("failed to send transaction: %s", err.Error())
 	}
-
-	if txn.GasPrice == 0 {
-		gasPrice, err := client.Eth().GasPrice()
-		require.NoError(t, err)
-
-		txn.GasPrice = gasPrice
-	}
-
-	if txn.Gas == 0 {
-		callMsg := txrelayer.ConvertTxnToCallMsg(txn)
-
-		gasLimit, err := client.Eth().EstimateGas(callMsg)
-		if err != nil {
-			// gas estimation can fail in case an account is not allow-listed
-			// (fallback it to default gas limit in that case)
-			txn.Gas = txrelayer.DefaultGasLimit
-		} else {
-			txn.Gas = gasLimit
-		}
-	}
-
-	chainID, err := client.Eth().ChainID()
-	require.NoError(t, err)
-
-	signer := wallet.NewEIP155Signer(chainID.Uint64())
-	signedTxn, err := signer.SignTx(txn, sender)
-	require.NoError(t, err)
-
-	txnRaw, err := signedTxn.MarshalRLPTo(nil)
-	require.NoError(t, err)
-
-	hash, err := client.Eth().SendRawTransaction(txnRaw)
-	require.NoError(t, err)
 
 	return &TestTxn{
-		client: client.Eth(),
-		txn:    txn,
-		hash:   hash,
+		txn:     txn,
+		receipt: receipt,
 	}
 }
 
 type TestTxn struct {
-	client  *jsonrpc.Eth
-	hash    ethgo.Hash
-	txn     *ethgo.Transaction
+	txn     *types.Transaction
 	receipt *ethgo.Receipt
 }
 
 // Txn returns the raw transaction that was sent
-func (t *TestTxn) Txn() *ethgo.Transaction {
+func (t *TestTxn) Txn() *types.Transaction {
 	return t.txn
 }
 
@@ -1136,44 +1125,18 @@ func (t *TestTxn) Receipt() *ethgo.Receipt {
 
 // Succeed returns whether the transaction succeed and it was not reverted
 func (t *TestTxn) Succeed() bool {
-	return t.receipt.Status == uint64(types.ReceiptSuccess)
+	return t.receipt != nil && t.receipt.Status == uint64(types.ReceiptSuccess)
 }
 
 // Failed returns whether the transaction failed
 func (t *TestTxn) Failed() bool {
-	return t.receipt.Status == uint64(types.ReceiptFailed)
+	return t.receipt == nil || t.receipt.Status == uint64(types.ReceiptFailed)
 }
 
 // Reverted returns whether the transaction failed and was reverted consuming
 // all the gas from the call
 func (t *TestTxn) Reverted() bool {
-	return t.receipt.Status == uint64(types.ReceiptFailed) && t.txn.Gas == t.receipt.GasUsed
-}
-
-// Wait waits for the transaction to be executed
-func (t *TestTxn) Wait() error {
-	tt := time.NewTimer(1 * time.Minute)
-
-	for {
-		select {
-		case <-time.After(100 * time.Millisecond):
-			receipt, err := t.client.GetTransactionReceipt(t.hash)
-			if err != nil {
-				if err.Error() != "not found" {
-					return err
-				}
-			}
-
-			if receipt != nil {
-				t.receipt = receipt
-
-				return nil
-			}
-
-		case <-tt.C:
-			return fmt.Errorf("timeout")
-		}
-	}
+	return t.Failed() && t.txn.Gas() == t.receipt.GasUsed
 }
 
 func sliceAddressToSliceString(addrs []types.Address) []string {

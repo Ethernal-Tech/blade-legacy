@@ -103,19 +103,17 @@ func TestToTransaction_Returns_V_R_S_ValuesWithoutLeading0(t *testing.T) {
 	v, _ := hex.DecodeHex(hexWithLeading0)
 	r, _ := hex.DecodeHex(hexWithLeading0)
 	s, _ := hex.DecodeHex(hexWithLeading0)
-	txn := types.NewTx(&types.LegacyTx{
-		Nonce:    0,
-		GasPrice: big.NewInt(0),
-		Gas:      0,
-		To:       nil,
-		Value:    big.NewInt(0),
-		Input:    nil,
-		V:        new(big.Int).SetBytes(v),
-		R:        new(big.Int).SetBytes(r),
-		S:        new(big.Int).SetBytes(s),
-		Hash:     types.Hash{},
-		From:     types.Address{},
-	})
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithGasPrice(big.NewInt(0)),
+		types.WithNonce(0),
+		types.WithGas(0),
+		types.WithTo(nil),
+		types.WithValue(big.NewInt(0)),
+		types.WithInput(nil),
+		types.WithSignatureValues(new(big.Int).SetBytes(v), new(big.Int).SetBytes(r), new(big.Int).SetBytes(s)),
+		types.WithHash(types.Hash{}),
+		types.WithFrom(types.Address{}),
+	))
 
 	jsonTx := toTransaction(txn, nil, nil, nil)
 
@@ -134,20 +132,16 @@ func TestToTransaction_EIP1559(t *testing.T) {
 	v, _ := hex.DecodeHex(hexWithLeading0)
 	r, _ := hex.DecodeHex(hexWithLeading0)
 	s, _ := hex.DecodeHex(hexWithLeading0)
-	txn := types.NewTx(&types.DynamicFeeTx{
-		Nonce:     0,
-		GasTipCap: big.NewInt(10),
-		GasFeeCap: big.NewInt(10),
-		Gas:       0,
-		To:        nil,
-		Value:     big.NewInt(0),
-		Input:     nil,
-		V:         new(big.Int).SetBytes(v),
-		R:         new(big.Int).SetBytes(r),
-		S:         new(big.Int).SetBytes(s),
-		Hash:      types.Hash{},
-		From:      types.Address{},
-	})
+	txn := types.NewTx(types.NewDynamicFeeTx(
+		types.WithGasTipCap(big.NewInt(10)),
+		types.WithGasFeeCap(big.NewInt(10)),
+		types.WithNonce(0),
+		types.WithGas(0),
+		types.WithValue(big.NewInt(0)),
+		types.WithSignatureValues(new(big.Int).SetBytes(v), new(big.Int).SetBytes(r), new(big.Int).SetBytes(s)),
+		types.WithHash(types.Hash{}),
+		types.WithFrom(types.Address{}),
+	))
 
 	jsonTx := toTransaction(txn, nil, nil, nil)
 
@@ -162,9 +156,12 @@ func TestToTransaction_EIP1559(t *testing.T) {
 
 func TestBlock_Copy(t *testing.T) {
 	b := &block{
-		ExtraData: []byte{0x1},
-		Miner:     []byte{0x2},
-		Uncles:    []types.Hash{{0x0, 0x1}},
+		header: header{
+			ExtraData: []byte{0x1},
+			Miner:     []byte{0x2},
+		},
+
+		Uncles: []types.Hash{{0x0, 0x1}},
 	}
 
 	bb := b.Copy()
@@ -176,7 +173,7 @@ var testsuite embed.FS
 
 func TestBlock_Encoding(t *testing.T) {
 	getBlock := func() block {
-		return block{
+		return block{header: header{
 			ParentHash:   types.Hash{0x1},
 			Sha3Uncles:   types.Hash{0x2},
 			Miner:        types.Address{0x1}.Bytes(),
@@ -194,7 +191,7 @@ func TestBlock_Encoding(t *testing.T) {
 			Nonce:        types.Nonce{10},
 			Hash:         types.Hash{0x8},
 			BaseFee:      15,
-		}
+		}}
 	}
 
 	testBlock := func(name string, b block) {

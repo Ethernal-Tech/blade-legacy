@@ -18,6 +18,7 @@ const (
 	privateKeyFlag         = "private"
 	insecureLocalStoreFlag = "insecure"
 	networkFlag            = "network"
+	jsonTLSCertFlag        = "json-tls-cert"
 	numFlag                = "num"
 	outputFlag             = "output"
 
@@ -29,8 +30,9 @@ type initParams struct {
 	accountDir    string
 	accountConfig string
 
-	generatesAccount bool
-	generatesNetwork bool
+	generatesAccount     bool
+	generatesNetwork     bool
+	generatesJSONTLSCert bool
 
 	printPrivateKey bool
 
@@ -94,6 +96,13 @@ func (ip *initParams) setFlags(cmd *cobra.Command) {
 		networkFlag,
 		true,
 		"the flag indicating whether new Network key is created",
+	)
+
+	cmd.Flags().BoolVar(
+		&ip.generatesJSONTLSCert,
+		jsonTLSCertFlag,
+		true,
+		"the flag indicating whether a new self signed TLS certificate is created for JSON RPC",
 	)
 
 	cmd.Flags().BoolVar(
@@ -171,6 +180,12 @@ func (ip *initParams) initKeys(secretsManager secrets.SecretsManager) ([]string,
 		}
 	}
 
+	if ip.generatesJSONTLSCert {
+		if err := ip.generateJSONTLSCert(secretsManager, &generated); err != nil {
+			return generated, err
+		}
+	}
+
 	return generated, nil
 }
 
@@ -203,6 +218,20 @@ func (ip *initParams) generateAccount(secretsManager secrets.SecretsManager, gen
 	}
 
 	*generated = append(*generated, secrets.ValidatorKey, secrets.ValidatorBLSKey)
+
+	return nil
+}
+
+func (ip *initParams) generateJSONTLSCert(secretsManager secrets.SecretsManager, generated *[]string) error {
+	if secretsManager.HasSecret(secrets.JSONTLSCert) && secretsManager.HasSecret(secrets.JSONTLSKey) {
+		return nil
+	}
+
+	if err := helper.InitJSONTLSCert(secretsManager); err != nil {
+		return fmt.Errorf("error initializing json tls certificate: %w", err)
+	}
+
+	*generated = append(*generated, secrets.JSONTLSCert, secrets.JSONTLSKey)
 
 	return nil
 }

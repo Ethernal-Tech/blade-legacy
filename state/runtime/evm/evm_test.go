@@ -242,9 +242,11 @@ func TestRun(t *testing.T) {
 			contract := newMockContract(tt.value, tt.gas, tt.code)
 			host := &mockHost{}
 			config := tt.config
+
 			if config == nil {
 				config = &chain.ForksInTime{}
 			}
+
 			res := evm.Run(contract, host, config)
 			assert.Equal(t, tt.expected, res)
 		})
@@ -256,6 +258,7 @@ type mockCall struct {
 	args map[string]interface{}
 }
 
+// m *mockTracer
 type mockTracer struct {
 	calls []mockCall
 }
@@ -305,6 +308,18 @@ func (m *mockTracer) ExecuteState(
 			"err":             err,
 		},
 	})
+}
+
+func (m *mockTracer) CaptureStateBre(
+	opCode, depth int,
+	ip, gas, cost uint64,
+	returnData []byte,
+	scope *runtime.ScopeContext,
+	host runtime.Host,
+	state runtime.VMState,
+	err error,
+) {
+
 }
 
 func TestRunWithTracer(t *testing.T) {
@@ -413,6 +428,7 @@ func TestRunWithTracer(t *testing.T) {
 			host := &mockHost{
 				tracer: tracer,
 			}
+
 			config := tt.config
 			if config == nil {
 				config = &chain.ForksInTime{}

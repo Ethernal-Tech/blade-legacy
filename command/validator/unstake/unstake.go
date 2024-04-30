@@ -13,7 +13,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
 )
 
 var params unstakeParams
@@ -54,6 +53,13 @@ func setFlags(cmd *cobra.Command) {
 		"amount to unstake from validator",
 	)
 
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		helper.TxTimeoutFlag,
+		150*time.Second,
+		helper.TxTimeoutDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 }
 
@@ -73,7 +79,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPC),
-		txrelayer.WithReceiptTimeout(150*time.Millisecond))
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		return err
 	}
@@ -87,11 +93,10 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	txn := &ethgo.Transaction{
-		From:  validatorAccount.Ecdsa.Address(),
-		Input: encoded,
-		To:    (*ethgo.Address)(&contracts.StakeManagerContract),
-	}
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(validatorAccount.Ecdsa.Address()),
+		types.WithInput(encoded),
+		types.WithTo(&contracts.StakeManagerContract)))
 
 	receipt, err := txRelayer.SendTransaction(txn, validatorAccount.Ecdsa)
 	if err != nil {

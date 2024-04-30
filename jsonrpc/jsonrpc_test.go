@@ -11,7 +11,7 @@ import (
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/require"
 
-	"github.com/0xPolygon/polygon-edge/helper/tests"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/versioning"
 )
 
@@ -103,7 +103,7 @@ func newTestJSONRPC(t *testing.T) (*JSONRPC, error) {
 
 	store := newMockStore()
 
-	port, err := tests.GetFreePort()
+	port, err := common.GetFreePort()
 	require.NoError(t, err, "Unable to fetch free port, %v", err)
 
 	config := &Config{

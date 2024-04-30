@@ -13,7 +13,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
 )
 
 var (
@@ -85,6 +84,13 @@ func setFlags(cmd *cobra.Command) {
 		"amount to premine as a staked balance",
 	)
 
+	cmd.Flags().DurationVar(
+		&params.txTimeout,
+		helper.TxTimeoutFlag,
+		150*time.Second,
+		helper.TxTimeoutDesc,
+	)
+
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
@@ -108,7 +114,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.jsonRPC),
-		txrelayer.WithReceiptTimeout(150*time.Millisecond))
+		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		return err
 	}
@@ -140,7 +146,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	bladeManagerAddr := ethgo.Address(types.StringToAddress(params.bladeManager))
+	bladeManagerAddr := types.StringToAddress(params.bladeManager)
 	txn := bridgeHelper.CreateTransaction(ownerKey.Address(), &bladeManagerAddr, premineInput, nil, false)
 
 	receipt, err = txRelayer.SendTransaction(txn, ownerKey)

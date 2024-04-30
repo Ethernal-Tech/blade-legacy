@@ -12,19 +12,23 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/blockchain/storage"
-	"github.com/0xPolygon/polygon-edge/blockchain/storage/leveldb"
-	"github.com/0xPolygon/polygon-edge/blockchain/storage/memory"
-	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
-	"github.com/0xPolygon/polygon-edge/forkmanager"
-	"github.com/0xPolygon/polygon-edge/gasprice"
+	"github.com/hashicorp/go-hclog"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"google.golang.org/grpc"
 
 	"github.com/0xPolygon/polygon-edge/archive"
 	"github.com/0xPolygon/polygon-edge/blockchain"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/leveldb"
+	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/memory"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
+	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/forkmanager"
+	"github.com/0xPolygon/polygon-edge/gasprice"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/progress"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
@@ -38,10 +42,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/txpool"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/0xPolygon/polygon-edge/validate"
-	"github.com/hashicorp/go-hclog"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"google.golang.org/grpc"
+	"github.com/0xPolygon/polygon-edge/versioning"
 )
 
 var (
@@ -145,7 +146,21 @@ func NewServer(config *Config) (*Server, error) {
 		restoreProgression: progress.NewProgressionWrapper(progress.ChainSyncRestore),
 	}
 
-	m.logger.Info("Data dir", "path", config.DataDir)
+	m.logger.Info("data dir", "path", config.DataDir)
+	m.logger.Info("version metadata",
+		"version", versioning.Version,
+		"commit", versioning.Commit,
+		"branch", versioning.Branch,
+		"build time", versioning.BuildTime)
+
+	if m.logger.IsDebug() {
+		chainConfigJSON, err := json.MarshalIndent(config.Chain, "", "\t")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal chain config to JSON: %w", err)
+		}
+
+		m.logger.Debug(fmt.Sprintf("chain configuration %s", string(chainConfigJSON)))
+	}
 
 	var dirPaths = []string{
 		"blockchain",
@@ -167,7 +182,7 @@ func NewServer(config *Config) (*Server, error) {
 	}
 
 	// Set up datadog profiler
-	if ddErr := m.enableDataDogProfiler(); err != nil {
+	if ddErr := m.enableDataDogProfiler(); ddErr != nil {
 		m.logger.Error("DataDog profiler setup failed", "err", ddErr.Error())
 	}
 
@@ -202,12 +217,21 @@ func NewServer(config *Config) (*Server, error) {
 	st := itrie.NewState(stateStorage)
 	m.state = st
 
-	m.executor = state.NewExecutor(config.Chain.Params, st, logger)
+	m.executor = state.NewExecutor(config.Chain.Params, st, logger.Named("executor"))
 
 	// custom write genesis hook per consensus engine
 	engineName := m.config.Chain.Params.GetEngine()
 	if factory, exists := genesisCreationFactory[ConsensusType(engineName)]; exists {
 		m.executor.GenesisPostHook = factory(m.config.Chain, engineName)
+	}
+
+	if factory, exists := isL1OriginatedTokenCheckFactory[ConsensusType(engineName)]; exists {
+		isL1OriginatedToken, err := factory(m.config.Chain.Params)
+		if err != nil {
+			return nil, err
+		}
+
+		m.executor.IsL1OriginatedToken = isL1OriginatedToken
 	}
 
 	// apply allow list contracts deployer genesis data
@@ -285,10 +309,10 @@ func NewServer(config *Config) (*Server, error) {
 	txSigner := crypto.NewSigner(config.Chain.Params.Forks.At(0), uint64(m.config.Chain.Params.ChainID))
 
 	// create storage instance for blockchain
-	var db storage.Storage
+	var db *storagev2.Storage
 	{
 		if m.config.DataDir == "" {
-			db, err = memory.NewMemoryStorage(nil)
+			db, err = memory.NewMemoryStorage()
 			if err != nil {
 				return nil, err
 			}
@@ -342,6 +366,7 @@ func NewServer(config *Config) (*Server, error) {
 				PriceLimit:         m.config.PriceLimit,
 				MaxAccountEnqueued: m.config.MaxAccountEnqueued,
 				ChainID:            big.NewInt(m.config.Chain.Params.ChainID),
+				PeerID:             m.network.AddrInfo().ID,
 			},
 		)
 		if err != nil {
@@ -868,6 +893,9 @@ func (s *Server) setupJSONRPC(txSigner crypto.TxSigner) error {
 		BlockRangeLimit:          s.config.JSONRPC.BlockRangeLimit,
 		ConcurrentRequestsDebug:  s.config.JSONRPC.ConcurrentRequestsDebug,
 		WebSocketReadLimit:       s.config.JSONRPC.WebSocketReadLimit,
+		UseTLS:                   s.config.UseTLS,
+		TLSCertFile:              s.config.TLSCertFile,
+		TLSKeyFile:               s.config.TLSKeyFile,
 		SecretsManager:           s.secretsManager,
 		TxSigner:                 txSigner,
 	}

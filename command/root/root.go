@@ -10,6 +10,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/bridge"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/command/helper"
+	"github.com/0xPolygon/polygon-edge/command/loadtest"
 	"github.com/0xPolygon/polygon-edge/command/mint"
 	"github.com/0xPolygon/polygon-edge/command/monitor"
 	"github.com/0xPolygon/polygon-edge/command/peers"
@@ -57,6 +58,7 @@ func (rc *RootCommand) registerSubCommands() {
 		regenesis.GetCommand(),
 		mint.GetCommand(),
 		validator.GetCommand(),
+		loadtest.GetCommand(),
 	)
 }
 

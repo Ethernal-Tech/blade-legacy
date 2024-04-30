@@ -109,6 +109,7 @@ type VMTracer interface {
 		err error,
 		host Host,
 	)
+	// TODO: REMOVE
 	CaptureStateBre(
 		opCode, depth int,
 		ip, gas, cost uint64,
@@ -128,6 +129,7 @@ type ExecutionResult struct {
 	GasUsed     uint64        // Total gas used as result of execution
 	Err         error         // Any error encountered during the execution, listed below
 	Address     types.Address // Contract address
+	AccessList  *AccessList   // Access list
 }
 
 func (r *ExecutionResult) Succeeded() bool { return r.Err == nil }
