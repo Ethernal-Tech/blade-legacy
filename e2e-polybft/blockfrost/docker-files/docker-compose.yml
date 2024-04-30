@@ -1,0 +1,120 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:14.10-alpine
+    environment:
+      - POSTGRES_LOGGING=true
+      - POSTGRES_DB_FILE=/run/secrets/postgres_db
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - POSTGRES_USER_FILE=/run/secrets/postgres_user
+    secrets:
+      - postgres_password
+      - postgres_user
+      - postgres_db
+    ports:
+      - ${POSTGRES_PORT:-5432}:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    restart: on-failure
+    healthcheck:
+      # Use pg_isready to check postgres is running. Substitute different
+      # user `postgres` if you've setup differently to config/pgpass-mainnet
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: ${POSTGRES_ARGS:--c maintenance_work_mem=1GB -c max_parallel_maintenance_workers=4}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+  db-sync:
+    image: ghcr.io/intersectmbo/cardano-db-sync:13.2.0.1
+    environment:
+      - DISABLE_LEDGER=${DISABLE_LEDGER:-}
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - RESTORE_SNAPSHOT=${RESTORE_SNAPSHOT:-}
+      - RESTORE_RECREATE_DB=N
+      - EXTRA_DB_SYNC_ARGS=--config /config/config.json --socket-path /node-data/node-spo1/node.socket
+    depends_on:
+      postgres:
+        condition: service_healthy
+    secrets:
+      - postgres_password
+      - postgres_user
+      - postgres_db
+    volumes:
+      - ../../e2e-docker-tmp/cluster-1:/node-data
+      - db-sync-data:/var/lib/cexplorer
+      - ./config/dbsync:/config
+    entrypoint: [
+      "/nix/store/4c3sz8s85sk74vl0h6r9pgqjz838bhg8-entrypoint/bin/entrypoint",
+      "--config",
+      "/config/config.json",
+      "--socket-path",
+      "/node-data/node-spo1/node.socket"
+     ]
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+  blockfrost:
+    image: blockfrost/backend-ryo:v1.7.0
+    environment:
+      - BLOCKFROST_CONFIG_SERVER_LISTEN_ADDRESS=0.0.0.0
+      - PGPASSWORD_FILE=/run/secrets/postgres_password
+      - NODE_ENV=testnet
+      - BLOCKFROST_CONFIG_SERVER_PORT=3000
+      - BLOCKFROST_CONFIG_SERVER_DEBUG=true
+      - BLOCKFROST_CONFIG_SERVER_PROMETHEUS_METRICS=false
+      - BLOCKFROST_CONFIG_DBSYNC_HOST=postgres
+      - BLOCKFROST_CONFIG_DBSYNC_USER_FILE=/run/secrets/postgres_user
+      - BLOCKFROST_CONFIG_DBSYNC_DATABASE_FILE=/run/secrets/postgres_db
+      - BLOCKFROST_CONFIG_DBSYNC_MAX_CONN=10
+      - BLOCKFROST_CONFIG_NETWORK=testnet
+      - BLOCKFROST_CONFIG_TOKEN_REGISTRY_URL=https://tokens.cardano.org
+    depends_on:
+      db-sync:
+        condition: service_started
+    entrypoint:
+      - '/nix/store/7q1b1bsmxi91zci6g8714rcljl620y7f-bash-5.2-p15/bin/bash'
+      - '-c'
+      - |
+        export PATH=$$PATH:/nix/store/f11ibsj5vmqcy8ihfa8mzvpfs4af7cw5-coreutils-9.1/bin;
+        export PGPASSWORD=$$(cat $$PGPASSWORD_FILE);
+        export BLOCKFROST_CONFIG_DBSYNC_USER=$$(cat $$BLOCKFROST_CONFIG_DBSYNC_USER_FILE);
+        export BLOCKFROST_CONFIG_DBSYNC_DATABASE=$$(cat $$BLOCKFROST_CONFIG_DBSYNC_DATABASE_FILE);
+        /nix/store/y52li35j2ldsh5ax4xzq8zdnr3hpb3rc-blockfrost-backend-ryo/bin/blockfrost-backend-ryo
+    ports:
+      - ${POSTGRES_PORT:-3000}:3000
+    secrets:
+      - postgres_password
+      - postgres_user
+      - postgres_db
+    volumes:
+      - ./config/blockfrost:/app/config
+    restart: on-failure
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+secrets:
+  postgres_db:
+    file: ./secrets/postgres_db
+  postgres_password:
+    file: ./secrets/postgres_password
+  postgres_user:
+    file: ./secrets/postgres_user
+
+volumes:
+  db-sync-data:
+  postgres:

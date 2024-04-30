@@ -26,7 +26,7 @@ import (
 type TestBridge struct {
 	t             *testing.T
 	clusterConfig *TestClusterConfig
-	node          *node
+	node          *Node
 }
 
 func NewTestBridge(t *testing.T, clusterConfig *TestClusterConfig) (*TestBridge, error) {
@@ -55,7 +55,7 @@ func (t *TestBridge) Start() error {
 
 	stdout := t.clusterConfig.GetStdout("bridge")
 
-	bridgeNode, err := newNode(t.clusterConfig.Binary, args, stdout)
+	bridgeNode, err := NewNode(t.clusterConfig.Binary, args, stdout)
 	if err != nil {
 		return err
 	}

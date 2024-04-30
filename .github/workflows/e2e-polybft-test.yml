@@ -37,6 +37,8 @@ jobs:
         run: sudo chmod -R 755 /etc/ssl/private
       - name: Update certificate key file permissions
         run: sudo chmod 644 /etc/ssl/private/localhost.key
+      - name: Install Cardano tools
+        uses: Qafana/cardano-tools-action@v1
       - name: Check certificate key permissions
         run: ls -l /etc/ssl/private/localhost.key
       - name: Run tests

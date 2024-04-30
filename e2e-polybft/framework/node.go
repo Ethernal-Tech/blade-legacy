@@ -7,14 +7,14 @@ import (
 	"sync/atomic"
 )
 
-type node struct {
+type Node struct {
 	shuttingDown atomic.Bool
 	cmd          *exec.Cmd
 	doneCh       chan struct{}
 	exitResult   *exitResult
 }
 
-func newNode(binary string, args []string, stdout io.Writer) (*node, error) {
+func NewNode(binary string, args []string, stdout io.Writer) (*Node, error) {
 	cmd := exec.Command(binary, args...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stdout
@@ -23,7 +23,7 @@ func newNode(binary string, args []string, stdout io.Writer) (*node, error) {
 		return nil, err
 	}
 
-	n := &node{
+	n := &Node{
 		cmd:    cmd,
 		doneCh: make(chan struct{}),
 	}
@@ -32,15 +32,15 @@ func newNode(binary string, args []string, stdout io.Writer) (*node, error) {
 	return n, nil
 }
 
-func (n *node) ExitResult() *exitResult {
+func (n *Node) ExitResult() *exitResult {
 	return n.exitResult
 }
 
-func (n *node) Wait() <-chan struct{} {
+func (n *Node) Wait() <-chan struct{} {
 	return n.doneCh
 }
 
-func (n *node) run() {
+func (n *Node) run() {
 	err := n.cmd.Wait()
 
 	n.exitResult = &exitResult{
@@ -51,11 +51,11 @@ func (n *node) run() {
 	n.cmd = nil
 }
 
-func (n *node) IsShuttingDown() bool {
+func (n *Node) IsShuttingDown() bool {
 	return n.shuttingDown.Load()
 }
 
-func (n *node) Stop() error {
+func (n *Node) Stop() error {
 	if n.cmd == nil {
 		// the server is already stopped
 		return nil

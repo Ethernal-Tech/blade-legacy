@@ -53,7 +53,6 @@ func (c *cardanoVerifySignaturePrecompile) run(input []byte, caller types.Addres
 		}
 	}
 
-	signature := []byte(nil)
 	rawTxOrMessage, witnessOrSignature, verifyingKey := dataBytes[0], dataBytes[1], dataBytes[2]
 
 	isTx, ok := data["3"].(bool)
@@ -62,7 +61,7 @@ func (c *cardanoVerifySignaturePrecompile) run(input []byte, caller types.Addres
 	}
 
 	// second parameter can be witness
-	signature, _, err = cardano_wallet.TxWitnessRaw(witnessOrSignature).GetSignatureAndVKey()
+	signature, _, err := cardano_wallet.TxWitnessRaw(witnessOrSignature).GetSignatureAndVKey()
 	if err != nil {
 		signature = witnessOrSignature
 	}
@@ -82,7 +81,7 @@ func (c *cardanoVerifySignaturePrecompile) run(input []byte, caller types.Addres
 
 	// golang unexpected behaviour fix?!?!
 	// `switch cardano_wallet.VerifyMessage(message, verifyingKey, signature)` acts strange
-	switch err = cardano_wallet.VerifyMessage(rawTxOrMessage, verifyingKey, signature); err {
+	switch err = cardano_wallet.VerifyMessage(rawTxOrMessage, verifyingKey, signature); err { //nolint:errorlint
 	case nil:
 		return abiBoolTrue, nil
 	case cardano_wallet.ErrInvalidSignature:

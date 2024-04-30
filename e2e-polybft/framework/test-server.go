@@ -60,7 +60,7 @@ type TestServer struct {
 	address       types.Address
 	clusterConfig *TestClusterConfig
 	config        *TestServerConfig
-	node          *node
+	node          *Node
 }
 
 func (t *TestServer) GrpcAddr() string {
@@ -195,7 +195,7 @@ func (t *TestServer) Start() {
 	// Start the server
 	stdout := t.clusterConfig.GetStdout(t.config.Name)
 
-	node, err := newNode(t.clusterConfig.Binary, args, stdout)
+	node, err := NewNode(t.clusterConfig.Binary, args, stdout)
 	if err != nil {
 		t.t.Fatal(err)
 	}

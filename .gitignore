@@ -32,3 +32,5 @@ node_modules
 vendor/
 coverage.out
 
+e2e-docker-tmp
+e2e-bridge-data-tmp
