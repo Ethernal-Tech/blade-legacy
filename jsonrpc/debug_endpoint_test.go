@@ -371,8 +371,8 @@ func TestTraceBlockByHash(t *testing.T) {
 	}
 }
 
+// FIXME: This test fails
 func TestTraceBlock(t *testing.T) {
-	// t.Skip("FIXME")
 	t.Parallel()
 
 	blockBytes := testLatestBlock.MarshalRLP()
