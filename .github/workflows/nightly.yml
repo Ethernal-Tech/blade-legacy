@@ -5,29 +5,11 @@ on: # yamllint disable-line rule:truthy
     # * is a special character in YAML so you have to quote this string
     - cron: '0 0 * * *'
   workflow_dispatch:
-    inputs:
-      force_run:
-        description: Force Run
-        type: boolean
-        default: false
 
 jobs:
-  check:
-    name: Check new commits
-    runs-on: ubuntu-latest
-    outputs:
-      new_commit_count: ${{ steps.get_new_commits.outputs.commit_count }}
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4.1.1
-      - name: Get new commits
-        id: get_new_commits
-        run: echo "commit_count=$(git log --oneline --since '24 hours ago' | wc -l | tr -d ' ')" >> $GITHUB_OUTPUT
   ci:
     name: CI
     uses: ./.github/workflows/ci.yml
-    needs: check
-    if: (needs.check.outputs.new_commit_count > 0 || inputs.force_run)
     with:
       build_blade: true
       lint: true
@@ -40,8 +22,6 @@ jobs:
   deploy_network:
     name: Deploy Network
     uses: ./.github/workflows/deploy-network.yml
-    needs: check
-    if: (needs.check.outputs.new_commit_count > 0 || inputs.force_run)
     with:
       environment: nightly
       block_gas_limit: "200000000"
@@ -68,7 +48,7 @@ jobs:
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
-      receipts_timeout: "30s"
+      receipts_timeout: "2m0s"
       batch_size: "10000"
       notification: false
     secrets:
@@ -92,7 +72,7 @@ jobs:
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
-      receipts_timeout: "30s"
+      receipts_timeout: "2m0s"
       batch_size: "10000"
       notification: false
     secrets:
@@ -116,7 +96,7 @@ jobs:
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
-      receipts_timeout: "30s"
+      receipts_timeout: "2m0s"
       batch_size: "10000"
       notification: false
     secrets:
@@ -131,8 +111,8 @@ jobs:
   destroy_network:
     name: Destroy Network
     uses: ./.github/workflows/destroy-network.yml
-    needs: [check, deploy_network, load_test_eoa, load_test_erc20, load_test_erc721]
-    if: (always() && (needs.check.outputs.new_commit_count > 0 || inputs.force_run))
+    needs: [deploy_network, load_test_eoa, load_test_erc20, load_test_erc721]
+    if: always()
     with:
       environment: nightly
       logs: true
@@ -187,7 +167,7 @@ jobs:
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
-      receipts_timeout: "30s"
+      receipts_timeout: "2m0s"
       batch_size: "10000"
       total_time: ${{ needs.load_test_eoa.outputs.total_time }}
       total_txs: ${{ needs.load_test_eoa.outputs.total_txs }}
@@ -213,7 +193,7 @@ jobs:
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
-      receipts_timeout: "30s"
+      receipts_timeout: "2m0s"
       batch_size: "10000"
       total_time: ${{ needs.load_test_erc20.outputs.total_time }}
       total_txs: ${{ needs.load_test_erc20.outputs.total_txs }}
@@ -239,7 +219,7 @@ jobs:
       txs_per_user: "10000"
       txpool_timeout: "60m0s"
       wait_txpool: false
-      receipts_timeout: "30s"
+      receipts_timeout: "2m0s"
       batch_size: "10000"
       total_time: ${{ needs.load_test_erc721.outputs.total_time }}
       total_txs: ${{ needs.load_test_erc721.outputs.total_txs }}
