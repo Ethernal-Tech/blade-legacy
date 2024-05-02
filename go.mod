@@ -43,7 +43,7 @@ require (
 	github.com/umbracle/go-eth-bn256 v0.0.0-20230125114011-47cb310d9b0b
 	github.com/valyala/fastjson v1.6.4
 	go.etcd.io/bbolt v1.3.9
-	golang.org/x/crypto v0.21.0
+	golang.org/x/crypto v0.22.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/tools v0.19.0
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de
