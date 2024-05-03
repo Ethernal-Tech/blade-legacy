@@ -9,7 +9,7 @@ require (
 	github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04
 	github.com/armon/go-metrics v0.4.1
 	github.com/aws/aws-sdk-go v1.51.11
-	github.com/btcsuite/btcd/btcec/v2 v2.3.2
+	github.com/btcsuite/btcd/btcec/v2 v2.3.3
 	github.com/docker/docker v24.0.9+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
@@ -43,7 +43,7 @@ require (
 	github.com/umbracle/go-eth-bn256 v0.0.0-20230125114011-47cb310d9b0b
 	github.com/valyala/fastjson v1.6.4
 	go.etcd.io/bbolt v1.3.9
-	golang.org/x/crypto v0.21.0
+	golang.org/x/crypto v0.22.0
 	golang.org/x/sync v0.6.0
 	golang.org/x/tools v0.19.0
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de
