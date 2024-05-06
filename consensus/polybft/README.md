@@ -35,7 +35,7 @@ In the following text, we will explain how to start a blade chain in different c
     ```
 
 ## Blade as L1 (without Bridge)
-Just run blade cluster (start each node definied in the initial validator set). For example:
+Just run blade cluster (start each node defined in the initial validator set). For example:
 
     ```bash
     $ blade server --data-dir ./test-chain-1 --chain genesis.json --grpc-address :5001 --libp2p :30301 --jsonrpc :9545 \
