@@ -220,16 +220,16 @@ func (cb *TestCardanoBridge) cardanoPrepareKeys() (err error) {
 			return err
 		}
 
-		cb.primeMultisigKeys[idx] = primeWallet.Multisig.VerifyingKey.CborHex
-		cb.primeMultisigFeeKeys[idx] = primeWallet.MultisigFee.VerifyingKey.CborHex
+		cb.primeMultisigKeys[idx] = primeWallet.Multisig.VerifyingKey.Hex
+		cb.primeMultisigFeeKeys[idx] = primeWallet.MultisigFee.VerifyingKey.Hex
 
 		vectorWallet, err := validator.GetCardanoWallet(ChainIDVector)
 		if err != nil {
 			return err
 		}
 
-		cb.vectorMultisigKeys[idx] = vectorWallet.Multisig.VerifyingKey.CborHex
-		cb.vectorMultisigFeeKeys[idx] = vectorWallet.MultisigFee.VerifyingKey.CborHex
+		cb.vectorMultisigKeys[idx] = vectorWallet.Multisig.VerifyingKey.Hex
+		cb.vectorMultisigFeeKeys[idx] = vectorWallet.MultisigFee.VerifyingKey.Hex
 	}
 
 	return err

@@ -8,6 +8,7 @@ import (
 	"path"
 
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
+	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 const (
@@ -20,15 +21,9 @@ const (
 	RelayerConfigFileName             = "relayer_config.json"
 )
 
-type CardanoWalletKey struct {
-	Type        string `json:"type"`
-	Description string `json:"description"`
-	CborHex     string `json:"cborHex"`
-}
-
 type CardanoWalletSecret struct {
-	SigningKey   CardanoWalletKey
-	VerifyingKey CardanoWalletKey
+	SigningKey   wallet.Key
+	VerifyingKey wallet.Key
 }
 
 type CardanoWallet struct {
@@ -88,7 +83,7 @@ func (cv *TestCardanoValidator) GetCardanoWallet(chainID string) (*CardanoWallet
 	multisigSigningPath := path.Join(
 		cv.GetCardanoWalletsDir(), chainID, "multisig", "payment.skey")
 
-	multisigSigning, err := LoadJSON[CardanoWalletKey](multisigSigningPath)
+	multisigSigning, err := wallet.NewKey(multisigSigningPath)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +91,7 @@ func (cv *TestCardanoValidator) GetCardanoWallet(chainID string) (*CardanoWallet
 	multisigVerifyingPath := path.Join(
 		cv.GetCardanoWalletsDir(), chainID, "multisig", "payment.vkey")
 
-	multisigVerifying, err := LoadJSON[CardanoWalletKey](multisigVerifyingPath)
+	multisigVerifying, err := wallet.NewKey(multisigVerifyingPath)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +99,7 @@ func (cv *TestCardanoValidator) GetCardanoWallet(chainID string) (*CardanoWallet
 	multisigFeeSigningPath := path.Join(
 		cv.GetCardanoWalletsDir(), chainID, "multisigfee", "payment.skey")
 
-	multisigFeeSigning, err := LoadJSON[CardanoWalletKey](multisigFeeSigningPath)
+	multisigFeeSigning, err := wallet.NewKey(multisigFeeSigningPath)
 	if err != nil {
 		return nil, err
 	}
@@ -112,14 +107,14 @@ func (cv *TestCardanoValidator) GetCardanoWallet(chainID string) (*CardanoWallet
 	multisigFeeVerifyingPath := path.Join(
 		cv.GetCardanoWalletsDir(), chainID, "multisigfee", "payment.vkey")
 
-	multisigFeeVerifying, err := LoadJSON[CardanoWalletKey](multisigFeeVerifyingPath)
+	multisigFeeVerifying, err := wallet.NewKey(multisigFeeVerifyingPath)
 	if err != nil {
 		return nil, err
 	}
 
 	return &CardanoWallet{
-		Multisig:    CardanoWalletSecret{SigningKey: *multisigSigning, VerifyingKey: *multisigVerifying},
-		MultisigFee: CardanoWalletSecret{SigningKey: *multisigFeeSigning, VerifyingKey: *multisigFeeVerifying},
+		Multisig:    CardanoWalletSecret{SigningKey: multisigSigning, VerifyingKey: multisigVerifying},
+		MultisigFee: CardanoWalletSecret{SigningKey: multisigFeeSigning, VerifyingKey: multisigFeeVerifying},
 	}, nil
 }
 
