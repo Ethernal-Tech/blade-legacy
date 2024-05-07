@@ -13,24 +13,14 @@ import (
 	"github.com/fxamacker/cbor/v2"
 )
 
-func PopulateAddress(ctx context.Context,
+func SendTx(ctx context.Context,
 	txProvider wallet.ITxProvider,
-	dirPath string,
+	cardanoWallet wallet.IWallet,
 	amount uint64,
 	receiver string,
-	testnetMagic uint,
-	keyID uint,
-	nodesCnt uint) error {
-	if keyID < 1 && keyID > nodesCnt {
-		return fmt.Errorf("invalid key id")
-	}
-
-	genesisWallet, err := GetGenesisWalletFromCluster(dirPath, keyID)
-	if err != nil {
-		return err
-	}
-
-	genesisAddress, _, err := wallet.GetWalletAddress(genesisWallet, testnetMagic)
+	testnetMagic int,
+) error {
+	cardanoWalletAddr, _, err := wallet.GetWalletAddress(cardanoWallet, uint(testnetMagic))
 	if err != nil {
 		return err
 	}
@@ -52,7 +42,7 @@ func PopulateAddress(ctx context.Context,
 		},
 	}
 
-	utxos, err := txProvider.GetUtxos(ctx, genesisAddress)
+	utxos, err := txProvider.GetUtxos(ctx, cardanoWalletAddr)
 	if err != nil {
 		return err
 	}
@@ -69,13 +59,13 @@ func PopulateAddress(ctx context.Context,
 	}
 	sendingAmount := utxos[0].Amount
 
-	rawTx, txHash, err := CreateTx(testnetMagic, protocolParams, qtd.Slot+TTLSlotNumberInc, []byte{},
-		outputs, inputs, genesisAddress, sendingAmount, amount)
+	rawTx, txHash, err := CreateTx(uint(testnetMagic), protocolParams, qtd.Slot+TTLSlotNumberInc, []byte{},
+		outputs, inputs, cardanoWalletAddr, sendingAmount, amount)
 	if err != nil {
 		return err
 	}
 
-	signedTx, err := wallet.SignTx(rawTx, txHash, genesisWallet)
+	signedTx, err := wallet.SignTx(rawTx, txHash, cardanoWallet)
 	if err != nil {
 		return err
 	}

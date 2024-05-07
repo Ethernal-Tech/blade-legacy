@@ -9,7 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/e2e-polybft/blockfrost"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/cardanofw"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
@@ -72,7 +71,7 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 
 			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
 
-			errors[id] = blockfrost.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*120)
+			errors[id] = cardanofw.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*120)
 			t.Run("simple send", func(t *testing.T) {
 				newWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(cluster.Config.Dir("keys")), true)
 				if checkAndSetError(err) {
@@ -89,16 +88,20 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 
 				sendAmount := uint64(1000000)
 
-				err = cardanofw.PopulateAddress(ctx, txProvider, cluster.Config.TmpDir, sendAmount, receiver, uint(cluster.Config.NetworkMagic), 1, clusterCnt)
+				genesisWallet, err := cardanofw.GetGenesisWalletFromCluster(cluster.Config.TmpDir, 1)
 				if checkAndSetError(err) {
 					return
 				}
 
-				cmpHandler := func(val *big.Int) bool {
-					return val.Cmp(new(big.Int).SetUint64(sendAmount)) >= 0
+				err = cardanofw.SendTx(ctx, txProvider, genesisWallet,
+					sendAmount, receiver, cluster.Config.NetworkMagic)
+				if checkAndSetError(err) {
+					return
 				}
 
-				err = wallet.WaitForAmount(context.Background(), txProvider, receiver, cmpHandler, 10, time.Second*60)
+				err = wallet.WaitForAmount(context.Background(), txProvider, receiver, func(val *big.Int) bool {
+					return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
+				}, 60, time.Second*2)
 				if checkAndSetError(err) {
 					return
 				}
