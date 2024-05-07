@@ -101,14 +101,14 @@ func (cb *TestCardanoBridge) StopValidators() {
 
 func (cb *TestCardanoBridge) RegisterChains(
 	primeTokenSupply *big.Int,
-	primeBlockfrostURL string,
+	primeOgmiosURL string,
 	vectorTokenSupply *big.Int,
-	vectorBlockfrostURL string,
+	vectorOgmiosURL string,
 ) (err error) {
 	for _, validator := range cb.validators {
 		err = validator.RegisterChain(
 			ChainIDPrime, cb.PrimeMultisigAddr, cb.PrimeMultisigFeeAddr,
-			primeTokenSupply, primeBlockfrostURL,
+			primeTokenSupply, primeOgmiosURL,
 		)
 		if err != nil {
 			return err
@@ -116,7 +116,7 @@ func (cb *TestCardanoBridge) RegisterChains(
 
 		err = validator.RegisterChain(
 			ChainIDVector, cb.VectorMultisigAddr, cb.VectorMultisigFeeAddr,
-			vectorTokenSupply, vectorBlockfrostURL,
+			vectorTokenSupply, vectorOgmiosURL,
 		)
 		if err != nil {
 			return err
@@ -129,10 +129,10 @@ func (cb *TestCardanoBridge) RegisterChains(
 func (cb *TestCardanoBridge) GenerateConfigs(
 	primeNetworkAddress string,
 	primeNetworkMagic int,
-	primeBlockfrostURL string,
+	primeOgmiosURL string,
 	vectorNetworkAddress string,
 	vectorNetworkMagic int,
-	vectorBlockfrostURL string,
+	vectorOgmiosURL string,
 	apiPortStart int,
 	apiKey string,
 ) (err error) {
@@ -140,10 +140,10 @@ func (cb *TestCardanoBridge) GenerateConfigs(
 		err = validator.GenerateConfigs(
 			primeNetworkAddress,
 			primeNetworkMagic,
-			primeBlockfrostURL,
+			primeOgmiosURL,
 			vectorNetworkAddress,
 			vectorNetworkMagic,
-			vectorBlockfrostURL,
+			vectorOgmiosURL,
 			apiPortStart+idx,
 			apiKey,
 		)

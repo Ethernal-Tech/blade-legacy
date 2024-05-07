@@ -46,9 +46,9 @@ func TestE2E_CardanoBridgeTest(t *testing.T) {
 		// need params for it to work properly
 		require.NoError(t, cb.RegisterChains(
 			big.NewInt(1000),
-			"http://testPrimeBFUrl",
+			"http://testPrimeOgmiosUrl",
 			big.NewInt(1000),
-			"http://testVectorBFUrl",
+			"http://testVectorOgmiosUrl",
 		))
 	*/
 
@@ -56,10 +56,10 @@ func TestE2E_CardanoBridgeTest(t *testing.T) {
 	require.NoError(t, cb.GenerateConfigs(
 		"http://prime_network_address",
 		NetworkMagicPrime,
-		"http://testPrimeBFUrl",
+		"http://testPrimeOgmiosUrl",
 		"http://vector_network_address",
 		NetworkMagicVector,
-		"http://testVectorBFUrl",
+		"http://testVectorOgmiosUrl",
 		40000,
 		"test_api_key",
 	))

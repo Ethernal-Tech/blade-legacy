@@ -123,7 +123,7 @@ func (cv *TestCardanoValidator) RegisterChain(
 	multisigAddr string,
 	multisigFeeAddr string,
 	tokenSupply *big.Int,
-	blockfrostURL string,
+	ogmiosURL string,
 ) error {
 	return RunCommand(ResolveApexBridgeBinary(), []string{
 		"register-chain",
@@ -133,7 +133,7 @@ func (cv *TestCardanoValidator) RegisterChain(
 		"--addr", multisigAddr,
 		"--addr-fee", multisigFeeAddr,
 		"--token-supply", fmt.Sprint(tokenSupply),
-		"--block-frost", blockfrostURL,
+		"--ogmios", ogmiosURL,
 		"--bridge-url", cv.server.JSONRPCAddr(),
 		"--bridge-addr", BridgeSCAddr,
 	}, os.Stdout)
@@ -142,10 +142,10 @@ func (cv *TestCardanoValidator) RegisterChain(
 func (cv *TestCardanoValidator) GenerateConfigs(
 	primeNetworkAddress string,
 	primeNetworkMagic int,
-	primeBlockfrostURL string,
+	primeOgmiosURL string,
 	vectorNetworkAddress string,
 	vectorNetworkMagic int,
-	vectorBlockfrostURL string,
+	vectorOgmiosURL string,
 	apiPort int,
 	apiKey string,
 ) error {
@@ -159,11 +159,11 @@ func (cv *TestCardanoValidator) GenerateConfigs(
 		"--prime-keys-dir", path.Join(cv.GetCardanoWalletsDir(), ChainIDPrime),
 		"--prime-network-address", primeNetworkAddress,
 		"--prime-network-magic", fmt.Sprint(primeNetworkMagic),
-		"--prime-blockfrost-url", primeBlockfrostURL,
+		"--prime-ogmios-url", primeOgmiosURL,
 		"--vector-keys-dir", path.Join(cv.GetCardanoWalletsDir(), ChainIDVector),
 		"--vector-network-address", vectorNetworkAddress,
 		"--vector-network-magic", fmt.Sprint(vectorNetworkMagic),
-		"--vector-blockfrost-url", vectorBlockfrostURL,
+		"--vector-ogmios-url", vectorOgmiosURL,
 		"--bridge-node-url", cv.server.JSONRPCAddr(),
 		"--bridge-sc-address", BridgeSCAddr,
 		"--logs-path", path.Join(cv.dataDirPath, BridgingLogsDir),
