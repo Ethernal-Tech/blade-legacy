@@ -7,68 +7,44 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/cardanofw"
-	"github.com/stretchr/testify/require"
 )
 
 func TestE2E_CardanoBridgeTest(t *testing.T) {
 	const (
 		dataDir = "../../e2e-bridge-data-tmp"
 
-		validatorsNum = 4
-		epochSize     = 5
+		bladeValidatorsNum = 4
+		bladeEpochSize     = 5
 
-		NetworkMagicPrime  = 142
-		NetworkMagicVector = 242
+		primeNetworkAddress = "http://prime_network_address"
+		primeNetworkMagic   = 142
+		primeOgmiosURL      = "http://testPrimeOgmiosUrl"
+
+		vectorNetworkAddress = "http://vector_network_address"
+		vectorNetworkMagic   = 242
+		vectorOgmiosURL      = "http://testVectorOgmiosUrl"
 	)
 
-	cleanup := func() {
-		os.RemoveAll(dataDir)
-	}
-
 	os.Setenv("E2E_TESTS", "true")
-
-	cleanup()
-	// defer cleanup()
-
-	cb := cardanofw.NewTestCardanoBridge(dataDir, validatorsNum)
-
-	require.NoError(t, cb.CardanoCreateWalletsAndAddresses(NetworkMagicPrime, NetworkMagicVector))
-
-	//nolint:godox
-	// TODO: setup cb.PrimeMultisigAddr and rest to cardano chains
-	// send initial utxos and such
-
-	cb.StartValidators(t, epochSize)
-	defer cb.StopValidators()
-
-	cb.WaitForValidatorsReady(t)
-	/*
-		// need params for it to work properly
-		require.NoError(t, cb.RegisterChains(
-			big.NewInt(1000),
-			"http://testPrimeOgmiosUrl",
-			big.NewInt(1000),
-			"http://testVectorOgmiosUrl",
-		))
-	*/
-
-	// need params for it to work properly
-	require.NoError(t, cb.GenerateConfigs(
-		"http://prime_network_address",
-		NetworkMagicPrime,
-		"http://testPrimeOgmiosUrl",
-		"http://vector_network_address",
-		NetworkMagicVector,
-		"http://testVectorOgmiosUrl",
-		40000,
-		"test_api_key",
-	))
 
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	require.NoError(t, cb.StartValidatorComponents(ctx))
-	require.NoError(t, cb.StartRelayer(ctx))
+	cleanup := cardanofw.SetupAndRunApexBridge(
+		t,
+		ctx,
+		dataDir,
+		bladeValidatorsNum,
+		bladeEpochSize,
+		primeNetworkAddress,
+		primeNetworkMagic,
+		primeOgmiosURL,
+		vectorNetworkAddress,
+		vectorNetworkMagic,
+		vectorOgmiosURL,
+	)
+
+	defer cleanup()
 
 	time.Sleep(100 * time.Second)
 }
