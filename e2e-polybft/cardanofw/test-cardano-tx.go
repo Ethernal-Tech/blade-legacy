@@ -14,7 +14,6 @@ import (
 )
 
 func PopulateAddress(ctx context.Context,
-	clusterID int,
 	txProvider wallet.ITxProvider,
 	dirPath string,
 	amount uint64,
@@ -26,31 +25,10 @@ func PopulateAddress(ctx context.Context,
 		return fmt.Errorf("invalid key id")
 	}
 
-	clusterPath := path.Join(dirPath, strings.Join([]string{"cluster", fmt.Sprint(clusterID)}, "-"))
-
-	keyFileName := strings.Join([]string{"utxo", fmt.Sprint(keyID)}, "")
-
-	sKey, err := wallet.NewKey(path.Join(clusterPath, "utxo-keys", strings.Join([]string{keyFileName, "skey"}, ".")))
+	genesisWallet, err := GetGenesisWalletFromCluster(dirPath, keyID)
 	if err != nil {
 		return err
 	}
-
-	sKeyBytes, err := sKey.GetKeyBytes()
-	if err != nil {
-		return err
-	}
-
-	vKey, err := wallet.NewKey(path.Join(clusterPath, "utxo-keys", strings.Join([]string{keyFileName, "vkey"}, ".")))
-	if err != nil {
-		return err
-	}
-
-	vKeyBytes, err := vKey.GetKeyBytes()
-	if err != nil {
-		return err
-	}
-
-	genesisWallet := wallet.NewWallet(vKeyBytes, sKeyBytes, "")
 
 	genesisAddress, _, err := wallet.GetWalletAddress(genesisWallet, testnetMagic)
 	if err != nil {
@@ -89,8 +67,10 @@ func PopulateAddress(ctx context.Context,
 			Index: utxos[0].Index,
 		},
 	}
+	sendingAmount := utxos[0].Amount
 
-	rawTx, txHash, err := CreateTx(testnetMagic, protocolParams, qtd.Slot+TTLSlotNumberInc, []byte{}, outputs, inputs)
+	rawTx, txHash, err := CreateTx(testnetMagic, protocolParams, qtd.Slot+TTLSlotNumberInc, []byte{},
+		outputs, inputs, genesisAddress, sendingAmount, amount)
 	if err != nil {
 		return err
 	}
@@ -103,6 +83,35 @@ func PopulateAddress(ctx context.Context,
 	return txProvider.SubmitTx(ctx, signedTx)
 }
 
+func GetGenesisWalletFromCluster(
+	dirPath string,
+	keyID uint,
+) (*wallet.Wallet, error) {
+	keyFileName := strings.Join([]string{"utxo", fmt.Sprint(keyID)}, "")
+
+	sKey, err := wallet.NewKey(path.Join(dirPath, "utxo-keys", strings.Join([]string{keyFileName, "skey"}, ".")))
+	if err != nil {
+		return nil, err
+	}
+
+	sKeyBytes, err := sKey.GetKeyBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	vKey, err := wallet.NewKey(path.Join(dirPath, "utxo-keys", strings.Join([]string{keyFileName, "vkey"}, ".")))
+	if err != nil {
+		return nil, err
+	}
+
+	vKeyBytes, err := vKey.GetKeyBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	return wallet.NewWallet(vKeyBytes, sKeyBytes, ""), nil
+}
+
 const TTLSlotNumberInc = 200
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
@@ -111,7 +120,10 @@ func CreateTx(testNetMagic uint,
 	timeToLive uint64,
 	metadataBytes []byte,
 	outputs []wallet.TxOutput,
-	inputs []wallet.TxInput) ([]byte, string, error) {
+	inputs []wallet.TxInput,
+	changeAddress string,
+	totalInput uint64,
+	totalOutput uint64) ([]byte, string, error) {
 	builder, err := wallet.NewTxBuilder()
 	if err != nil {
 		return nil, "", err
@@ -120,7 +132,19 @@ func CreateTx(testNetMagic uint,
 	defer builder.Dispose()
 
 	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive)
-	builder.SetMetaData(metadataBytes).SetTestNetMagic(testNetMagic)
+
+	if len(metadataBytes) != 0 {
+		builder.SetMetaData(metadataBytes)
+	}
+
+	builder.SetTestNetMagic(testNetMagic)
+
+	// Add change
+	outputs = append(outputs, wallet.TxOutput{
+		Addr:   changeAddress,
+		Amount: 0,
+	})
+
 	builder.AddOutputs(outputs...)
 	builder.AddInputs(inputs...)
 
@@ -128,6 +152,14 @@ func CreateTx(testNetMagic uint,
 	if err != nil {
 		return nil, "", err
 	}
+
+	change := totalInput - totalOutput - fee
+	if change < wallet.MinUTxODefaultValue {
+		return []byte{}, "", fmt.Errorf("change too small, should be greater or equal than %v but change = %v",
+			wallet.MinUTxODefaultValue, change)
+	}
+
+	builder.UpdateOutputAmount(len(outputs)-1, change)
 
 	builder.SetFee(fee)
 

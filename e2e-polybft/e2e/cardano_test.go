@@ -3,6 +3,7 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"path"
 	"sync"
 	"testing"
@@ -72,6 +73,36 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
 
 			errors[id] = blockfrost.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*120)
+			t.Run("simple send", func(t *testing.T) {
+				newWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(cluster.Config.Dir("keys")), true)
+				if checkAndSetError(err) {
+					return
+				}
+
+				receiver, _, err := wallet.GetWalletAddress(newWalletKeys, uint(cluster.Config.NetworkMagic))
+				if checkAndSetError(err) {
+					return
+				}
+
+				ctx, cncl := context.WithCancel(context.Background())
+				defer cncl()
+
+				sendAmount := uint64(1000000)
+
+				err = cardanofw.PopulateAddress(ctx, txProvider, cluster.Config.TmpDir, sendAmount, receiver, uint(cluster.Config.NetworkMagic), 1, clusterCnt)
+				if checkAndSetError(err) {
+					return
+				}
+
+				cmpHandler := func(val *big.Int) bool {
+					return val.Cmp(new(big.Int).SetUint64(sendAmount)) >= 0
+				}
+
+				err = wallet.WaitForAmount(context.Background(), txProvider, receiver, cmpHandler, 10, time.Second*60)
+				if checkAndSetError(err) {
+					return
+				}
+			})
 		}(i)
 	}
 
