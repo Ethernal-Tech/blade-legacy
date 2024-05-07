@@ -71,7 +71,7 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 
 			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
 
-			errors[id] = blockfrost.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*300)
+			errors[id] = blockfrost.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*120)
 		}(i)
 	}
 
