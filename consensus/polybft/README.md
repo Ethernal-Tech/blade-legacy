@@ -52,7 +52,7 @@ Just run blade cluster (start each node defined in the initial validator set). F
     ```
 
     It is possible to run nodes in "relayer" mode. It allows automatic execution of deposit and withdrawal events on behalf of users.
-    In order to start node in relayer mode, it is necessary to supply `--relayer` flag:
+    In order to start node in relayer mode, it is necessary to supply the `--relayer` flag:
 
     ```bash
     $ blade server --data-dir ./test-chain-1 --chain genesis.json --grpc-address :5001 --libp2p :30301 --jsonrpc :9545 \
@@ -84,7 +84,7 @@ Just run blade cluster (start each node defined in the initial validator set). F
         --amounts 200000000000000000000
     ```
 
-4. Do mint and premine for relayer node. **These commands should only be executed if non-mintable (L1 originated) erc20 native token is used**
+4. Do mint and premine for relayer node. **These commands should only be executed if non-mintable (L1 originated) native token is used**
 
     ```bash
     $ blade mint-erc20 \ 
@@ -103,7 +103,7 @@ Just run blade cluster (start each node defined in the initial validator set). F
        --stake-amount <ammount_of_tokens_relayer_staked_on_blade>
     ```
 
-5. Finalize bridge setup on rootchain (BladeManager) contract. This is done after all addresses we need premined on rootchain, and it's a final step that is required before starting the child chain. This needs to be done by the deployer of BladeManager contract (the user that run the deploy command). He can use either its hex encoded private key, or data-dir flag if he has secerets initialized. The commands says to rootchain that tokens of premined addresses will be locked on L1, so that they can be used from L2 start. **This command should only be executed if non-mintable (L1 originated) erc20 native token is used**
+5. Finalize bridge setup on rootchain (`BladeManager`) contract. This is done after all addresses we need premined on rootchain, and it's a final step that is required before starting the child chain. This needs to be done by the deployer of BladeManager contract (the user that run the deploy command). He can use either its hex encoded private key, or data-dir flag if he has secerets initialized. The commands says to rootchain that tokens of premined addresses will be locked on L1, so that they can be used from L2 start. **This command should only be executed if non-mintable (L1 originated) erc20 native token is used**
 
     ```bash
     $ blade bridge finalize-bridge --private-key <hex_encoded_rootchain_account_private_key_of_supernetManager_deployer> \
