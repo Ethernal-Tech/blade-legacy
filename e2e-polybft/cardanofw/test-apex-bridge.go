@@ -20,7 +20,7 @@ func SetupAndRunApexBridge(
 	vectorNetworkAddress string,
 	vectorNetworkMagic int,
 	vectorOgmiosURL string,
-) func() {
+) (*TestCardanoBridge, func()) {
 	t.Helper()
 
 	cleanupDataDir := func() {
@@ -68,7 +68,7 @@ func SetupAndRunApexBridge(
 	require.NoError(t, cb.StartValidatorComponents(ctx))
 	require.NoError(t, cb.StartRelayer(ctx))
 
-	return func() {
+	return cb, func() {
 		// cleanupDataDir()
 		cb.StopValidators()
 	}

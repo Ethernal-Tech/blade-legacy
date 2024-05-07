@@ -30,7 +30,7 @@ func TestE2E_CardanoBridgeTest(t *testing.T) {
 	ctx, cancelFunc := context.WithCancel(context.Background())
 	defer cancelFunc()
 
-	cleanup := cardanofw.SetupAndRunApexBridge(
+	_, cleanup := cardanofw.SetupAndRunApexBridge(
 		t,
 		ctx,
 		dataDir,
