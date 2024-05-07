@@ -48,6 +48,7 @@ type TestCardanoClusterConfig struct {
 	NodesCount     int
 	StartNodeID    int
 	Port           int
+	OgmiosPort     int
 	InitialSupply  *big.Int
 	BlockTimeMilis int
 	StartTimeDelay time.Duration
@@ -159,6 +160,12 @@ func WithPort(port int) CardanoClusterOption {
 	}
 }
 
+func WithOgmiosPort(ogmiosPort int) CardanoClusterOption {
+	return func(h *TestCardanoClusterConfig) {
+		h.OgmiosPort = ogmiosPort
+	}
+}
+
 func WithLogsDir(logsDir string) CardanoClusterOption {
 	return func(h *TestCardanoClusterConfig) {
 		h.LogsDir = logsDir
@@ -194,6 +201,7 @@ func NewCardanoTestCluster(t *testing.T, opts ...CardanoClusterOption) (*TestCar
 		StartTimeDelay: time.Second * 30,
 		BlockTimeMilis: 2000,
 		Port:           3000,
+		OgmiosPort:     1337,
 	}
 
 	startTime := time.Now().UTC().Add(config.StartTimeDelay)
@@ -272,7 +280,8 @@ func (c *TestCardanoCluster) StartDocker() error {
 	if err != nil {
 		cntErrors := strings.Count(err.Error(), "error")
 		if cntErrors == 1 &&
-			strings.Contains(err.Error(), "error during command execution: Creating network") {
+			(strings.Contains(err.Error(), "error during command execution: Creating network") ||
+				strings.Contains(err.Error(), "error during command execution:  Network cluster")) {
 			err = nil
 		}
 	}
@@ -700,6 +709,23 @@ func (c *TestCardanoCluster) GenerateDockerComposeFiles() error {
 		_, _ = writer.WriteString("        max-file: \"10\"\n")
 		_, _ = writer.WriteString("\n")
 	}
+
+	// Ogmios for node-1
+	_, _ = writer.WriteString("  ogmios:\n")
+	_, _ = writer.WriteString("    image: cardanosolutions/ogmios:v6.1.0\n")
+	_, _ = writer.WriteString("    restart: on-failure\n")
+	_, _ = writer.WriteString("    command: [\n")
+	_, _ = writer.WriteString("      \"--host\", \"0.0.0.0\",\n")
+	_, _ = writer.WriteString("      \"--node-socket\", \"/node-data/node-spo1/node.socket\",\n")
+	_, _ = writer.WriteString("      \"--node-config\", \"/node-data/configuration.yaml\"\n")
+	_, _ = writer.WriteString("    ]\n")
+	_, _ = writer.WriteString("    volumes:\n")
+	_, _ = writer.WriteString(fmt.Sprintf("      - %s:/node-data\n", c.Config.Dir("")))
+	_, _ = writer.WriteString("    ports:\n")
+	_, _ = writer.WriteString(fmt.Sprintf("      - ${OGMIOS_PORT:-%d}:1337\n", c.Config.OgmiosPort))
+	_, _ = writer.WriteString("    depends_on:\n")
+	_, _ = writer.WriteString(fmt.Sprintf("      cluster-%d-node-%d:\n", c.Config.ID, 1))
+	_, _ = writer.WriteString("        condition: service_started\n")
 
 	err = writer.Flush()
 	if err != nil {

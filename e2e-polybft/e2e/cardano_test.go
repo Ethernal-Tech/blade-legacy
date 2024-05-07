@@ -53,6 +53,7 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 				cardanofw.WithNodesCount(4),
 				cardanofw.WithStartTimeDelay(time.Second*5),
 				cardanofw.WithPort(5000+id*100),
+				cardanofw.WithOgmiosPort(1337+id),
 				cardanofw.WithLogsDir(logsDir),
 				cardanofw.WithNetworkMagic(42+id))
 			if checkAndSetError(err) {
