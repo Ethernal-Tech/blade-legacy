@@ -69,29 +69,9 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 
 			t.Log("Waiting for sockets to be ready")
 
-			bf, err := blockfrost.NewBlockFrost(cluster, id+1)
-			if checkAndSetError(err) {
-				return
-			}
+			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
 
-			err = bf.Start()
-			if checkAndSetError(err) {
-				return
-			}
-
-			defer bf.Stop() //nolint:errcheck
-
-			err = blockfrost.ResetDBSync(t, time.Second*600, time.Second*20, bf.DBSyncContainerName())
-			if checkAndSetError(err) {
-				return
-			}
-
-			txProvider, err := wallet.NewTxProviderBlockFrost(bf.URL(), "")
-			if checkAndSetError(err) {
-				return
-			}
-
-			errors[id] = blockfrost.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*10)
+			errors[id] = blockfrost.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*300)
 		}(i)
 	}
 

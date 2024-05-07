@@ -298,6 +298,10 @@ func (c *TestCardanoCluster) StopDocker() error {
 	return c.runCommand("docker-compose", []string{"-f", dockerFile, "down"}, stdOut)
 }
 
+func (c *TestCardanoCluster) OgmiosURL() string {
+	return fmt.Sprintf("http://localhost:%d", c.Config.OgmiosPort)
+}
+
 func (c *TestCardanoCluster) Stats(
 	ctx context.Context,
 ) ([]cardano_wallet.QueryTipData, bool, error) {
