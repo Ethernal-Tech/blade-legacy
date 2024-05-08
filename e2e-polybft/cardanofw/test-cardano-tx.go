@@ -19,6 +19,7 @@ func SendTx(ctx context.Context,
 	amount uint64,
 	receiver string,
 	testnetMagic int,
+	metadata []byte,
 ) error {
 	cardanoWalletAddr, _, err := wallet.GetWalletAddress(cardanoWallet, uint(testnetMagic))
 	if err != nil {
@@ -59,7 +60,7 @@ func SendTx(ctx context.Context,
 	}
 	sendingAmount := utxos[0].Amount
 
-	rawTx, txHash, err := CreateTx(uint(testnetMagic), protocolParams, qtd.Slot+TTLSlotNumberInc, []byte{},
+	rawTx, txHash, err := CreateTx(uint(testnetMagic), protocolParams, qtd.Slot+TTLSlotNumberInc, metadata,
 		outputs, inputs, cardanoWalletAddr, sendingAmount, amount)
 	if err != nil {
 		return err

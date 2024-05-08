@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"path"
@@ -13,6 +14,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Download Cardano executables from https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3 and unpack tar.gz file
@@ -94,7 +96,7 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 				}
 
 				err = cardanofw.SendTx(ctx, txProvider, genesisWallet,
-					sendAmount, receiver, cluster.Config.NetworkMagic)
+					sendAmount, receiver, cluster.Config.NetworkMagic, []byte{})
 				if checkAndSetError(err) {
 					return
 				}
@@ -114,4 +116,156 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 	for i := 0; i < clusterCnt; i++ {
 		assert.NoError(t, errors[i])
 	}
+}
+
+func TestE2E_ApexBridge(t *testing.T) {
+	const (
+		clusterCnt         = 2
+		bladeValidatorsNum = 4
+		bladeEpochSize     = 5
+	)
+
+	var (
+		errors        [clusterCnt]error
+		wg            sync.WaitGroup
+		baseLogsDir   = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().UTC().Unix()), t.Name())
+		primeCluster  *cardanofw.TestCardanoCluster
+		vectorCluster *cardanofw.TestCardanoCluster
+	)
+
+	for i := 0; i < clusterCnt; i++ {
+		wg.Add(1)
+
+		go func(id int) {
+			defer wg.Done()
+
+			checkAndSetError := func(err error) bool {
+				errors[id] = err
+
+				return err != nil
+			}
+
+			logsDir := fmt.Sprintf("%s/%d", baseLogsDir, id)
+
+			err := common.CreateDirSafe(logsDir, 0750)
+			if checkAndSetError(err) {
+				return
+			}
+
+			cluster, err := cardanofw.NewCardanoTestCluster(t,
+				cardanofw.WithID(id+1),
+				cardanofw.WithNodesCount(4),
+				cardanofw.WithStartTimeDelay(time.Second*5),
+				cardanofw.WithPort(5000+id*100),
+				cardanofw.WithOgmiosPort(1337+id),
+				cardanofw.WithLogsDir(logsDir),
+				cardanofw.WithNetworkMagic(42+id))
+			if checkAndSetError(err) {
+				return
+			}
+
+			if id == 0 {
+				primeCluster = cluster
+			} else {
+				vectorCluster = cluster
+			}
+
+			err = cluster.StartDocker()
+			if checkAndSetError(err) {
+				return
+			}
+
+			t.Log("Waiting for sockets to be ready")
+
+			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
+
+			errors[id] = cardanofw.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*120)
+		}(i)
+	}
+
+	wg.Wait()
+
+	for i := 0; i < clusterCnt; i++ {
+		assert.NoError(t, errors[i])
+	}
+
+	primeWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
+	require.NoError(t, err)
+
+	primeUserAddress, _, err := wallet.GetWalletAddress(primeWalletKeys, uint(primeCluster.Config.NetworkMagic))
+	require.NoError(t, err)
+
+	vectorWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(vectorCluster.Config.Dir("keys")), true)
+	require.NoError(t, err)
+
+	vectorUserAddress, _, err := wallet.GetWalletAddress(vectorWalletKeys, uint(vectorCluster.Config.NetworkMagic))
+	require.NoError(t, err)
+
+	ctx, cncl := context.WithCancel(context.Background())
+	defer cncl()
+
+	txProviderPrime := wallet.NewOgmiosProvider(primeCluster.OgmiosURL())
+	txProviderVector := wallet.NewOgmiosProvider(vectorCluster.OgmiosURL())
+
+	cb, fun := cardanofw.SetupAndRunApexBridge(t,
+		ctx,
+		path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
+		bladeValidatorsNum,
+		bladeEpochSize,
+		"http://localhost:5001",
+		primeCluster.Config.NetworkMagic,
+		primeCluster.OgmiosURL(),
+		"http://localhost:5101",
+		vectorCluster.Config.NetworkMagic,
+		vectorCluster.OgmiosURL())
+	defer fun()
+
+	// Initiate bridging PRIME -> VECTOR
+	var receivers map[string]uint64 = make(map[string]uint64)
+	sendAmount := uint64(1_000_000)
+
+	receivers[vectorUserAddress] = sendAmount
+	receivers[cb.PrimeMultisigFeeAddr] = 1_100_000
+
+	bridgingRequestMetadata, err := CreateMetaData(primeUserAddress, receivers)
+	require.NoError(t, err)
+
+	require.NoError(t, cardanofw.SendTx(ctx, txProviderPrime, primeWalletKeys, 2_100_000, cb.PrimeMultisigAddr, primeCluster.Config.NetworkMagic, bridgingRequestMetadata))
+
+	err = wallet.WaitForAmount(context.Background(), txProviderVector, vectorUserAddress, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
+	}, 100, time.Minute*5)
+	require.NoError(t, err)
+
+	err = primeCluster.StopDocker()
+	assert.NoError(t, err)
+
+	err = vectorCluster.StopDocker()
+	assert.NoError(t, err)
+}
+
+func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) {
+	type BridgingRequestMetadataTransaction struct {
+		Address string `cbor:"address" json:"address"`
+		Amount  uint64 `cbor:"amount" json:"amount"`
+	}
+
+	var transactions []BridgingRequestMetadataTransaction
+	for addr, amount := range receivers {
+		transactions = append(transactions, BridgingRequestMetadataTransaction{
+			Address: addr,
+			Amount:  amount,
+		})
+	}
+
+	metadata := map[string]interface{}{
+		"0": map[string]interface{}{
+			"type":               "bridgingRequest",
+			"destinationChainId": "vector",
+			"senderAddr":         sender,
+			"transactions":       transactions,
+		},
+	}
+
+	return json.Marshal(metadata)
 }
