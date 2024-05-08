@@ -39,12 +39,12 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 		)
 
 		var (
-			txProviders = make([]*wallet.OgmiosProvider, cardanoChainsCnt)
+			txProviders = make([]wallet.ITxProvider, cardanoChainsCnt)
 			receivers   = make([]string, cardanoChainsCnt)
 		)
 
 		for i := 0; i < cardanoChainsCnt; i++ {
-			txProviders[i] = wallet.NewOgmiosProvider(clusters[i].OgmiosURL())
+			txProviders[i] = wallet.NewTxProviderOgmios(clusters[i].OgmiosURL())
 			newWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(clusters[i].Config.Dir("keys")), true)
 
 			require.NoError(t, err)
@@ -106,8 +106,8 @@ func TestE2E_ApexBridge(t *testing.T) {
 	vectorUserAddress, _, err := wallet.GetWalletAddress(vectorWalletKeys, uint(vectorCluster.Config.NetworkMagic))
 	require.NoError(t, err)
 
-	txProviderPrime := wallet.NewOgmiosProvider(primeCluster.OgmiosURL())
-	txProviderVector := wallet.NewOgmiosProvider(vectorCluster.OgmiosURL())
+	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
+	txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
 
 	// Fund prime address
 	primeGenesisWallet, err := cardanofw.GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 2)

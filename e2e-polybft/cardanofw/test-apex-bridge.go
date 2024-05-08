@@ -70,7 +70,7 @@ func SetupAndRunApexCardanoChains(
 
 			fmt.Printf("Waiting for sockets to be ready\n")
 
-			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
+			txProvider := wallet.NewTxProviderOgmios(cluster.OgmiosURL())
 
 			errors[id] = WaitUntilBlock(t, ctx, txProvider, 4, time.Second*120)
 
@@ -121,8 +121,8 @@ func SetupAndRunApexBridge(
 
 	fmt.Printf("Wallets and addresses created\n")
 
-	txProviderPrime := wallet.NewOgmiosProvider(primeCluster.OgmiosURL())
-	txProviderVector := wallet.NewOgmiosProvider(vectorCluster.OgmiosURL())
+	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
+	txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
 
 	primeGenesisWallet, err := GetGenesisWalletFromCluster(path.Join(path.Dir(dataDir), "cluster-1"), 1)
 	require.NoError(t, err)
