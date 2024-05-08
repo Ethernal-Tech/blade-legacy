@@ -278,10 +278,8 @@ func (c *TestCardanoCluster) StartDocker() error {
 
 	err := c.runCommand("docker-compose", []string{"-f", dockerFile, "up", "-d"}, stdOut)
 	if err != nil {
-		cntErrors := strings.Count(err.Error(), "error")
-		if cntErrors == 1 &&
-			(strings.Contains(err.Error(), "error during command execution: Creating network") ||
-				strings.Contains(err.Error(), "error during command execution:  Network cluster")) {
+		msg := strings.TrimRight(err.Error(), "\r\n")
+		if strings.Count(msg, "error") == 1 && strings.HasSuffix(msg, "done") {
 			err = nil
 		}
 	}
