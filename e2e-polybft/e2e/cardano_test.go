@@ -175,11 +175,13 @@ func TestE2E_ApexBridge(t *testing.T) {
 				return
 			}
 
-			t.Log("Waiting for sockets to be ready")
+			fmt.Printf("Waiting for sockets to be ready\n")
 
 			txProvider := wallet.NewOgmiosProvider(cluster.OgmiosURL())
 
 			errors[id] = cardanofw.WaitUntilBlock(t, context.Background(), txProvider, 4, time.Second*120)
+
+			fmt.Printf("Cluster %d is ready\n", id)
 		}(i)
 	}
 
@@ -207,6 +209,20 @@ func TestE2E_ApexBridge(t *testing.T) {
 	txProviderPrime := wallet.NewOgmiosProvider(primeCluster.OgmiosURL())
 	txProviderVector := wallet.NewOgmiosProvider(vectorCluster.OgmiosURL())
 
+	// Fund prime address
+	primeGenesisWallet, err := cardanofw.GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 2)
+	require.NoError(t, err)
+
+	sendAmount := uint64(3_000_000)
+	require.NoError(t, cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
+		sendAmount, primeUserAddress, primeCluster.Config.NetworkMagic, []byte{}))
+
+	require.NoError(t, wallet.WaitForAmount(context.Background(), txProviderPrime, primeUserAddress, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
+	}, 60, time.Second*2))
+
+	fmt.Printf("Prime user address funded\n")
+
 	cb, fun := cardanofw.SetupAndRunApexBridge(t,
 		ctx,
 		path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
@@ -220,9 +236,12 @@ func TestE2E_ApexBridge(t *testing.T) {
 		vectorCluster.OgmiosURL())
 	defer fun()
 
+	fmt.Printf("Apex bridge setup done\n")
+
 	// Initiate bridging PRIME -> VECTOR
-	var receivers map[string]uint64 = make(map[string]uint64)
-	sendAmount := uint64(1_000_000)
+	var receivers = make(map[string]uint64, 2)
+
+	sendAmount = uint64(1_000_000)
 
 	receivers[vectorUserAddress] = sendAmount
 	receivers[cb.PrimeMultisigFeeAddr] = 1_100_000
@@ -237,6 +256,11 @@ func TestE2E_ApexBridge(t *testing.T) {
 	}, 100, time.Minute*5)
 	require.NoError(t, err)
 
+	fmt.Printf("Prime address = " + primeUserAddress)
+	fmt.Printf("\n")
+	fmt.Printf("Vector address = " + vectorUserAddress)
+	fmt.Printf("\n")
+
 	err = primeCluster.StopDocker()
 	assert.NoError(t, err)
 
@@ -250,7 +274,7 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 		Amount  uint64 `cbor:"amount" json:"amount"`
 	}
 
-	var transactions []BridgingRequestMetadataTransaction
+	var transactions = make([]BridgingRequestMetadataTransaction, 0, len(receivers))
 	for addr, amount := range receivers {
 		transactions = append(transactions, BridgingRequestMetadataTransaction{
 			Address: addr,
@@ -259,7 +283,7 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 	}
 
 	metadata := map[string]interface{}{
-		"0": map[string]interface{}{
+		"1": map[string]interface{}{
 			"type":               "bridgingRequest",
 			"destinationChainId": "vector",
 			"senderAddr":         sender,
