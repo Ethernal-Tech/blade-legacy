@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: 1.21.x
       - name: Install Cardano tools
-        uses: Qafana/cardano-tools-action@v1
+        uses: milos-ethernal/cardano-node-action@bf79cdb680c317f5cd8c60b0905f2e72639bb371
       - name: Install Dependencies
         run: ./setup-ci.sh
       - name: Run Go Test
