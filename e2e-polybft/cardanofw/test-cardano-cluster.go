@@ -302,6 +302,10 @@ func (c *TestCardanoCluster) OgmiosURL() string {
 	return fmt.Sprintf("http://localhost:%d", c.Config.OgmiosPort)
 }
 
+func (c *TestCardanoCluster) NetworkURL() string {
+	return fmt.Sprintf("http://localhost:%d", c.Config.Port)
+}
+
 func (c *TestCardanoCluster) Stats(
 	ctx context.Context,
 ) ([]cardano_wallet.QueryTipData, bool, error) {
