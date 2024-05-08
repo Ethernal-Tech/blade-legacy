@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"testing"
+	"time"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/require"
@@ -46,13 +47,35 @@ func SetupAndRunApexBridge(
 	require.NoError(t, err)
 
 	require.NoError(t, SendTx(ctx, txProviderPrime, primeGenesisWallet, 10_000_000, cb.PrimeMultisigAddr, primeNetworkMagic, []byte{}))
+
+	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigAddr, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(10_000_000)) == 0
+	}, 100, time.Minute*1)
+	require.NoError(t, err)
+
 	require.NoError(t, SendTx(ctx, txProviderPrime, primeGenesisWallet, 10_000_000, cb.PrimeMultisigFeeAddr, primeNetworkMagic, []byte{}))
+
+	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigFeeAddr, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(10_000_000)) == 0
+	}, 100, time.Minute*1)
+	require.NoError(t, err)
 
 	vectorGenesisWallet, err := GetGenesisWalletFromCluster(path.Join(path.Dir(dataDir), "cluster-2"), 1)
 	require.NoError(t, err)
 
-	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, 10_000_000, cb.PrimeMultisigAddr, primeNetworkMagic, []byte{}))
-	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, 10_000_000, cb.PrimeMultisigFeeAddr, primeNetworkMagic, []byte{}))
+	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, 10_000_000, cb.VectorMultisigAddr, primeNetworkMagic, []byte{}))
+
+	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigAddr, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(10_000_000)) == 0
+	}, 100, time.Minute*1)
+	require.NoError(t, err)
+
+	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, 10_000_000, cb.VectorMultisigFeeAddr, primeNetworkMagic, []byte{}))
+
+	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigFeeAddr, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(10_000_000)) == 0
+	}, 100, time.Minute*1)
+	require.NoError(t, err)
 
 	cb.StartValidators(t, bladeEpochSize)
 
