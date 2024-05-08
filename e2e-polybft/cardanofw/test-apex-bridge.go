@@ -106,6 +106,8 @@ func SetupAndRunApexBridge(
 	const (
 		sendAmount     = uint64(10_000_000)
 		bladeEpochSize = 5
+		numOfRetries   = 90
+		waitTime       = time.Second * 2
 	)
 
 	cleanupDataDir := func() {
@@ -132,7 +134,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, 12, time.Second*10)
+	}, numOfRetries, waitTime)
 	require.NoError(t, err)
 
 	fmt.Printf("Prime multisig addr funded\n")
@@ -142,7 +144,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigFeeAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, 12, time.Second*10)
+	}, numOfRetries, waitTime)
 	require.NoError(t, err)
 
 	fmt.Printf("Prime multisig fee addr funded\n")
@@ -155,7 +157,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, 12, time.Second*10)
+	}, numOfRetries, waitTime)
 	require.NoError(t, err)
 
 	fmt.Printf("Vector multisig addr funded\n")
@@ -165,7 +167,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigFeeAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, 12, time.Second*10)
+	}, numOfRetries, waitTime)
 	require.NoError(t, err)
 
 	fmt.Printf("Vector multisig fee addr funded\n")

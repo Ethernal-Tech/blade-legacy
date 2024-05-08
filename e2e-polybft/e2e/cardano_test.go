@@ -113,7 +113,7 @@ func TestE2E_ApexBridge(t *testing.T) {
 	primeGenesisWallet, err := cardanofw.GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 2)
 	require.NoError(t, err)
 
-	sendAmount := uint64(3_000_000)
+	sendAmount := uint64(5_000_000)
 	require.NoError(t, cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
 		sendAmount, primeUserAddress, primeCluster.Config.NetworkMagic, []byte{}))
 
