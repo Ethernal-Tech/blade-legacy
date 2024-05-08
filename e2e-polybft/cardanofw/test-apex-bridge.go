@@ -99,8 +99,8 @@ func SetupAndRunApexBridge(
 	fmt.Printf("Validators ready\n")
 
 	// need params for it to work properly
-	primeTokenSupply := big.NewInt(10_000_000)
-	vectorTokenSupply := big.NewInt(10_000_000)
+	primeTokenSupply := big.NewInt(int64(sendAmount))
+	vectorTokenSupply := big.NewInt(int64(sendAmount))
 	require.NoError(t, cb.RegisterChains(
 		primeTokenSupply,
 		primeOgmiosURL,

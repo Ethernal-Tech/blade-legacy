@@ -191,6 +191,9 @@ func TestE2E_ApexBridge(t *testing.T) {
 		assert.NoError(t, errors[i])
 	}
 
+	defer primeCluster.StopDocker()  //nolint:errcheck
+	defer vectorCluster.StopDocker() //nolint:errcheck
+
 	primeWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
 	require.NoError(t, err)
 
@@ -260,12 +263,6 @@ func TestE2E_ApexBridge(t *testing.T) {
 	fmt.Printf("\n")
 	fmt.Printf("Vector address = " + vectorUserAddress)
 	fmt.Printf("\n")
-
-	err = primeCluster.StopDocker()
-	assert.NoError(t, err)
-
-	err = vectorCluster.StopDocker()
-	assert.NoError(t, err)
 }
 
 func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) {
