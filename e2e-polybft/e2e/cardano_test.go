@@ -176,7 +176,7 @@ func TestE2E_ApexBridge(t *testing.T) {
 	ctx, cncl := context.WithCancel(context.Background())
 	defer cncl()
 
-	clusters, cleanupCardanoChainsFunc := cardanofw.SetupAndRunApexCardanoChains(
+	clusters, _ := cardanofw.SetupAndRunApexCardanoChains(
 		t,
 		ctx,
 		cardanoChainsCnt,
@@ -188,7 +188,7 @@ func TestE2E_ApexBridge(t *testing.T) {
 	vectorCluster := clusters[1]
 	require.NotNil(t, vectorCluster)
 
-	defer cleanupCardanoChainsFunc()
+	// defer cleanupCardanoChainsFunc()
 
 	primeWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
 	require.NoError(t, err)
@@ -219,14 +219,15 @@ func TestE2E_ApexBridge(t *testing.T) {
 
 	fmt.Printf("Prime user address funded\n")
 
-	cb, cleanupApexBridgeFunc := cardanofw.SetupAndRunApexBridge(t,
+	cb, _ := cardanofw.SetupAndRunApexBridge(t,
 		ctx,
-		path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
+		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
+		"../../e2e-bridge-data-tmp",
 		bladeValidatorsNum,
 		primeCluster,
 		vectorCluster,
 	)
-	defer cleanupApexBridgeFunc()
+	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
 
@@ -256,24 +257,24 @@ func TestE2E_ApexBridge(t *testing.T) {
 
 func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) {
 	type BridgingRequestMetadataTransaction struct {
-		Address string `cbor:"address" json:"address"`
-		Amount  uint64 `cbor:"amount" json:"amount"`
+		Address []string `cbor:"a" json:"a"`
+		Amount  uint64   `cbor:"m" json:"m"`
 	}
 
 	var transactions = make([]BridgingRequestMetadataTransaction, 0, len(receivers))
 	for addr, amount := range receivers {
 		transactions = append(transactions, BridgingRequestMetadataTransaction{
-			Address: addr,
+			Address: cardanofw.SplitString(addr, 40),
 			Amount:  amount,
 		})
 	}
 
 	metadata := map[string]interface{}{
 		"1": map[string]interface{}{
-			"type":               "bridgingRequest",
-			"destinationChainId": "vector",
-			"senderAddr":         sender,
-			"transactions":       transactions,
+			"t":  "bridge",
+			"d":  "vector",
+			"s":  cardanofw.SplitString(sender, 40),
+			"tx": transactions,
 		},
 	}
 

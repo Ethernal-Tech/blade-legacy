@@ -138,3 +138,17 @@ func WaitUntilBlock(
 		return qtd.Block >= blockNum
 	})
 }
+
+// SplitString splits large string into slice of substrings
+func SplitString(s string, mxlen int) (res []string) {
+	for i := 0; i < len(s); i += mxlen {
+		end := i + mxlen
+		if end > len(s) {
+			end = len(s)
+		}
+
+		res = append(res, s[i:end])
+	}
+
+	return res
+}

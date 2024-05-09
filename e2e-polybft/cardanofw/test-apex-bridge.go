@@ -30,6 +30,16 @@ func SetupAndRunApexCardanoChains(
 		baseLogsDir = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().UTC().Unix()), t.Name())
 	)
 
+	cleanupFunc := func() {
+		for i := 0; i < clusterCnt; i++ {
+			if clusters[i] != nil {
+				clusters[i].Stop() //nolint:errcheck
+			}
+		}
+	}
+
+	t.Cleanup(cleanupFunc)
+
 	for i := 0; i < clusterCnt; i++ {
 		wg.Add(1)
 
@@ -56,11 +66,13 @@ func SetupAndRunApexCardanoChains(
 				WithPort(5000+id*100),
 				WithOgmiosPort(1337+id),
 				WithLogsDir(logsDir),
-				WithNetworkMagic(42+id))
+				WithNetworkMagic(42+id),
+			)
 			if checkAndSetError(err) {
 				return
 			}
 
+			cluster.Config.WithStdout = false
 			clusters[id] = cluster
 
 			fmt.Printf("Waiting for sockets to be ready\n")
@@ -95,12 +107,6 @@ func SetupAndRunApexCardanoChains(
 		assert.NoError(t, errors[i])
 	}
 
-	cleanupFunc := func() {
-		for i := 0; i < clusterCnt; i++ {
-			clusters[i].Stop() //nolint:errcheck
-		}
-	}
-
 	return clusters, cleanupFunc
 }
 
@@ -129,6 +135,13 @@ func SetupAndRunApexBridge(
 
 	cb := NewTestCardanoBridge(dataDir, bladeValidatorsNum)
 
+	cleanupFunc := func() {
+		// cleanupDataDir()
+		cb.StopValidators()
+	}
+
+	t.Cleanup(cleanupFunc)
+
 	require.NoError(t, cb.CardanoCreateWalletsAndAddresses(
 		primeCluster.Config.NetworkMagic, vectorCluster.Config.NetworkMagic))
 
@@ -137,7 +150,7 @@ func SetupAndRunApexBridge(
 	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
 	txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
 
-	primeGenesisWallet, err := GetGenesisWalletFromCluster(path.Join(path.Dir(dataDir), "cluster-1"), 1)
+	primeGenesisWallet, err := GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 1)
 	require.NoError(t, err)
 
 	require.NoError(t, SendTx(ctx, txProviderPrime, primeGenesisWallet, sendAmount,
@@ -160,7 +173,7 @@ func SetupAndRunApexBridge(
 
 	fmt.Printf("Prime multisig fee addr funded\n")
 
-	vectorGenesisWallet, err := GetGenesisWalletFromCluster(path.Join(path.Dir(dataDir), "cluster-2"), 1)
+	vectorGenesisWallet, err := GetGenesisWalletFromCluster(vectorCluster.Config.TmpDir, 1)
 	require.NoError(t, err)
 
 	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, sendAmount,
@@ -223,8 +236,5 @@ func SetupAndRunApexBridge(
 	require.NoError(t, cb.StartRelayer(ctx))
 	fmt.Printf("Relayer started\n")
 
-	return cb, func() {
-		// cleanupDataDir()
-		cb.StopValidators()
-	}
+	return cb, cleanupFunc
 }
