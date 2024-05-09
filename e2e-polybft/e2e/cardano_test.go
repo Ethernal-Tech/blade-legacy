@@ -237,12 +237,14 @@ func TestE2E_ApexBridge(t *testing.T) {
 	sendAmount = uint64(1_000_000)
 
 	receivers[vectorUserAddress] = sendAmount
-	receivers[cb.PrimeMultisigFeeAddr] = 1_100_000
+	receivers[cb.VectorMultisigFeeAddr] = 1_100_000
 
 	bridgingRequestMetadata, err := CreateMetaData(primeUserAddress, receivers)
 	require.NoError(t, err)
 
-	require.NoError(t, cardanofw.SendTx(ctx, txProviderPrime, primeWalletKeys, 2_100_000, cb.PrimeMultisigAddr, primeCluster.Config.NetworkMagic, bridgingRequestMetadata))
+	require.NoError(t, cardanofw.SendTx(
+		ctx, txProviderPrime, primeWalletKeys, 2_100_000, cb.PrimeMultisigAddr,
+		primeCluster.Config.NetworkMagic, bridgingRequestMetadata))
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, vectorUserAddress, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
