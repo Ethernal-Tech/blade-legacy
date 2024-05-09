@@ -44,6 +44,8 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 		)
 
 		for i := 0; i < cardanoChainsCnt; i++ {
+			require.NotNil(t, clusters[i])
+
 			txProviders[i] = wallet.NewTxProviderOgmios(clusters[i].OgmiosURL())
 			newWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(clusters[i].Config.Dir("keys")), true)
 
@@ -89,10 +91,13 @@ func TestE2E_ApexBridge(t *testing.T) {
 		cardanoChainsCnt,
 	)
 
-	defer cleanupCardanoChainsFunc()
-
 	primeCluster := clusters[0]
+	require.NotNil(t, primeCluster)
+
 	vectorCluster := clusters[1]
+	require.NotNil(t, vectorCluster)
+
+	defer cleanupCardanoChainsFunc()
 
 	primeWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
 	require.NoError(t, err)
