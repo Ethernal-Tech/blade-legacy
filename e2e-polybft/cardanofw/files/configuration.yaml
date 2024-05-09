@@ -6,10 +6,10 @@
 
 ##### Locations #####
 
-ByronGenesisFile: /node-data/genesis/byron/genesis.json
-ShelleyGenesisFile: /node-data/genesis/shelley/genesis.json
-AlonzoGenesisFile: /node-data/genesis/shelley/genesis.alonzo.json
-ConwayGenesisFile: /node-data/genesis/shelley/genesis.conway.json
+ByronGenesisFile: genesis/byron/genesis.json
+ShelleyGenesisFile: genesis/shelley/genesis.json
+AlonzoGenesisFile: genesis/shelley/genesis.alonzo.json
+ConwayGenesisFile: genesis/shelley/genesis.conway.json
 # SocketPath: db/node.socket
 
 ##### Blockfetch Protocol

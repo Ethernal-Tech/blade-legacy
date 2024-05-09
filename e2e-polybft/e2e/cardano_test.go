@@ -6,13 +6,100 @@ import (
 	"fmt"
 	"math/big"
 	"path"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/cardanofw"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestE2E_Original(t *testing.T) {
+	const (
+		clusterCnt = 2
+	)
+
+	var (
+		errors      [clusterCnt]error
+		wg          sync.WaitGroup
+		baseLogsDir = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d",
+			time.Now().UTC().Unix()), t.Name())
+	)
+
+	for i := 0; i < clusterCnt; i++ {
+		id := i
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			checkAndSetError := func(err error) bool {
+				errors[id] = err
+
+				return err != nil
+			}
+
+			logsDir := fmt.Sprintf("%s/%d", baseLogsDir, id)
+
+			err := common.CreateDirSafe(logsDir, 0750)
+			if checkAndSetError(err) {
+				return
+			}
+
+			cluster, err := cardanofw.NewCardanoTestCluster(t,
+				cardanofw.WithID(id+1),
+				cardanofw.WithNodesCount(4),
+				cardanofw.WithStartTimeDelay(time.Second*5),
+				cardanofw.WithPort(5000+id*100),
+				cardanofw.WithOgmiosPort(1337+id),
+				cardanofw.WithLogsDir(logsDir),
+				cardanofw.WithNetworkMagic(42+id))
+			if checkAndSetError(err) {
+				return
+			}
+
+			defer cluster.Stop() //nolint:errcheck
+
+			fmt.Printf("Waiting for sockets to be ready\n")
+
+			ctx, cncl := context.WithCancel(context.Background())
+			defer cncl()
+
+			if errors[id] = cluster.WaitForReady(time.Minute * 2); errors[id] != nil {
+				return
+			}
+
+			fmt.Printf("Sockets ready\n")
+
+			err = cluster.StartOgmios(t)
+			if checkAndSetError(err) {
+				return
+			}
+
+			fmt.Printf("Ogmios started\n")
+
+			txProvider := wallet.NewTxProviderOgmios(cluster.OgmiosURL())
+
+			if errors[id] = cluster.WaitForBlockWithState(10, time.Second*120); errors[id] != nil {
+				return
+			}
+
+			errors[id] = cardanofw.WaitUntilBlock(t, ctx, txProvider, 15, time.Second*120)
+
+			fmt.Printf("Cluster %d is ready\n", id)
+		}()
+	}
+
+	wg.Wait()
+
+	for i := 0; i < clusterCnt; i++ {
+		assert.NoError(t, errors[i])
+	}
+}
 
 // Download Cardano executables from https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3 and unpack tar.gz file
 // Add directory where unpacked files are located to the $PATH (in example bellow `~/Apps/cardano`)
@@ -30,6 +117,10 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 		ctx,
 		cardanoChainsCnt,
 	)
+
+	for i := 0; i < cardanoChainsCnt; i++ {
+		require.NotNil(t, clusters[i])
+	}
 
 	defer cleanupFunc()
 

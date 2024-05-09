@@ -63,16 +63,27 @@ func SetupAndRunApexCardanoChains(
 
 			clusters[id] = cluster
 
-			err = cluster.StartDocker()
+			fmt.Printf("Waiting for sockets to be ready\n")
+
+			ctx, cncl := context.WithCancel(context.Background())
+			defer cncl()
+
+			if errors[id] = cluster.WaitForReady(time.Minute * 2); errors[id] != nil {
+				return
+			}
+
+			err = cluster.StartOgmios(t)
 			if checkAndSetError(err) {
 				return
 			}
 
-			fmt.Printf("Waiting for sockets to be ready\n")
-
 			txProvider := wallet.NewTxProviderOgmios(cluster.OgmiosURL())
 
-			errors[id] = WaitUntilBlock(t, ctx, txProvider, 4, time.Second*120)
+			if errors[id] = cluster.WaitForBlockWithState(10, time.Second*120); errors[id] != nil {
+				return
+			}
+
+			errors[id] = WaitUntilBlock(t, ctx, txProvider, 15, time.Second*120)
 
 			fmt.Printf("Cluster %d is ready\n", id)
 		}(i)
@@ -86,7 +97,7 @@ func SetupAndRunApexCardanoChains(
 
 	cleanupFunc := func() {
 		for i := 0; i < clusterCnt; i++ {
-			clusters[i].StopDocker() //nolint:errcheck
+			clusters[i].Stop() //nolint:errcheck
 		}
 	}
 

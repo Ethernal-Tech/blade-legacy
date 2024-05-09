@@ -1,12 +1,9 @@
 package cardanofw
 
 import (
-	"bufio"
 	"bytes"
-	"context"
 	"embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -17,18 +14,26 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/helper/common"
-	cardano_wallet "github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
 //go:embed files/*
 var cardanoFiles embed.FS
 
-const hostIP = "cluster-%d-node-%d"
+const hostIP = "127.0.0.1"
+
+func resolveCardanoNodeBinary() string {
+	bin := os.Getenv("CARDANO_NODE_BINARY")
+	if bin != "" {
+		return bin
+	}
+	// fallback
+	return "cardano-node"
+}
 
 func resolveCardanoCliBinary() string {
 	bin := os.Getenv("CARDANO_CLI_BINARY")
@@ -37,6 +42,15 @@ func resolveCardanoCliBinary() string {
 	}
 	// fallback
 	return "cardano-cli"
+}
+
+func resolveOgmiosBinary() string {
+	bin := os.Getenv("OGMIOS")
+	if bin != "" {
+		return bin
+	}
+	// fallback
+	return "ogmios"
 }
 
 type TestCardanoClusterConfig struct {
@@ -120,8 +134,9 @@ func (c *TestCardanoClusterConfig) initLogsDir() error {
 }
 
 type TestCardanoCluster struct {
-	Config  *TestCardanoClusterConfig
-	Servers []*TestCardanoServer
+	Config       *TestCardanoClusterConfig
+	Servers      []*TestCardanoServer
+	OgmiosServer *TestOgmiosServer
 
 	once         sync.Once
 	failCh       chan struct{}
@@ -148,7 +163,7 @@ func WithStartTimeDelay(delay time.Duration) CardanoClusterOption {
 	}
 }
 
-func WithStartNodeID(startNodeID int) CardanoClusterOption {
+func WithStartNodeID(startNodeID int) CardanoClusterOption { // COM: Should this be removed?
 	return func(h *TestCardanoClusterConfig) {
 		h.StartNodeID = startNodeID
 	}
@@ -186,7 +201,8 @@ func WithID(id int) CardanoClusterOption {
 
 func NewCardanoTestCluster(t *testing.T, opts ...CardanoClusterOption) (*TestCardanoCluster, error) {
 	t.Helper()
-	// var err error
+
+	var err error
 
 	config := &TestCardanoClusterConfig{
 		t:          t,
@@ -210,16 +226,8 @@ func NewCardanoTestCluster(t *testing.T, opts ...CardanoClusterOption) (*TestCar
 		opt(config)
 	}
 
-	clusterName := fmt.Sprintf("cluster-%d", config.ID)
-	config.TmpDir = path.Join("../../e2e-docker-tmp", clusterName)
-
-	if common.DirectoryExists(path.Dir(config.TmpDir)) {
-		if err := os.RemoveAll(path.Dir(config.TmpDir)); err != nil {
-			return nil, err
-		}
-	}
-
-	if err := common.CreateDirSafe(config.TmpDir, 0750); err != nil {
+	config.TmpDir, err = os.MkdirTemp("/tmp", "cardano-")
+	if err != nil {
 		return nil, err
 	}
 
@@ -250,52 +258,71 @@ func NewCardanoTestCluster(t *testing.T, opts ...CardanoClusterOption) (*TestCar
 		return nil, err
 	}
 
-	for i := 1; i <= cluster.Config.NodesCount; i++ {
-		id := cluster.Config.StartNodeID + i
-		port := cluster.Config.Port + i
-		socketPath := fmt.Sprintf("node-spo%d/node.socket", id)
-
-		server, err := NewCardanoTestServer(id, port, uint(config.NetworkMagic), config.Dir(""), socketPath)
+	for i := 0; i < cluster.Config.NodesCount; i++ {
+		// time.Sleep(time.Second * 5)
+		err = cluster.NewTestServer(t, i+1, config.Port+i)
 		if err != nil {
 			return nil, err
 		}
-
-		cluster.Servers = append(cluster.Servers, server)
-	}
-
-	if err := cluster.GenerateDockerComposeFiles(); err != nil {
-		return nil, err
 	}
 
 	return cluster, nil
 }
 
-func (c *TestCardanoCluster) StartDocker() error {
-	dockerFile := filepath.Join(c.Config.TmpDir, "docker-compose.yml")
+func (c *TestCardanoCluster) NewTestServer(t *testing.T, id int, port int) error {
+	t.Helper()
 
-	var b bytes.Buffer
-	stdOut := c.Config.GetStdout("docker-compose", &b)
-
-	err := c.runCommand("docker-compose", []string{"-f", dockerFile, "up", "-d"}, stdOut)
+	srv, err := NewCardanoTestServer(t, &TestCardanoServerConfig{
+		ID:   id,
+		Port: port,
+		//StdOut:       c.Config.GetStdout(fmt.Sprintf("node-%d", id)),
+		ConfigFile:   c.Config.Dir("configuration.yaml"),
+		NodeDir:      c.Config.Dir(fmt.Sprintf("node-spo%d", id)),
+		Binary:       resolveCardanoNodeBinary(),
+		NetworkMagic: c.Config.NetworkMagic,
+	})
 	if err != nil {
-		cntErrors := strings.Count(err.Error(), "error")
-		if cntErrors == 1 &&
-			(strings.Contains(err.Error(), "error during command execution: Creating network") ||
-				strings.Contains(err.Error(), "error during command execution:  Network cluster")) {
-			err = nil
-		}
+		return err
 	}
+
+	// watch the server for stop signals. It is important to fix the specific
+	// 'node' reference since 'TestServer' creates a new one if restarted.
+	go func(node *framework.Node) {
+		<-node.Wait()
+
+		if !node.ExitResult().Signaled {
+			c.Fail(fmt.Errorf("server id = %d, port = %d has stopped unexpectedly", id, port))
+		}
+	}(srv.node)
+
+	c.Servers = append(c.Servers, srv)
 
 	return err
 }
 
-func (c *TestCardanoCluster) StopDocker() error {
-	dockerFile := filepath.Join(c.Config.TmpDir, "docker-compose.yml")
+func (c *TestCardanoCluster) Fail(err error) {
+	c.once.Do(func() {
+		c.executionErr = err
+		close(c.failCh)
+	})
+}
 
-	var b bytes.Buffer
-	stdOut := c.Config.GetStdout("docker-compose", &b)
+func (c *TestCardanoCluster) Stop() error {
+	for _, srv := range c.Servers {
+		if srv.IsRunning() {
+			if err := srv.Stop(); err != nil {
+				return err
+			}
+		}
+	}
 
-	return c.runCommand("docker-compose", []string{"-f", dockerFile, "down"}, stdOut)
+	if c.OgmiosServer.IsRunning() {
+		if err := c.OgmiosServer.Stop(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (c *TestCardanoCluster) OgmiosURL() string {
@@ -306,41 +333,67 @@ func (c *TestCardanoCluster) NetworkURL() string {
 	return fmt.Sprintf("http://localhost:%d", c.Config.Port)
 }
 
-func (c *TestCardanoCluster) Stats(
-	ctx context.Context,
-) ([]cardano_wallet.QueryTipData, bool, error) {
-	result := make([]cardano_wallet.QueryTipData, len(c.Servers))
-	errs := make([]error, len(c.Servers))
-	ready := uint32(1)
+func (c *TestCardanoCluster) Stats() ([]*TestCardanoStats, bool, error) {
+	blocks := make([]*TestCardanoStats, len(c.Servers))
+	ready := make([]bool, len(c.Servers))
+	errors := make([]error, len(c.Servers))
 	wg := sync.WaitGroup{}
 
-	for i, srv := range c.Servers {
+	for i := range c.Servers {
+		id, srv := i, c.Servers[i]
+		if !srv.IsRunning() {
+			ready[id] = true
+
+			continue
+		}
+
 		wg.Add(1)
 
-		go func(indx int, txProv cardano_wallet.ITxProvider) {
+		go func() {
 			defer wg.Done()
 
-			tip, err := txProv.GetTip(ctx)
-			if err != nil {
-				c.Config.t.Log("query tip error", "indx", indx, "err", err)
+			var b bytes.Buffer
 
-				if strings.Contains(err.Error(), "cardano-cli: Network.Socket.connect") &&
-					strings.Contains(err.Error(), "does not exist") {
-					atomic.StoreUint32(&ready, 0)
-				} else {
-					errs[indx] = fmt.Errorf("error for provider %d: %w", indx, err)
+			stdOut := c.Config.GetStdout(fmt.Sprintf("cardano-stats-%d", srv.ID()), &b)
+			args := []string{
+				"query", "tip",
+				"--testnet-magic", strconv.Itoa(c.Config.NetworkMagic),
+				"--socket-path", srv.SocketPath(),
+			}
+
+			if err := c.runCommand(c.Config.Binary, args, stdOut); err != nil {
+				if strings.Contains(err.Error(), "Network.Socket.connect") &&
+					strings.Contains(err.Error(), "does not exist (No such file or directory)") {
+					c.Config.t.Log("socket error", "path", srv.SocketPath(), "err", err)
+
+					return
 				}
+
+				ready[id], errors[id] = true, err
 
 				return
 			}
 
-			result[indx] = tip
-		}(i, srv.GetTxProvider())
+			stat, err := NewTestCardanoStats(b.Bytes())
+			if err != nil {
+				ready[id], errors[id] = true, err
+			}
+
+			ready[id], blocks[id] = true, stat
+		}()
 	}
 
 	wg.Wait()
 
-	return result, ready == uint32(1), errors.Join(errs...)
+	for i, err := range errors {
+		if err != nil {
+			return nil, true, err
+		} else if !ready[i] {
+			return nil, false, nil
+		}
+	}
+
+	return blocks, true, nil
 }
 
 func (c *TestCardanoCluster) WaitUntil(timeout, frequency time.Duration, handler func() (bool, error)) error {
@@ -368,19 +421,19 @@ func (c *TestCardanoCluster) WaitUntil(timeout, frequency time.Duration, handler
 	}
 }
 
-func (c *TestCardanoCluster) WaitForReady(ctx context.Context, timeout time.Duration) error {
+func (c *TestCardanoCluster) WaitForReady(timeout time.Duration) error {
 	return c.WaitUntil(timeout, time.Second*2, func() (bool, error) {
-		_, ready, err := c.Stats(ctx)
+		_, ready, err := c.Stats()
 
 		return ready, err
 	})
 }
 
 func (c *TestCardanoCluster) WaitForBlock(
-	ctx context.Context, n uint64, timeout time.Duration, frequency time.Duration,
+	n uint64, timeout time.Duration, frequency time.Duration,
 ) error {
 	return c.WaitUntil(timeout, frequency, func() (bool, error) {
-		tips, ready, err := c.Stats(ctx)
+		tips, ready, err := c.Stats()
 		if err != nil {
 			return false, err
 		} else if !ready {
@@ -400,20 +453,20 @@ func (c *TestCardanoCluster) WaitForBlock(
 }
 
 func (c *TestCardanoCluster) WaitForBlockWithState(
-	ctx context.Context, n uint64, timeout time.Duration,
+	n uint64, timeout time.Duration,
 ) error {
 	servers := c.Servers
 	blockState := make(map[uint64]map[int]string, len(c.Servers))
 
 	return c.WaitUntil(timeout, time.Millisecond*200, func() (bool, error) {
-		tips, ready, err := c.Stats(ctx)
+		tips, ready, err := c.Stats()
 		if err != nil {
 			return false, err
 		} else if !ready {
 			return false, nil
 		}
 
-		c.Config.t.Log("WaitForBlockWithState", "tips", tips)
+		fmt.Print("WaitForBlockWithState", "tips", tips)
 
 		for i, bn := range tips {
 			serverID := servers[i].ID()
@@ -457,6 +510,35 @@ func (c *TestCardanoCluster) WaitForBlockWithState(
 
 		return false, nil
 	})
+}
+
+func (c *TestCardanoCluster) StartOgmios(t *testing.T) error {
+	t.Helper()
+
+	srv, err := NewOgmiosTestServer(t, &TestOgmiosServerConfig{
+		ConfigFile: c.Servers[0].config.ConfigFile,
+		Binary:     resolveOgmiosBinary(),
+		Port:       c.Config.OgmiosPort,
+		SocketPath: c.Servers[0].SocketPath(),
+		StdOut:     c.Config.GetStdout(fmt.Sprintf("ogmios-%d", c.Config.ID)),
+	})
+	if err != nil {
+		return err
+	}
+
+	// watch the server for stop signals. It is important to fix the specific
+	// 'node' reference since 'TestServer' creates a new one if restarted.
+	go func(node *framework.Node, id int, port int) {
+		<-node.Wait()
+
+		if !node.ExitResult().Signaled {
+			c.Fail(fmt.Errorf("ogmios id = %d, port = %d has stopped unexpectedly", id, port))
+		}
+	}(srv.node, c.Config.ID, c.Config.OgmiosPort)
+
+	c.OgmiosServer = srv
+
+	return err
 }
 
 // runCommand executes command with given arguments
@@ -612,7 +694,7 @@ func (c *TestCardanoCluster) CopyConfigFilesAndInitDirectoriesStep2() error {
 		for pid := 0; pid < c.Config.NodesCount; pid++ {
 			if i != pid {
 				producers = append(producers, map[string]interface{}{
-					"addr":    fmt.Sprintf(hostIP, c.Config.ID, pid),
+					"addr":    hostIP,
 					"valency": 1,
 					"port":    c.Config.Port + pid,
 				})
@@ -670,79 +752,6 @@ func (c *TestCardanoCluster) CopyConfigFilesAndInitDirectoriesStep2() error {
 	return nil
 }
 
-func (c *TestCardanoCluster) GenerateDockerComposeFiles() error {
-	filePath := c.Config.Dir("docker-compose.yml")
-
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
-
-	_, _ = writer.WriteString("version: \"3.9\"\n\n")
-	_, _ = writer.WriteString("services:\n")
-
-	for _, srv := range c.Servers {
-		nodeID := srv.ID()
-		dockerSocketPath := srv.SocketPath("/node-data")
-
-		_, _ = writer.WriteString(fmt.Sprintf("  cluster-%d-node-%d:\n", c.Config.ID, nodeID))
-		_, _ = writer.WriteString("    image: ghcr.io/intersectmbo/cardano-node:8.7.3\n")
-		_, _ = writer.WriteString("    environment:\n")
-		_, _ = writer.WriteString("      - CARDANO_BLOCK_PRODUCER=true\n")
-		_, _ = writer.WriteString("      - CARDANO_CONFIG=/node-data/configuration.yaml\n")
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_TOPOLOGY=/node-data/node-spo%d/topology.json\n", nodeID))
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_DATABASE_PATH=/node-data/node-spo%d/db\n", nodeID))
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_SOCKET_PATH=%s\n", dockerSocketPath))
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_SHELLEY_KES_KEY=/node-data/node-spo%d/kes.skey\n", nodeID))
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_SHELLEY_VRF_KEY=/node-data/node-spo%d/vrf.skey\n", nodeID))
-		_, _ = writer.WriteString(
-			fmt.Sprintf("      - CARDANO_SHELLEY_OPERATIONAL_CERTIFICATE=/node-data/node-spo%d/opcert.cert\n", nodeID))
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_LOG_DIR=/node-data/node-spo%d/node.log\n", nodeID))
-		_, _ = writer.WriteString("      - CARDANO_BIND_ADDR=0.0.0.0\n")
-		_, _ = writer.WriteString(fmt.Sprintf("      - CARDANO_PORT=%d\n", srv.Port()))
-		_, _ = writer.WriteString("    command:\n")
-		_, _ = writer.WriteString("      - run\n")
-		_, _ = writer.WriteString("    ports:\n")
-		_, _ = writer.WriteString(fmt.Sprintf("      - %d:%d\n", srv.Port(), srv.Port()))
-		_, _ = writer.WriteString("    volumes:\n")
-		_, _ = writer.WriteString(fmt.Sprintf("      - %s:/node-data\n", c.Config.Dir("")))
-		_, _ = writer.WriteString("    restart: on-failure\n")
-		_, _ = writer.WriteString("    logging:\n")
-		_, _ = writer.WriteString("      driver: \"json-file\"\n")
-		_, _ = writer.WriteString("      options:\n")
-		_, _ = writer.WriteString("        max-size: \"200k\"\n")
-		_, _ = writer.WriteString("        max-file: \"10\"\n")
-		_, _ = writer.WriteString("\n")
-	}
-
-	// Ogmios for node-1
-	_, _ = writer.WriteString("  ogmios:\n")
-	_, _ = writer.WriteString("    image: cardanosolutions/ogmios:v6.1.0\n")
-	_, _ = writer.WriteString("    restart: on-failure\n")
-	_, _ = writer.WriteString("    command: [\n")
-	_, _ = writer.WriteString("      \"--host\", \"0.0.0.0\",\n")
-	_, _ = writer.WriteString("      \"--node-socket\", \"/node-data/node-spo1/node.socket\",\n")
-	_, _ = writer.WriteString("      \"--node-config\", \"/node-data/configuration.yaml\"\n")
-	_, _ = writer.WriteString("    ]\n")
-	_, _ = writer.WriteString("    volumes:\n")
-	_, _ = writer.WriteString(fmt.Sprintf("      - %s:/node-data\n", c.Config.Dir("")))
-	_, _ = writer.WriteString("    ports:\n")
-	_, _ = writer.WriteString(fmt.Sprintf("      - ${OGMIOS_PORT:-%d}:1337\n", c.Config.OgmiosPort))
-	_, _ = writer.WriteString("    depends_on:\n")
-	_, _ = writer.WriteString(fmt.Sprintf("      cluster-%d-node-%d:\n", c.Config.ID, 1))
-	_, _ = writer.WriteString("        condition: service_started\n")
-
-	err = writer.Flush()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // Because in Babbage the overlay schedule and decentralization parameter are deprecated,
 // we must use the "create-staked" cli command to create SPOs in the ShelleyGenesis
 func (c *TestCardanoCluster) GenesisCreateStaked(startTime time.Time) error {
@@ -771,6 +780,18 @@ func (c *TestCardanoCluster) GenesisCreateStaked(startTime time.Time) error {
 	}
 
 	return err
+}
+
+func (c *TestCardanoCluster) RunningServersCount() int {
+	cnt := 0
+
+	for _, srv := range c.Servers {
+		if srv.IsRunning() {
+			cnt++
+		}
+	}
+
+	return cnt
 }
 
 func updateJSON(content []byte, callback func(mp map[string]interface{})) ([]byte, error) {
