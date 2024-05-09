@@ -42,6 +42,7 @@ type TestServerConfig struct {
 	UseTLS                bool
 	TLSCertFile           string
 	TLSKeyFile            string
+	PriceLimit            *uint64
 }
 
 type TestServerConfigCallback func(*TestServerConfig)
@@ -190,6 +191,10 @@ func (t *TestServer) Start() {
 
 	if config.UseTLS {
 		args = append(args, "--use-tls")
+	}
+
+	if config.PriceLimit != nil {
+		args = append(args, "--price-limit", strconv.FormatUint(*config.PriceLimit, 10))
 	}
 
 	// Start the server

@@ -5,8 +5,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/genesis/predeploy"
+	"github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 )
@@ -30,6 +32,14 @@ func GetCommand() *cobra.Command {
 }
 
 func setFlags(cmd *cobra.Command) {
+	// apex flag
+	cmd.Flags().BoolVar(
+		&params.apexBridge,
+		apexBridgeFlag,
+		apexBridgeFlagDefaultValue,
+		apexBridgeDescriptionFlag,
+	)
+
 	cmd.Flags().StringVar(
 		&params.genesisPath,
 		dirFlag,
@@ -389,7 +399,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	var err error
 
 	if params.isPolyBFTConsensus() {
-		err = params.generateChainConfig(outputter)
+		var chainConfig *chain.Chain
+
+		if chainConfig, err = params.generateChainConfig(outputter); err == nil {
+			params.processConfigApex(chainConfig)
+
+			err = helper.WriteGenesisConfigToDisk(chainConfig, params.genesisPath)
+		}
 	} else {
 		err = params.generateGenesis()
 	}

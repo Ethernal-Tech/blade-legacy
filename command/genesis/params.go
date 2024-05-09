@@ -135,6 +135,8 @@ type genesisParams struct {
 
 	stakeToken     string
 	stakeTokenAddr types.Address
+
+	apexBridge bool
 }
 
 func (p *genesisParams) validateFlags() error {

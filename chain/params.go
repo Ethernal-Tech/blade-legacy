@@ -34,7 +34,7 @@ type Params struct {
 	BridgeBlockList           *AddressListConfig `json:"bridgeBlockList,omitempty"`
 
 	// Governance contract where the token will be sent to and burn in london fork
-	BurnContract map[uint64]types.Address `json:"burnContract"`
+	BurnContract map[uint64]types.Address `json:"burnContract,omitempty"`
 	// Destination address to initialize default burn contract with
 	BurnContractDestinationAddress types.Address `json:"burnContractDestinationAddress,omitempty"`
 }

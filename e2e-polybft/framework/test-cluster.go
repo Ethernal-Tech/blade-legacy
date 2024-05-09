@@ -116,6 +116,7 @@ type TestClusterConfig struct {
 	BladeAdmin           string
 	RewardWallet         string
 	PredeployContract    string
+	ApexBridge           bool
 
 	ContractDeployerAllowListAdmin   []types.Address
 	ContractDeployerAllowListEnabled []types.Address
@@ -241,6 +242,12 @@ type TestCluster struct {
 }
 
 type ClusterOption func(*TestClusterConfig)
+
+func WithApexBridge(useApex bool) ClusterOption {
+	return func(h *TestClusterConfig) {
+		h.ApexBridge = useApex
+	}
+}
 
 func WithPremine(addresses ...types.Address) ClusterOption {
 	return func(h *TestClusterConfig) {
@@ -506,6 +513,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		StakeAmounts:  []*big.Int{},
 		HasBridge:     false,
 		VotingDelay:   10,
+		ApexBridge:    true,
 	}
 
 	if config.ValidatorPrefix == "" {
@@ -728,6 +736,12 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			args = append(args, "--stake-token", parts[0])
 		}
 
+		if config.ApexBridge {
+			args = append(args, "--apex")
+		} else {
+			args = append(args, "--apex=false")
+		}
+
 		// run genesis command with all the arguments
 		err = cluster.cmdRun(args...)
 		require.NoError(t, err)
@@ -823,6 +837,11 @@ func (c *TestCluster) InitTestServer(t *testing.T,
 		config.UseTLS = c.Config.UseTLS
 		config.TLSCertFile = c.Config.TLSCertFile
 		config.TLSKeyFile = c.Config.TLSKeyFile
+
+		if c.Config.ApexBridge {
+			priceLimit := uint64(0)
+			config.PriceLimit = &priceLimit
+		}
 	})
 
 	// watch the server for stop signals. It is important to fix the specific
