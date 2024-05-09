@@ -3,6 +3,7 @@ package polybft
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -281,6 +282,47 @@ func TestValidatorsSnapshotCache_Empty(t *testing.T) {
 
 	_, err := testValidatorsCache.GetSnapshot(1, nil, nil)
 	assert.ErrorContains(t, err, "validator snapshot is empty for block")
+}
+
+func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
+	t.Parallel()
+
+	const (
+		validatorSetSize = 5
+		epochSize        = uint64(10)
+		lastBlock        = uint64(100_000)
+	)
+
+	allValidators := validator.NewTestValidators(t, validatorSetSize).GetPublicIdentities()
+	headersMap := &testHeadersMap{headersByNumber: make(map[uint64]*types.Header)}
+
+	for i := uint64(0); i < lastBlock; i += epochSize {
+		from := i
+		to := i + epochSize - 1
+		epoch := i/epochSize + 1
+
+		if i == 0 {
+			createHeaders(t, headersMap, from, to, epoch, nil, allValidators)
+			continue
+		}
+
+		createHeaders(t, headersMap, from, to, epoch, allValidators, allValidators)
+	}
+
+	blockchainMock := new(blockchainMock)
+	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headersMap.getHeader)
+
+	validatorsSnapshotCache := newValidatorsSnapshotCache(hclog.NewNullLogger(), newTestState(t), blockchainMock)
+
+	s := time.Now().UTC()
+
+	snapshot, err := validatorsSnapshotCache.GetSnapshot(lastBlock-epochSize, nil, nil)
+
+	fmt.Println("Time needed to calculate snapshot:", time.Since(s))
+
+	require.NoError(t, err)
+	require.NotNil(t, snapshot)
+	require.NotEmpty(t, snapshot)
 }
 
 func createHeaders(t *testing.T, headersMap *testHeadersMap,

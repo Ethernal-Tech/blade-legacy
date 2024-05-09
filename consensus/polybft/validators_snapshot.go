@@ -138,8 +138,6 @@ func (v *validatorsSnapshotCache) GetSnapshot(
 				latestValidatorSnapshot.Epoch+1, err)
 		}
 
-		v.logger.Trace("Applying delta", "epochEndBlock", nextEpochEndBlockNumber)
-
 		intermediateSnapshot, err := v.computeSnapshot(latestValidatorSnapshot, nextEpochEndBlockNumber, parents)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute snapshot for epoch %d: %w", latestValidatorSnapshot.Epoch+1, err)
@@ -169,7 +167,7 @@ func (v *validatorsSnapshotCache) GetSnapshot(
 		}
 	}
 
-	return latestValidatorSnapshot.Snapshot, nil
+	return latestValidatorSnapshot.Snapshot.Copy(), nil
 }
 
 // computeSnapshot gets desired block header by block number, extracts its extra and applies given delta to the snapshot
@@ -243,11 +241,9 @@ func (v *validatorsSnapshotCache) computeSnapshot(
 
 // storeSnapshot stores given snapshot to the in-memory cache and database
 func (v *validatorsSnapshotCache) storeSnapshot(snapshot *validatorSnapshot, dbTx *bolt.Tx) error {
-	copySnap := snapshot.copy()
-	v.snapshots[copySnap.Epoch] = copySnap
-
-	if err := v.state.EpochStore.insertValidatorSnapshot(copySnap, dbTx); err != nil {
-		return fmt.Errorf("failed to insert validator snapshot for epoch %d to the database: %w", copySnap.Epoch, err)
+	v.snapshots[snapshot.Epoch] = snapshot
+	if err := v.state.EpochStore.insertValidatorSnapshot(snapshot, dbTx); err != nil {
+		return fmt.Errorf("failed to insert validator snapshot for epoch %d to the database: %w", snapshot.Epoch, err)
 	}
 
 	v.logger.Trace("Store snapshot", "Snapshots", v.snapshots)
