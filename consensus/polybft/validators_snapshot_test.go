@@ -303,6 +303,7 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 
 		if i == 0 {
 			createHeaders(t, headersMap, from, to, epoch, nil, allValidators)
+
 			continue
 		}
 
