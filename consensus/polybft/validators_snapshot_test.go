@@ -358,30 +358,35 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	// check if the validators of random epochs are as expected
 	snapshot, err = validatorsSnapshotCache.GetSnapshot(46, nil, nil) // epoch 5 where validator set did not change
 	require.NoError(t, err)
+
 	epochValIndexes, ok := epochValidators[5]
 	require.True(t, ok)
 	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
 
 	snapshot, err = validatorsSnapshotCache.GetSnapshot(numOfEpochsToChangeValSet*epochSize, nil, nil) // epoch 50 where validator set was changed
 	require.NoError(t, err)
+
 	epochValIndexes, ok = epochValidators[numOfEpochsToChangeValSet]
 	require.True(t, ok)
 	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
 
 	snapshot, err = validatorsSnapshotCache.GetSnapshot(2*numOfEpochsToChangeValSet*epochSize, nil, nil) // epoch 100 where validator set was changed
 	require.NoError(t, err)
+
 	epochValIndexes, ok = epochValidators[2*numOfEpochsToChangeValSet]
 	require.True(t, ok)
 	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
 
 	snapshot, err = validatorsSnapshotCache.GetSnapshot(57903, nil, nil) // epoch 5790 where validator set did not change
 	require.NoError(t, err)
+
 	epochValIndexes, ok = epochValidators[57903/epochSize+1]
 	require.True(t, ok)
 	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
 
 	snapshot, err = validatorsSnapshotCache.GetSnapshot(99991, nil, nil) // epoch 10000 where validator set did not change
 	require.NoError(t, err)
+
 	epochValIndexes, ok = epochValidators[99991/epochSize+1]
 	require.True(t, ok)
 	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
