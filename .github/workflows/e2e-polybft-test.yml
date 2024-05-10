@@ -38,7 +38,9 @@ jobs:
       - name: Update certificate key file permissions
         run: sudo chmod 644 /etc/ssl/private/localhost.key
       - name: Install Cardano tools
-        uses: milos-ethernal/cardano-node-action@bf79cdb680c317f5cd8c60b0905f2e72639bb371
+        uses: milos-ethernal/cardano-node-action@5a3bce7266cc1500d96e8fa63b3bb97135988482
+      - name: Install ogmios
+        uses: milos-ethernal/ogmios-action@13e2be0b00da80f26bb8583fa129bd7c08856a49
       - name: Check certificate key permissions
         run: ls -l /etc/ssl/private/localhost.key
       - name: Run tests
