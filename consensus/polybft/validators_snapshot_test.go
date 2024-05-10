@@ -288,13 +288,19 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	t.Parallel()
 
 	const (
-		validatorSetSize = 5
 		epochSize        = uint64(10)
 		lastBlock        = uint64(100_000)
+		totalValidators  = 20
+		validatorSetSize = 5
 	)
 
-	allValidators := validator.NewTestValidators(t, validatorSetSize).GetPublicIdentities()
+	allValidators := validator.NewTestValidators(t, totalValidators).GetPublicIdentities()
 	headersMap := &testHeadersMap{headersByNumber: make(map[uint64]*types.Header)}
+
+	oldValidators := allValidators[:validatorSetSize]
+	newValidators := oldValidators
+	firstValIndex := 0
+	lastValIndex := validatorSetSize
 
 	for i := uint64(0); i < lastBlock; i += epochSize {
 		from := i
@@ -302,12 +308,27 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 		epoch := i/epochSize + 1
 
 		if i == 0 {
-			createHeaders(t, headersMap, from, to, epoch, nil, allValidators)
+			createHeaders(t, headersMap, from, to, epoch, nil, newValidators)
 
 			continue
 		}
 
-		createHeaders(t, headersMap, from, to, epoch, allValidators, allValidators)
+		oldValidators = newValidators
+
+		if epoch%50 == 0 {
+			// every 50 epochs, change validators
+			firstValIndex = lastValIndex
+			lastValIndex += validatorSetSize
+
+			if lastValIndex > totalValidators {
+				firstValIndex = 0
+				lastValIndex = validatorSetSize
+			}
+
+			newValidators = allValidators[firstValIndex:lastValIndex]
+		}
+
+		createHeaders(t, headersMap, from, to, epoch, oldValidators, newValidators)
 	}
 
 	blockchainMock := new(blockchainMock)
