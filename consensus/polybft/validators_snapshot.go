@@ -138,6 +138,8 @@ func (v *validatorsSnapshotCache) GetSnapshot(
 				latestValidatorSnapshot.Epoch+1, err)
 		}
 
+		v.logger.Trace("Applying delta", "epochEndBlock", nextEpochEndBlockNumber)
+
 		intermediateSnapshot, err := v.computeSnapshot(latestValidatorSnapshot, nextEpochEndBlockNumber, parents)
 		if err != nil {
 			return nil, fmt.Errorf("failed to compute snapshot for epoch %d: %w", latestValidatorSnapshot.Epoch+1, err)
