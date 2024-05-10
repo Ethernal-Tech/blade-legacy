@@ -287,11 +287,17 @@ func TestValidatorsSnapshotCache_Empty(t *testing.T) {
 func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	t.Parallel()
 
+	type epochValidatorSetIndexes struct {
+		firstValIndex int
+		lastValIndex  int
+	}
+
 	const (
-		epochSize        = uint64(10)
-		lastBlock        = uint64(100_000)
-		totalValidators  = 20
-		validatorSetSize = 5
+		epochSize                 = uint64(10)
+		lastBlock                 = uint64(100_000)
+		numOfEpochsToChangeValSet = 50
+		totalValidators           = 20
+		validatorSetSize          = 5
 	)
 
 	allValidators := validator.NewTestValidators(t, totalValidators).GetPublicIdentities()
@@ -301,6 +307,7 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	newValidators := oldValidators
 	firstValIndex := 0
 	lastValIndex := validatorSetSize
+	epochValidators := map[uint64]epochValidatorSetIndexes{}
 
 	for i := uint64(0); i < lastBlock; i += epochSize {
 		from := i
@@ -315,8 +322,8 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 
 		oldValidators = newValidators
 
-		if epoch%50 == 0 {
-			// every 50 epochs, change validators
+		if epoch%numOfEpochsToChangeValSet == 0 {
+			// every n epochs, change validators
 			firstValIndex = lastValIndex
 			lastValIndex += validatorSetSize
 
@@ -327,6 +334,8 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 
 			newValidators = allValidators[firstValIndex:lastValIndex]
 		}
+
+		epochValidators[epoch] = epochValidatorSetIndexes{firstValIndex, lastValIndex}
 
 		createHeaders(t, headersMap, from, to, epoch, oldValidators, newValidators)
 	}
@@ -345,6 +354,37 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, snapshot)
 	require.NotEmpty(t, snapshot)
+
+	// check if the validators of random epochs are as expected
+	snapshot, err = validatorsSnapshotCache.GetSnapshot(46, nil, nil) // epoch 5 where validator set did not change
+	require.NoError(t, err)
+	epochValIndexes, ok := epochValidators[5]
+	require.True(t, ok)
+	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
+
+	snapshot, err = validatorsSnapshotCache.GetSnapshot(numOfEpochsToChangeValSet*epochSize, nil, nil) // epoch 50 where validator set was changed
+	require.NoError(t, err)
+	epochValIndexes, ok = epochValidators[numOfEpochsToChangeValSet]
+	require.True(t, ok)
+	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
+
+	snapshot, err = validatorsSnapshotCache.GetSnapshot(2*numOfEpochsToChangeValSet*epochSize, nil, nil) // epoch 100 where validator set was changed
+	require.NoError(t, err)
+	epochValIndexes, ok = epochValidators[2*numOfEpochsToChangeValSet]
+	require.True(t, ok)
+	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
+
+	snapshot, err = validatorsSnapshotCache.GetSnapshot(57903, nil, nil) // epoch 5790 where validator set did not change
+	require.NoError(t, err)
+	epochValIndexes, ok = epochValidators[57903/epochSize+1]
+	require.True(t, ok)
+	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
+
+	snapshot, err = validatorsSnapshotCache.GetSnapshot(99991, nil, nil) // epoch 10000 where validator set did not change
+	require.NoError(t, err)
+	epochValIndexes, ok = epochValidators[99991/epochSize+1]
+	require.True(t, ok)
+	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
 }
 
 func createHeaders(t *testing.T, headersMap *testHeadersMap,
