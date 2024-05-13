@@ -304,7 +304,7 @@ func (as AccountSet) ApplyDelta(validatorsDelta *ValidatorSetDelta) (AccountSet,
 
 	// Figure out which validators from the existing set are not marked for deletion.
 	// Those should be kept in the snapshot.
-	validators := make(AccountSet, 0)
+	validators := make(AccountSet, 0, as.Len())
 
 	for i, validator := range as {
 		// If a validator is not in the Removed set, or it is in the Removed set
@@ -319,7 +319,7 @@ func (as AccountSet) ApplyDelta(validatorsDelta *ValidatorSetDelta) (AccountSet,
 	// Append added validators
 	for _, addedValidator := range validatorsDelta.Added {
 		if validators.ContainsAddress(addedValidator.Address) {
-			return nil, fmt.Errorf("validator %v is already present in the validators snapshot", addedValidator.Address.String())
+			return nil, fmt.Errorf("validator %s is already present in the validators snapshot", addedValidator.Address)
 		}
 
 		validators = append(validators, addedValidator)
