@@ -105,20 +105,8 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Triggered by: *${{ github.triggering_actor }}*"
-                    },
-                    {
-                      "type": "mrkdwn",
                       "text": "Commit: *<https://github.com/${{ github.repository }}/tree/${{ github.sha }}|${{ steps.short_sha.outputs.value }}>*"
-                    }
-                  ]
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "context",
-                  "elements": [
+                    },
                     {
                       "type": "mrkdwn",
                       "text": "Environment: *${{ inputs.environment }}*"
@@ -128,6 +116,9 @@ jobs:
                       "text": "Instances Type: *${{ vars.AWS_INSTANCE_TYPE }}*"
                     }
                   ]
+                },
+                {
+                  "type": "divider"
                 },
                 {
                   "type": "context",

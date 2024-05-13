@@ -75,6 +75,14 @@ on: # yamllint disable-line rule:truthy
         description: Maximum Gas Utilization
         type: string
         required: true
+      txpool_pending:
+        description: Number of transactions in pending
+        type: string
+        required: true
+      txpool_queued:
+        description: Number of transactions in queued
+        type: string
+        required: true
     secrets:
       SLACK_WEBHOOK_URL:
         required: true
@@ -94,6 +102,7 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
           succeed_bnt: 'primary'
+          failed_bnt: 'danger'
         with:
           payload: |
             {
@@ -114,7 +123,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ env.succeed_bnt }}",
+                      "style": "${{ inputs.txpool_pending == '0' && inputs.txpool_queued == '0' && env.succeed_bnt || env.failed_bnt }}"
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ]
@@ -124,20 +133,8 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Triggered by: *${{ github.triggering_actor }}*"
-                    },
-                    {
-                      "type": "mrkdwn",
                       "text": "Commit: *<https://github.com/${{ github.repository }}/tree/${{ github.sha }}|${{ steps.short_sha.outputs.value }}>*"
-                    }
-                  ]
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "context",
-                  "elements": [
+                    },
                     {
                       "type": "mrkdwn",
                       "text": "Environment: *${{ inputs.environment }}*"
@@ -147,6 +144,9 @@ jobs:
                       "text": "Instance Type: *${{ vars.AWS_INSTANCE_TYPE }}*"
                     }
                   ]
+                },
+                {
+                  "type": "divider"
                 },
                 {
                   "type": "context",
@@ -173,11 +173,27 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
+                      "text": "Receipts Timeout: *${{ inputs.receipts_timeout }}*"
+                    }
+                    {
+                      "type": "mrkdwn",
                       "text": "Wait TX Pool To Empty: *${{ inputs.wait_txpool }}*"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Pending TXs: *${{ inputs.txpool_pending }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Receipts Timeout: *${{ inputs.receipts_timeout }}*"
+                      "text": "Queued TXs: *${{ inputs.txpool_queued }}*"
                     }
                   ]
                 },

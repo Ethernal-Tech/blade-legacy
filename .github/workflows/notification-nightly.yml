@@ -83,12 +83,36 @@ on: # yamllint disable-line rule:truthy
         description: Load Test EOA output
         type: string
         required: true
+      load_test_eoa_txpool_pending_output:
+        description: Load Test EOA txpool pending output
+        type: string
+        required: true
+      load_test_eoa_txpool_queued_output:
+        description: Load Test EOA txpool queued output
+        type: string
+        required: true
       load_test_erc20_output:
         description: Load Test ERC20 output
         type: string
         required: true
+      load_test_erc20_txpool_pending_output:
+        description: Load Test ERC20 txpool pending output
+        type: string
+        required: true
+      load_test_erc20_txpool_queued_output:
+        description: Load Test ERC20 txpool queued output
+        type: string
+        required: true
       load_test_erc721_output:
         description: Load Test ERC721 output
+        type: string
+        required: true
+      load_test_erc721_txpool_pending_output:
+        description: Load Test ERC721 txpool pending output
+        type: string
+        required: true
+      load_test_erc721_txpool_queued_output:
+        description: Load Test ERC721 txpool queued output
         type: string
         required: true
       destroy_network_logs_output:
@@ -143,7 +167,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc721_output == 'true' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
                     {
@@ -162,20 +186,8 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Triggered by: *${{ github.triggering_actor }}*"
-                    },
-                    {
-                      "type": "mrkdwn",
                       "text": "Commit: *<https://github.com/${{ github.repository }}/tree/${{ github.sha }}|${{ steps.short_sha.outputs.value }}>*"
-                    }
-                  ]
-                },
-                {
-                  "type": "divider"
-                },
-                {
-                  "type": "context",
-                  "elements": [
+                    },
                     {
                       "type": "mrkdwn",
                       "text": "Environment: *${{ inputs.environment }}*"
@@ -185,6 +197,9 @@ jobs:
                       "text": "Instances Type: *${{ vars.AWS_INSTANCE_TYPE }}*"
                     }
                   ]
+                },
+                {
+                  "type": "divider"
                 },
                 {
                   "type": "context",
@@ -232,11 +247,11 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Gossip Message Size: *${{ inputs.gossip_msg_size }}*"
+                      "text": "Log Level: *${{ vars.LOG_LEVEL }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Log Level: *${{ vars.LOG_LEVEL }}*"
+                      "text": "Gossip Message Size: *${{ inputs.gossip_msg_size }}*"
                     }
                   ]
                 },
@@ -296,15 +311,15 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.load_test_eoa_output == 'true' && env.succeed_job || env.failed_job }} *Load Test EOA*"
+                      "text": "${{ inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && env.succeed_job || env.failed_job }} *Load Test EOA*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.load_test_erc20_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC20*"
+                      "text": "${{ inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && env.succeed_job || env.failed_job }} *Load Test ERC20*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.load_test_erc721_output == 'true' && env.succeed_job || env.failed_job }} *Load Test ERC721*"
+                      "text": "${{ inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && env.succeed_job || env.failed_job }} *Load Test ERC721*"
                     }
                   ]
                 }

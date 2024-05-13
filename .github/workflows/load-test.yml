@@ -117,6 +117,12 @@ on: # yamllint disable-line rule:truthy
       max_gas_utilization:
         description: Maximum Gas Utilization
         value: ${{ jobs.load_test.outputs.max_gas_utilization }}
+      txpool_pending:
+        description: Number of transactions in pending
+        value: ${{ jobs.txpool_status.outputs.txpool_pending }}
+      txpool_queued:
+        description: Number of transactions in queued
+        value: ${{ jobs.txpool_status.outputs.txpool_queued }}
     secrets:
       AWS_ROLE_ARN:
         required: true
@@ -239,9 +245,23 @@ jobs:
         if: success()
         id: load_test_results_success
         run: echo "test_output=true" >> $GITHUB_OUTPUT
+  txpool_status:
+    name: Check txpool status after Load Test
+    runs-on: ubuntu-latest
+    needs: load_test
+    outputs:
+      txpool_pending: ${{ steps.txpool_status_results.outputs.txpool_pending }}
+      txpool_queued: ${{ steps.txpool_status_results.outputs.txpool_queued }}
+    steps:
+      - name: Get txpool status
+        id: txpool_status_results
+        run: |
+          txpool_status=$(cast rpc --rpc-url "http://${{ needs.check_network.outputs.rpc_url }}" txpool_status | jq)
+          echo "txpool_pending=$(echo $txpool_status | jq -r '.pending')" >> $GITHUB_OUTPUT
+          echo "txpool_queued=$(echo $txpool_status | jq -r '.queued')" >> $GITHUB_OUTPUT
   notification:
     name: Load Test Notification
-    needs: load_test
+    needs: [load_test, txpool_status]
     uses: ./.github/workflows/notification-load-test.yml
     if: (always() && inputs.notification && needs.load_test.outputs.test_output_success == 'true')
     with:
@@ -263,12 +283,14 @@ jobs:
       avg_gas_per_tx: ${{ needs.load_test.outputs.avg_gas_per_tx }}
       avg_gas_utilization: ${{ needs.load_test.outputs.avg_gas_utilization }}
       max_gas_utilization: ${{ needs.load_test.outputs.max_gas_utilization }}
+      txpool_pending: ${{ needs.txpool_status.outputs.txpool_pending }}
+      txpool_queued: ${{ needs.txpool_status.outputs.txpool_queued }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   destroy_load_test_runner:
     name: Destroy Load Test Runner
     environment: ${{ inputs.environment }}
-    needs: [load_test_runner, load_test]
+    needs: [load_test_runner, load_test, txpool_status]
     if: always()
     runs-on: ubuntu-latest
     steps:

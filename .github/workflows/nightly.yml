@@ -147,8 +147,14 @@ jobs:
       deploy_network_terraform_output: ${{ needs.deploy_network.outputs.terraform_output }}
       deploy_network_ansible_output: ${{ needs.deploy_network.outputs.ansible_output }}
       load_test_eoa_output: ${{ needs.load_test_eoa.outputs.load_test_output }}
+      load_test_eoa_txpool_pending_output: ${{ needs.load_test_eoa.outputs.txpool_pending }}
+      load_test_eoa_txpool_queued_output: ${{ needs.load_test_eoa.outputs.txpool_queued }}
       load_test_erc20_output: ${{ needs.load_test_erc20.outputs.load_test_output }}
+      load_test_erc20_txpool_pending_output: ${{ needs.load_test_erc20.outputs.txpool_pending }}
+      load_test_erc20_txpool_queued_output: ${{ needs.load_test_erc20.outputs.txpool_queued }}
       load_test_erc721_output: ${{ needs.load_test_erc721.outputs.load_test_output }}
+      load_test_erc721_txpool_pending_output: ${{ needs.load_test_erc721.outputs.txpool_pending }}
+      load_test_erc721_txpool_queued_output: ${{ needs.load_test_erc721.outputs.txpool_queued }}
       destroy_network_logs_output: ${{ needs.destroy_network.outputs.logs_output }}
       destroy_network_terraform_output: ${{ needs.destroy_network.outputs.terraform_output }}
     secrets:
@@ -178,6 +184,8 @@ jobs:
       avg_gas_per_tx: ${{ needs.load_test_eoa.outputs.avg_gas_per_tx }}
       avg_gas_utilization: ${{ needs.load_test_eoa.outputs.avg_gas_utilization }}
       max_gas_utilization: ${{ needs.load_test_eoa.outputs.max_gas_utilization }}
+      txpool_pending: ${{ needs.load_test_eoa.outputs.txpool_pending }}
+      txpool_queued: ${{ needs.load_test_eoa.outputs.txpool_queued }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   notification_load_test_erc20:
@@ -204,6 +212,8 @@ jobs:
       avg_gas_per_tx: ${{ needs.load_test_erc20.outputs.avg_gas_per_tx }}
       avg_gas_utilization: ${{ needs.load_test_erc20.outputs.avg_gas_utilization }}
       max_gas_utilization: ${{ needs.load_test_erc20.outputs.max_gas_utilization }}
+      txpool_pending: ${{ needs.load_test_erc20.outputs.txpool_pending }}
+      txpool_queued: ${{ needs.load_test_erc20.outputs.txpool_queued }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   notification_load_test_erc721:
@@ -230,5 +240,7 @@ jobs:
       avg_gas_per_tx: ${{ needs.load_test_erc721.outputs.avg_gas_per_tx }}
       avg_gas_utilization: ${{ needs.load_test_erc721.outputs.avg_gas_utilization }}
       max_gas_utilization: ${{ needs.load_test_erc721.outputs.max_gas_utilization }}
+      txpool_pending: ${{ needs.load_test_erc721.outputs.txpool_pending }}
+      txpool_queued: ${{ needs.load_test_erc721.outputs.txpool_queued }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
