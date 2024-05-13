@@ -296,7 +296,8 @@ func (as AccountSet) GetFilteredValidators(bitmap bitmap.Bitmap) (AccountSet, er
 
 // ApplyDelta receives ValidatorSetDelta and applies it to the values from the current AccountSet
 // (removes the ones marked for deletion and adds the one which are being added by delta)
-// Function returns new AccountSet with old and new data merged. AccountSet is immutable!
+// Function returns new AccountSet with old and new data merged.
+// Note: AccountSet is immutable in case of non-empty delta!
 func (as AccountSet) ApplyDelta(validatorsDelta *ValidatorSetDelta) (AccountSet, error) {
 	if validatorsDelta == nil || validatorsDelta.IsEmpty() {
 		return as, nil
