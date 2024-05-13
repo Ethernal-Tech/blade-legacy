@@ -3,11 +3,14 @@ package e2e
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"net/http"
+	"net/url"
 	"path"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -147,6 +150,11 @@ func TestE2E_ApexBridge(t *testing.T) {
 	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
+
+	fmt.Printf("Prime address = " + primeUserAddress)
+	fmt.Printf("\n")
+	fmt.Printf("Vector address = " + vectorUserAddress)
+	fmt.Printf("\n")
 
 	// Initiate bridging PRIME -> VECTOR
 	var receivers = make(map[string]uint64, 2)
@@ -374,7 +382,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 	require.NoError(t, err)
 
 	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
-	// txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
+	//txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
 
 	// Fund prime address
 	primeGenesisWallet, err := cardanofw.GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 2)
@@ -517,7 +525,11 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 		require.NoError(t, err)
 
-		// check tx rejected on validator API
+		// apiUrl, err := cb.GetBridgingAPI()
+		// require.NoError(t, err)
+
+		// requestURL := fmt.Sprintf("%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiUrl, "prime", txHash)
+
 	})
 }
 
@@ -789,4 +801,48 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 	}
 
 	return json.Marshal(metadata)
+}
+
+func WaitForRequestState(ctx context.Context, expectedState string, chainId string, txHash string,
+	numRetries int, waitTime time.Duration) error {
+	for count := 0; count < numRetries; count++ {
+		state, err := CheckBridgingRequestState(chainId, txHash)
+
+		if err != nil {
+			return err
+		}
+
+		if strings.Compare(state, expectedState) == 0 {
+			return nil
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(waitTime):
+		}
+	}
+
+	return errors.New("timeout while waiting for transaction")
+}
+
+func CheckBridgingRequestState(chainId string, txHash string) (string, error) {
+	params := url.Values{}
+	params.Add("chainId", chainId)
+	params.Add("txHash", txHash)
+
+	url := "http://localhost:40000/api/BridgingRequestState/Get?" + params.Encode()
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(responseBody), nil
 }
