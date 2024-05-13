@@ -20,20 +20,20 @@ func SendTx(ctx context.Context,
 	receiver string,
 	testnetMagic int,
 	metadata []byte,
-) error {
+) (string, error) {
 	cardanoWalletAddr, _, err := wallet.GetWalletAddress(cardanoWallet, uint(testnetMagic))
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	protocolParams, err := txProvider.GetProtocolParameters(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	qtd, err := txProvider.GetTip(ctx)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	outputs := []wallet.TxOutput{
@@ -45,11 +45,11 @@ func SendTx(ctx context.Context,
 
 	utxos, err := txProvider.GetUtxos(ctx, cardanoWalletAddr)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if len(utxos) == 0 {
-		return fmt.Errorf("no utxos at given address")
+		return "", fmt.Errorf("no utxos at given address")
 	}
 
 	inputs := []wallet.TxInput{
@@ -63,15 +63,15 @@ func SendTx(ctx context.Context,
 	rawTx, txHash, err := CreateTx(uint(testnetMagic), protocolParams, qtd.Slot+TTLSlotNumberInc, metadata,
 		outputs, inputs, cardanoWalletAddr, sendingAmount, amount)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	signedTx, err := wallet.SignTx(rawTx, txHash, cardanoWallet)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return txProvider.SubmitTx(ctx, signedTx)
+	return txHash, txProvider.SubmitTx(ctx, signedTx)
 }
 
 func GetGenesisWalletFromCluster(

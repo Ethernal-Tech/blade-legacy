@@ -148,10 +148,11 @@ func (cv *TestCardanoValidator) GenerateConfigs(
 	vectorOgmiosURL string,
 	apiPort int,
 	apiKey string,
+	ttlInc uint64,
 ) error {
 	cv.APIPort = apiPort
 
-	return RunCommand(ResolveApexBridgeBinary(), []string{
+	args := []string{
 		"generate-configs",
 		"--output-dir", cv.GetBridgingConfigsDir(),
 		"--output-validator-components-file-name", ValidatorComponentsConfigFileName,
@@ -171,7 +172,15 @@ func (cv *TestCardanoValidator) GenerateConfigs(
 		"--bridge-validator-data-dir", cv.server.DataDir(),
 		"--api-port", fmt.Sprint(apiPort),
 		"--api-keys", apiKey,
-	}, os.Stdout)
+	}
+
+	if ttlInc > 0 {
+		args = append(args,
+			"--ttl-slot-inc", fmt.Sprint(ttlInc),
+		)
+	}
+
+	return RunCommand(ResolveApexBridgeBinary(), args, os.Stdout)
 }
 
 func (cv *TestCardanoValidator) StartValidatorComponents(

@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
+	"net/http"
 	"path"
 	"testing"
 	"time"
@@ -66,7 +68,7 @@ func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
 			genesisWallet, err := cardanofw.GetGenesisWalletFromCluster(clusters[i].Config.TmpDir, 1)
 			require.NoError(t, err)
 
-			err = cardanofw.SendTx(ctx, txProviders[i], genesisWallet,
+			_, err = cardanofw.SendTx(ctx, txProviders[i], genesisWallet,
 				sendAmount, receivers[i], clusters[i].Config.NetworkMagic, []byte{})
 			require.NoError(t, err)
 		}
@@ -123,8 +125,9 @@ func TestE2E_ApexBridge(t *testing.T) {
 	require.NoError(t, err)
 
 	sendAmount := uint64(5_000_000)
-	require.NoError(t, cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
-		sendAmount, primeUserAddress, primeCluster.Config.NetworkMagic, []byte{}))
+	_, err = cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
+		sendAmount, primeUserAddress, primeCluster.Config.NetworkMagic, []byte{})
+	require.NoError(t, err)
 
 	require.NoError(t, wallet.WaitForAmount(context.Background(), txProviderPrime, primeUserAddress, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
@@ -155,19 +158,181 @@ func TestE2E_ApexBridge(t *testing.T) {
 	bridgingRequestMetadata, err := CreateMetaData(primeUserAddress, receivers)
 	require.NoError(t, err)
 
-	require.NoError(t, cardanofw.SendTx(
+	_, err = cardanofw.SendTx(
 		ctx, txProviderPrime, primeWalletKeys, 2_100_000, cb.PrimeMultisigAddr,
-		primeCluster.Config.NetworkMagic, bridgingRequestMetadata))
+		primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
+	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, vectorUserAddress, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
 	}, 100, time.Minute*5)
 	require.NoError(t, err)
 
-	fmt.Printf("Prime address = " + primeUserAddress)
-	fmt.Printf("\n")
-	fmt.Printf("Vector address = " + vectorUserAddress)
-	fmt.Printf("\n")
+	fmt.Printf("Prime address = %s\n", primeUserAddress)
+	fmt.Printf("Vector address = %s\n", vectorUserAddress)
+}
+
+func TestE2E_ApexBridge_BatchRecreated(t *testing.T) {
+	const (
+		cardanoChainsCnt   = 2
+		bladeValidatorsNum = 4
+		apiKey             = "test_api_key"
+	)
+
+	ctx, cncl := context.WithCancel(context.Background())
+	defer cncl()
+
+	clusters, _ := cardanofw.SetupAndRunApexCardanoChains(
+		t,
+		ctx,
+		cardanoChainsCnt,
+	)
+
+	primeCluster := clusters[0]
+	require.NotNil(t, primeCluster)
+
+	vectorCluster := clusters[1]
+	require.NotNil(t, vectorCluster)
+
+	// defer cleanupCardanoChainsFunc()
+
+	primeWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
+	require.NoError(t, err)
+
+	primeUserAddress, _, err := wallet.GetWalletAddress(primeWalletKeys, uint(primeCluster.Config.NetworkMagic))
+	require.NoError(t, err)
+
+	vectorWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(vectorCluster.Config.Dir("keys")), true)
+	require.NoError(t, err)
+
+	vectorUserAddress, _, err := wallet.GetWalletAddress(vectorWalletKeys, uint(vectorCluster.Config.NetworkMagic))
+	require.NoError(t, err)
+
+	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
+
+	// Fund prime address
+	primeGenesisWallet, err := cardanofw.GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 2)
+	require.NoError(t, err)
+
+	sendAmount := uint64(5_000_000)
+	_, err = cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
+		sendAmount, primeUserAddress, primeCluster.Config.NetworkMagic, []byte{})
+	require.NoError(t, err)
+
+	require.NoError(t, wallet.WaitForAmount(context.Background(), txProviderPrime, primeUserAddress, func(val *big.Int) bool {
+		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
+	}, 60, time.Second*2))
+
+	fmt.Printf("Prime user address funded\n")
+
+	cb, _ := cardanofw.SetupAndRunApexBridge(t,
+		ctx,
+		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
+		"../../e2e-bridge-data-tmp",
+		bladeValidatorsNum,
+		primeCluster,
+		vectorCluster,
+		cardanofw.WithTTLInc(1),
+		cardanofw.WithAPIKey(apiKey),
+	)
+	// defer cleanupApexBridgeFunc()
+
+	fmt.Printf("Apex bridge setup done\n")
+
+	// Initiate bridging PRIME -> VECTOR
+	var receivers = make(map[string]uint64, 2)
+
+	sendAmount = uint64(1_000_000)
+
+	receivers[vectorUserAddress] = sendAmount
+	receivers[cb.VectorMultisigFeeAddr] = 1_100_000
+
+	bridgingRequestMetadata, err := CreateMetaData(primeUserAddress, receivers)
+	require.NoError(t, err)
+
+	txHash, err := cardanofw.SendTx(
+		ctx, txProviderPrime, primeWalletKeys, 2_100_000, cb.PrimeMultisigAddr,
+		primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
+	require.NoError(t, err)
+
+	timeoutTimer := time.NewTimer(time.Second * 300)
+	defer timeoutTimer.Stop()
+
+	wentFromFailedOnDestinationToIncludedInBatch := false
+
+	var (
+		prevStatus    string
+		currentStatus string
+	)
+
+	apiURL, err := cb.GetBridgingAPI()
+	require.NoError(t, err)
+
+	requestURL := fmt.Sprintf(
+		"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
+
+	fmt.Printf("Bridging request txHash = %s\n", txHash)
+
+for_loop:
+	for {
+		select {
+		case <-timeoutTimer.C:
+			fmt.Printf("Timeout\n")
+
+			break for_loop
+		case <-ctx.Done():
+			fmt.Printf("Done\n")
+
+			break for_loop
+		case <-time.After(time.Millisecond * 500):
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+		if err != nil {
+			continue
+		}
+
+		req.Header.Set("X-API-KEY", apiKey)
+		resp, err := http.DefaultClient.Do(req)
+		if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
+			continue
+		}
+
+		resBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			continue
+		}
+
+		var responseModel BridgingRequestStateResponse
+
+		err = json.Unmarshal(resBody, &responseModel)
+		if err != nil {
+			continue
+		}
+
+		prevStatus = currentStatus
+		currentStatus = responseModel.Status
+
+		fmt.Printf("currentStatus = %s\n", currentStatus)
+
+		if prevStatus == "FailedToExecuteOnDestination" && currentStatus == "IncludedInBatch" {
+			wentFromFailedOnDestinationToIncludedInBatch = true
+
+			break for_loop
+		}
+	}
+
+	fmt.Printf("wentFromFailedOnDestinationToIncludedInBatch = %v\n", wentFromFailedOnDestinationToIncludedInBatch)
+
+	require.True(t, wentFromFailedOnDestinationToIncludedInBatch)
+}
+
+type BridgingRequestStateResponse struct {
+	SourceChainID      string `json:"sourceChainId"`
+	SourceTxHash       string `json:"sourceTxHash"`
+	DestinationChainID string `json:"destinationChainId"`
+	Status             string `json:"status"`
+	DestinationTxHash  string `json:"destinationTxHash"`
 }
 
 func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) {

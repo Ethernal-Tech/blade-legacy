@@ -25,6 +25,8 @@ const (
 	RunRelayerOnValidatorID = 1
 )
 
+type CardanoBridgeOption func(*TestCardanoBridge)
+
 type TestCardanoBridge struct {
 	validatorCount int
 	dataDirPath    string
@@ -42,20 +44,50 @@ type TestCardanoBridge struct {
 	VectorMultisigFeeAddr string
 
 	cluster *framework.TestCluster
+
+	apiPortStart int
+	apiKey       string
+	ttlInc       uint64
 }
 
-func NewTestCardanoBridge(dataDirPath string, validatorCount int) *TestCardanoBridge {
+func WithAPIPortStart(apiPortStart int) CardanoBridgeOption {
+	return func(h *TestCardanoBridge) {
+		h.apiPortStart = apiPortStart
+	}
+}
+
+func WithAPIKey(apiKey string) CardanoBridgeOption {
+	return func(h *TestCardanoBridge) {
+		h.apiKey = apiKey
+	}
+}
+
+func WithTTLInc(ttlInc uint64) CardanoBridgeOption {
+	return func(h *TestCardanoBridge) {
+		h.ttlInc = ttlInc
+	}
+}
+
+func NewTestCardanoBridge(
+	dataDirPath string, validatorCount int, opts ...CardanoBridgeOption,
+) *TestCardanoBridge {
 	validators := make([]*TestCardanoValidator, validatorCount)
 
 	for i := 0; i < validatorCount; i++ {
 		validators[i] = NewTestCardanoValidator(dataDirPath, i+1)
 	}
 
-	return &TestCardanoBridge{
+	bridge := &TestCardanoBridge{
 		dataDirPath:    dataDirPath,
 		validatorCount: validatorCount,
 		validators:     validators,
 	}
+
+	for _, opt := range opts {
+		opt(bridge)
+	}
+
+	return bridge
 }
 
 func (cb *TestCardanoBridge) CardanoCreateWalletsAndAddresses(
@@ -146,8 +178,6 @@ func (cb *TestCardanoBridge) GenerateConfigs(
 	vectorNetworkAddress string,
 	vectorNetworkMagic int,
 	vectorBlockfrostURL string,
-	apiPortStart int,
-	apiKey string,
 ) error {
 	errs := make([]error, len(cb.validators))
 	wg := sync.WaitGroup{}
@@ -165,8 +195,9 @@ func (cb *TestCardanoBridge) GenerateConfigs(
 				vectorNetworkAddress,
 				vectorNetworkMagic,
 				vectorBlockfrostURL,
-				apiPortStart+indx,
-				apiKey,
+				cb.apiPortStart+indx,
+				cb.apiKey,
+				cb.ttlInc,
 			)
 		}(validator, i)
 	}
@@ -206,7 +237,7 @@ func (cb *TestCardanoBridge) GetBridgingAPI() (string, error) {
 				return "", fmt.Errorf("api port not defined")
 			}
 
-			return fmt.Sprintf("localhost:%d", validator.APIPort), nil
+			return fmt.Sprintf("http://localhost:%d", validator.APIPort), nil
 		}
 	}
 

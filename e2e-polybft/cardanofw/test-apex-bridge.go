@@ -31,11 +31,15 @@ func SetupAndRunApexCardanoChains(
 	)
 
 	cleanupFunc := func() {
+		fmt.Printf("Cleaning up cardano chains\n")
+
 		for i := 0; i < clusterCnt; i++ {
 			if clusters[i] != nil {
 				clusters[i].Stop() //nolint:errcheck
 			}
 		}
+
+		fmt.Printf("Done cleaning up cardano chains\n")
 	}
 
 	t.Cleanup(cleanupFunc)
@@ -117,6 +121,7 @@ func SetupAndRunApexBridge(
 	bladeValidatorsNum int,
 	primeCluster *TestCardanoCluster,
 	vectorCluster *TestCardanoCluster,
+	opts ...CardanoBridgeOption,
 ) (*TestCardanoBridge, func()) {
 	t.Helper()
 
@@ -125,6 +130,8 @@ func SetupAndRunApexBridge(
 		bladeEpochSize = 5
 		numOfRetries   = 90
 		waitTime       = time.Second * 2
+		apiPort        = 40000
+		apiKey         = "test_api_key"
 	)
 
 	cleanupDataDir := func() {
@@ -133,11 +140,20 @@ func SetupAndRunApexBridge(
 
 	cleanupDataDir()
 
-	cb := NewTestCardanoBridge(dataDir, bladeValidatorsNum)
+	opts = append(opts,
+		WithAPIPortStart(apiPort),
+		WithAPIKey(apiKey),
+	)
+
+	cb := NewTestCardanoBridge(dataDir, bladeValidatorsNum, opts...)
 
 	cleanupFunc := func() {
+		fmt.Printf("Cleaning up apex bridge\n")
+
 		// cleanupDataDir()
 		cb.StopValidators()
+
+		fmt.Printf("Done cleaning up apex bridge\n")
 	}
 
 	t.Cleanup(cleanupFunc)
@@ -153,8 +169,9 @@ func SetupAndRunApexBridge(
 	primeGenesisWallet, err := GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 1)
 	require.NoError(t, err)
 
-	require.NoError(t, SendTx(ctx, txProviderPrime, primeGenesisWallet, sendAmount,
-		cb.PrimeMultisigAddr, primeCluster.Config.NetworkMagic, []byte{}))
+	_, err = SendTx(ctx, txProviderPrime, primeGenesisWallet, sendAmount,
+		cb.PrimeMultisigAddr, primeCluster.Config.NetworkMagic, []byte{})
+	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
@@ -163,8 +180,9 @@ func SetupAndRunApexBridge(
 
 	fmt.Printf("Prime multisig addr funded\n")
 
-	require.NoError(t, SendTx(ctx, txProviderPrime, primeGenesisWallet, sendAmount,
-		cb.PrimeMultisigFeeAddr, primeCluster.Config.NetworkMagic, []byte{}))
+	_, err = SendTx(ctx, txProviderPrime, primeGenesisWallet, sendAmount,
+		cb.PrimeMultisigFeeAddr, primeCluster.Config.NetworkMagic, []byte{})
+	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigFeeAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
@@ -176,8 +194,9 @@ func SetupAndRunApexBridge(
 	vectorGenesisWallet, err := GetGenesisWalletFromCluster(vectorCluster.Config.TmpDir, 1)
 	require.NoError(t, err)
 
-	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, sendAmount,
-		cb.VectorMultisigAddr, vectorCluster.Config.NetworkMagic, []byte{}))
+	_, err = SendTx(ctx, txProviderVector, vectorGenesisWallet, sendAmount,
+		cb.VectorMultisigAddr, vectorCluster.Config.NetworkMagic, []byte{})
+	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
@@ -186,8 +205,9 @@ func SetupAndRunApexBridge(
 
 	fmt.Printf("Vector multisig addr funded\n")
 
-	require.NoError(t, SendTx(ctx, txProviderVector, vectorGenesisWallet, sendAmount,
-		cb.VectorMultisigFeeAddr, vectorCluster.Config.NetworkMagic, []byte{}))
+	_, err = SendTx(ctx, txProviderVector, vectorGenesisWallet, sendAmount,
+		cb.VectorMultisigFeeAddr, vectorCluster.Config.NetworkMagic, []byte{})
+	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigFeeAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
@@ -224,8 +244,6 @@ func SetupAndRunApexBridge(
 		vectorCluster.NetworkURL(),
 		vectorCluster.Config.NetworkMagic,
 		vectorCluster.OgmiosURL(),
-		40000,
-		"test_api_key",
 	))
 
 	fmt.Printf("Configs generated\n")
