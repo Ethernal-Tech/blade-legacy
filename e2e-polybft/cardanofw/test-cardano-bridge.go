@@ -3,6 +3,7 @@ package cardanofw
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -272,16 +273,16 @@ func (cb *TestCardanoBridge) cardanoPrepareKeys() (err error) {
 			return err
 		}
 
-		cb.primeMultisigKeys[idx] = primeWallet.Multisig.VerifyingKey.Hex
-		cb.primeMultisigFeeKeys[idx] = primeWallet.MultisigFee.VerifyingKey.Hex
+		cb.primeMultisigKeys[idx] = hex.EncodeToString(primeWallet.Multisig.GetVerificationKey())
+		cb.primeMultisigFeeKeys[idx] = hex.EncodeToString(primeWallet.MultisigFee.GetVerificationKey())
 
 		vectorWallet, err := validator.GetCardanoWallet(ChainIDVector)
 		if err != nil {
 			return err
 		}
 
-		cb.vectorMultisigKeys[idx] = vectorWallet.Multisig.VerifyingKey.Hex
-		cb.vectorMultisigFeeKeys[idx] = vectorWallet.MultisigFee.VerifyingKey.Hex
+		cb.vectorMultisigKeys[idx] = hex.EncodeToString(vectorWallet.Multisig.GetVerificationKey())
+		cb.vectorMultisigFeeKeys[idx] = hex.EncodeToString(vectorWallet.MultisigFee.GetVerificationKey())
 	}
 
 	return err
@@ -341,8 +342,7 @@ func (cb *TestCardanoBridge) cardanoCreateAddress(networkMagic int, keys []strin
 		return "", err
 	}
 
-	result := outb.String()
-	result = strings.TrimSpace(strings.ReplaceAll(result, "Address = ", ""))
+	result := strings.TrimSpace(strings.ReplaceAll(outb.String(), "Address = ", ""))
 
 	return result, nil
 }

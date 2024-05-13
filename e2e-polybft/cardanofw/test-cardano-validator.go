@@ -21,14 +21,9 @@ const (
 	RelayerConfigFileName             = "relayer_config.json"
 )
 
-type CardanoWalletSecret struct {
-	SigningKey   wallet.Key
-	VerifyingKey wallet.Key
-}
-
 type CardanoWallet struct {
-	Multisig    CardanoWalletSecret
-	MultisigFee CardanoWalletSecret
+	Multisig    wallet.IWallet
+	MultisigFee wallet.IWallet
 }
 
 type TestCardanoValidator struct {
@@ -80,41 +75,23 @@ func (cv *TestCardanoValidator) CardanoWalletCreate(chainID string) error {
 }
 
 func (cv *TestCardanoValidator) GetCardanoWallet(chainID string) (*CardanoWallet, error) {
-	multisigSigningPath := path.Join(
-		cv.GetCardanoWalletsDir(), chainID, "multisig", "payment.skey")
+	wm := wallet.NewWalletManager()
 
-	multisigSigning, err := wallet.NewKey(multisigSigningPath)
+	multiSig, err := wm.Load(path.Join(
+		cv.GetCardanoWalletsDir(), chainID, "multisig"))
 	if err != nil {
 		return nil, err
 	}
 
-	multisigVerifyingPath := path.Join(
-		cv.GetCardanoWalletsDir(), chainID, "multisig", "payment.vkey")
-
-	multisigVerifying, err := wallet.NewKey(multisigVerifyingPath)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigFeeSigningPath := path.Join(
-		cv.GetCardanoWalletsDir(), chainID, "multisigfee", "payment.skey")
-
-	multisigFeeSigning, err := wallet.NewKey(multisigFeeSigningPath)
-	if err != nil {
-		return nil, err
-	}
-
-	multisigFeeVerifyingPath := path.Join(
-		cv.GetCardanoWalletsDir(), chainID, "multisigfee", "payment.vkey")
-
-	multisigFeeVerifying, err := wallet.NewKey(multisigFeeVerifyingPath)
+	multiSigFee, err := wm.Load(path.Join(
+		cv.GetCardanoWalletsDir(), chainID, "multisigfee"))
 	if err != nil {
 		return nil, err
 	}
 
 	return &CardanoWallet{
-		Multisig:    CardanoWalletSecret{SigningKey: multisigSigning, VerifyingKey: multisigVerifying},
-		MultisigFee: CardanoWalletSecret{SigningKey: multisigFeeSigning, VerifyingKey: multisigFeeVerifying},
+		Multisig:    multiSig,
+		MultisigFee: multiSigFee,
 	}, nil
 }
 
