@@ -261,7 +261,6 @@ func (c *state) Run() ([]byte, error) {
 
 		// consume the gas of the instruction
 		if !c.consumeGas(inst.gas) {
-			c.exit(errOutOfGas)
 			c.captureExecution(op.String(), uint64(c.ip), gasCopy, inst.gas)
 
 			break
@@ -332,8 +331,6 @@ func (c *state) allocateMemory(offset, size *big.Int) bool {
 		c.lastGasCost = newCost
 
 		if !c.consumeGas(cost) {
-			c.exit(errOutOfGas)
-
 			return false
 		}
 
