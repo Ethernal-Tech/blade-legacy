@@ -4,7 +4,9 @@ import (
 	"encoding/hex"
 	"fmt"
 	"math/big"
+	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -1248,13 +1250,26 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	})
 }
 
+func init() {
+	wd, err := os.Getwd()
+	if err != nil {
+		return
+	}
+
+	parent := filepath.Dir(wd)
+	wd = filepath.Join(parent, "../artifacts/blade")
+	os.Setenv("EDGE_BINARY", wd)
+	os.Setenv("E2E_TESTS", "true")
+	os.Setenv("E2E_LOGS", "true")
+	os.Setenv("E2E_LOG_LEVEL", "debug")
+}
+
 func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	var (
-		numBlockConfirmations = uint64(2)
-		epochSize             = 10
-		sprintSize            = uint64(5)
-		numberOfAttempts      = uint64(4)
+		epochSize             = 5
 		stateSyncedLogsCount  = 2
+		numBlockConfirmations = uint64(2)
+		numberOfAttempts      = uint64(4)
 		exitEventsCount       = uint64(2)
 		tokensToTransfer      = ethgo.Gwei(10)
 		bigZero               = big.NewInt(0)
@@ -1445,13 +1460,13 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, err)
 
 		// wait for a couple of sprints
-		finalBlockNum := currentBlock.Header.Number + 5*sprintSize
+		finalBlockNum := currentBlock.Header.Number + 5*uint64(epochSize)
 
 		// the transaction is processed and there should be a success event
 		var stateSyncedResult contractsapi.StateSyncResultEvent
 
 		for i := uint64(0); i < numberOfAttempts; i++ {
-			logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum+i*sprintSize, childEthEndpoint)
+			logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum+i*uint64(epochSize), childEthEndpoint)
 			require.NoError(t, err)
 
 			if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
@@ -1461,7 +1476,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 				break
 			}
 
-			require.NoError(t, cluster.WaitForBlock(finalBlockNum+(i+1)*sprintSize, 2*time.Minute))
+			require.NoError(t, cluster.WaitForBlock(finalBlockNum+(i+1)*uint64(epochSize), 2*time.Minute))
 		}
 	})
 }

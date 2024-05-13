@@ -154,10 +154,13 @@ func (s *stateSyncManager) initTransport() error {
 
 // saveVote saves the gotten vote to boltDb for later quorum check and signature aggregation
 func (s *stateSyncManager) saveVote(msg *TransportMessage) error {
+	s.logger.Debug("DL saveVote lock acquiring...")
 	s.lock.RLock()
+	s.logger.Debug("DL saveVote lock acquired")
 	epoch := s.epoch
 	valSet := s.validatorSet
 	s.lock.RUnlock()
+	s.logger.Debug("DL saveVote lock released")
 
 	if valSet == nil || msg.EpochNumber != epoch {
 		// Epoch metadata is undefined or received a message for the irrelevant epoch
@@ -173,6 +176,7 @@ func (s *stateSyncManager) saveVote(msg *TransportMessage) error {
 		Signature: msg.Signature,
 	}
 
+	s.logger.Debug("DL saveVote insertMessageVote starts...")
 	numSignatures, err := s.state.StateSyncStore.insertMessageVote(msg.EpochNumber, msg.Hash, msgVote, nil)
 	if err != nil {
 		return fmt.Errorf("error inserting message vote: %w", err)
@@ -247,11 +251,16 @@ func (s *stateSyncManager) AddLog(eventLog *ethgo.Log) error {
 
 // Commitment returns a commitment to be submitted if there is a pending commitment with quorum
 func (s *stateSyncManager) Commitment(blockNumber uint64) (*CommitmentMessageSigned, error) {
+	s.logger.Debug("DL Commitment lock acquiring...")
 	s.lock.RLock()
-	defer s.lock.RUnlock()
+	defer func() {
+		s.lock.RUnlock()
+		s.logger.Debug("DL Commitment lock released")
+	}()
 
 	var largestCommitment *CommitmentMessageSigned
 
+	s.logger.Debug("DL Commitment lock acquired")
 	// we start from the end, since last pending commitment is the largest one
 	for i := len(s.pendingCommitments) - 1; i >= 0; i-- {
 		commitment := s.pendingCommitments[i]
@@ -350,7 +359,9 @@ func (s *stateSyncManager) getAggSignatureForCommitmentMessage(blockNumber uint6
 // PostEpoch notifies the state sync manager that an epoch has changed,
 // so that it can discard any previous epoch commitments, and build a new one (since validator set changed)
 func (s *stateSyncManager) PostEpoch(req *PostEpochRequest) error {
+	s.logger.Debug("DL PostEpoch lock acquiring...")
 	s.lock.Lock()
+	s.logger.Debug("DL PostEpoch lock acquired")
 
 	s.pendingCommitments = nil
 	s.validatorSet = req.ValidatorSet
@@ -360,6 +371,7 @@ func (s *stateSyncManager) PostEpoch(req *PostEpochRequest) error {
 	nextCommittedIndex, err := req.SystemState.GetNextCommittedIndex()
 	if err != nil {
 		s.lock.Unlock()
+		s.logger.Debug("DL PostEpoch lock released")
 
 		return err
 	}
@@ -368,6 +380,7 @@ func (s *stateSyncManager) PostEpoch(req *PostEpochRequest) error {
 
 	s.lock.Unlock()
 
+	s.logger.Debug("DL PostEpoch lock released")
 	return s.buildCommitment(req.DBTx)
 }
 
@@ -393,13 +406,16 @@ func (s *stateSyncManager) PostBlock(req *PostBlockRequest) error {
 		return fmt.Errorf("build commitment proofs error: %w", err)
 	}
 
+	s.logger.Debug("DL PostBlock lock acquiring...")
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	s.logger.Debug("DL PostBlock lock acquired")
 	// update the nextCommittedIndex since a commitment was submitted
 	s.nextCommittedIndex = commitment.Message.EndID.Uint64() + 1
 	// commitment was submitted, so discard what we have in memory, so we can build a new one
 	s.pendingCommitments = nil
 
+	s.logger.Debug("DL PostBlock lock released")
 	return nil
 }
 
@@ -494,9 +510,14 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		return nil
 	}
 
+	s.logger.Debug("DL buildCommitment lock acquiring...")
 	s.lock.Lock()
-	defer s.lock.Unlock()
+	defer func() {
+		s.lock.Unlock()
+		s.logger.Debug("DL buildCommitment lock released")
+	}()
 
+	s.logger.Debug("DL buildCommitment lock acquired")
 	stateSyncEvents, err := s.state.StateSyncStore.getStateSyncEventsForCommitment(s.nextCommittedIndex,
 		s.nextCommittedIndex+s.config.maxCommitmentSize-1, dbTx)
 	if err != nil && !errors.Is(err, errNotEnoughStateSyncs) {
@@ -536,6 +557,7 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		Signature: signature,
 	}
 
+	s.logger.Debug("DL buildCommitment insertMessageVote starts...")
 	if _, err = s.state.StateSyncStore.insertMessageVote(s.epoch, hashBytes, sig, dbTx); err != nil {
 		return fmt.Errorf(
 			"failed to insert signature for hash=%v to the state. Error: %w",
@@ -544,6 +566,7 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		)
 	}
 
+	s.logger.Debug("DL buildCommitment multicast starts...")
 	// gossip message
 	s.multicast(&TransportMessage{
 		Hash:        hashBytes,
