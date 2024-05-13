@@ -1250,7 +1250,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	var (
-		epochSize             = 5
+		epochSize             = 10
 		stateSyncedLogsCount  = 2
 		numBlockConfirmations = uint64(2)
 		numberOfAttempts      = uint64(4)
@@ -1444,13 +1444,13 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, err)
 
 		// wait for a couple of sprints
-		finalBlockNum := currentBlock.Header.Number + 5*uint64(epochSize)
+		finalBlockNum := currentBlock.Header.Number + 5*uint64(epochSize/2)
 
 		// the transaction is processed and there should be a success event
 		var stateSyncedResult contractsapi.StateSyncResultEvent
 
 		for i := uint64(0); i < numberOfAttempts; i++ {
-			logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum+i*uint64(epochSize), childEthEndpoint)
+			logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum+i*uint64(epochSize/2), childEthEndpoint)
 			require.NoError(t, err)
 
 			if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
@@ -1460,7 +1460,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 				break
 			}
 
-			require.NoError(t, cluster.WaitForBlock(finalBlockNum+(i+1)*uint64(epochSize), 2*time.Minute))
+			require.NoError(t, cluster.WaitForBlock(finalBlockNum+(i+1)*uint64(epochSize/2), 2*time.Minute))
 		}
 	})
 }
