@@ -309,16 +309,13 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	lastValIndex := validatorSetSize
 	epochValidators := map[uint64]epochValidatorSetIndexes{}
 
-	for i := uint64(0); i < lastBlock; i += epochSize {
+	// create headers for the first epoch separately
+	createHeaders(t, headersMap, 0, epochSize-1, 1, nil, newValidators)
+
+	for i := epochSize; i < lastBlock; i += epochSize {
 		from := i
 		to := i + epochSize - 1
 		epoch := i/epochSize + 1
-
-		if i == 0 {
-			createHeaders(t, headersMap, from, to, epoch, nil, newValidators)
-
-			continue
-		}
 
 		oldValidators = newValidators
 
@@ -349,7 +346,7 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 
 	snapshot, err := validatorsSnapshotCache.GetSnapshot(lastBlock-epochSize, nil, nil)
 
-	fmt.Println("Time needed to calculate snapshot:", time.Since(s))
+	t.Log("Time needed to calculate snapshot:", time.Since(s))
 
 	require.NoError(t, err)
 	require.NotNil(t, snapshot)
