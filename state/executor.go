@@ -906,8 +906,11 @@ func (t *Transition) hasCodeOrNonce(addr types.Address) bool {
 	}
 
 	codeHash := t.state.GetCodeHash(addr)
+	// EIP-7610 change - rejects the contract deployment if the destination has non-empty storage.
+	storageRoot := t.state.GetStorageRoot(addr)
 
-	return codeHash != types.EmptyCodeHash && codeHash != types.ZeroHash
+	return (codeHash != types.EmptyCodeHash && codeHash != types.ZeroHash) || // non-empty code
+		(storageRoot != types.EmptyRootHash && storageRoot != types.ZeroHash) // non-empty storage
 }
 
 func (t *Transition) applyCreate(c *runtime.Contract, host runtime.Host) *runtime.ExecutionResult {

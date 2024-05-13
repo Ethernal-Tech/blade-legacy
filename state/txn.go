@@ -505,6 +505,17 @@ func (txn *Txn) GetCommittedState(addr types.Address, key types.Hash) types.Hash
 	return txn.snapshot.GetStorage(addr, obj.Account.Root, key)
 }
 
+// GetStorageRoot retrieves the storage root from the given address or empty
+// if object not found.
+func (txn *Txn) GetStorageRoot(addr types.Address) types.Hash {
+	obj, ok := txn.getStateObject(addr)
+	if !ok {
+		return types.Hash{}
+	}
+
+	return obj.Account.Root
+}
+
 // SetFullStorage is used to replace the full state of the address.
 // Only used for debugging on the override jsonrpc endpoint.
 func (txn *Txn) SetFullStorage(addr types.Address, state map[types.Hash]types.Hash) {
