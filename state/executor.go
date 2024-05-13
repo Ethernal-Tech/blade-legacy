@@ -179,12 +179,12 @@ func (e *Executor) ProcessBlock(
 		}
 	}
 
-	var (
-		logMsg  = "[Executor.ProcessBlock] finished."
-		logArgs = []interface{}{"txs count", len(block.Transactions), "txs", buf.String()}
-	)
-
 	if logLvl <= hclog.Debug {
+		var (
+			logMsg  = "[Executor.ProcessBlock] finished."
+			logArgs = []interface{}{"txs count", len(block.Transactions), "txs", buf.String()}
+		)
+
 		e.logger.Log(logLvl, logMsg, logArgs...)
 	}
 
