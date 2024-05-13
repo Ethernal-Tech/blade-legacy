@@ -166,11 +166,11 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Gossip Message Size: *${{ inputs.gossip_msg_size }}*"
+                      "text": "Log Level: *${{ vars.LOG_LEVEL }}*"
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "Log Level: *${{ vars.LOG_LEVEL }}*"
+                      "text": "Gossip Message Size: *${{ inputs.gossip_msg_size }}*"
                     }
                   ]
                 }

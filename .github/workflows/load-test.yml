@@ -248,11 +248,13 @@ jobs:
   txpool_status:
     name: Check txpool status after Load Test
     runs-on: ubuntu-latest
-    needs: load_test
+    needs: [check_network, load_test]
     outputs:
       txpool_pending: ${{ steps.txpool_status_results.outputs.txpool_pending }}
       txpool_queued: ${{ steps.txpool_status_results.outputs.txpool_queued }}
     steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
       - name: Get txpool status
         id: txpool_status_results
         run: |

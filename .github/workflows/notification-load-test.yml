@@ -123,7 +123,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.txpool_pending == '0' && inputs.txpool_queued == '0' && env.succeed_bnt || env.failed_bnt }}"
+                      "style": "${{ inputs.txpool_pending == '0' && inputs.txpool_queued == '0' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ]
@@ -174,7 +174,7 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "Receipts Timeout: *${{ inputs.receipts_timeout }}*"
-                    }
+                    },
                     {
                       "type": "mrkdwn",
                       "text": "Wait TX Pool To Empty: *${{ inputs.wait_txpool }}*"
