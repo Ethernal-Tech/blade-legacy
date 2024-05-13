@@ -8,7 +8,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"net/url"
 	"path"
 	"strings"
 	"sync"
@@ -338,18 +337,11 @@ for_loop:
 	require.True(t, wentFromFailedOnDestinationToIncludedInBatch)
 }
 
-type BridgingRequestStateResponse struct {
-	SourceChainID      string `json:"sourceChainId"`
-	SourceTxHash       string `json:"sourceTxHash"`
-	DestinationChainID string `json:"destinationChainId"`
-	Status             string `json:"status"`
-	DestinationTxHash  string `json:"destinationTxHash"`
-}
-
 func TestE2E_InvalidScenarios(t *testing.T) {
 	const (
 		cardanoChainsCnt   = 2
 		bladeValidatorsNum = 4
+		apiKey             = "test_api_key"
 	)
 
 	ctx, cncl := context.WithCancel(context.Background())
@@ -407,6 +399,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		bladeValidatorsNum,
 		primeCluster,
 		vectorCluster,
+		cardanofw.WithAPIKey(apiKey),
 	)
 	// defer cleanupApexBridgeFunc()
 
@@ -429,12 +422,22 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		bridgingRequestMetadata, err := CreateMetaData(primeUserAddress, receivers)
 		require.NoError(t, err)
 
-		_, err = cardanofw.SendTx(
+		txHash, err := cardanofw.SendTx(
 			ctx, txProviderPrime, primeWalletKeys, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
 			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 		require.NoError(t, err)
 
-		// check tx rejected on validator API
+		expectedState := "Invalid"
+
+		apiURL, err := cb.GetBridgingAPI()
+		require.NoError(t, err)
+
+		requestURL := fmt.Sprintf(
+			"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
+
+		state, err := WaitForRequestState(expectedState, ctx, "prime", txHash, requestURL, apiKey, 300)
+		require.NoError(t, err)
+		require.Equal(t, state, expectedState)
 	})
 
 	t.Run("Multiple submiters don't have enough funds", func(t *testing.T) {
@@ -449,31 +452,40 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			bridgingRequestMetadata, err := CreateMetaData(primeUserAddress, receivers)
 			require.NoError(t, err)
 
-			_, err = cardanofw.SendTx(
+			txHash, err := cardanofw.SendTx(
 				ctx, txProviderPrime, primeWalletKeys, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
 				primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 			require.NoError(t, err)
 
-			time.Sleep(time.Second * 10)
-			// check tx rejected on validator API
+			expectedState := "Invalid"
+
+			apiURL, err := cb.GetBridgingAPI()
+			require.NoError(t, err)
+
+			requestURL := fmt.Sprintf(
+				"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
+
+			state, err := WaitForRequestState(expectedState, ctx, "prime", txHash, requestURL, apiKey, 300)
+			require.NoError(t, err)
+			require.Equal(t, state, expectedState)
 		}
 	})
 
 	t.Run("Multiple submiters don't have enough funds parallel", func(t *testing.T) {
 		instances := 5
 		walletKeys := make([]wallet.IWallet, instances)
-		walledAddresses := make([]string, instances)
+		txHashes := make([]string, instances)
 
 		for i := 0; i < instances; i++ {
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
-			walledAddresses[i], _, err = wallet.GetWalletAddress(walletKeys[i], uint(primeCluster.Config.NetworkMagic))
+			walledAddress, _, err := wallet.GetWalletAddress(walletKeys[i], uint(primeCluster.Config.NetworkMagic))
 			require.NoError(t, err)
 
 			sendAmount = uint64(5_000_000)
 			_, err = cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
-				sendAmount, walledAddresses[i], primeCluster.Config.NetworkMagic, []byte{})
+				sendAmount, walledAddress, primeCluster.Config.NetworkMagic, []byte{})
 			require.NoError(t, err)
 		}
 
@@ -492,7 +504,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			wg.Add(1)
 			idx := i
 			go func() {
-				_, err = cardanofw.SendTx(
+				txHashes[idx], err = cardanofw.SendTx(
 					ctx, txProviderPrime, walletKeys[idx], (sendAmount + feeAmount), cb.PrimeMultisigAddr,
 					primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 				require.NoError(t, err)
@@ -502,7 +514,17 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 
 		wg.Wait()
 		for i := 0; i < instances; i++ {
-			// check tx rejected on validator API
+			expectedState := "Invalid"
+
+			apiURL, err := cb.GetBridgingAPI()
+			require.NoError(t, err)
+
+			requestURL := fmt.Sprintf(
+				"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHashes[i])
+
+			state, err := WaitForRequestState(expectedState, ctx, "prime", txHashes[i], requestURL, apiKey, 300)
+			require.NoError(t, err)
+			require.Equal(t, state, expectedState)
 		}
 	})
 
@@ -520,16 +542,22 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		// Send only half bytes of metadata making it invalid
 		bridgingRequestMetadata = bridgingRequestMetadata[0 : len(bridgingRequestMetadata)/2]
 
-		_, err = cardanofw.SendTx(
+		txHash, err := cardanofw.SendTx(
 			ctx, txProviderPrime, primeWalletKeys, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
 			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 		require.NoError(t, err)
 
-		// apiUrl, err := cb.GetBridgingAPI()
-		// require.NoError(t, err)
+		expectedState := "Invalid"
 
-		// requestURL := fmt.Sprintf("%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiUrl, "prime", txHash)
+		apiURL, err := cb.GetBridgingAPI()
+		require.NoError(t, err)
 
+		requestURL := fmt.Sprintf(
+			"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
+
+		state, err := WaitForRequestState(expectedState, ctx, "prime", txHash, requestURL, apiKey, 300)
+		require.NoError(t, err)
+		require.Equal(t, state, expectedState)
 	})
 }
 
@@ -537,6 +565,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	const (
 		cardanoChainsCnt   = 2
 		bladeValidatorsNum = 4
+		apiKey             = "test_api_key"
 	)
 
 	ctx, cncl := context.WithCancel(context.Background())
@@ -609,6 +638,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		bladeValidatorsNum,
 		primeCluster,
 		vectorCluster,
+		cardanofw.WithAPIKey(apiKey),
 	)
 	// defer cleanupApexBridgeFunc()
 
@@ -803,46 +833,78 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 	return json.Marshal(metadata)
 }
 
-func WaitForRequestState(ctx context.Context, expectedState string, chainId string, txHash string,
-	numRetries int, waitTime time.Duration) error {
-	for count := 0; count < numRetries; count++ {
-		state, err := CheckBridgingRequestState(chainId, txHash)
+func WaitForRequestState(expectedState string, ctx context.Context, chainId string, txHash string,
+	requestURL string, apiKey string, timeout uint) (string, error) {
 
+	var previousState, currentState string
+
+	for {
+		previousState = currentState
+		currentState, err := GetBridgingRequestState(ctx, chainId, txHash, requestURL, apiKey, timeout)
 		if err != nil {
-			return err
+			return "", err
 		}
 
-		if strings.Compare(state, expectedState) == 0 {
-			return nil
+		if previousState != currentState {
+			fmt.Print(currentState)
 		}
 
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(waitTime):
+		if strings.Compare(currentState, expectedState) == 0 {
+			return currentState, nil
 		}
 	}
-
-	return errors.New("timeout while waiting for transaction")
 }
 
-func CheckBridgingRequestState(chainId string, txHash string) (string, error) {
-	params := url.Values{}
-	params.Add("chainId", chainId)
-	params.Add("txHash", txHash)
+func GetBridgingRequestState(ctx context.Context, chainId string, txHash string,
+	requestURL string, apiKey string, timeout uint) (string, error) {
 
-	url := "http://localhost:40000/api/BridgingRequestState/Get?" + params.Encode()
+	timeoutTimer := time.NewTimer(time.Second * time.Duration(timeout))
+	defer timeoutTimer.Stop()
 
-	resp, err := http.Get(url)
-	if err != nil {
-		return "", err
+	for {
+		select {
+		case <-timeoutTimer.C:
+			fmt.Printf("Timeout\n")
+
+			return "", errors.New("Timeout")
+		case <-ctx.Done():
+			fmt.Printf("Done\n")
+
+			return "", errors.New("Done")
+		case <-time.After(time.Millisecond * 500):
+		}
+
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+		if err != nil {
+			continue
+		}
+
+		req.Header.Set("X-API-KEY", apiKey)
+		resp, err := http.DefaultClient.Do(req)
+		if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
+			continue
+		}
+
+		resBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			continue
+		}
+
+		var responseModel BridgingRequestStateResponse
+
+		err = json.Unmarshal(resBody, &responseModel)
+		if err != nil {
+			continue
+		}
+
+		return responseModel.Status, nil
 	}
-	defer resp.Body.Close()
+}
 
-	responseBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-
-	return string(responseBody), nil
+type BridgingRequestStateResponse struct {
+	SourceChainID      string `json:"sourceChainId"`
+	SourceTxHash       string `json:"sourceTxHash"`
+	DestinationChainID string `json:"destinationChainId"`
+	Status             string `json:"status"`
+	DestinationTxHash  string `json:"destinationTxHash"`
 }
