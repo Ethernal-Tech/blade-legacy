@@ -14,8 +14,8 @@ const (
 	DefaultChainName                 = "blade"
 	DefaultChainID                   = 100
 	DefaultConsensus                 = server.PolyBFTConsensus
-	DefaultGenesisGasUsed            = 458752  // 0x70000
-	DefaultGenesisGasLimit           = 5242880 // 0x500000
+	DefaultGenesisGasUsed            = 458752      // 0x70000
+	DefaultGenesisGasLimit           = 400_000_000 // 5242880 // 0x500000
 	DefaultGenesisBaseFeeEM          = chain.GenesisBaseFeeEM
 	DefaultGenesisBaseFeeChangeDenom = chain.BaseFeeChangeDenom
 	DefaultEpochSize                 = 10

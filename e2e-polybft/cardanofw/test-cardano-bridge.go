@@ -3,11 +3,13 @@ package cardanofw
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
@@ -104,26 +106,37 @@ func (cb *TestCardanoBridge) RegisterChains(
 	primeBlockfrostURL string,
 	vectorTokenSupply *big.Int,
 	vectorBlockfrostURL string,
-) (err error) {
-	for _, validator := range cb.validators {
-		err = validator.RegisterChain(
-			ChainIDPrime, cb.PrimeMultisigAddr, cb.PrimeMultisigFeeAddr,
-			primeTokenSupply, primeBlockfrostURL,
-		)
-		if err != nil {
-			return err
-		}
+) error {
+	errs := make([]error, len(cb.validators))
+	wg := sync.WaitGroup{}
 
-		err = validator.RegisterChain(
-			ChainIDVector, cb.VectorMultisigAddr, cb.VectorMultisigFeeAddr,
-			vectorTokenSupply, vectorBlockfrostURL,
-		)
-		if err != nil {
-			return err
-		}
+	wg.Add(len(cb.validators))
+
+	for i, validator := range cb.validators {
+		go func(validator *TestCardanoValidator, indx int) {
+			defer wg.Done()
+
+			errs[indx] = validator.RegisterChain(
+				ChainIDPrime, cb.PrimeMultisigAddr, cb.PrimeMultisigFeeAddr,
+				primeTokenSupply, primeBlockfrostURL,
+			)
+			if errs[indx] != nil {
+				return
+			}
+
+			errs[indx] = validator.RegisterChain(
+				ChainIDVector, cb.VectorMultisigAddr, cb.VectorMultisigFeeAddr,
+				vectorTokenSupply, vectorBlockfrostURL,
+			)
+			if errs[indx] != nil {
+				return
+			}
+		}(validator, i)
 	}
 
-	return err
+	wg.Wait()
+
+	return errors.Join(errs...)
 }
 
 func (cb *TestCardanoBridge) GenerateConfigs(
@@ -135,24 +148,32 @@ func (cb *TestCardanoBridge) GenerateConfigs(
 	vectorBlockfrostURL string,
 	apiPortStart int,
 	apiKey string,
-) (err error) {
-	for idx, validator := range cb.validators {
-		err = validator.GenerateConfigs(
-			primeNetworkAddress,
-			primeNetworkMagic,
-			primeBlockfrostURL,
-			vectorNetworkAddress,
-			vectorNetworkMagic,
-			vectorBlockfrostURL,
-			apiPortStart+idx,
-			apiKey,
-		)
-		if err != nil {
-			return err
-		}
+) error {
+	errs := make([]error, len(cb.validators))
+	wg := sync.WaitGroup{}
+
+	wg.Add(len(cb.validators))
+
+	for i, validator := range cb.validators {
+		go func(validator *TestCardanoValidator, indx int) {
+			defer wg.Done()
+
+			errs[indx] = validator.GenerateConfigs(
+				primeNetworkAddress,
+				primeNetworkMagic,
+				primeBlockfrostURL,
+				vectorNetworkAddress,
+				vectorNetworkMagic,
+				vectorBlockfrostURL,
+				apiPortStart+indx,
+				apiKey,
+			)
+		}(validator, i)
 	}
 
-	return err
+	wg.Wait()
+
+	return errors.Join(errs...)
 }
 
 func (cb *TestCardanoBridge) StartValidatorComponents(ctx context.Context) (err error) {
@@ -237,28 +258,39 @@ func (cb *TestCardanoBridge) cardanoPrepareKeys() (err error) {
 
 func (cb *TestCardanoBridge) cardanoCreateAddresses(
 	networkMagicPrime int, networkMagicVector int,
-) (err error) {
-	cb.PrimeMultisigAddr, err = cb.cardanoCreateAddress(networkMagicPrime, cb.primeMultisigKeys)
-	if err != nil {
-		return err
-	}
+) error {
+	errs := make([]error, 4)
+	wg := sync.WaitGroup{}
 
-	cb.PrimeMultisigFeeAddr, err = cb.cardanoCreateAddress(networkMagicPrime, cb.primeMultisigFeeKeys)
-	if err != nil {
-		return err
-	}
+	wg.Add(4)
 
-	cb.VectorMultisigAddr, err = cb.cardanoCreateAddress(networkMagicVector, cb.vectorMultisigKeys)
-	if err != nil {
-		return err
-	}
+	go func() {
+		defer wg.Done()
 
-	cb.VectorMultisigFeeAddr, err = cb.cardanoCreateAddress(networkMagicVector, cb.vectorMultisigFeeKeys)
-	if err != nil {
-		return err
-	}
+		cb.PrimeMultisigAddr, errs[0] = cb.cardanoCreateAddress(networkMagicPrime, cb.primeMultisigKeys)
+	}()
 
-	return err
+	go func() {
+		defer wg.Done()
+
+		cb.PrimeMultisigFeeAddr, errs[1] = cb.cardanoCreateAddress(networkMagicPrime, cb.primeMultisigFeeKeys)
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		cb.VectorMultisigAddr, errs[2] = cb.cardanoCreateAddress(networkMagicVector, cb.vectorMultisigKeys)
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		cb.VectorMultisigFeeAddr, errs[3] = cb.cardanoCreateAddress(networkMagicVector, cb.vectorMultisigFeeKeys)
+	}()
+
+	wg.Wait()
+
+	return errors.Join(errs...)
 }
 
 func (cb *TestCardanoBridge) cardanoCreateAddress(networkMagic int, keys []string) (string, error) {

@@ -509,7 +509,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		Binary:        resolveBinary(),
 		EpochSize:     10,
 		EpochReward:   1,
-		BlockGasLimit: 1e7, // 10M
+		BlockGasLimit: command.DefaultGenesisGasLimit,
 		StakeAmounts:  []*big.Int{},
 		HasBridge:     false,
 		VotingDelay:   10,
