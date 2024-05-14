@@ -267,6 +267,8 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 		currentBlockNumber, err := relayer.Client().BlockNumber()
 		require.NoError(t, err)
 
+		currentBlockNumber--
+
 		endOfEpoch := (currentBlockNumber/epochSize.Uint64() + 1) * epochSize.Uint64()
 
 		// wait for epoch ending block plus couple of more blocks
