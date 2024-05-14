@@ -587,9 +587,23 @@ func (r *BaseLoadTestRunner) calculateResults(blockInfos map[uint64]*BlockInfo, 
 		return infos[i].Number < infos[j].Number
 	})
 
-	avgTxsPerSecond := math.Ceil(float64(totalTxs) / totalTime)
-	avgGasPerTx := new(big.Int).Div(totalGasUsed, big.NewInt(int64(totalTxs)))
-	avgGasUtilization := totalGasUtilization / float64(len(blockInfos))
+	var (
+		avgTxsPerSecond   float64
+		avgGasUtilization float64
+		avgGasPerTx       = big.NewInt(0)
+	)
+
+	if totalTime > 0 {
+		avgTxsPerSecond = math.Ceil(float64(totalTxs) / totalTime)
+	}
+
+	if totalTxs > 0 {
+		avgGasPerTx = new(big.Int).Div(totalGasUsed, big.NewInt(int64(totalTxs)))
+	}
+
+	if len(blockInfos) > 0 {
+		avgGasUtilization = totalGasUtilization / float64(len(blockInfos))
+	}
 
 	if !r.cfg.ResultsToJSON {
 		return printResults(
