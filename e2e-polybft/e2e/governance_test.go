@@ -66,6 +66,8 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 
 	executeSuccessfulProposalCycle := func(t *testing.T,
 		proposalInput []byte, proposalDescription, fieldName string, expectedValue *big.Int) {
+		t.Helper()
+
 		proposalID := sendProposalTransaction(t, relayer, proposerAcc.Ecdsa,
 			polybftCfg.GovernanceConfig.ChildGovernorAddr,
 			polybftCfg.GovernanceConfig.NetworkParamsAddr,
@@ -279,7 +281,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 		require.NoError(t, err)
 
 		blockTime := headerOne.Timestamp - headerTwo.Timestamp
-		require.GreaterOrEqual(t, uint64(blockTime), newBlockTime.Uint64())
+		require.GreaterOrEqual(t, blockTime, newBlockTime.Uint64())
 	})
 }
 
