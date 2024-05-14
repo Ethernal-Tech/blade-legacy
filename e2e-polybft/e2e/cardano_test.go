@@ -332,7 +332,6 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		bladeValidatorsNum,
 		primeCluster,
 		vectorCluster,
-		cardanofw.WithTTLInc(1),
 		cardanofw.WithAPIKey(apiKey),
 	)
 	// defer cleanupApexBridgeFunc()
@@ -418,7 +417,9 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		feeAmount := uint64(1_100_000)
 
 		var wg sync.WaitGroup
+
 		for i := 0; i < instances; i++ {
+			idx := i
 			receivers := make(map[string]uint64, 2)
 			receivers[user.VectorAddress] = sendAmount * 10 // 10Ada
 			receivers[cb.VectorMultisigFeeAddr] = feeAmount
@@ -427,7 +428,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			require.NoError(t, err)
 
 			wg.Add(1)
-			idx := i
+
 			go func() {
 				txHashes[idx], err = cardanofw.SendTx(
 					ctx, txProviderPrime, walletKeys[idx], (sendAmount + feeAmount), cb.PrimeMultisigAddr,
@@ -438,6 +439,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		}
 
 		wg.Wait()
+
 		for i := 0; i < instances; i++ {
 			apiURL, err := cb.GetBridgingAPI()
 			require.NoError(t, err)
@@ -527,7 +529,6 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		bladeValidatorsNum,
 		primeCluster,
 		vectorCluster,
-		cardanofw.WithTTLInc(1),
 		cardanofw.WithAPIKey(apiKey),
 	)
 	// defer cleanupApexBridgeFunc()
@@ -546,6 +547,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		}
 	})
 
+	//nolint:dupl
 	t.Run("From prime to vector parallel", func(t *testing.T) {
 		instances := 5
 		walletKeys := make([]wallet.IWallet, instances)
@@ -566,6 +568,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		var wg sync.WaitGroup
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
+
 			go func() {
 				user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, sendAmount, true)
 				wg.Done()
@@ -593,6 +596,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		}
 	})
 
+	//nolint:dupl
 	t.Run("From vector to prime parallel", func(t *testing.T) {
 		instances := 5
 		walletKeys := make([]wallet.IWallet, instances)
@@ -613,6 +617,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		var wg sync.WaitGroup
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
+
 			go func() {
 				user.BridgeAmount(t, ctx, txProviderVector, cb.VectorMultisigAddr, cb.PrimeMultisigFeeAddr, sendAmount, false)
 				wg.Done()
@@ -629,14 +634,13 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		fmt.Printf("%v TXs confirmed", instances)
 	})
 }
-func WaitForRequestState(expectedState string, ctx context.Context, chainId string, txHash string,
-	requestURL string, apiKey string, timeout uint) (string, error) {
-
+func WaitForRequestState(expectedState string, ctx context.Context, chainID string, txHash string, requestURL string, apiKey string, timeout uint) (string, error) {
 	var previousState, currentState string
 
 	for {
 		previousState = currentState
-		currentState, err := GetBridgingRequestState(ctx, chainId, txHash, requestURL, apiKey, timeout)
+
+		currentState, err := GetBridgingRequestState(ctx, chainID, txHash, requestURL, apiKey, timeout)
 		if err != nil {
 			return "", err
 		}
@@ -651,9 +655,7 @@ func WaitForRequestState(expectedState string, ctx context.Context, chainId stri
 	}
 }
 
-func GetBridgingRequestState(ctx context.Context, chainId string, txHash string,
-	requestURL string, apiKey string, timeout uint) (string, error) {
-
+func GetBridgingRequestState(ctx context.Context, chainID string, txHash string, requestURL string, apiKey string, timeout uint) (string, error) {
 	timeoutTimer := time.NewTimer(time.Second * time.Duration(timeout))
 	defer timeoutTimer.Stop()
 
@@ -677,6 +679,7 @@ func GetBridgingRequestState(ctx context.Context, chainId string, txHash string,
 
 		req.Header.Set("X-API-KEY", apiKey)
 		resp, err := http.DefaultClient.Do(req)
+
 		if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
 			continue
 		}
