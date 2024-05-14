@@ -635,31 +635,18 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	})
 }
 func WaitForRequestState(expectedState string, ctx context.Context, chainID string, txHash string, requestURL string, apiKey string, timeout uint) (string, error) {
-	var previousState, currentState string
+	var (
+		previousState *BridgingRequestStateResponse
+		currentState  *BridgingRequestStateResponse
+		err           error
+	)
 
-	for {
-		previousState = currentState
-
-		currentState, err := GetBridgingRequestState(ctx, chainID, txHash, requestURL, apiKey, timeout)
-		if err != nil {
-			return "", err
-		}
-
-		if strings.Compare(previousState, currentState) != 0 {
-			fmt.Println(currentState)
-		}
-
-		if strings.Compare(currentState, expectedState) == 0 {
-			return currentState, nil
-		}
-	}
-}
-
-func GetBridgingRequestState(ctx context.Context, chainID string, txHash string, requestURL string, apiKey string, timeout uint) (string, error) {
 	timeoutTimer := time.NewTimer(time.Second * time.Duration(timeout))
 	defer timeoutTimer.Stop()
 
 	for {
+		previousState = currentState
+
 		select {
 		case <-timeoutTimer.C:
 			fmt.Printf("Timeout\n")
@@ -672,32 +659,47 @@ func GetBridgingRequestState(ctx context.Context, chainID string, txHash string,
 		case <-time.After(time.Millisecond * 500):
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
-		if err != nil {
+		currentState, err = GetBridgingRequestState(ctx, chainID, txHash, requestURL, apiKey, timeout)
+		if err != nil || currentState == nil {
 			continue
 		}
 
-		req.Header.Set("X-API-KEY", apiKey)
-		resp, err := http.DefaultClient.Do(req)
-
-		if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
-			continue
+		if previousState != nil && strings.Compare(previousState.Status, currentState.Status) != 0 {
+			fmt.Println(currentState)
 		}
 
-		resBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
+		if strings.Compare(currentState.Status, expectedState) == 0 {
+			return currentState.Status, nil
 		}
-
-		var responseModel BridgingRequestStateResponse
-
-		err = json.Unmarshal(resBody, &responseModel)
-		if err != nil {
-			continue
-		}
-
-		return responseModel.Status, nil
 	}
+}
+
+func GetBridgingRequestState(ctx context.Context, chainID string, txHash string, requestURL string, apiKey string, timeout uint) (*BridgingRequestStateResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("X-API-KEY", apiKey)
+	resp, err := http.DefaultClient.Do(req)
+
+	if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+
+	resBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var responseModel *BridgingRequestStateResponse
+
+	err = json.Unmarshal(resBody, &responseModel)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseModel, nil
 }
 
 type BridgingRequestStateResponse struct {
