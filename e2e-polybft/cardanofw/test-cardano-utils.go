@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -151,4 +154,77 @@ func SplitString(s string, mxlen int) (res []string) {
 	}
 
 	return res
+}
+
+func WaitForRequestState(expectedState string, ctx context.Context, requestURL string, apiKey string,
+	timeout uint) (string, error) {
+	var (
+		currentState *BridgingRequestStateResponse
+		err          error
+	)
+
+	timeoutTimer := time.NewTimer(time.Second * time.Duration(timeout))
+	defer timeoutTimer.Stop()
+
+	for {
+		select {
+		case <-timeoutTimer.C:
+			fmt.Printf("Timeout\n")
+
+			return "", errors.New("Timeout")
+		case <-ctx.Done():
+			fmt.Printf("Done\n")
+
+			return "", errors.New("Done")
+		case <-time.After(time.Millisecond * 500):
+		}
+
+		currentState, err = GetBridgingRequestState(ctx, requestURL, apiKey, timeout)
+		if err != nil || currentState == nil {
+			continue
+		}
+
+		fmt.Println(currentState.Status)
+
+		if strings.Compare(currentState.Status, expectedState) == 0 {
+			return currentState.Status, nil
+		}
+	}
+}
+
+func GetBridgingRequestState(ctx context.Context, requestURL string, apiKey string,
+	timeout uint) (*BridgingRequestStateResponse, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("X-API-KEY", apiKey)
+	resp, err := http.DefaultClient.Do(req)
+
+	if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+
+	resBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var responseModel *BridgingRequestStateResponse
+
+	err = json.Unmarshal(resBody, &responseModel)
+	if err != nil {
+		return nil, err
+	}
+
+	return responseModel, nil
+}
+
+type BridgingRequestStateResponse struct {
+	SourceChainID      string `json:"sourceChainId"`
+	SourceTxHash       string `json:"sourceTxHash"`
+	DestinationChainID string `json:"destinationChainId"`
+	Status             string `json:"status"`
+	DestinationTxHash  string `json:"destinationTxHash"`
 }
