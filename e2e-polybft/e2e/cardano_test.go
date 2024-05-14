@@ -372,7 +372,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			sendAmount = uint64(1_000_000)
 			feeAmount := uint64(1_100_000)
 
-			receivers[user.VectorAddress] = sendAmount * 2 // 10Ada
+			receivers[user.VectorAddress] = sendAmount * 10 // 10Ada
 			receivers[cb.VectorMultisigFeeAddr] = feeAmount
 
 			bridgingRequestMetadata, err := cardanofw.CreateMetaData(user.PrimeAddress, receivers)
@@ -411,8 +411,6 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			_, err = cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
 				sendAmount, walledAddress, primeCluster.Config.NetworkMagic, []byte{})
 			require.NoError(t, err)
-			// sendAmount = uint64(3_000_000)
-			// user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, walledAddress, true)
 			time.Sleep(time.Second * 5)
 		}
 
@@ -422,7 +420,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		var wg sync.WaitGroup
 		for i := 0; i < instances; i++ {
 			receivers := make(map[string]uint64, 2)
-			receivers[user.VectorAddress] = sendAmount * 2 // 10Ada
+			receivers[user.VectorAddress] = sendAmount * 10 // 10Ada
 			receivers[cb.VectorMultisigFeeAddr] = feeAmount
 
 			bridgingRequestMetadata, err := cardanofw.CreateMetaData(user.PrimeAddress, receivers)
@@ -644,7 +642,7 @@ func WaitForRequestState(expectedState string, ctx context.Context, chainId stri
 		}
 
 		if strings.Compare(previousState, currentState) != 0 {
-			fmt.Print(currentState)
+			fmt.Println(currentState)
 		}
 
 		if strings.Compare(currentState, expectedState) == 0 {
