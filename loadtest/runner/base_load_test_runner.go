@@ -255,7 +255,7 @@ func (r *BaseLoadTestRunner) waitForReceiptsParallel() {
 	sequentialEmptyBlocks := 0
 	totalTxsExecuted := 0
 
-	timer := time.NewTimer(30 * time.Minute)
+	timer := time.NewTimer(r.cfg.TxPoolTimeout)
 	ticker := time.NewTicker(2 * time.Second)
 
 	defer func() {
