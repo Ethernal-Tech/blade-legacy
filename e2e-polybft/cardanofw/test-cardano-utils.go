@@ -179,7 +179,7 @@ func WaitForRequestState(expectedState string, ctx context.Context, requestURL s
 		case <-time.After(time.Millisecond * 500):
 		}
 
-		currentState, err = GetBridgingRequestState(ctx, requestURL, apiKey, timeout)
+		currentState, err = GetBridgingRequestState(ctx, requestURL, apiKey)
 		if err != nil || currentState == nil {
 			continue
 		}
@@ -192,8 +192,9 @@ func WaitForRequestState(expectedState string, ctx context.Context, requestURL s
 	}
 }
 
-func GetBridgingRequestState(ctx context.Context, requestURL string, apiKey string,
-	timeout uint) (*BridgingRequestStateResponse, error) {
+func GetBridgingRequestState(ctx context.Context, requestURL string, apiKey string) (
+	*BridgingRequestStateResponse, error,
+) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err

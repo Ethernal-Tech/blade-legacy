@@ -2,11 +2,8 @@ package e2e
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math/big"
-	"net/http"
 	"path"
 	"sync"
 	"testing"
@@ -179,31 +176,13 @@ for_loop:
 		case <-time.After(time.Millisecond * 500):
 		}
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
-		if err != nil {
-			continue
-		}
-
-		req.Header.Set("X-API-KEY", apiKey)
-		resp, err := http.DefaultClient.Do(req)
-		if resp == nil || err != nil || resp.StatusCode != http.StatusOK {
-			continue
-		}
-
-		resBody, err := io.ReadAll(resp.Body)
-		if err != nil {
-			continue
-		}
-
-		var responseModel cardanofw.BridgingRequestStateResponse
-
-		err = json.Unmarshal(resBody, &responseModel)
-		if err != nil {
+		currentState, err := cardanofw.GetBridgingRequestState(ctx, requestURL, apiKey)
+		if err != nil || currentState == nil {
 			continue
 		}
 
 		prevStatus = currentStatus
-		currentStatus = responseModel.Status
+		currentStatus = currentState.Status
 
 		if prevStatus != currentStatus {
 			fmt.Printf("currentStatus = %s\n", currentStatus)
