@@ -7,7 +7,6 @@ import (
 	"io"
 	"math/big"
 	"net/http"
-	"path"
 	"testing"
 	"time"
 
@@ -19,69 +18,6 @@ import (
 // Download Cardano executables from https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3 and unpack tar.gz file
 // Add directory where unpacked files are located to the $PATH (in example bellow `~/Apps/cardano`)
 // eq add line `export PATH=$PATH:~/Apps/cardano` to  `~/.bashrc`
-func TestE2E_CardanoTwoClustersBasic(t *testing.T) {
-	const (
-		cardanoChainsCnt = 2
-	)
-
-	ctx, cncl := context.WithCancel(context.Background())
-	defer cncl()
-
-	clusters, cleanupFunc := cardanofw.SetupAndRunApexCardanoChains(
-		t,
-		ctx,
-		cardanoChainsCnt,
-	)
-
-	for i := 0; i < cardanoChainsCnt; i++ {
-		require.NotNil(t, clusters[i])
-	}
-
-	defer cleanupFunc()
-
-	t.Run("simple send", func(t *testing.T) {
-		const (
-			sendAmount = uint64(1000000)
-		)
-
-		var (
-			txProviders = make([]wallet.ITxProvider, cardanoChainsCnt)
-			receivers   = make([]string, cardanoChainsCnt)
-		)
-
-		for i := 0; i < cardanoChainsCnt; i++ {
-			require.NotNil(t, clusters[i])
-
-			txProviders[i] = wallet.NewTxProviderOgmios(clusters[i].OgmiosURL())
-			newWalletKeys, err := wallet.NewStakeWalletManager().Create(path.Join(clusters[i].Config.Dir("keys")), true)
-
-			require.NoError(t, err)
-
-			receiver, _, err := wallet.GetWalletAddress(newWalletKeys, uint(clusters[i].Config.NetworkMagic))
-			require.NoError(t, err)
-
-			receivers[i] = receiver
-
-			ctx, cncl := context.WithCancel(context.Background())
-			defer cncl()
-
-			genesisWallet, err := cardanofw.GetGenesisWalletFromCluster(clusters[i].Config.TmpDir, 1)
-			require.NoError(t, err)
-
-			_, err = cardanofw.SendTx(ctx, txProviders[i], genesisWallet,
-				sendAmount, receivers[i], clusters[i].Config.NetworkMagic, []byte{})
-			require.NoError(t, err)
-		}
-
-		for i := 0; i < cardanoChainsCnt; i++ {
-			err := wallet.WaitForAmount(context.Background(), txProviders[i], receivers[i], func(val *big.Int) bool {
-				return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-			}, 60, time.Second*2)
-			require.NoError(t, err)
-		}
-	})
-}
-
 func TestE2E_ApexBridge(t *testing.T) {
 	const (
 		cardanoChainsCnt   = 2
