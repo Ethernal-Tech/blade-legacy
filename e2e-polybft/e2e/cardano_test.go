@@ -451,18 +451,23 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	fmt.Printf("Apex bridge setup done\n")
 
 	t.Run("From prime to vector one by one", func(t *testing.T) {
-		for i := 0; i < 5; i++ {
+		instances := 5
+		prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
+
+		for i := 0; i < instances; i++ {
 			sendAmount = uint64(1_000_000)
 
 			txHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
 				cb.VectorMultisigFeeAddr, sendAmount, true)
 
-			fmt.Printf("Tx %v confirmed. hash: %s\n", i+1, txHash)
+			fmt.Printf("Tx %v sent. hash: %s\n", i+1, txHash)
 		}
 
-		err := wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(5*sendAmount)) == 0
-		}, 200, time.Second*20)
+		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
+		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
+		}, 20, time.Second*10)
 		require.NoError(t, err)
 	})
 
@@ -470,6 +475,8 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	t.Run("From prime to vector parallel", func(t *testing.T) {
 		instances := 5
 		walletKeys := make([]wallet.IWallet, instances)
+		prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
 
 		for i := 0; i < instances; i++ {
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
@@ -487,19 +494,21 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		var wg sync.WaitGroup
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
+			idx := i
 
 			go func() {
 				defer wg.Done()
 
-				user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, sendAmount, true)
+				txHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, sendAmount, true)
+				fmt.Printf("Tx %v sent. hash: %s\n", idx, txHash)
 			}()
 		}
 
 		wg.Wait()
 
-		expectedTotal := 50_000_000 + uint64(instances)*sendAmount
+		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
 		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedTotal)) == 0
+			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 100, time.Minute*5)
 		require.NoError(t, err)
 		fmt.Printf("%v TXs confirmed", instances)
