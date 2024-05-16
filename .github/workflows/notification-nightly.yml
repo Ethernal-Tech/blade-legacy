@@ -115,6 +115,18 @@ on: # yamllint disable-line rule:truthy
         description: Load Test ERC721 txpool queued output
         type: string
         required: true
+      load_test_mixed_output:
+        description: Load Test MIXED output
+        type: string
+        required: true
+      load_test_mixed_txpool_pending_output:
+        description: Load Test MIXED txpool pending output
+        type: string
+        required: true
+      load_test_mixed_txpool_queued_output:
+        description: Load Test MIXED txpool queued output
+        type: string
+        required: true
       destroy_network_logs_output:
         description: Deploy Network - Logs output
         type: string
@@ -167,7 +179,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.load_test_mixed_output == 'true' && inputs.load_test_mixed_txpool_pending_output == '0' && inputs.load_test_mixed_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
                     {
@@ -320,6 +332,10 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "${{ inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && env.succeed_job || env.failed_job }} *Load Test ERC721*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.load_test_mixed_output == 'true' && inputs.load_test_mixed_txpool_pending_output == '0' && inputs.load_test_mixed_txpool_queued_output == '0' && env.succeed_job || env.failed_job }} *Load Test MIXED*"
                     }
                   ]
                 }

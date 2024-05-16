@@ -108,10 +108,34 @@ jobs:
       AWS_LOADTESTRUNNER_MNEMONIC: ${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  load_test_mixed:
+    name: Load Test MIXED
+    uses: ./.github/workflows/load-test.yml
+    needs: [deploy_network, load_test_eoa, load_test_erc20, load_test_erc721]
+    with:
+      environment: nightly
+      type: MIXED
+      dynamic: true
+      vus: "100"
+      txs_per_user: "10000"
+      txpool_timeout: "60m0s"
+      wait_txpool: false
+      receipts_timeout: "2m0s"
+      batch_size: "10000"
+      notification: false
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
+      AWS_LOADTESTRUNNER_AMI_ID: ${{ secrets.AWS_LOADTESTRUNNER_AMI_ID }}
+      AWS_LOADTESTRUNNER_SUBNET_ID: ${{ secrets.AWS_LOADTESTRUNNER_SUBNET_ID }}
+      AWS_LOADTESTRUNNER_SG_ID: ${{ secrets.AWS_LOADTESTRUNNER_SG_ID }}
+      AWS_LOADTESTRUNNER_MNEMONIC: ${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   destroy_network:
     name: Destroy Network
     uses: ./.github/workflows/destroy-network.yml
-    needs: [deploy_network, load_test_eoa, load_test_erc20, load_test_erc721]
+    needs: [deploy_network, load_test_eoa, load_test_erc20, load_test_erc721, load_test_mixed]
     if: always()
     with:
       environment: nightly
@@ -124,7 +148,7 @@ jobs:
   notification_nightly:
     name: Nightly Notification
     uses: ./.github/workflows/notification-nightly.yml
-    needs: [ci, deploy_network, load_test_eoa, load_test_erc20, load_test_erc721, destroy_network]
+    needs: [ci, deploy_network, load_test_eoa, load_test_erc20, load_test_erc721, load_test_mixed, destroy_network]
     if: success() || failure()
     with:
       environment: nightly
@@ -155,6 +179,9 @@ jobs:
       load_test_erc721_output: ${{ needs.load_test_erc721.outputs.load_test_output }}
       load_test_erc721_txpool_pending_output: ${{ needs.load_test_erc721.outputs.txpool_pending }}
       load_test_erc721_txpool_queued_output: ${{ needs.load_test_erc721.outputs.txpool_queued }}
+      load_test_mixed_output: ${{ needs.load_test_mixed.outputs.load_test_output }}
+      load_test_mixed_txpool_pending_output: ${{ needs.load_test_mixed.outputs.txpool_pending }}
+      load_test_mixed_txpool_queued_output: ${{ needs.load_test_mixed.outputs.txpool_queued }}
       destroy_network_logs_output: ${{ needs.destroy_network.outputs.logs_output }}
       destroy_network_terraform_output: ${{ needs.destroy_network.outputs.terraform_output }}
     secrets:
@@ -242,5 +269,33 @@ jobs:
       max_gas_utilization: ${{ needs.load_test_erc721.outputs.max_gas_utilization }}
       txpool_pending: ${{ needs.load_test_erc721.outputs.txpool_pending }}
       txpool_queued: ${{ needs.load_test_erc721.outputs.txpool_queued }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+  notification_load_test_mixed:
+    name: Load Test MIXED Notification
+    uses: ./.github/workflows/notification-load-test.yml
+    needs: [load_test_mixed, notification_nightly, notification_load_test_eoa, notification_load_test_erc20, notification_load_test_erc721]
+    if: (always() && needs.load_test_mixed.outputs.load_test_output == 'true')
+    with:
+      environment: nightly
+      type: MIXED
+      dynamic: true
+      vus: "100"
+      txs_per_user: "10000"
+      txpool_timeout: "60m0s"
+      wait_txpool: false
+      receipts_timeout: "2m0s"
+      batch_size: "10000"
+      total_time: ${{ needs.load_test_mixed.outputs.total_time }}
+      total_txs: ${{ needs.load_test_mixed.outputs.total_txs }}
+      total_blocks: ${{ needs.load_test_mixed.outputs.total_blocks }}
+      avg_txs_per_second: ${{ needs.load_test_mixed.outputs.avg_txs_per_second }}
+      max_txs_per_second: ${{ needs.load_test_mixed.outputs.max_txs_per_second }}
+      total_gas_used: ${{ needs.load_test_mixed.outputs.total_gas_used }}
+      avg_gas_per_tx: ${{ needs.load_test_mixed.outputs.avg_gas_per_tx }}
+      avg_gas_utilization: ${{ needs.load_test_mixed.outputs.avg_gas_utilization }}
+      max_gas_utilization: ${{ needs.load_test_mixed.outputs.max_gas_utilization }}
+      txpool_pending: ${{ needs.load_test_mixed.outputs.txpool_pending }}
+      txpool_queued: ${{ needs.load_test_mixed.outputs.txpool_queued }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

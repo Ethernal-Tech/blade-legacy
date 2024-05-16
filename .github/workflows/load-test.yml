@@ -11,7 +11,7 @@ on: # yamllint disable-line rule:truthy
       type:
         description: The type of load test to run
         type: choice
-        options: [EOA, ERC20, ERC721]
+        options: [EOA, ERC20, ERC721, MIXED]
       dynamic:
         description: Indicates whether the load test should generate dynamic transactions
         type: boolean
@@ -118,10 +118,10 @@ on: # yamllint disable-line rule:truthy
         description: Maximum Gas Utilization
         value: ${{ jobs.load_test.outputs.max_gas_utilization }}
       txpool_pending:
-        description: Number of transactions in pending
+        description: Pending Transactions Count
         value: ${{ jobs.txpool_status.outputs.txpool_pending }}
       txpool_queued:
-        description: Number of transactions in queued
+        description: Queued Transactions Count
         value: ${{ jobs.txpool_status.outputs.txpool_queued }}
     secrets:
       AWS_ROLE_ARN:

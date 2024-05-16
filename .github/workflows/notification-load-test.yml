@@ -76,11 +76,11 @@ on: # yamllint disable-line rule:truthy
         type: string
         required: true
       txpool_pending:
-        description: Number of transactions in pending
+        description: Pending Transactions Count
         type: string
         required: true
       txpool_queued:
-        description: Number of transactions in queued
+        description: Queued Transactions Count
         type: string
         required: true
     secrets:
