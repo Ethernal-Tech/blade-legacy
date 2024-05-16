@@ -131,7 +131,9 @@ func (cb *TestCardanoBridge) WaitForValidatorsReady(t *testing.T) {
 }
 
 func (cb *TestCardanoBridge) StopValidators() {
-	cb.cluster.Stop()
+	if cb.cluster != nil {
+		cb.cluster.Stop()
+	}
 }
 
 func (cb *TestCardanoBridge) RegisterChains(

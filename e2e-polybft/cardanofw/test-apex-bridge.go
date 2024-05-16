@@ -126,7 +126,7 @@ func SetupAndRunApexBridge(
 	t.Helper()
 
 	const (
-		sendAmount     = uint64(10_000_000)
+		sendAmount     = uint64(100_000_000_000)
 		bladeEpochSize = 5
 		numOfRetries   = 90
 		waitTime       = time.Second * 2

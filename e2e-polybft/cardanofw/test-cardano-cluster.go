@@ -213,7 +213,7 @@ func NewCardanoTestCluster(t *testing.T, opts ...CardanoClusterOption) (*TestCar
 		NetworkMagic:   42,
 		SecurityParam:  10,
 		NodesCount:     3,
-		InitialSupply:  new(big.Int).SetUint64(12000000),
+		InitialSupply:  new(big.Int).SetUint64(11_111_111_112_000_000),
 		StartTimeDelay: time.Second * 30,
 		BlockTimeMilis: 2000,
 		Port:           3000,
