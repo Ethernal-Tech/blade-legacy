@@ -130,8 +130,8 @@ func (u *TestApexUser) BridgeAmount(
 		receiverAddr = u.PrimeAddress
 	}
 
-	txHash, err := u.BridgeAmountFull(t, ctx, txProvider, networkMagic, multisigAddr, feeAddr, sender, receiverAddr, sendAmount)
-	require.NoError(t, err)
+	txHash := u.BridgeAmountFull(t, ctx, txProvider, networkMagic,
+		multisigAddr, feeAddr, sender, receiverAddr, sendAmount)
 
 	return txHash
 }
@@ -139,17 +139,15 @@ func (u *TestApexUser) BridgeAmount(
 func (u *TestApexUser) BridgeAmountFull(
 	t *testing.T, ctx context.Context, txProvider wallet.ITxProvider, networkMagic uint,
 	multisigAddr, feeAddr string, sender wallet.IWallet, receiverAddr string, sendAmount uint64,
-) (string, error) {
+) string {
 	t.Helper()
+
+	const feeAmount = 1_100_000
 
 	senderAddr, _, err := wallet.GetWalletAddress(sender, networkMagic)
 	require.NoError(t, err)
-	const feeAmount = 1_100_000
 
 	prevAmount, err := GetTokenAmount(ctx, txProvider, multisigAddr)
-	if err != nil {
-		return "", err
-	}
 	require.NoError(t, err)
 
 	var receivers = map[string]uint64{
@@ -158,28 +156,19 @@ func (u *TestApexUser) BridgeAmountFull(
 	}
 
 	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers)
-	if err != nil {
-		return "", err
-	}
 	require.NoError(t, err)
 
 	txHash, err := SendTx(ctx, txProvider, sender,
 		sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
-	if err != nil {
-		return "", err
-	}
 	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProvider, multisigAddr,
 		func(val *big.Int) bool {
 			return val.Cmp(prevAmount) > 0
 		}, 60, time.Second*2)
-	if err != nil {
-		return "", err
-	}
 	require.NoError(t, err)
 
-	return txHash, nil
+	return txHash
 }
 
 func (u *TestApexUser) Dispose() {

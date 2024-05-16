@@ -453,11 +453,11 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	t.Run("From prime to vector one by one - wait for other side", func(t *testing.T) {
 		instances := 5
 		for i := 0; i < instances; i++ {
+			sendAmount = uint64(1_000_000)
 			prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
 			require.NoError(t, err)
 
 			fmt.Printf("%v - prevAmount %v\n", i+1, prevAmount)
-			sendAmount = uint64(1_000_000)
 
 			txHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
 				cb.VectorMultisigFeeAddr, sendAmount, true)
@@ -522,9 +522,8 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			go func(idx int) {
 				defer wg.Done()
 
-				txHash, err := user.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
+				txHash := user.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
 					cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount)
-				require.NoError(t, err)
 				fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 			}(i)
 		}
@@ -540,20 +539,32 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	})
 
 	t.Run("From vector to prime one by one", func(t *testing.T) {
-		for i := 0; i < 5; i++ {
+		instances := 5
+		prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
+
+		for i := 0; i < instances; i++ {
 			sendAmount = uint64(1_000_000)
 
-			user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
-				cb.VectorMultisigFeeAddr, sendAmount, false)
+			txHash := user.BridgeAmount(t, ctx, txProviderVector, cb.VectorMultisigAddr,
+				cb.PrimeMultisigFeeAddr, sendAmount, false)
 
-			fmt.Printf("Tx %v confirmed", i+1)
+			fmt.Printf("Tx %v sent. hash: %s\n", i+1, txHash)
 		}
+
+		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
+		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
+		}, 20, time.Second*10)
+		require.NoError(t, err)
 	})
 
 	//nolint:dupl
 	t.Run("From vector to prime parallel", func(t *testing.T) {
 		instances := 5
 		walletKeys := make([]wallet.IWallet, instances)
+		prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
 
 		for i := 0; i < instances; i++ {
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(vectorCluster.Config.Dir("keys")), true)
@@ -562,8 +573,8 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			walledAddress, _, err := wallet.GetWalletAddress(walletKeys[i], uint(vectorCluster.Config.NetworkMagic))
 			require.NoError(t, err)
 
-			sendAmount = uint64(5_000_000)
-			user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, walledAddress, true)
+			sendAmount := uint64(5_000_000)
+			user.SendToAddress(t, ctx, txProviderVector, vectorGenesisWallet, sendAmount, walledAddress, true)
 		}
 
 		sendAmount = uint64(1_000_000)
@@ -572,18 +583,20 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
 
-			go func() {
+			go func(idx int) {
 				defer wg.Done()
 
-				user.BridgeAmount(t, ctx, txProviderVector, cb.VectorMultisigAddr, cb.PrimeMultisigFeeAddr, sendAmount, false)
-			}()
+				txHash := user.BridgeAmountFull(t, ctx, txProviderVector, uint(vectorCluster.Config.NetworkMagic),
+					cb.VectorMultisigAddr, cb.PrimeMultisigFeeAddr, walletKeys[idx], user.PrimeAddress, sendAmount)
+				fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
+			}(i)
 		}
 
 		wg.Wait()
 
-		expectedTotal := 50_000_000 + uint64(instances)*sendAmount
+		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
 		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedTotal)) == 0
+			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 100, time.Minute*5)
 		require.NoError(t, err)
 		fmt.Printf("%v TXs confirmed", instances)
