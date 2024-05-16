@@ -97,7 +97,8 @@ func (t *BaseSanityCheckTest) fundAddress(address types.Address, amount *big.Int
 
 // CreateApproveERC20Txn sends approve transaction
 // to ERC20 token for spender so that it is able to spend given tokens
-func (t *BaseSanityCheckTest) approveNativeERC20(sender *crypto.ECDSAKey, amount *big.Int, spender types.Address) error {
+func (t *BaseSanityCheckTest) approveNativeERC20(sender *crypto.ECDSAKey,
+	amount *big.Int, spender types.Address) error {
 	fmt.Println("Approving", amount.String(), "tokens for", spender.String())
 
 	s := time.Now().UTC()
@@ -159,10 +160,16 @@ func (t *BaseSanityCheckTest) waitForEpochEnding() (*types.Header, error) {
 				return currentBlock.Header, nil
 			}
 
-			currentBlock, err = t.client.GetBlockByNumber(jsonrpc.BlockNumber(currentBlock.Number()+1), false)
+			block, err := t.client.GetBlockByNumber(jsonrpc.BlockNumber(currentBlock.Number()+1), false)
 			if err != nil {
 				return nil, err
 			}
+
+			if block == nil {
+				continue
+			}
+
+			currentBlock = block
 		}
 	}
 }

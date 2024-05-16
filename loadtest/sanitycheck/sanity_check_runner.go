@@ -17,7 +17,7 @@ const (
 
 // SanityCheckTestConfig represents the configuration for sanity check tests.
 type SanityCheckTestConfig struct {
-	Mnemonnic string // Mnemonnic is the mnemonic phrase used for account funding.
+	Mnemonic string // Mnemonnic is the mnemonic phrase used for account funding.
 
 	JSONRPCUrl      string        // JSONRPCUrl is the URL of the JSON-RPC server.
 	ReceiptsTimeout time.Duration // ReceiptsTimeout is the timeout for waiting for transaction receipts.
@@ -41,7 +41,7 @@ type SanityCheckTestRunner struct {
 
 // NewSanityCheckTestRunner creates a new SanityCheckTestRunner
 func NewSanityCheckTestRunner(cfg *SanityCheckTestConfig) (*SanityCheckTestRunner, error) {
-	key, err := wallet.NewWalletFromMnemonic(cfg.Mnemonnic)
+	key, err := wallet.NewWalletFromMnemonic(cfg.Mnemonic)
 	if err != nil {
 		return nil, err
 	}
@@ -75,11 +75,12 @@ func NewSanityCheckTestRunner(cfg *SanityCheckTestConfig) (*SanityCheckTestRunne
 }
 
 // registerTests registers the sanity check tests that will be run by the SanityCheckTestRunner.
-func registerTests(cfg *SanityCheckTestConfig, testAccountKey *crypto.ECDSAKey, client *jsonrpc.EthClient) ([]SanityCheckTest, error) {
-	// stakeTest, err := NewStakeTest(cfg, testAccountKey, client)
-	// if err != nil {
-	// 	return nil, err
-	// }
+func registerTests(cfg *SanityCheckTestConfig,
+	testAccountKey *crypto.ECDSAKey, client *jsonrpc.EthClient) ([]SanityCheckTest, error) {
+	stakeTest, err := NewStakeTest(cfg, testAccountKey, client)
+	if err != nil {
+		return nil, err
+	}
 
 	unsstakeTest, err := NewUnstakeTest(cfg, testAccountKey, client)
 	if err != nil {
@@ -87,7 +88,7 @@ func registerTests(cfg *SanityCheckTestConfig, testAccountKey *crypto.ECDSAKey, 
 	}
 
 	return []SanityCheckTest{
-		//stakeTest,
+		stakeTest,
 		unsstakeTest,
 	}, nil
 }
@@ -117,6 +118,7 @@ func (r *SanityCheckTestRunner) Run() {
 
 	printUxSeparator()
 	fmt.Println("Sanity check results:")
+
 	for _, result := range results {
 		fmt.Println(result)
 	}
