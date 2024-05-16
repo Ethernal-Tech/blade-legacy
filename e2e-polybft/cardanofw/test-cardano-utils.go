@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 	"os"
 	"os/exec"
@@ -180,7 +181,13 @@ func WaitForRequestState(expectedState string, ctx context.Context, requestURL s
 		}
 
 		currentState, err = GetBridgingRequestState(ctx, requestURL, apiKey)
-		if err != nil || currentState == nil {
+		if err != nil {
+			fmt.Println("error requesting bridging state", err)
+
+			continue
+		} else if currentState == nil {
+			fmt.Println("empty currentState")
+
 			continue
 		}
 
@@ -232,4 +239,14 @@ type BridgingRequestStateResponse struct {
 	DestinationChainID string `json:"destinationChainId"`
 	Status             string `json:"status"`
 	DestinationTxHash  string `json:"destinationTxHash"`
+}
+
+// GetTokenAmount returns token amount for address
+func GetTokenAmount(ctx context.Context, txProvider wallet.ITxProvider, addr string) (*big.Int, error) {
+	utxos, err := txProvider.GetUtxos(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return wallet.GetUtxosSum(utxos), nil
 }
