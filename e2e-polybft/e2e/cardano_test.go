@@ -518,14 +518,15 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		var wg sync.WaitGroup
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
-			idx := i
 
-			go func() {
+			go func(idx int) {
 				defer wg.Done()
 
-				txHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, sendAmount, true)
-				fmt.Printf("Tx %v sent. hash: %s\n", idx, txHash)
-			}()
+				txHash, err := user.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
+					cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount)
+				require.NoError(t, err)
+				fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
+			}(i)
 		}
 
 		wg.Wait()
@@ -543,7 +544,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			sendAmount = uint64(1_000_000)
 
 			user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
-				cb.VectorMultisigFeeAddr, sendAmount, true)
+				cb.VectorMultisigFeeAddr, sendAmount, false)
 
 			fmt.Printf("Tx %v confirmed", i+1)
 		}

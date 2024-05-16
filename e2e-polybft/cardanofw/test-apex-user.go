@@ -71,10 +71,8 @@ func (u *TestApexUser) SendToUser(
 		addr = u.VectorAddress
 	}
 
-	utxos, err := txProvider.GetUtxos(ctx, addr)
+	prevAmount, err := GetTokenAmount(ctx, txProvider, addr)
 	require.NoError(t, err)
-
-	prevAmount := wallet.GetUtxosSum(utxos)
 
 	_, err = SendTx(ctx, txProvider, sender,
 		sendAmount, addr, int(networkMagic), []byte{})
@@ -101,10 +99,8 @@ func (u *TestApexUser) SendToAddress(
 		networkMagic = u.vectorNetworkMagic
 	}
 
-	utxos, err := txProvider.GetUtxos(ctx, receiver)
+	prevAmount, err := GetTokenAmount(ctx, txProvider, receiver)
 	require.NoError(t, err)
-
-	prevAmount := wallet.GetUtxosSum(utxos)
 
 	_, err = SendTx(ctx, txProvider, sender,
 		sendAmount, receiver, int(networkMagic), []byte{})
@@ -112,7 +108,7 @@ func (u *TestApexUser) SendToAddress(
 
 	err = wallet.WaitForAmount(
 		context.Background(), txProvider, receiver, func(val *big.Int) bool {
-			return val.Cmp(prevAmount) > 0
+			return val.Cmp(new(big.Int).SetUint64(prevAmount.Uint64()+sendAmount)) == 0
 		}, 60, time.Second*2)
 	require.NoError(t, err)
 }
@@ -124,24 +120,37 @@ func (u *TestApexUser) BridgeAmount(
 ) string {
 	t.Helper()
 
-	const feeAmount = 1_100_000
-
 	networkMagic := u.primeNetworkMagic
 	sender := u.PrimeWallet
-	senderAddr := u.PrimeAddress
 	receiverAddr := u.VectorAddress
 
 	if !isPrime {
 		networkMagic = u.vectorNetworkMagic
 		sender = u.VectorWallet
-		senderAddr = u.VectorAddress
 		receiverAddr = u.PrimeAddress
 	}
 
-	utxos, err := txProvider.GetUtxos(ctx, multisigAddr)
+	txHash, err := u.BridgeAmountFull(t, ctx, txProvider, networkMagic, multisigAddr, feeAddr, sender, receiverAddr, sendAmount)
 	require.NoError(t, err)
 
-	prevAmount := wallet.GetUtxosSum(utxos)
+	return txHash
+}
+
+func (u *TestApexUser) BridgeAmountFull(
+	t *testing.T, ctx context.Context, txProvider wallet.ITxProvider, networkMagic uint,
+	multisigAddr, feeAddr string, sender wallet.IWallet, receiverAddr string, sendAmount uint64,
+) (string, error) {
+	t.Helper()
+
+	senderAddr, _, err := wallet.GetWalletAddress(sender, networkMagic)
+	require.NoError(t, err)
+	const feeAmount = 1_100_000
+
+	prevAmount, err := GetTokenAmount(ctx, txProvider, multisigAddr)
+	if err != nil {
+		return "", err
+	}
+	require.NoError(t, err)
 
 	var receivers = map[string]uint64{
 		receiverAddr: sendAmount,
@@ -149,19 +158,28 @@ func (u *TestApexUser) BridgeAmount(
 	}
 
 	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers)
+	if err != nil {
+		return "", err
+	}
 	require.NoError(t, err)
 
 	txHash, err := SendTx(ctx, txProvider, sender,
 		sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
+	if err != nil {
+		return "", err
+	}
 	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(context.Background(), txProvider, multisigAddr,
 		func(val *big.Int) bool {
 			return val.Cmp(prevAmount) > 0
 		}, 60, time.Second*2)
+	if err != nil {
+		return "", err
+	}
 	require.NoError(t, err)
 
-	return txHash
+	return txHash, nil
 }
 
 func (u *TestApexUser) Dispose() {
