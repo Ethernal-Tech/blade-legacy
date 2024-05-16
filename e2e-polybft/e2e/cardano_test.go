@@ -522,7 +522,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			go func(idx int) {
 				defer wg.Done()
 
-				txHash := user.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
+				txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
 					cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount)
 				fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 			}(i)
@@ -586,7 +586,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			go func(idx int) {
 				defer wg.Done()
 
-				txHash := user.BridgeAmountFull(t, ctx, txProviderVector, uint(vectorCluster.Config.NetworkMagic),
+				txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderVector, uint(vectorCluster.Config.NetworkMagic),
 					cb.VectorMultisigAddr, cb.PrimeMultisigFeeAddr, walletKeys[idx], user.PrimeAddress, sendAmount)
 				fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 			}(i)

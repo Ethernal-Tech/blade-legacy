@@ -130,43 +130,8 @@ func (u *TestApexUser) BridgeAmount(
 		receiverAddr = u.PrimeAddress
 	}
 
-	txHash := u.BridgeAmountFull(t, ctx, txProvider, networkMagic,
+	txHash := BridgeAmountFull(t, ctx, txProvider, networkMagic,
 		multisigAddr, feeAddr, sender, receiverAddr, sendAmount)
-
-	return txHash
-}
-
-func (u *TestApexUser) BridgeAmountFull(
-	t *testing.T, ctx context.Context, txProvider wallet.ITxProvider, networkMagic uint,
-	multisigAddr, feeAddr string, sender wallet.IWallet, receiverAddr string, sendAmount uint64,
-) string {
-	t.Helper()
-
-	const feeAmount = 1_100_000
-
-	senderAddr, _, err := wallet.GetWalletAddress(sender, networkMagic)
-	require.NoError(t, err)
-
-	prevAmount, err := GetTokenAmount(ctx, txProvider, multisigAddr)
-	require.NoError(t, err)
-
-	var receivers = map[string]uint64{
-		receiverAddr: sendAmount,
-		feeAddr:      feeAmount,
-	}
-
-	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers)
-	require.NoError(t, err)
-
-	txHash, err := SendTx(ctx, txProvider, sender,
-		sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
-	require.NoError(t, err)
-
-	err = wallet.WaitForAmount(context.Background(), txProvider, multisigAddr,
-		func(val *big.Int) bool {
-			return val.Cmp(prevAmount) > 0
-		}, 60, time.Second*2)
-	require.NoError(t, err)
 
 	return txHash
 }
@@ -200,4 +165,33 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 	}
 
 	return json.Marshal(metadata)
+}
+
+func BridgeAmountFull(
+	t *testing.T, ctx context.Context, txProvider wallet.ITxProvider, networkMagic uint,
+	multisigAddr, feeAddr string, sender wallet.IWallet, receiverAddr string, sendAmount uint64,
+) string {
+	t.Helper()
+
+	const feeAmount = 1_100_000
+
+	senderAddr, _, err := wallet.GetWalletAddress(sender, networkMagic)
+	require.NoError(t, err)
+
+	var receivers = map[string]uint64{
+		receiverAddr: sendAmount,
+		feeAddr:      feeAmount,
+	}
+
+	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers)
+	require.NoError(t, err)
+
+	txHash, err := SendTx(ctx, txProvider, sender,
+		sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
+	require.NoError(t, err)
+
+	err = wallet.WaitForTxHashInUtxos(context.Background(), txProvider, multisigAddr, txHash, 60, time.Second*2)
+	require.NoError(t, err)
+
+	return txHash
 }
