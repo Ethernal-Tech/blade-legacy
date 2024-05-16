@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -372,13 +373,17 @@ type GetResponse struct {
 	Name    string `json:"name"`
 	ChainID uint64 `json:"chain_id"`
 	Version string `json:"version"`
+	Node    string `json:"node"`
 }
 
 func (j *JSONRPC) handleGetRequest(writer io.Writer) {
+	host, _ := os.Hostname()
+
 	data := &GetResponse{
 		Name:    j.config.ChainName,
 		ChainID: j.config.ChainID,
 		Version: versioning.Version,
+		Node:    host,
 	}
 
 	resp, err := json.Marshal(data)
