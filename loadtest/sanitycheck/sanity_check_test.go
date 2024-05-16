@@ -3,6 +3,8 @@ package sanitycheck
 import (
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestSanityCheck(t *testing.T) {
@@ -23,5 +25,5 @@ func TestSanityCheck(t *testing.T) {
 
 	defer runner.Close()
 
-	runner.Run()
+	require.NoError(t, runner.Run())
 }
