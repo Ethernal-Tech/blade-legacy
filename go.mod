@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/secretmanager v1.12.0
 	github.com/0xPolygon/go-ibft v0.4.1-0.20240429085428-e2032115c799
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20231202204931-b886edca635a
-	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240508090152-ed7858744d55
+	github.com/Ethernal-Tech/cardano-infrastructure v0.0.0-20240516160843-979df4f75af0
 	github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04
 	github.com/armon/go-metrics v0.4.1
 	github.com/aws/aws-sdk-go v1.51.18
@@ -15,7 +15,6 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/erigontech/mdbx-go v0.38.0
-	github.com/fxamacker/cbor/v2 v2.6.0
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.1
@@ -59,6 +58,7 @@ require (
 
 require (
 	github.com/blinklabs-io/gouroboros v0.79.0 // indirect
+	github.com/fxamacker/cbor/v2 v2.6.0 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/utxorpc/go-codegen v0.5.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect

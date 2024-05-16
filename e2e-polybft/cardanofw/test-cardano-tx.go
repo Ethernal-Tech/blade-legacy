@@ -9,6 +9,11 @@ import (
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 )
 
+const (
+	potentialFee     = 250_000
+	ttlSlotNumberInc = 500
+)
+
 func SendTx(ctx context.Context,
 	txProvider wallet.ITxProvider,
 	cardanoWallet wallet.IWallet,
@@ -39,25 +44,14 @@ func SendTx(ctx context.Context,
 		},
 	}
 
-	utxos, err := txProvider.GetUtxos(ctx, cardanoWalletAddr)
+	inputs, err := wallet.GetUTXOsForAmount(
+		ctx, txProvider, cardanoWalletAddr, amount+potentialFee, wallet.MinUTxODefaultValue)
 	if err != nil {
 		return "", err
 	}
 
-	if len(utxos) == 0 {
-		return "", fmt.Errorf("no utxos at given address")
-	}
-
-	inputs := []wallet.TxInput{
-		{
-			Hash:  utxos[0].Hash,
-			Index: utxos[0].Index,
-		},
-	}
-	sendingAmount := utxos[0].Amount
-
-	rawTx, txHash, err := CreateTx(uint(testnetMagic), protocolParams, qtd.Slot+TTLSlotNumberInc, metadata,
-		outputs, inputs, cardanoWalletAddr, sendingAmount, amount)
+	rawTx, txHash, err := CreateTx(uint(testnetMagic), protocolParams, qtd.Slot+ttlSlotNumberInc, metadata,
+		outputs, inputs, cardanoWalletAddr)
 	if err != nil {
 		return "", err
 	}
@@ -99,18 +93,17 @@ func GetGenesisWalletFromCluster(
 	return wallet.NewWallet(vKeyBytes, sKeyBytes, ""), nil
 }
 
-const TTLSlotNumberInc = 200
-
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error
 func CreateTx(testNetMagic uint,
 	protocolParams []byte,
 	timeToLive uint64,
 	metadataBytes []byte,
 	outputs []wallet.TxOutput,
-	inputs []wallet.TxInput,
+	inputs wallet.TxInputs,
 	changeAddress string,
-	totalInput uint64,
-	totalOutput uint64) ([]byte, string, error) {
+) ([]byte, string, error) {
+	outputsSum := wallet.GetOutputsSum(outputs)
+
 	builder, err := wallet.NewTxBuilder()
 	if err != nil {
 		return nil, "", err
@@ -118,36 +111,27 @@ func CreateTx(testNetMagic uint,
 
 	defer builder.Dispose()
 
-	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive)
-
 	if len(metadataBytes) != 0 {
 		builder.SetMetaData(metadataBytes)
 	}
 
-	builder.SetTestNetMagic(testNetMagic)
-
-	// Add change
-	outputs = append(outputs, wallet.TxOutput{
-		Addr:   changeAddress,
-		Amount: 0,
-	})
-
-	builder.AddOutputs(outputs...)
-	builder.AddInputs(inputs...)
+	builder.SetProtocolParameters(protocolParams).SetTimeToLive(timeToLive).
+		SetTestNetMagic(testNetMagic).
+		AddInputs(inputs.Inputs...).
+		AddOutputs(outputs...).AddOutputs(wallet.TxOutput{Addr: changeAddress})
 
 	fee, err := builder.CalculateFee(0)
 	if err != nil {
 		return nil, "", err
 	}
 
-	change := totalInput - totalOutput - fee
+	change := inputs.Sum - outputsSum - fee
 	if change < wallet.MinUTxODefaultValue {
 		return []byte{}, "", fmt.Errorf("change too small, should be greater or equal than %v but change = %v",
 			wallet.MinUTxODefaultValue, change)
 	}
 
-	builder.UpdateOutputAmount(len(outputs)-1, change)
-
+	builder.UpdateOutputAmount(-1, change)
 	builder.SetFee(fee)
 
 	return builder.Build()
