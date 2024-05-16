@@ -344,11 +344,12 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
+
 				txHashes[idx], err = cardanofw.SendTx(
 					ctx, txProviderPrime, walletKeys[idx], (sendAmount + feeAmount), cb.PrimeMultisigAddr,
 					primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 				require.NoError(t, err)
-				wg.Done()
 			}()
 		}
 
@@ -488,8 +489,9 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
+
 				user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, sendAmount, true)
-				wg.Done()
 			}()
 		}
 
@@ -537,8 +539,9 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			wg.Add(1)
 
 			go func() {
+				defer wg.Done()
+
 				user.BridgeAmount(t, ctx, txProviderVector, cb.VectorMultisigAddr, cb.PrimeMultisigFeeAddr, sendAmount, false)
-				wg.Done()
 			}()
 		}
 
