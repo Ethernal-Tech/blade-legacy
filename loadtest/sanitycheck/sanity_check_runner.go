@@ -1,10 +1,12 @@
 package sanitycheck
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/umbracle/ethgo/wallet"
 )
@@ -100,7 +102,7 @@ func (r *SanityCheckTestRunner) Close() error {
 }
 
 // Run executes the sanity check test based on the provided SanityCheckTestConfig.
-func (r *SanityCheckTestRunner) Run() {
+func (r *SanityCheckTestRunner) Run() error {
 	fmt.Println("Running sanity check tests")
 
 	results := make([]string, 0, len(r.tests))
@@ -119,9 +121,27 @@ func (r *SanityCheckTestRunner) Run() {
 	printUxSeparator()
 	fmt.Println("Sanity check results:")
 
-	for _, result := range results {
-		fmt.Println(result)
+	if !r.config.ResultsToJSON {
+		for _, result := range results {
+			fmt.Println(result)
+		}
+	} else {
+		jsonData, err := json.Marshal(results)
+		if err != nil {
+			return err
+		}
+
+		fileName := "./sanity_check_results.json"
+
+		err = common.SaveFileSafe(fileName, jsonData, 0600)
+		if err != nil {
+			return err
+		}
+
+		fmt.Println("Results saved to JSON file", fileName)
 	}
+
+	return nil
 }
 
 func printUxSeparator() {

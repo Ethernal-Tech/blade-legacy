@@ -95,5 +95,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	sanityCheckRunner.Run()
+	if err = sanityCheckRunner.Run(); err != nil {
+		outputter.SetError(err)
+	}
 }
