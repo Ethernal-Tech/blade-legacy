@@ -102,7 +102,7 @@ func (t *BaseSanityCheckTest) approveNativeERC20(sender *crypto.ECDSAKey, amount
 
 	s := time.Now().UTC()
 	defer func() {
-		fmt.Println("Approving", amount.String(), "tokens for", spender.String(), "took", time.Since(s))
+		fmt.Println("Approving", amount.String(), "for", spender.String(), "took", time.Since(s))
 	}()
 
 	approveFnParams := &contractsapi.ApproveRootERC20Fn{

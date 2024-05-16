@@ -76,13 +76,19 @@ func NewSanityCheckTestRunner(cfg *SanityCheckTestConfig) (*SanityCheckTestRunne
 
 // registerTests registers the sanity check tests that will be run by the SanityCheckTestRunner.
 func registerTests(cfg *SanityCheckTestConfig, testAccountKey *crypto.ECDSAKey, client *jsonrpc.EthClient) ([]SanityCheckTest, error) {
-	stakeTest, err := NewStakeTest(cfg, testAccountKey, client)
+	// stakeTest, err := NewStakeTest(cfg, testAccountKey, client)
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	unsstakeTest, err := NewUnstakeTest(cfg, testAccountKey, client)
 	if err != nil {
 		return nil, err
 	}
 
 	return []SanityCheckTest{
-		stakeTest,
+		//stakeTest,
+		unsstakeTest,
 	}, nil
 }
 

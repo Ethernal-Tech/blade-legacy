@@ -9,37 +9,36 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/umbracle/ethgo"
 )
 
 // StakeTest represents a stake test.
-type StakeTest struct {
-	*BaseSanityCheckTest
+type UnstakeTest struct {
+	*StakeTest
 }
 
-// NewStakeTest creates a new StakeTest.
-func NewStakeTest(cfg *SanityCheckTestConfig,
-	testAccountKey *crypto.ECDSAKey, client *jsonrpc.EthClient) (*StakeTest, error) {
-	base, err := NewBaseSanityCheckTest(cfg, testAccountKey, client)
+// NewUnstakeTest creates a new UnstakeTest.
+func NewUnstakeTest(cfg *SanityCheckTestConfig,
+	testAccountKey *crypto.ECDSAKey, client *jsonrpc.EthClient) (*UnstakeTest, error) {
+	stakeTest, err := NewStakeTest(cfg, testAccountKey, client)
 	if err != nil {
 		return nil, err
 	}
 
-	return &StakeTest{
-		BaseSanityCheckTest: base,
+	return &UnstakeTest{
+		StakeTest: stakeTest,
 	}, nil
 }
 
-// Name returns the name of the stake test.
-func (t *StakeTest) Name() string {
-	return "Stake Test"
+// Name returns the name of the unstake test.
+func (t *UnstakeTest) Name() string {
+	return "Unstake Test"
 }
 
-// Run runs the stake test.
-func (t *StakeTest) Run() error {
+// Run runs the unstake test.
+func (t *UnstakeTest) Run() error {
 	printUxSeparator()
 
 	fmt.Println("Running", t.Name())
@@ -50,9 +49,9 @@ func (t *StakeTest) Run() error {
 		return err
 	}
 
-	amountToStake := ethgo.Ether(1)
+	amountToUnstake := ethgo.Ether(1)
 
-	if err := t.fundAddress(validatorKey.Address(), ethgo.Ether(1)); err != nil {
+	if err := t.fundAddress(validatorKey.Address(), amountToUnstake); err != nil {
 		return err
 	}
 
@@ -61,9 +60,9 @@ func (t *StakeTest) Run() error {
 		return fmt.Errorf("failed to get stake of validator: %s. Error: %w", validatorKey.Address(), err)
 	}
 
-	fmt.Println("Stake of validator", validatorKey.Address(), "before staking:", previousStake)
+	fmt.Println("Stake of validator", validatorKey.Address(), "before unstaking:", previousStake)
 
-	if err := t.stake(validatorKey, amountToStake); err != nil {
+	if err := t.unstake(validatorKey, amountToUnstake); err != nil {
 		return fmt.Errorf("failed to stake for validator: %s. Error: %w", validatorKey.Address(), err)
 	}
 
@@ -72,9 +71,9 @@ func (t *StakeTest) Run() error {
 		return fmt.Errorf("failed to get new stake of validator: %s. Error: %w", validatorKey.Address(), err)
 	}
 
-	fmt.Println("Stake of validator", validatorKey.Address(), "after staking:", currentStake)
+	fmt.Println("Stake of validator", validatorKey.Address(), "after unstaking:", currentStake)
 
-	expectedStake := previousStake.Add(previousStake, amountToStake)
+	expectedStake := previousStake.Sub(previousStake, amountToUnstake)
 	if currentStake.Cmp(expectedStake) != 0 {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
@@ -110,23 +109,19 @@ func (t *StakeTest) Run() error {
 }
 
 // stake stakes the given amount for the given validator.
-func (t *StakeTest) stake(validatorKey *crypto.ECDSAKey, amount *big.Int) error {
-	if err := t.approveNativeERC20(validatorKey, amount, contracts.StakeManagerContract); err != nil {
-		return err
-	}
-
-	fmt.Println("Staking for validator", validatorKey.Address(), "Amount", amount.String())
+func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) error {
+	fmt.Println("Unstaking for validator", validatorKey.Address(), "Amount", amount.String())
 
 	s := time.Now().UTC()
 	defer func() {
 		fmt.Println("Staking for validator", validatorKey.Address(), "took", time.Since(s))
 	}()
 
-	stakeFn := &contractsapi.StakeStakeManagerFn{
+	unstakeFn := &contractsapi.UnstakeStakeManagerFn{
 		Amount: amount,
 	}
 
-	encoded, err := stakeFn.EncodeAbi()
+	encoded, err := unstakeFn.EncodeAbi()
 	if err != nil {
 		return err
 	}
@@ -142,27 +137,8 @@ func (t *StakeTest) stake(validatorKey *crypto.ECDSAKey, amount *big.Int) error 
 	}
 
 	if receipt.Status == uint64(types.ReceiptFailed) {
-		return fmt.Errorf("stake transaction failed on block %d", receipt.BlockNumber)
+		return fmt.Errorf("unstake transaction failed on block %d", receipt.BlockNumber)
 	}
 
 	return nil
-}
-
-// getStake returns the stake of the given validator on the StakeManager contract.
-func (t *StakeTest) getStake(address types.Address) (*big.Int, error) {
-	stakeOfFn := &contractsapi.StakeOfStakeManagerFn{
-		Validator: address,
-	}
-
-	encode, err := stakeOfFn.EncodeAbi()
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := t.txrelayer.Call(t.testAccountKey.Address(), contracts.StakeManagerContract, encode)
-	if err != nil {
-		return nil, err
-	}
-
-	return common.ParseUint256orHex(&response)
 }
