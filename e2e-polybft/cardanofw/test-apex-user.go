@@ -81,7 +81,7 @@ func (u *TestApexUser) SendToUser(
 	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(
-		context.Background(), txProvider, u.PrimeAddress, func(val *big.Int) bool {
+		context.Background(), txProvider, addr, func(val *big.Int) bool {
 			return val.Cmp(prevAmount) > 0
 		}, 60, time.Second*2)
 	require.NoError(t, err)
@@ -111,7 +111,7 @@ func (u *TestApexUser) SendToAddress(
 	require.NoError(t, err)
 
 	err = wallet.WaitForAmount(
-		context.Background(), txProvider, u.PrimeAddress, func(val *big.Int) bool {
+		context.Background(), txProvider, receiver, func(val *big.Int) bool {
 			return val.Cmp(prevAmount) > 0
 		}, 60, time.Second*2)
 	require.NoError(t, err)

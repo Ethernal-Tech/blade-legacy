@@ -453,12 +453,16 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		for i := 0; i < 5; i++ {
 			sendAmount = uint64(1_000_000)
 
-			user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
+			txHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
 				cb.VectorMultisigFeeAddr, sendAmount, true)
 
-			require.NoError(t, err)
-			fmt.Printf("Tx %v confirmed", i+1)
+			fmt.Printf("Tx %v confirmed. hash: %s\n", i+1, txHash)
 		}
+
+		err := wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(5*sendAmount)) == 0
+		}, 200, time.Second*20)
+		require.NoError(t, err)
 	})
 
 	//nolint:dupl
