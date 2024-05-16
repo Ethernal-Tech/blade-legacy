@@ -450,6 +450,30 @@ func TestE2E_ValidScenarios(t *testing.T) {
 
 	fmt.Printf("Apex bridge setup done\n")
 
+	t.Run("From prime to vector one by one - wait for other side", func(t *testing.T) {
+		instances := 5
+		for i := 0; i < instances; i++ {
+			prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+			require.NoError(t, err)
+
+			fmt.Printf("%v - prevAmount %v\n", i+1, prevAmount)
+			sendAmount = uint64(1_000_000)
+
+			txHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
+				cb.VectorMultisigFeeAddr, sendAmount, true)
+
+			fmt.Printf("%v - Tx sent. hash: %s\n", i+1, txHash)
+
+			expectedAmount := prevAmount.Uint64() + sendAmount
+			fmt.Printf("%v - expectedAmount %v\n", i+1, expectedAmount)
+
+			err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+				return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
+			}, 20, time.Second*10)
+			require.NoError(t, err)
+		}
+	})
+
 	t.Run("From prime to vector one by one", func(t *testing.T) {
 		instances := 5
 		prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
