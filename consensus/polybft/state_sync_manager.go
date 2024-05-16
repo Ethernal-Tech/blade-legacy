@@ -494,27 +494,33 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		return nil
 	}
 
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	s.lock.RLock()
 
+	// Since lock is reduced grab original values into local variables in order to keep them
+	epoch := s.epoch
 	stateSyncEvents, err := s.state.StateSyncStore.getStateSyncEventsForCommitment(s.nextCommittedIndex,
 		s.nextCommittedIndex+s.config.maxCommitmentSize-1, dbTx)
 	if err != nil && !errors.Is(err, errNotEnoughStateSyncs) {
+		s.lock.RUnlock()
 		return fmt.Errorf("failed to get state sync events for commitment. Error: %w", err)
 	}
 
 	if len(stateSyncEvents) == 0 {
 		// there are no state sync events
+		s.lock.RUnlock()
 		return nil
 	}
 
 	if len(s.pendingCommitments) > 0 &&
 		s.pendingCommitments[len(s.pendingCommitments)-1].StartID.Cmp(stateSyncEvents[len(stateSyncEvents)-1].ID) >= 0 {
 		// already built a commitment of this size which is pending to be submitted
+		s.lock.RUnlock()
 		return nil
 	}
 
-	commitment, err := NewPendingCommitment(s.epoch, stateSyncEvents)
+	s.lock.RUnlock()
+
+	commitment, err := NewPendingCommitment(epoch, stateSyncEvents)
 	if err != nil {
 		return err
 	}
@@ -536,7 +542,7 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		Signature: signature,
 	}
 
-	if _, err = s.state.StateSyncStore.insertMessageVote(s.epoch, hashBytes, sig, dbTx); err != nil {
+	if _, err = s.state.StateSyncStore.insertMessageVote(epoch, hashBytes, sig, dbTx); err != nil {
 		return fmt.Errorf(
 			"failed to insert signature for hash=%v to the state. Error: %w",
 			hex.EncodeToString(hashBytes),
@@ -549,7 +555,7 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		Hash:        hashBytes,
 		Signature:   signature,
 		From:        s.config.key.String(),
-		EpochNumber: s.epoch,
+		EpochNumber: epoch,
 	})
 
 	s.logger.Debug(
@@ -557,6 +563,9 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		"from", commitment.StartID.Uint64(),
 		"to", commitment.EndID.Uint64(),
 	)
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
 
 	s.pendingCommitments = append(s.pendingCommitments, commitment)
 

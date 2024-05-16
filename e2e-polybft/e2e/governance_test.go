@@ -64,16 +64,9 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
-	t.Run("successful change of epoch size", func(t *testing.T) {
-		// propose a new epoch size
-		setNewEpochSizeFn := &contractsapi.SetNewEpochSizeNetworkParamsFn{
-			NewEpochSize: big.NewInt(int64(newEpochSize)),
-		}
-
-		proposalInput, err := setNewEpochSizeFn.EncodeAbi()
-		require.NoError(t, err)
-
-		proposalDescription := fmt.Sprintf("Change epoch size from %d to %d", oldEpochSize, newEpochSize)
+	executeSuccessfulProposalCycle := func(t *testing.T,
+		proposalInput []byte, proposalDescription, fieldName string, expectedValue *big.Int) {
+		t.Helper()
 
 		proposalID := sendProposalTransaction(t, relayer, proposerAcc.Ecdsa,
 			polybftCfg.GovernanceConfig.ChildGovernorAddr,
@@ -131,17 +124,32 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 			polybftCfg.GovernanceConfig.NetworkParamsAddr,
 			proposalInput, proposalDescription)
 
-		currentBlockNumber, err = relayer.Client().BlockNumber()
-		require.NoError(t, err)
-
-		// check if epoch size changed on NetworkParams
+		// check if parameter value changed on NetworkParams
 		networkParamsResponse, err := ABICall(relayer, contractsapi.NetworkParams,
-			polybftCfg.GovernanceConfig.NetworkParamsAddr, types.ZeroAddress, "epochSize")
+			polybftCfg.GovernanceConfig.NetworkParamsAddr, types.ZeroAddress, fieldName)
 		require.NoError(t, err)
 
-		epochSizeOnNetworkParams, err := common.ParseUint256orHex(&networkParamsResponse)
+		paramValueOnNetworkParams, err := common.ParseUint256orHex(&networkParamsResponse)
 		require.NoError(t, err)
-		require.Equal(t, newEpochSize, epochSizeOnNetworkParams.Uint64())
+		require.Equal(t, expectedValue.Uint64(), paramValueOnNetworkParams.Uint64())
+	}
+
+	t.Run("successful change of epoch size", func(t *testing.T) {
+		// propose a new epoch size
+		newEpochSizeBigInt := big.NewInt(int64(newEpochSize))
+		setNewEpochSizeFn := &contractsapi.SetNewEpochSizeNetworkParamsFn{
+			NewEpochSize: newEpochSizeBigInt,
+		}
+
+		proposalInput, err := setNewEpochSizeFn.EncodeAbi()
+		require.NoError(t, err)
+
+		proposalDescription := fmt.Sprintf("Change epoch size from %d to %d", oldEpochSize, newEpochSize)
+
+		executeSuccessfulProposalCycle(t, proposalInput, proposalDescription, "epochSize", newEpochSizeBigInt)
+
+		currentBlockNumber, err := relayer.Client().BlockNumber()
+		require.NoError(t, err)
 
 		endOfPreviousEpoch := (currentBlockNumber/oldEpochSize + 1) * oldEpochSize
 		endOfNewEpoch := endOfPreviousEpoch + newEpochSize
@@ -222,10 +230,9 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 	})
 
 	t.Run("successful change of base fee denom", func(t *testing.T) {
-		var baseFee = uint64(215)
-		// propose a new base fee change denom
+		newBaseFeeChangeDenom := big.NewInt(215)
 		setNewBaseFeeDenomFn := &contractsapi.SetNewBaseFeeChangeDenomNetworkParamsFn{
-			NewBaseFeeChangeDenom: big.NewInt(int64(baseFee)),
+			NewBaseFeeChangeDenom: newBaseFeeChangeDenom,
 		}
 
 		proposalInput, err := setNewBaseFeeDenomFn.EncodeAbi()
@@ -233,70 +240,50 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 
 		proposalDescription := fmt.Sprintf("Change epoch size from %d to %d", oldEpochSize, newEpochSize)
 
-		proposalID := sendProposalTransaction(t, relayer, proposerAcc.Ecdsa,
-			polybftCfg.GovernanceConfig.ChildGovernorAddr,
-			polybftCfg.GovernanceConfig.NetworkParamsAddr,
-			proposalInput, proposalDescription)
+		executeSuccessfulProposalCycle(t, proposalInput, proposalDescription, "baseFeeChangeDenom", newBaseFeeChangeDenom)
+	})
 
-		// check that proposal delay finishes, and porposal becomes active (ready to for voting)
-		require.NoError(t, cluster.WaitUntil(3*time.Minute, 2*time.Second, func() bool {
-			proposalState := getProposalState(t, proposalID,
-				polybftCfg.GovernanceConfig.ChildGovernorAddr, relayer)
-
-			return proposalState == Active
-		}))
-
-		// vote for the proposal
-		for _, s := range cluster.Servers {
-			voterAcc, err := helper.GetAccountFromDir(s.DataDir())
-			require.NoError(t, err)
-
-			sendVoteTransaction(t, proposalID, For, polybftCfg.GovernanceConfig.ChildGovernorAddr,
-				relayer, voterAcc.Ecdsa)
+	t.Run("successful change of block time", func(t *testing.T) {
+		newBlockTime := big.NewInt(5) // 5 seconds
+		setNewBlockTime := contractsapi.SetNewBlockTimeNetworkParamsFn{
+			NewBlockTime: newBlockTime,
 		}
 
-		// check if proposal has quorum (if it was accepted)
-		require.NoError(t, cluster.WaitUntil(3*time.Minute, 2*time.Second, func() bool {
-			proposalState := getProposalState(t, proposalID,
-				polybftCfg.GovernanceConfig.ChildGovernorAddr, relayer)
+		proposalInput, err := setNewBlockTime.EncodeAbi()
+		require.NoError(t, err)
 
-			return proposalState == Succeeded
-		}))
+		proposalDescription := fmt.Sprintf("Change block time from 2s to %ds", newBlockTime)
 
-		// queue proposal for execution
-		sendQueueProposalTransaction(t, relayer, proposerAcc.Ecdsa,
-			polybftCfg.GovernanceConfig.ChildGovernorAddr,
-			polybftCfg.GovernanceConfig.NetworkParamsAddr,
-			proposalInput, proposalDescription)
+		executeSuccessfulProposalCycle(t, proposalInput, proposalDescription, "blockTime", newBlockTime)
 
-		// check if proposal has quorum (if it was accepted)
-		require.NoError(t, cluster.WaitUntil(3*time.Minute, 2*time.Second, func() bool {
-			proposalState := getProposalState(t, proposalID,
-				polybftCfg.GovernanceConfig.ChildGovernorAddr, relayer)
+		// get epoch size from NetworkParams contract
+		networkParamsResponse, err := ABICall(relayer, contractsapi.NetworkParams,
+			polybftCfg.GovernanceConfig.NetworkParamsAddr, types.ZeroAddress, "epochSize")
+		require.NoError(t, err)
 
-			return proposalState == Queued
-		}))
+		epochSize, err := common.ParseUint256orHex(&networkParamsResponse)
+		require.NoError(t, err)
 
 		currentBlockNumber, err := relayer.Client().BlockNumber()
 		require.NoError(t, err)
 
-		// wait for couple of more blocks because of execution delay
-		require.NoError(t, cluster.WaitForBlock(currentBlockNumber+2, 10*time.Second))
+		currentBlockNumber--
 
-		// execute proposal
-		sendExecuteProposalTransaction(t, relayer, proposerAcc.Ecdsa,
-			polybftCfg.GovernanceConfig.ChildGovernorAddr,
-			polybftCfg.GovernanceConfig.NetworkParamsAddr,
-			proposalInput, proposalDescription)
+		endOfEpoch := (currentBlockNumber/epochSize.Uint64() + 1) * epochSize.Uint64()
 
-		// check if base fee change denom changed on NetworkParams
-		networkParamsResponse, err := ABICall(relayer, contractsapi.NetworkParams,
-			polybftCfg.GovernanceConfig.NetworkParamsAddr, types.ZeroAddress, "baseFeeChangeDenom")
+		// wait for epoch ending block plus couple of more blocks
+		// so that new block time is in effect with blocks mined in new epoch with that block time
+		require.NoError(t, cluster.WaitForBlock(endOfEpoch+5, 3*time.Minute))
+
+		blockToGet := endOfEpoch + 5
+		headerOne, err := relayer.Client().GetHeaderByNumber(jsonrpc.BlockNumber(blockToGet))
 		require.NoError(t, err)
 
-		baseFeeDenomOnNetworkParams, err := common.ParseUint256orHex(&networkParamsResponse)
+		headerTwo, err := relayer.Client().GetHeaderByNumber(jsonrpc.BlockNumber(blockToGet - 1))
 		require.NoError(t, err)
-		require.Equal(t, baseFee, baseFeeDenomOnNetworkParams.Uint64())
+
+		blockTime := headerOne.Timestamp - headerTwo.Timestamp
+		require.GreaterOrEqual(t, blockTime, newBlockTime.Uint64())
 	})
 }
 

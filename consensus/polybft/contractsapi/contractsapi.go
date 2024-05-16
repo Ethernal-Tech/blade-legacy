@@ -1922,6 +1922,22 @@ func (s *SetNewBaseFeeChangeDenomNetworkParamsFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(NetworkParams.Abi.Methods["setNewBaseFeeChangeDenom"], buf, s)
 }
 
+type SetNewBlockTimeNetworkParamsFn struct {
+	NewBlockTime *big.Int `abi:"newBlockTime"`
+}
+
+func (s *SetNewBlockTimeNetworkParamsFn) Sig() []byte {
+	return NetworkParams.Abi.Methods["setNewBlockTime"].ID()
+}
+
+func (s *SetNewBlockTimeNetworkParamsFn) EncodeAbi() ([]byte, error) {
+	return NetworkParams.Abi.Methods["setNewBlockTime"].Encode(s)
+}
+
+func (s *SetNewBlockTimeNetworkParamsFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(NetworkParams.Abi.Methods["setNewBlockTime"], buf, s)
+}
+
 type NewCheckpointBlockIntervalEvent struct {
 	CheckpointInterval *big.Int `abi:"checkpointInterval"`
 }
