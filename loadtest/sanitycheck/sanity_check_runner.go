@@ -17,6 +17,24 @@ const (
 	uxSeparator = "============================================================="
 )
 
+// SanityCheckTestResult represents the result of a sanity check test.
+type SanityCheckTestResult struct {
+	Name          string
+	ExecutionTime string
+	Result        string
+	Err           error
+}
+
+// String returns a string representation of the SanityCheckTestResult.
+func (s SanityCheckTestResult) String() string {
+	if s.Err != nil {
+		return fmt.Sprintf("%s: Execution time: %s. Error: %s. Result: %s.",
+			s.Name, s.ExecutionTime, s.Err.Error(), s.Result)
+	}
+
+	return fmt.Sprintf("%s: Execution time: %s. Result: %s.", s.Name, s.ExecutionTime, s.Result)
+}
+
 // SanityCheckTestConfig represents the configuration for sanity check tests.
 type SanityCheckTestConfig struct {
 	Mnemonic string // Mnemonnic is the mnemonic phrase used for account funding.
@@ -105,17 +123,23 @@ func (r *SanityCheckTestRunner) Close() error {
 func (r *SanityCheckTestRunner) Run() error {
 	fmt.Println("Running sanity check tests")
 
-	results := make([]string, 0, len(r.tests))
+	results := make([]SanityCheckTestResult, 0, len(r.tests))
 
 	for _, test := range r.tests {
 		result := passed
 		t := time.Now().UTC()
 
-		if err := test.Run(); err != nil {
-			result = fmt.Sprintf("%s: %v", failed, err)
+		err := test.Run()
+		if err != nil {
+			result = failed
 		}
 
-		results = append(results, fmt.Sprintf("%s: Execution time: %s. Result: %s", test.Name(), time.Since(t), result))
+		results = append(results, SanityCheckTestResult{
+			Name:          test.Name(),
+			ExecutionTime: time.Since(t).String(),
+			Result:        result,
+			Err:           err,
+		})
 	}
 
 	printUxSeparator()
@@ -123,27 +147,32 @@ func (r *SanityCheckTestRunner) Run() error {
 
 	if !r.config.ResultsToJSON {
 		for _, result := range results {
-			fmt.Println(result)
-		}
-	} else {
-		jsonData, err := json.Marshal(results)
-		if err != nil {
-			return err
+			fmt.Println(result.String())
 		}
 
-		fileName := "./sanity_check_results.json"
-
-		err = common.SaveFileSafe(fileName, jsonData, 0600)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("Results saved to JSON file", fileName)
+		return nil
 	}
+
+	return saveResultsToFile(results, "sanity_check_results.json")
+}
+
+// saveResultsToFile saves the sanity check tests results to a JSON file.
+func saveResultsToFile(results []SanityCheckTestResult, fileName string) error {
+	jsonData, err := json.Marshal(results)
+	if err != nil {
+		return err
+	}
+
+	if err := common.SaveFileSafe(fileName, jsonData, 0600); err != nil {
+		return fmt.Errorf("failed to save results to JSON file: %w", err)
+	}
+
+	fmt.Println("Results saved to JSON file", fileName)
 
 	return nil
 }
 
+// printUxSeparator prints a separator to the console.
 func printUxSeparator() {
 	fmt.Println(uxSeparator)
 }

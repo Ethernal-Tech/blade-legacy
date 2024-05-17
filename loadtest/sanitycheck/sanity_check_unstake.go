@@ -14,7 +14,7 @@ import (
 	"github.com/umbracle/ethgo"
 )
 
-// StakeTest represents a stake test.
+// UnstakeTest represents an unstake test.
 type UnstakeTest struct {
 	*StakeTest
 }
@@ -108,7 +108,7 @@ func (t *UnstakeTest) Run() error {
 	return nil
 }
 
-// stake stakes the given amount for the given validator.
+// unstake unstakes the given amount for the given validator.
 func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) error {
 	fmt.Println("Unstaking for validator", validatorKey.Address(), "Amount", amount.String())
 
