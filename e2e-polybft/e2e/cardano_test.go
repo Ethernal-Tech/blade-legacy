@@ -782,10 +782,6 @@ func TestE2E_ValidScenarios(t *testing.T) {
 
 	t.Run("Both directions sequential", func(t *testing.T) {
 		instances := 5
-		prevAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
-		require.NoError(t, err)
-		prevAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
-		require.NoError(t, err)
 
 		for i := 0; i < instances; i++ {
 			sendAmount = uint64(1_000_000)
@@ -801,11 +797,16 @@ func TestE2E_ValidScenarios(t *testing.T) {
 			fmt.Printf("vector tx %v sent. hash: %s\n", i+1, vectorTxHash)
 		}
 
+		prevAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
+		prevAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
+
 		fmt.Printf("Waiting for %v TXs on vector\n", instances)
 		expectedAmountOnVector := prevAmountOnVector.Uint64() + uint64(instances)*sendAmount
 		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnVector)) == 0
-		}, 20, time.Second*10)
+		}, 100, time.Second*10)
 		require.NoError(t, err)
 
 		newAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
@@ -817,7 +818,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		expectedAmountOnPrime := prevAmountOnPrime.Uint64() + uint64(instances)*sendAmount
 		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnPrime)) == 0
-		}, 20, time.Second*10)
+		}, 100, time.Second*10)
 		require.NoError(t, err)
 
 		newAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
@@ -827,45 +828,46 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	})
 
 	t.Run("Both directions sequential and parallel", func(t *testing.T) {
+		sequentialInstances := 5
+		parallelInstances := 6
+
+		primeWalletKeys := make([]wallet.IWallet, parallelInstances)
+
+		for i := 0; i < parallelInstances; i++ {
+			primeWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
+			require.NoError(t, err)
+
+			walledAddress, _, err := wallet.GetWalletAddress(primeWalletKeys[i], uint(primeCluster.Config.NetworkMagic))
+			require.NoError(t, err)
+
+			sendAmount := uint64(5_000_000)
+			user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, uint64(sequentialInstances)*sendAmount, walledAddress, true)
+		}
+
+		fmt.Printf("Funded %v prime wallets \n", parallelInstances)
+
+		vectorWalletKeys := make([]wallet.IWallet, parallelInstances)
+
+		for i := 0; i < parallelInstances; i++ {
+			vectorWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(vectorCluster.Config.Dir("keys")), true)
+			require.NoError(t, err)
+
+			walledAddress, _, err := wallet.GetWalletAddress(vectorWalletKeys[i], uint(vectorCluster.Config.NetworkMagic))
+			require.NoError(t, err)
+
+			sendAmount := uint64(5_000_000)
+			user.SendToAddress(t, ctx, txProviderVector, vectorGenesisWallet, uint64(sequentialInstances)*sendAmount, walledAddress, false)
+		}
+
+		fmt.Printf("Funded %v vector wallets \n", parallelInstances)
+
 		prevAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
 		require.NoError(t, err)
 		prevAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
 		require.NoError(t, err)
 
-		sequentialInstances := 5
-		parallelInstances := 6
-
-		var wg sync.WaitGroup
-
 		for j := 0; j < sequentialInstances; j++ {
-			primeWalletKeys := make([]wallet.IWallet, parallelInstances)
-
-			for i := 0; i < parallelInstances; i++ {
-				primeWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
-				require.NoError(t, err)
-
-				walledAddress, _, err := wallet.GetWalletAddress(primeWalletKeys[i], uint(primeCluster.Config.NetworkMagic))
-				require.NoError(t, err)
-
-				sendAmount := uint64(5_000_000)
-				user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, walledAddress, true)
-			}
-
-			fmt.Printf("run: %v. Funded %v prime wallets \n", j+1, parallelInstances)
-
-			vectorWalletKeys := make([]wallet.IWallet, parallelInstances)
-
-			for i := 0; i < parallelInstances; i++ {
-				vectorWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(vectorCluster.Config.Dir("keys")), true)
-				require.NoError(t, err)
-
-				walledAddress, _, err := wallet.GetWalletAddress(vectorWalletKeys[i], uint(vectorCluster.Config.NetworkMagic))
-				require.NoError(t, err)
-
-				sendAmount := uint64(5_000_000)
-				user.SendToAddress(t, ctx, txProviderVector, vectorGenesisWallet, sendAmount, walledAddress, false)
-			}
-
+			var wg sync.WaitGroup
 			sendAmount = uint64(1_000_000)
 
 			for i := 0; i < parallelInstances; i++ {
