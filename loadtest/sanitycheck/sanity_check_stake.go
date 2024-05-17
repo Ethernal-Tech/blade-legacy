@@ -99,9 +99,10 @@ func (t *StakeTest) Run() error {
 		return fmt.Errorf("validator %s is not in the updated validator set", validatorKey.Address())
 	}
 
-	if extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address()).VotingPower.Cmp(currentStake) != 0 {
-		return fmt.Errorf("voting power of validator %s is incorrect. Expected: %s, Actual: %s", validatorKey.Address(),
-			currentStake, extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address()).VotingPower)
+	validatorMetaData := extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address())
+	if validatorMetaData.VotingPower.Cmp(currentStake) != 0 {
+		return fmt.Errorf("voting power of validator %s is incorrect. Expected: %s, Actual: %s",
+			validatorKey.Address(), currentStake, validatorMetaData.VotingPower)
 	}
 
 	fmt.Println("Validator", validatorKey.Address(), "is in the updated validator set with correct voting power")

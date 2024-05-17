@@ -98,9 +98,10 @@ func (t *UnstakeTest) Run() error {
 		return fmt.Errorf("validator %s is not in the updated validator set", validatorKey.Address())
 	}
 
-	if extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address()).VotingPower.Cmp(currentStake) != 0 {
-		return fmt.Errorf("voting power of validator %s is incorrect. Expected: %s, Actual: %s", validatorKey.Address(),
-			currentStake, extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address()).VotingPower)
+	validatorMetaData := extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address())
+	if validatorMetaData.VotingPower.Cmp(currentStake) != 0 {
+		return fmt.Errorf("voting power of validator %s is incorrect. Expected: %s, Actual: %s",
+			validatorKey.Address(), currentStake, validatorMetaData.VotingPower)
 	}
 
 	fmt.Println("Validator", validatorKey.Address(), "is in the updated validator set with correct voting power")
@@ -126,8 +127,8 @@ func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) er
 		return err
 	}
 
-	tx := types.NewTx(types.NewLegacyTx(types.WithFrom(
-		validatorKey.Address()),
+	tx := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(validatorKey.Address()),
 		types.WithTo(&contracts.StakeManagerContract),
 		types.WithInput(encoded)))
 
