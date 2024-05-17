@@ -670,7 +670,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
 						cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount,
 						cardanofw.GetDestinationChainID(true))
-					fmt.Printf("run: %v. Tx %v sent. hash: %s\n", run, idx+1, txHash)
+					fmt.Printf("run: %v. Tx %v sent. hash: %s\n", run+1, idx+1, txHash)
 				}(j, i)
 			}
 
@@ -778,5 +778,153 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		require.NoError(t, err)
 
 		fmt.Printf("prevAmount: %v. newAmount: %v\n", prevAmount, newAmount)
+	})
+
+	t.Run("Both directions sequential", func(t *testing.T) {
+		instances := 5
+		prevAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
+		prevAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
+
+		for i := 0; i < instances; i++ {
+			sendAmount = uint64(1_000_000)
+
+			primeTxHash := user.BridgeAmount(t, ctx, txProviderPrime, cb.PrimeMultisigAddr,
+				cb.VectorMultisigFeeAddr, sendAmount, true)
+
+			fmt.Printf("prime tx %v sent. hash: %s\n", i+1, primeTxHash)
+
+			vectorTxHash := user.BridgeAmount(t, ctx, txProviderVector, cb.VectorMultisigAddr,
+				cb.PrimeMultisigFeeAddr, sendAmount, false)
+
+			fmt.Printf("vector tx %v sent. hash: %s\n", i+1, vectorTxHash)
+		}
+
+		fmt.Printf("Waiting for %v TXs on vector\n", instances)
+		expectedAmountOnVector := prevAmountOnVector.Uint64() + uint64(instances)*sendAmount
+		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnVector)) == 0
+		}, 20, time.Second*10)
+		require.NoError(t, err)
+
+		newAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
+
+		fmt.Printf("on vector: prevAmount: %v. newAmount: %v\n", prevAmountOnVector, newAmountOnVector)
+
+		fmt.Printf("Waiting for %v TXs on prime\n", instances)
+		expectedAmountOnPrime := prevAmountOnPrime.Uint64() + uint64(instances)*sendAmount
+		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnPrime)) == 0
+		}, 20, time.Second*10)
+		require.NoError(t, err)
+
+		newAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
+
+		fmt.Printf("on prime: prevAmount: %v. newAmount: %v\n", prevAmountOnPrime, newAmountOnPrime)
+	})
+
+	t.Run("Both directions sequential and parallel", func(t *testing.T) {
+		prevAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
+		prevAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
+
+		sequentialInstances := 5
+		parallelInstances := 6
+
+		var wg sync.WaitGroup
+
+		for j := 0; j < sequentialInstances; j++ {
+			primeWalletKeys := make([]wallet.IWallet, parallelInstances)
+
+			for i := 0; i < parallelInstances; i++ {
+				primeWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
+				require.NoError(t, err)
+
+				walledAddress, _, err := wallet.GetWalletAddress(primeWalletKeys[i], uint(primeCluster.Config.NetworkMagic))
+				require.NoError(t, err)
+
+				sendAmount := uint64(5_000_000)
+				user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, walledAddress, true)
+			}
+
+			fmt.Printf("run: %v. Funded %v prime wallets \n", j+1, parallelInstances)
+
+			vectorWalletKeys := make([]wallet.IWallet, parallelInstances)
+
+			for i := 0; i < parallelInstances; i++ {
+				vectorWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(vectorCluster.Config.Dir("keys")), true)
+				require.NoError(t, err)
+
+				walledAddress, _, err := wallet.GetWalletAddress(vectorWalletKeys[i], uint(vectorCluster.Config.NetworkMagic))
+				require.NoError(t, err)
+
+				sendAmount := uint64(5_000_000)
+				user.SendToAddress(t, ctx, txProviderVector, vectorGenesisWallet, sendAmount, walledAddress, false)
+			}
+
+			sendAmount = uint64(1_000_000)
+
+			for i := 0; i < parallelInstances; i++ {
+				wg.Add(1)
+
+				go func(run, idx int) {
+					defer wg.Done()
+
+					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
+						cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, primeWalletKeys[idx], user.VectorAddress, sendAmount,
+						cardanofw.GetDestinationChainID(true))
+					fmt.Printf("run: %v. Prime tx %v sent. hash: %s\n", run+1, idx+1, txHash)
+				}(j, i)
+			}
+
+			wg.Wait()
+
+			for i := 0; i < parallelInstances; i++ {
+				wg.Add(1)
+
+				go func(run, idx int) {
+					defer wg.Done()
+
+					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderVector, uint(vectorCluster.Config.NetworkMagic),
+						cb.VectorMultisigAddr, cb.PrimeMultisigFeeAddr, vectorWalletKeys[idx], user.PrimeAddress, sendAmount,
+						cardanofw.GetDestinationChainID(false))
+					fmt.Printf("run: %v. Vector tx %v sent. hash: %s\n", run+1, idx+1, txHash)
+				}(j, i)
+			}
+
+			wg.Wait()
+		}
+
+		fmt.Printf("Waiting for %v TXs on vector:\n", sequentialInstances*parallelInstances)
+
+		expectedAmountOnVector := prevAmountOnVector.Uint64() + uint64(sequentialInstances)*uint64(parallelInstances)*sendAmount
+		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnVector)) == 0
+		}, 100, time.Second*10)
+		require.NoError(t, err)
+		fmt.Printf("%v TXs on vector confirmed\n", sequentialInstances*parallelInstances)
+
+		newAmountOnVector, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+		require.NoError(t, err)
+
+		fmt.Printf("on vector: prevAmount: %v. newAmount: %v\n", prevAmountOnVector, newAmountOnVector)
+
+		fmt.Printf("Waiting for %v TXs on prime\n", sequentialInstances*parallelInstances)
+
+		expectedAmountOnPrime := prevAmountOnPrime.Uint64() + uint64(sequentialInstances)*uint64(parallelInstances)*sendAmount
+		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnPrime)) == 0
+		}, 100, time.Second*10)
+		require.NoError(t, err)
+		fmt.Printf("%v TXs on prime confirmed\n", sequentialInstances*parallelInstances)
+
+		newAmountOnPrime, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+		require.NoError(t, err)
+
+		fmt.Printf("on prime: prevAmount: %v. newAmount: %v\n", prevAmountOnPrime, newAmountOnPrime)
 	})
 }
