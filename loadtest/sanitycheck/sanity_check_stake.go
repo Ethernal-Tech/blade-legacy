@@ -39,6 +39,11 @@ func (t *StakeTest) Name() string {
 }
 
 // Run runs the stake test.
+// It does the following steps:
+// 1. Fund the validator address.
+// 2. Stake the given amount for the validator.
+// 3. Wait for the epoch ending block.
+// 4. Check if the correct validator stake is in the validator set delta.
 func (t *StakeTest) Run() error {
 	printUxSeparator()
 

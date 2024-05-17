@@ -39,6 +39,13 @@ func (t *RegisterValidatorTest) Name() string {
 }
 
 // Run runs the register validator test.
+// It does the following steps:
+// 1. Generate a new validator key.
+// 2. Fund the new validator address.
+// 3. Whitelist the new validator.
+// 4. Register the new validator with a stake amount.
+// 5. Wait for the epoch ending block.
+// 6. Check if the new validator is added to the validator set with its stake.
 func (t *RegisterValidatorTest) Run() error {
 	printUxSeparator()
 
