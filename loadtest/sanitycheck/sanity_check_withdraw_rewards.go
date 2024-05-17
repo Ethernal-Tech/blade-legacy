@@ -37,6 +37,13 @@ func (t *WithdrawRewardsTest) Name() string {
 }
 
 // Run runs the withdraw rewards test.
+// It does the following:
+// 1. Funds the validator account.
+// 2. Waits for one epoch.
+// 3. Gets the pending rewards for the validator.
+// 4. Withdraws the rewards.
+// 5. Gets the pending rewards for the validator again.
+// 6. Checks if the pending rewards after withdrawing are less than before.
 func (t *WithdrawRewardsTest) Run() error {
 	printUxSeparator()
 
