@@ -65,33 +65,6 @@ func verifyGenesisExistence(genesisPath string) *GenesisGenError {
 	return nil
 }
 
-// parseTrackerStartBlocks parses provided event tracker start blocks configuration.
-// It is set in a following format: <contractAddress>:<startBlock>.
-// In case smart contract address isn't provided in the string, it is assumed its starting block is 0 implicitly.
-func parseTrackerStartBlocks(trackerStartBlocksRaw []string) (map[types.Address]uint64, error) {
-	trackerStartBlocksConfig := make(map[types.Address]uint64, len(trackerStartBlocksRaw))
-
-	for _, startBlockRaw := range trackerStartBlocksRaw {
-		delimiterIdx := strings.Index(startBlockRaw, ":")
-		if delimiterIdx == -1 {
-			return nil, fmt.Errorf("invalid event tracker start block configuration provided: %s", trackerStartBlocksRaw)
-		}
-
-		// <contractAddress>:<startBlock>
-		address := types.StringToAddress(startBlockRaw[:delimiterIdx])
-		startBlockRaw := startBlockRaw[delimiterIdx+1:]
-
-		startBlock, err := strconv.ParseUint(startBlockRaw, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse provided start block %s: %w", startBlockRaw, err)
-		}
-
-		trackerStartBlocksConfig[address] = startBlock
-	}
-
-	return trackerStartBlocksConfig, nil
-}
-
 // parseBurnContractInfo parses provided burn contract information and returns burn contract block and address
 func parseBurnContractInfo(burnContractInfoRaw string) (*polybft.BurnContractInfo, error) {
 	// <block>:<address>[:<burn destination address>]
