@@ -131,7 +131,7 @@ func (u *TestApexUser) BridgeAmount(
 	}
 
 	txHash := BridgeAmountFull(t, ctx, txProvider, networkMagic,
-		multisigAddr, feeAddr, sender, receiverAddr, sendAmount)
+		multisigAddr, feeAddr, sender, receiverAddr, sendAmount, GetDestinationChainID(isPrime))
 
 	return txHash
 }
@@ -141,7 +141,7 @@ func (u *TestApexUser) Dispose() {
 	_ = os.Remove(u.basePath)
 }
 
-func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) {
+func CreateMetaData(sender string, receivers map[string]uint64, destinationChainID string) ([]byte, error) {
 	type BridgingRequestMetadataTransaction struct {
 		Address []string `cbor:"a" json:"a"`
 		Amount  uint64   `cbor:"m" json:"m"`
@@ -158,7 +158,7 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 	metadata := map[string]interface{}{
 		"1": map[string]interface{}{
 			"t":  "bridge",
-			"d":  "vector",
+			"d":  destinationChainID,
 			"s":  SplitString(sender, 40),
 			"tx": transactions,
 		},
@@ -167,9 +167,18 @@ func CreateMetaData(sender string, receivers map[string]uint64) ([]byte, error) 
 	return json.Marshal(metadata)
 }
 
+func GetDestinationChainID(isSourcePrime bool) string {
+	if isSourcePrime {
+		return "vector"
+	} else {
+		return "prime"
+	}
+}
+
 func BridgeAmountFull(
 	t *testing.T, ctx context.Context, txProvider wallet.ITxProvider, networkMagic uint,
 	multisigAddr, feeAddr string, sender wallet.IWallet, receiverAddr string, sendAmount uint64,
+	destinationChainID string,
 ) string {
 	t.Helper()
 
@@ -183,7 +192,7 @@ func BridgeAmountFull(
 		feeAddr:      feeAmount,
 	}
 
-	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers)
+	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers, destinationChainID)
 	require.NoError(t, err)
 
 	txHash, err := SendTx(ctx, txProvider, sender,
