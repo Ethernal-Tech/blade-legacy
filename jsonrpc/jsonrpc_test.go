@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -44,12 +45,16 @@ func Test_handleGetRequest(t *testing.T) {
 		json.Unmarshal(mockWriter.Bytes(), response),
 	)
 
+	host, err := os.Hostname()
+	require.NoError(t, err)
+
 	require.Equal(
 		t,
 		&GetResponse{
 			Name:    chainName,
 			ChainID: chainID,
 			Version: versioning.Version,
+			Node:    host,
 		},
 		response,
 	)
