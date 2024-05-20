@@ -67,7 +67,8 @@ func (t *UnstakeTest) Run() error {
 
 	fmt.Println("Stake of validator", validatorKey.Address(), "before unstaking:", previousStake)
 
-	if _, err := t.unstake(validatorKey, amountToUnstake); err != nil {
+	blockNum, err := t.unstake(validatorKey, amountToUnstake)
+	if err != nil {
 		return fmt.Errorf("failed to stake for validator: %s. Error: %w", validatorKey.Address(), err)
 	}
 
@@ -83,7 +84,7 @@ func (t *UnstakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
-	epochEndingBlock, err := t.waitForEpochEnding(nil)
+	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
 	if err != nil {
 		return err
 	}

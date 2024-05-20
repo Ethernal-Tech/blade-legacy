@@ -68,7 +68,8 @@ func (t *StakeTest) Run() error {
 
 	fmt.Println("Stake of validator", validatorKey.Address(), "before staking:", previousStake)
 
-	if err := t.stake(validatorKey, amountToStake); err != nil {
+	blockNum, err := t.stake(validatorKey, amountToStake)
+	if err != nil {
 		return fmt.Errorf("failed to stake for validator: %s. Error: %w", validatorKey.Address(), err)
 	}
 
@@ -84,7 +85,7 @@ func (t *StakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
-	epochEndingBlock, err := t.waitForEpochEnding(nil)
+	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
 	if err != nil {
 		return err
 	}
@@ -116,9 +117,9 @@ func (t *StakeTest) Run() error {
 }
 
 // stake stakes the given amount for the given validator.
-func (t *StakeTest) stake(validatorKey *crypto.ECDSAKey, amount *big.Int) error {
+func (t *StakeTest) stake(validatorKey *crypto.ECDSAKey, amount *big.Int) (uint64, error) {
 	if err := t.approveNativeERC20(validatorKey, amount, contracts.StakeManagerContract); err != nil {
-		return err
+		return 0, err
 	}
 
 	fmt.Println("Staking for validator", validatorKey.Address(), "Amount", amount.String())
@@ -134,7 +135,7 @@ func (t *StakeTest) stake(validatorKey *crypto.ECDSAKey, amount *big.Int) error 
 
 	encoded, err := stakeFn.EncodeAbi()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	tx := types.NewTx(types.NewLegacyTx(types.WithFrom(
@@ -144,14 +145,14 @@ func (t *StakeTest) stake(validatorKey *crypto.ECDSAKey, amount *big.Int) error 
 
 	receipt, err := t.txrelayer.SendTransaction(tx, validatorKey)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if receipt.Status == uint64(types.ReceiptFailed) {
-		return fmt.Errorf("stake transaction failed on block %d", receipt.BlockNumber)
+		return 0, fmt.Errorf("stake transaction failed on block %d", receipt.BlockNumber)
 	}
 
-	return nil
+	return receipt.BlockNumber, nil
 }
 
 // getStake returns the stake of the given validator on the StakeManager contract.

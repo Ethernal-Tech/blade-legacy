@@ -80,11 +80,12 @@ func (t *RegisterValidatorTest) runTest() (*wallet.Account, error) {
 		return nil, fmt.Errorf("failed to whitelist new validator: %w", err)
 	}
 
-	if err := t.registerValidator(newValidatorAcc, stakeAmount); err != nil {
+	blockNum, err := t.registerValidator(newValidatorAcc, stakeAmount)
+	if err != nil {
 		return nil, fmt.Errorf("failed to register new validator: %w", err)
 	}
 
-	epochEndingBlock, err := t.waitForEpochEnding(nil)
+	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
 	if err != nil {
 		return nil, err
 	}
@@ -149,29 +150,29 @@ func (t *RegisterValidatorTest) whitelistValidators(bladeAdminKey *crypto.ECDSAK
 // 1. Approve the stake amount for StakeManager contract.
 // 2. Create KOSK signature.
 // 3. Create RegisterStakeManagerFn and send the transaction.
-func (t *RegisterValidatorTest) registerValidator(validatorAcc *wallet.Account, stakeAmount *big.Int) error {
+func (t *RegisterValidatorTest) registerValidator(validatorAcc *wallet.Account, stakeAmount *big.Int) (uint64, error) {
 	// first we need to approve the stake amount
 	if err := t.approveNativeERC20(validatorAcc.Ecdsa, stakeAmount, contracts.StakeManagerContract); err != nil {
-		return fmt.Errorf("failed to approve stake amount: %w", err)
+		return 0, fmt.Errorf("failed to approve stake amount: %w", err)
 	}
 
 	// then we create the KOSK signature
 	chainID, err := t.client.ChainID()
 	if err != nil {
-		return fmt.Errorf("failed to get chain ID: %w", err)
+		return 0, fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
 	koskSignature, err := signer.MakeKOSKSignature(
 		validatorAcc.Bls, validatorAcc.Address(),
 		chainID.Int64(), signer.DomainValidatorSet, contracts.StakeManagerContract)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// then we create register validator txn and send it
 	sigMarshal, err := koskSignature.ToBigInt()
 	if err != nil {
-		return fmt.Errorf("failed to marshal kosk signature: %w", err)
+		return 0, fmt.Errorf("failed to marshal kosk signature: %w", err)
 	}
 
 	registerFn := &contractsapi.RegisterStakeManagerFn{
@@ -182,7 +183,7 @@ func (t *RegisterValidatorTest) registerValidator(validatorAcc *wallet.Account, 
 
 	encoded, err := registerFn.EncodeAbi()
 	if err != nil {
-		return fmt.Errorf("failed to encode register validator data: %w", err)
+		return 0, fmt.Errorf("failed to encode register validator data: %w", err)
 	}
 
 	tx := types.NewTx(types.NewLegacyTx(
@@ -193,12 +194,12 @@ func (t *RegisterValidatorTest) registerValidator(validatorAcc *wallet.Account, 
 
 	receipt, err := t.txrelayer.SendTransaction(tx, validatorAcc.Ecdsa)
 	if err != nil {
-		return fmt.Errorf("failed to send register validator transaction: %w", err)
+		return 0, fmt.Errorf("failed to send register validator transaction: %w", err)
 	}
 
 	if receipt.Status != uint64(types.ReceiptSuccess) {
-		return fmt.Errorf("register validator transaction failed on block %d", receipt.BlockNumber)
+		return 0, fmt.Errorf("register validator transaction failed on block %d", receipt.BlockNumber)
 	}
 
-	return nil
+	return receipt.BlockNumber, nil
 }
