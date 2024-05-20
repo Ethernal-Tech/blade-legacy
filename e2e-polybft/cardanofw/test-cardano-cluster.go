@@ -325,7 +325,11 @@ func (c *TestCardanoCluster) Stop() error {
 			go func(s *TestCardanoServer) {
 				defer wg.Done()
 
+				fmt.Printf("terminating cardano node: cluster=%d, node port=%d\n", c.Config.ID, s.Port())
+
 				errs = append(errs, s.Stop())
+
+				fmt.Printf("cardano node has been terminated: cluster=%d, node port=%d\n", c.Config.ID, s.Port())
 			}(srv)
 		}
 	}
