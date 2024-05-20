@@ -230,8 +230,6 @@ func GetBridgingRequestState(ctx context.Context, requestURL string, apiKey stri
 		return nil, err
 	} else if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("http status for %s code is %d", requestURL, http.StatusOK)
-	} else if resp == nil {
-		return nil, fmt.Errorf("response for %s is nil", requestURL)
 	}
 
 	resBody, err := io.ReadAll(resp.Body)
