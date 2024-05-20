@@ -67,7 +67,7 @@ func (t *UnstakeTest) Run() error {
 
 	fmt.Println("Stake of validator", validatorKey.Address(), "before unstaking:", previousStake)
 
-	if err := t.unstake(validatorKey, amountToUnstake); err != nil {
+	if _, err := t.unstake(validatorKey, amountToUnstake); err != nil {
 		return fmt.Errorf("failed to stake for validator: %s. Error: %w", validatorKey.Address(), err)
 	}
 
@@ -83,7 +83,7 @@ func (t *UnstakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
-	epochEndingBlock, err := t.waitForEpochEnding()
+	epochEndingBlock, err := t.waitForEpochEnding(nil)
 	if err != nil {
 		return err
 	}
@@ -115,12 +115,12 @@ func (t *UnstakeTest) Run() error {
 }
 
 // unstake unstakes the given amount for the given validator.
-func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) error {
+func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) (uint64, error) {
 	fmt.Println("Unstaking for validator", validatorKey.Address(), "Amount", amount.String())
 
 	s := time.Now().UTC()
 	defer func() {
-		fmt.Println("Staking for validator", validatorKey.Address(), "took", time.Since(s))
+		fmt.Println("Unstaking for validator", validatorKey.Address(), "took", time.Since(s))
 	}()
 
 	unstakeFn := &contractsapi.UnstakeStakeManagerFn{
@@ -129,7 +129,7 @@ func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) er
 
 	encoded, err := unstakeFn.EncodeAbi()
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	tx := types.NewTx(types.NewLegacyTx(
@@ -139,12 +139,12 @@ func (t *UnstakeTest) unstake(validatorKey *crypto.ECDSAKey, amount *big.Int) er
 
 	receipt, err := t.txrelayer.SendTransaction(tx, validatorKey)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if receipt.Status == uint64(types.ReceiptFailed) {
-		return fmt.Errorf("unstake transaction failed on block %d", receipt.BlockNumber)
+		return 0, fmt.Errorf("unstake transaction failed on block %d", receipt.BlockNumber)
 	}
 
-	return nil
+	return receipt.BlockNumber, nil
 }

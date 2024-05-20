@@ -84,7 +84,7 @@ func (t *StakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
-	epochEndingBlock, err := t.waitForEpochEnding()
+	epochEndingBlock, err := t.waitForEpochEnding(nil)
 	if err != nil {
 		return err
 	}

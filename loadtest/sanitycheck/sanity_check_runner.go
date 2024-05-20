@@ -117,11 +117,17 @@ func registerTests(cfg *SanityCheckTestConfig,
 		return nil, err
 	}
 
+	unstakeAllTest, err := NewUnstakeAllTest(cfg, testAccountKey, client)
+	if err != nil {
+		return nil, err
+	}
+
 	return []SanityCheckTest{
 		stakeTest,
 		unstakeTest,
 		registerValidatorTest,
 		withdrawRewardsTest,
+		unstakeAllTest,
 	}, nil
 }
 

@@ -60,7 +60,7 @@ func (t *WithdrawRewardsTest) Run() error {
 	}
 
 	// lets wait for one epoch so that there are some rewards accumulated
-	_, err = t.waitForEpochEnding()
+	_, err = t.waitForEpochEnding(nil)
 	if err != nil {
 		return err
 	}

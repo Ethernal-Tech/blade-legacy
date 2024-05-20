@@ -134,10 +134,15 @@ func (t *BaseSanityCheckTest) approveNativeERC20(sender *crypto.ECDSAKey,
 }
 
 // waitForEndOfEpoch waits for the end of the current epoch.
-func (t *BaseSanityCheckTest) waitForEpochEnding() (*types.Header, error) {
+func (t *BaseSanityCheckTest) waitForEpochEnding(fromBlock *uint64) (*types.Header, error) {
 	fmt.Println("Waiting for end of epoch")
 
-	currentBlock, err := t.client.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
+	rpcBlock := jsonrpc.LatestBlockNumber
+	if fromBlock != nil {
+		rpcBlock = jsonrpc.BlockNumber(*fromBlock)
+	}
+
+	currentBlock, err := t.client.GetBlockByNumber(rpcBlock, false)
 	if err != nil {
 		return nil, err
 	}
