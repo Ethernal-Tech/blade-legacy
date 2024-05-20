@@ -746,6 +746,7 @@ func (t *Transition) apply(msg *types.Transaction) (*runtime.ExecutionResult, er
 	coinbaseFee := new(big.Int).Mul(new(big.Int).SetUint64(result.GasUsed), effectiveTip)
 	t.state.AddBalance(t.ctx.Coinbase, coinbaseFee)
 
+	//nolint:godox
 	// Burn some amount if the london hardfork is applied and token is non mintable.
 	// Basically, burn amount is just transferred to the current burn contract.
 	if t.isL1OriginatedToken && t.config.London && msg.Type() != types.StateTxType {
