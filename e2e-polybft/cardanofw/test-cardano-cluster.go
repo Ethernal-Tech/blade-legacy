@@ -330,7 +330,7 @@ func (c *TestCardanoCluster) Stop() error {
 		}
 	}
 
-	wg.Done()
+	wg.Wait()
 
 	return errors.Join(errs...)
 }
