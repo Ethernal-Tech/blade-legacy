@@ -31,8 +31,7 @@ func Test_OnlyRunApexBridge(t *testing.T) {
 	ctx, cncl := context.WithCancel(context.Background())
 	defer cncl()
 
-	_, cleanupFunc := cardanofw.RunApexBridge(t, ctx)
-	defer cleanupFunc()
+	cardanofw.RunApexBridge(t, ctx)
 
 	signalChannel := make(chan os.Signal, 1)
 	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)

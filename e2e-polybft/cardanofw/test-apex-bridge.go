@@ -261,7 +261,7 @@ func SetupAndRunApexBridge(
 	return cb
 }
 
-func RunApexBridge(t *testing.T, ctx context.Context) (*TestCardanoBridge, func()) {
+func RunApexBridge(t *testing.T, ctx context.Context) *TestCardanoBridge {
 	t.Helper()
 
 	const (
@@ -281,11 +281,10 @@ func RunApexBridge(t *testing.T, ctx context.Context) (*TestCardanoBridge, func(
 	vectorCluster := clusters[1]
 	require.NotNil(t, vectorCluster)
 
-	// defer cleanupCardanoChainsFunc()
-
 	user := NewTestApexUser(
 		t, uint(primeCluster.Config.NetworkMagic), uint(vectorCluster.Config.NetworkMagic))
-	// defer user.Dispose()
+
+	t.Cleanup(user.Dispose)
 
 	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
 	txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
@@ -315,11 +314,8 @@ func RunApexBridge(t *testing.T, ctx context.Context) (*TestCardanoBridge, func(
 		primeCluster,
 		vectorCluster,
 	)
-	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
 
-	return cb, func() {
-		user.Dispose()
-	}
+	return cb
 }
