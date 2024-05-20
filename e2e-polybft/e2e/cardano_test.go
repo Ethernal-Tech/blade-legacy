@@ -39,8 +39,6 @@ func TestE2E_ApexBridge(t *testing.T) {
 	vectorCluster := clusters[1]
 	require.NotNil(t, vectorCluster)
 
-	// defer cleanupCardanoChainsFunc()
-
 	user := cardanofw.NewTestApexUser(
 		t, uint(primeCluster.Config.NetworkMagic), uint(vectorCluster.Config.NetworkMagic))
 	defer user.Dispose()
@@ -103,8 +101,6 @@ func TestE2E_ApexBridge_BatchRecreated(t *testing.T) {
 
 	vectorCluster := clusters[1]
 	require.NotNil(t, vectorCluster)
-
-	// defer cleanupCardanoChainsFunc()
 
 	user := cardanofw.NewTestApexUser(
 		t, uint(primeCluster.Config.NetworkMagic), uint(vectorCluster.Config.NetworkMagic))
@@ -218,8 +214,6 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 
 	vectorCluster := clusters[1]
 	require.NotNil(t, vectorCluster)
-
-	// defer cleanupCardanoChainsFunc()
 
 	user := cardanofw.NewTestApexUser(
 		t, uint(primeCluster.Config.NetworkMagic), uint(vectorCluster.Config.NetworkMagic))
@@ -532,8 +526,6 @@ func TestE2E_ValidScenarios(t *testing.T) {
 
 	vectorCluster := clusters[1]
 	require.NotNil(t, vectorCluster)
-
-	// defer cleanupCardanoChainsFunc()
 
 	user := cardanofw.NewTestApexUser(
 		t, uint(primeCluster.Config.NetworkMagic), uint(vectorCluster.Config.NetworkMagic))
