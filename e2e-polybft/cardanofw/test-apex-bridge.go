@@ -2,6 +2,7 @@ package cardanofw
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"os"
@@ -20,11 +21,11 @@ func SetupAndRunApexCardanoChains(
 	t *testing.T,
 	ctx context.Context,
 	clusterCnt int,
-) ([]*TestCardanoCluster, func()) {
+) []*TestCardanoCluster {
 	t.Helper()
 
 	var (
-		errors      = make([]error, clusterCnt)
+		clErrors    = make([]error, clusterCnt)
 		clusters    = make([]*TestCardanoCluster, clusterCnt)
 		wg          sync.WaitGroup
 		baseLogsDir = path.Join("../..", fmt.Sprintf("e2e-logs-cardano-%d", time.Now().UTC().Unix()), t.Name())
@@ -33,13 +34,24 @@ func SetupAndRunApexCardanoChains(
 	cleanupFunc := func() {
 		fmt.Printf("Cleaning up cardano chains\n")
 
+		wg := sync.WaitGroup{}
+		stopErrs := []error(nil)
+
 		for i := 0; i < clusterCnt; i++ {
 			if clusters[i] != nil {
-				clusters[i].Stop() //nolint:errcheck
+				wg.Add(1)
+
+				go func(cl *TestCardanoCluster) {
+					defer wg.Done()
+
+					stopErrs = append(stopErrs, cl.Stop())
+				}(clusters[i])
 			}
 		}
 
-		fmt.Printf("Done cleaning up cardano chains\n")
+		wg.Wait()
+
+		fmt.Printf("Done cleaning up cardano chains: %v\n", errors.Join(stopErrs...))
 	}
 
 	t.Cleanup(cleanupFunc)
@@ -51,7 +63,7 @@ func SetupAndRunApexCardanoChains(
 			defer wg.Done()
 
 			checkAndSetError := func(err error) bool {
-				errors[id] = err
+				clErrors[id] = err
 
 				return err != nil
 			}
@@ -81,25 +93,17 @@ func SetupAndRunApexCardanoChains(
 
 			fmt.Printf("Waiting for sockets to be ready\n")
 
-			ctx, cncl := context.WithCancel(context.Background())
-			defer cncl()
-
-			if errors[id] = cluster.WaitForReady(time.Minute * 2); errors[id] != nil {
+			if checkAndSetError(cluster.WaitForReady(time.Minute * 2)) {
 				return
 			}
 
-			err = cluster.StartOgmios(t)
-			if checkAndSetError(err) {
+			if checkAndSetError(cluster.StartOgmios(t)) {
 				return
 			}
 
-			txProvider := wallet.NewTxProviderOgmios(cluster.OgmiosURL())
-
-			if errors[id] = cluster.WaitForBlockWithState(10, time.Second*120); errors[id] != nil {
+			if checkAndSetError(cluster.WaitForBlockWithState(10, time.Second*120)) {
 				return
 			}
-
-			errors[id] = WaitUntilBlock(t, ctx, txProvider, 15, time.Second*120)
 
 			fmt.Printf("Cluster %d is ready\n", id)
 		}(i)
@@ -108,10 +112,10 @@ func SetupAndRunApexCardanoChains(
 	wg.Wait()
 
 	for i := 0; i < clusterCnt; i++ {
-		assert.NoError(t, errors[i])
+		assert.NoError(t, clErrors[i])
 	}
 
-	return clusters, cleanupFunc
+	return clusters
 }
 
 func SetupAndRunApexBridge(

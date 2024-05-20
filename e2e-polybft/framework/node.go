@@ -1,17 +1,14 @@
 package framework
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"sync/atomic"
 )
 
 type Node struct {
 	shuttingDown atomic.Bool
-	args         string
 	cmd          *exec.Cmd
 	doneCh       chan struct{}
 	exitResult   *exitResult
@@ -28,7 +25,6 @@ func NewNode(binary string, args []string, stdout io.Writer) (*Node, error) {
 
 	n := &Node{
 		cmd:    cmd,
-		args:   fmt.Sprintf("%s: %s", binary, strings.Join(args, " ")),
 		doneCh: make(chan struct{}),
 	}
 	go n.run()
@@ -65,17 +61,12 @@ func (n *Node) Stop() error {
 		return nil
 	}
 
-	fmt.Println("stoping node", n.args)
-
 	if err := n.cmd.Process.Signal(os.Interrupt); err != nil {
-		fmt.Println("error while stoping node", n.args, err)
 		return err
 	}
 
 	n.shuttingDown.Store(true)
 	<-n.Wait()
-
-	fmt.Println("node stopped", n.args)
 
 	return nil
 }

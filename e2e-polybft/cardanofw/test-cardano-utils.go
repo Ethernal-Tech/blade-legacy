@@ -205,6 +205,8 @@ func WaitForRequestState(expectedState string, ctx context.Context, requestURL s
 }
 
 func WaitForInvalidState(t *testing.T, ctx context.Context, apiURL string, apiKey string, txHash string) {
+	t.Helper()
+
 	requestURL := fmt.Sprintf(
 		"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
 

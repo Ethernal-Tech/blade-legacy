@@ -27,7 +27,7 @@ func TestE2E_ApexBridge(t *testing.T) {
 	ctx, cncl := context.WithCancel(context.Background())
 	defer cncl()
 
-	clusters, _ := cardanofw.SetupAndRunApexCardanoChains(
+	clusters := cardanofw.SetupAndRunApexCardanoChains(
 		t,
 		ctx,
 		cardanoChainsCnt,
@@ -92,7 +92,7 @@ func TestE2E_ApexBridge_BatchRecreated(t *testing.T) {
 	ctx, cncl := context.WithCancel(context.Background())
 	defer cncl()
 
-	clusters, _ := cardanofw.SetupAndRunApexCardanoChains(
+	clusters := cardanofw.SetupAndRunApexCardanoChains(
 		t,
 		ctx,
 		cardanoChainsCnt,
@@ -207,7 +207,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 	ctx, cncl := context.WithCancel(context.Background())
 	defer cncl()
 
-	clusters, _ := cardanofw.SetupAndRunApexCardanoChains(
+	clusters := cardanofw.SetupAndRunApexCardanoChains(
 		t,
 		ctx,
 		cardanoChainsCnt,
@@ -521,7 +521,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 	ctx, cncl := context.WithCancel(context.Background())
 	defer cncl()
 
-	clusters, _ := cardanofw.SetupAndRunApexCardanoChains(
+	clusters := cardanofw.SetupAndRunApexCardanoChains(
 		t,
 		ctx,
 		cardanoChainsCnt,
@@ -897,6 +897,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 
 		for j := 0; j < sequentialInstances; j++ {
 			var wg sync.WaitGroup
+
 			sendAmount = uint64(1_000_000)
 
 			for i := 0; i < parallelInstances; i++ {

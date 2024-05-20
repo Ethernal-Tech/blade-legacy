@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -308,21 +309,30 @@ func (c *TestCardanoCluster) Fail(err error) {
 }
 
 func (c *TestCardanoCluster) Stop() error {
-	for _, srv := range c.Servers {
-		if srv.IsRunning() {
-			if err := srv.Stop(); err != nil {
-				return err
-			}
-		}
-	}
-
 	if c.OgmiosServer.IsRunning() {
 		if err := c.OgmiosServer.Stop(); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	wg := sync.WaitGroup{}
+	errs := []error(nil)
+
+	for _, srv := range c.Servers {
+		if srv.IsRunning() {
+			wg.Add(1)
+
+			go func(s *TestCardanoServer) {
+				defer wg.Done()
+
+				errs = append(errs, s.Stop())
+			}(srv)
+		}
+	}
+
+	wg.Done()
+
+	return errors.Join(errs...)
 }
 
 func (c *TestCardanoCluster) OgmiosURL() string {
