@@ -19,7 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var (
+const (
 	InvalidState = "InvalidRequest"
 )
 
@@ -72,7 +72,6 @@ func runCommand(cmd *exec.Cmd, stdout io.Writer, envVariables ...string) error {
 	cmd.Stdout = stdout
 
 	cmd.Env = append(os.Environ(), envVariables...)
-	// fmt.Printf("$ %s %s\n", binary, strings.Join(args, " "))
 
 	if err := cmd.Run(); err != nil {
 		if stdErr.Len() > 0 {
@@ -212,7 +211,7 @@ func WaitForInvalidState(t *testing.T, ctx context.Context, apiURL string, apiKe
 
 	state, err := WaitForRequestState(InvalidState, ctx, requestURL, apiKey, 300)
 	require.NoError(t, err)
-	require.Equal(t, state, InvalidState)
+	require.Equal(t, InvalidState, state)
 }
 
 func GetBridgingRequestState(ctx context.Context, requestURL string, apiKey string) (
