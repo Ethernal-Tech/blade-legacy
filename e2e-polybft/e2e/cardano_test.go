@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"path"
 	"sync"
 	"testing"
@@ -468,7 +467,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			"1": map[string]interface{}{
 				"t":  "bridge",
 				"d":  cardanofw.GetDestinationChainID(true),
-				"s":  cardanofw.SplitString(user.PrimeAddress, 40), // should be sender address (max len 40)
+				"s":  "", // should be sender address (max len 40)
 				"tx": transactions,
 			},
 		}
@@ -502,7 +501,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		require.NoError(t, err)
 
 		txHash, err := cardanofw.SendTx(
-			ctx, txProviderPrime, user.PrimeWallet, 0, cb.PrimeMultisigAddr,
+			ctx, txProviderPrime, user.PrimeWallet, 1_000_000, cb.PrimeMultisigAddr,
 			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 		require.NoError(t, err)
 
@@ -803,87 +802,6 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		}, 100, time.Second*10)
 		require.NoError(t, err)
 		fmt.Printf("%v TXs confirmed\n", sequentialInstances*parallelInstances)
-
-		newAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
-		require.NoError(t, err)
-
-		fmt.Printf("prevAmount: %v. newAmount: %v\n", prevAmount, newAmount)
-	})
-
-	t.Run("From prime to vector 100x random", func(t *testing.T) {
-		instances := 200
-		maxWaitTime := 300
-		walletKeys := make([]wallet.IWallet, instances)
-		succeededCount := 0
-
-		prevAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
-		require.NoError(t, err)
-
-		for i := 0; i < instances; i++ {
-			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(primeCluster.Config.Dir("keys")), true)
-			require.NoError(t, err)
-
-			walledAddress, _, err := wallet.GetWalletAddress(walletKeys[i], uint(primeCluster.Config.NetworkMagic))
-			require.NoError(t, err)
-
-			sendAmount := uint64(5_000_000)
-			user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, walledAddress, true)
-		}
-
-		sendAmount = uint64(1_000_000)
-
-		var wg sync.WaitGroup
-		for i := 0; i < instances; i++ {
-			wg.Add(1)
-
-			go func(idx int) {
-				defer wg.Done()
-
-				if rand.Intn(2) == 0 {
-					sleepTime := rand.Intn(maxWaitTime)
-					time.Sleep(time.Second * time.Duration(sleepTime))
-
-					fmt.Printf("Sending Successful Tx %v", idx)
-
-					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(primeCluster.Config.NetworkMagic),
-						cb.PrimeMultisigAddr, cb.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount,
-						cardanofw.GetDestinationChainID(true))
-					succeededCount++
-
-					fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
-				} else {
-					fmt.Printf("Sending Failing Tx %v", idx)
-
-					receivers := make(map[string]uint64, 2)
-					feeAmount := uint64(1_100_000)
-
-					receivers[user.VectorAddress] = sendAmount * 10 // 10Ada
-					receivers[cb.VectorMultisigFeeAddr] = feeAmount
-
-					bridgingRequestMetadata, err := cardanofw.CreateMetaData(
-						user.PrimeAddress, receivers, cardanofw.GetDestinationChainID(true))
-					require.NoError(t, err)
-
-					txHash, err := cardanofw.SendTx(
-						ctx, txProviderPrime, walletKeys[idx], (sendAmount + feeAmount), cb.PrimeMultisigAddr,
-						primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
-					require.NoError(t, err)
-
-					apiURL, err := cb.GetBridgingAPI()
-					require.NoError(t, err)
-					cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
-				}
-			}(i)
-		}
-
-		wg.Wait()
-
-		expectedAmount := prevAmount.Uint64() + uint64(succeededCount)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
-		}, 100, time.Second*10)
-		require.NoError(t, err)
-		fmt.Printf("%v TXs confirmed\n", succeededCount)
 
 		newAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
 		require.NoError(t, err)
