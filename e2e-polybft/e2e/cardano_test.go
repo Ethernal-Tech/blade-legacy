@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"os"
+	"os/signal"
 	"path"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 
@@ -18,6 +21,26 @@ import (
 // Download Cardano executables from https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3 and unpack tar.gz file
 // Add directory where unpacked files are located to the $PATH (in example bellow `~/Apps/cardano`)
 // eq add line `export PATH=$PATH:~/Apps/cardano` to  `~/.bashrc`
+// cd e2e-polybft/e2e
+// ONLY_RUN_APEX_BRIDGE=true go test -v -timeout 0 -run ^Test_OnlyRunApexBridge$ github.com/0xPolygon/polygon-edge/e2e-polybft/e2e
+func Test_OnlyRunApexBridge(t *testing.T) {
+	if shouldRun := os.Getenv("ONLY_RUN_APEX_BRIDGE"); shouldRun != "true" {
+		t.Skip()
+	}
+
+	ctx, cncl := context.WithCancel(context.Background())
+	defer cncl()
+
+	_, cleanupFunc := cardanofw.RunApexBridge(t, ctx)
+	defer cleanupFunc()
+
+	signalChannel := make(chan os.Signal, 1)
+	// Notify the signalChannel when the interrupt signal is received (Ctrl+C)
+	signal.Notify(signalChannel, os.Interrupt, syscall.SIGTERM)
+
+	<-signalChannel
+}
+
 func TestE2E_ApexBridge(t *testing.T) {
 	const (
 		cardanoChainsCnt   = 2

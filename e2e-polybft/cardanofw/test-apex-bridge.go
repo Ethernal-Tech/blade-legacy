@@ -260,3 +260,66 @@ func SetupAndRunApexBridge(
 
 	return cb
 }
+
+func RunApexBridge(t *testing.T, ctx context.Context) (*TestCardanoBridge, func()) {
+	t.Helper()
+
+	const (
+		cardanoChainsCnt   = 2
+		bladeValidatorsNum = 4
+	)
+
+	clusters := SetupAndRunApexCardanoChains(
+		t,
+		ctx,
+		cardanoChainsCnt,
+	)
+
+	primeCluster := clusters[0]
+	require.NotNil(t, primeCluster)
+
+	vectorCluster := clusters[1]
+	require.NotNil(t, vectorCluster)
+
+	// defer cleanupCardanoChainsFunc()
+
+	user := NewTestApexUser(
+		t, uint(primeCluster.Config.NetworkMagic), uint(vectorCluster.Config.NetworkMagic))
+	// defer user.Dispose()
+
+	txProviderPrime := wallet.NewTxProviderOgmios(primeCluster.OgmiosURL())
+	txProviderVector := wallet.NewTxProviderOgmios(vectorCluster.OgmiosURL())
+
+	// Fund prime address
+	primeGenesisWallet, err := GetGenesisWalletFromCluster(primeCluster.Config.TmpDir, 2)
+	require.NoError(t, err)
+
+	sendAmount := uint64(5_000_000)
+	user.SendToUser(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, true)
+
+	fmt.Printf("Prime user address funded\n")
+
+	// Fund vector address
+	vectorGenesisWallet, err := GetGenesisWalletFromCluster(vectorCluster.Config.TmpDir, 2)
+	require.NoError(t, err)
+
+	user.SendToUser(t, ctx, txProviderVector, vectorGenesisWallet, sendAmount, false)
+
+	fmt.Printf("Vector user address funded\n")
+
+	cb := SetupAndRunApexBridge(t,
+		ctx,
+		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
+		"../../e2e-bridge-data-tmp",
+		bladeValidatorsNum,
+		primeCluster,
+		vectorCluster,
+	)
+	// defer cleanupApexBridgeFunc()
+
+	fmt.Printf("Apex bridge setup done\n")
+
+	return cb, func() {
+		user.Dispose()
+	}
+}
