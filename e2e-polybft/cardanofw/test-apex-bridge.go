@@ -126,7 +126,7 @@ func SetupAndRunApexBridge(
 	primeCluster *TestCardanoCluster,
 	vectorCluster *TestCardanoCluster,
 	opts ...CardanoBridgeOption,
-) (*TestCardanoBridge, func()) {
+) *TestCardanoBridge {
 	t.Helper()
 
 	const (
@@ -258,5 +258,5 @@ func SetupAndRunApexBridge(
 	require.NoError(t, cb.StartRelayer(ctx))
 	fmt.Printf("Relayer started\n")
 
-	return cb, cleanupFunc
+	return cb
 }

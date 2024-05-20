@@ -55,7 +55,7 @@ func TestE2E_ApexBridge(t *testing.T) {
 
 	fmt.Printf("Prime user address funded\n")
 
-	cb, _ := cardanofw.SetupAndRunApexBridge(t,
+	cb := cardanofw.SetupAndRunApexBridge(t,
 		ctx,
 		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
 		"../../e2e-bridge-data-tmp",
@@ -63,7 +63,6 @@ func TestE2E_ApexBridge(t *testing.T) {
 		primeCluster,
 		vectorCluster,
 	)
-	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
 
@@ -117,7 +116,7 @@ func TestE2E_ApexBridge_BatchRecreated(t *testing.T) {
 
 	fmt.Printf("Prime user address funded\n")
 
-	cb, _ := cardanofw.SetupAndRunApexBridge(t,
+	cb := cardanofw.SetupAndRunApexBridge(t,
 		ctx,
 		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
 		"../../e2e-bridge-data-tmp",
@@ -127,7 +126,6 @@ func TestE2E_ApexBridge_BatchRecreated(t *testing.T) {
 		cardanofw.WithTTLInc(1),
 		cardanofw.WithAPIKey(apiKey),
 	)
-	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
 
@@ -230,7 +228,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 
 	fmt.Printf("Prime user address funded\n")
 
-	cb, _ := cardanofw.SetupAndRunApexBridge(t,
+	cb := cardanofw.SetupAndRunApexBridge(t,
 		ctx,
 		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
 		"../../e2e-bridge-data-tmp",
@@ -239,7 +237,6 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		vectorCluster,
 		cardanofw.WithAPIKey(apiKey),
 	)
-	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
 
@@ -551,7 +548,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 
 	fmt.Printf("Vector user address funded\n")
 
-	cb, _ := cardanofw.SetupAndRunApexBridge(t,
+	cb := cardanofw.SetupAndRunApexBridge(t,
 		ctx,
 		// path.Join(path.Dir(primeCluster.Config.TmpDir), "bridge"),
 		"../../e2e-bridge-data-tmp",
@@ -560,7 +557,6 @@ func TestE2E_ValidScenarios(t *testing.T) {
 		vectorCluster,
 		cardanofw.WithAPIKey(apiKey),
 	)
-	// defer cleanupApexBridgeFunc()
 
 	fmt.Printf("Apex bridge setup done\n")
 
