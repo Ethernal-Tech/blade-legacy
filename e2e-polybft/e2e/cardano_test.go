@@ -2,6 +2,7 @@ package e2e
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"math/rand"
@@ -13,10 +14,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/cardanofw"
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
 	"github.com/stretchr/testify/require"
-)
-
-var (
-	InvalidState = "InvalidRequest"
 )
 
 // Download Cardano executables from https://github.com/IntersectMBO/cardano-node/releases/tag/8.7.3 and unpack tar.gz file
@@ -272,13 +269,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 
 		apiURL, err := cb.GetBridgingAPI()
 		require.NoError(t, err)
-
-		requestURL := fmt.Sprintf(
-			"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
-
-		state, err := cardanofw.WaitForRequestState(InvalidState, ctx, requestURL, apiKey, 300)
-		require.NoError(t, err)
-		require.Equal(t, state, InvalidState)
+		cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
 	})
 
 	t.Run("Multiple submiters don't have enough funds", func(t *testing.T) {
@@ -301,13 +292,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 
 			apiURL, err := cb.GetBridgingAPI()
 			require.NoError(t, err)
-
-			requestURL := fmt.Sprintf(
-				"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
-
-			state, err := cardanofw.WaitForRequestState(InvalidState, ctx, requestURL, apiKey, 300)
-			require.NoError(t, err)
-			require.Equal(t, state, InvalidState)
+			cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
 		}
 	})
 
@@ -362,13 +347,7 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 		for i := 0; i < instances; i++ {
 			apiURL, err := cb.GetBridgingAPI()
 			require.NoError(t, err)
-
-			requestURL := fmt.Sprintf(
-				"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHashes[i])
-
-			state, err := cardanofw.WaitForRequestState(InvalidState, ctx, requestURL, apiKey, 300)
-			require.NoError(t, err)
-			require.Equal(t, state, InvalidState)
+			cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHashes[i])
 		}
 	})
 
@@ -391,6 +370,145 @@ func TestE2E_InvalidScenarios(t *testing.T) {
 			ctx, txProviderPrime, user.PrimeWallet, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
 			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 		require.Error(t, err)
+	})
+
+	t.Run("Submited invalid metadata - wrong type", func(t *testing.T) {
+		sendAmount = uint64(1_000_000)
+		feeAmount := uint64(1_100_000)
+
+		receivers := make(map[string]uint64, 2)
+		receivers[user.VectorAddress] = sendAmount
+		receivers[cb.VectorMultisigFeeAddr] = feeAmount
+
+		var transactions = make([]cardanofw.BridgingRequestMetadataTransaction, 0, len(receivers))
+		for addr, amount := range receivers {
+			transactions = append(transactions, cardanofw.BridgingRequestMetadataTransaction{
+				Address: cardanofw.SplitString(addr, 40),
+				Amount:  amount,
+			})
+		}
+
+		metadata := map[string]interface{}{
+			"1": map[string]interface{}{
+				"t":  "transaction", // should be "bridge"
+				"d":  cardanofw.GetDestinationChainID(true),
+				"s":  cardanofw.SplitString(user.PrimeAddress, 40),
+				"tx": transactions,
+			},
+		}
+
+		bridgingRequestMetadata, err := json.Marshal(metadata)
+		require.NoError(t, err)
+
+		txHash, err := cardanofw.SendTx(
+			ctx, txProviderPrime, user.PrimeWallet, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
+			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
+		require.NoError(t, err)
+
+		apiURL, err := cb.GetBridgingAPI()
+		require.NoError(t, err)
+		cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
+	})
+
+	t.Run("Submited invalid metadata - invalid destination", func(t *testing.T) {
+		sendAmount = uint64(1_000_000)
+		feeAmount := uint64(1_100_000)
+
+		receivers := make(map[string]uint64, 2)
+		receivers[user.VectorAddress] = sendAmount
+		receivers[cb.VectorMultisigFeeAddr] = feeAmount
+
+		var transactions = make([]cardanofw.BridgingRequestMetadataTransaction, 0, len(receivers))
+		for addr, amount := range receivers {
+			transactions = append(transactions, cardanofw.BridgingRequestMetadataTransaction{
+				Address: cardanofw.SplitString(addr, 40),
+				Amount:  amount,
+			})
+		}
+
+		metadata := map[string]interface{}{
+			"1": map[string]interface{}{
+				"t":  "bridge",
+				"d":  "", // should be destination chain address
+				"s":  cardanofw.SplitString(user.PrimeAddress, 40),
+				"tx": transactions,
+			},
+		}
+
+		bridgingRequestMetadata, err := json.Marshal(metadata)
+		require.NoError(t, err)
+
+		txHash, err := cardanofw.SendTx(
+			ctx, txProviderPrime, user.PrimeWallet, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
+			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
+		require.NoError(t, err)
+
+		apiURL, err := cb.GetBridgingAPI()
+		require.NoError(t, err)
+		cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
+	})
+
+	t.Run("Submited invalid metadata - invalid sender", func(t *testing.T) {
+		sendAmount = uint64(1_000_000)
+		feeAmount := uint64(1_100_000)
+
+		receivers := make(map[string]uint64, 2)
+		receivers[user.VectorAddress] = sendAmount
+		receivers[cb.VectorMultisigFeeAddr] = feeAmount
+
+		var transactions = make([]cardanofw.BridgingRequestMetadataTransaction, 0, len(receivers))
+		for addr, amount := range receivers {
+			transactions = append(transactions, cardanofw.BridgingRequestMetadataTransaction{
+				Address: cardanofw.SplitString(addr, 40),
+				Amount:  amount,
+			})
+		}
+
+		metadata := map[string]interface{}{
+			"1": map[string]interface{}{
+				"t":  "bridge",
+				"d":  cardanofw.GetDestinationChainID(true),
+				"s":  cardanofw.SplitString(user.PrimeAddress, 40), // should be sender address (max len 40)
+				"tx": transactions,
+			},
+		}
+
+		bridgingRequestMetadata, err := json.Marshal(metadata)
+		require.NoError(t, err)
+
+		txHash, err := cardanofw.SendTx(
+			ctx, txProviderPrime, user.PrimeWallet, (sendAmount + feeAmount), cb.PrimeMultisigAddr,
+			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
+		require.NoError(t, err)
+
+		apiURL, err := cb.GetBridgingAPI()
+		require.NoError(t, err)
+		cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
+	})
+
+	t.Run("Submited invalid metadata - empty tx", func(t *testing.T) {
+		var transactions = make([]cardanofw.BridgingRequestMetadataTransaction, 0)
+
+		metadata := map[string]interface{}{
+			"1": map[string]interface{}{
+				"t":  "bridge",
+				"d":  cardanofw.GetDestinationChainID(true),
+				"s":  cardanofw.SplitString(user.PrimeAddress, 40),
+				"tx": transactions, // should not be empty
+			},
+		}
+
+		bridgingRequestMetadata, err := json.Marshal(metadata)
+		require.NoError(t, err)
+
+		txHash, err := cardanofw.SendTx(
+			ctx, txProviderPrime, user.PrimeWallet, 0, cb.PrimeMultisigAddr,
+			primeCluster.Config.NetworkMagic, bridgingRequestMetadata)
+		require.NoError(t, err)
+
+		apiURL, err := cb.GetBridgingAPI()
+		require.NoError(t, err)
+		cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
 	})
 }
 
@@ -753,14 +871,7 @@ func TestE2E_ValidScenarios(t *testing.T) {
 
 					apiURL, err := cb.GetBridgingAPI()
 					require.NoError(t, err)
-
-					requestURL := fmt.Sprintf(
-						"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
-
-					state, err := cardanofw.WaitForRequestState(InvalidState, ctx, requestURL, apiKey, 300)
-					require.NoError(t, err)
-					require.Equal(t, state, InvalidState)
-					fmt.Printf("Tx %v failed. State: %s\n", idx+1, state)
+					cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
 				}
 			}(i)
 		}

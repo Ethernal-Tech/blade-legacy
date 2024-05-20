@@ -16,6 +16,11 @@ import (
 	"time"
 
 	"github.com/Ethernal-Tech/cardano-infrastructure/wallet"
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	InvalidState = "InvalidRequest"
 )
 
 func ResolveCardanoCliBinary() string {
@@ -197,6 +202,15 @@ func WaitForRequestState(expectedState string, ctx context.Context, requestURL s
 			return currentState.Status, nil
 		}
 	}
+}
+
+func WaitForInvalidState(t *testing.T, ctx context.Context, apiURL string, apiKey string, txHash string) {
+	requestURL := fmt.Sprintf(
+		"%s/api/BridgingRequestState/Get?chainId=%s&txHash=%s", apiURL, "prime", txHash)
+
+	state, err := WaitForRequestState(InvalidState, ctx, requestURL, apiKey, 300)
+	require.NoError(t, err)
+	require.Equal(t, state, InvalidState)
 }
 
 func GetBridgingRequestState(ctx context.Context, requestURL string, apiKey string) (

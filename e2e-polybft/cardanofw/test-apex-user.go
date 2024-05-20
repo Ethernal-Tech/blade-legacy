@@ -24,6 +24,11 @@ type TestApexUser struct {
 	VectorAddress      string
 }
 
+type BridgingRequestMetadataTransaction struct {
+	Address []string `cbor:"a" json:"a"`
+	Amount  uint64   `cbor:"m" json:"m"`
+}
+
 func NewTestApexUser(t *testing.T, primeNetworkMagic, vectorNetworkMagic uint) *TestApexUser {
 	t.Helper()
 
@@ -142,11 +147,6 @@ func (u *TestApexUser) Dispose() {
 }
 
 func CreateMetaData(sender string, receivers map[string]uint64, destinationChainID string) ([]byte, error) {
-	type BridgingRequestMetadataTransaction struct {
-		Address []string `cbor:"a" json:"a"`
-		Amount  uint64   `cbor:"m" json:"m"`
-	}
-
 	var transactions = make([]BridgingRequestMetadataTransaction, 0, len(receivers))
 	for addr, amount := range receivers {
 		transactions = append(transactions, BridgingRequestMetadataTransaction{
