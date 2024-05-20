@@ -27,6 +27,10 @@ func (c *codeHelper) push1() {
 	c.buf = append(c.buf, 0x1)
 }
 
+func (c *codeHelper) opDup() {
+	c.buf = append(c.buf, DUP16)
+}
+
 func (c *codeHelper) pop() {
 	c.buf = append(c.buf, POP)
 }
@@ -125,4 +129,21 @@ func TestOpcodeNotFound(t *testing.T) {
 
 	_, err := s.Run()
 	assert.Equal(t, errOpCodeNotFound, err)
+}
+
+func TestErrorHandlingStopsContractExecution(t *testing.T) {
+	code := codeHelper{}
+	code.opDup()
+	code.opDup()
+
+	s, closeFn := getState(&chain.ForksInTime{})
+	defer closeFn()
+
+	s.code = code.buf
+	s.gas = 10000
+	s.host = &mockHost{}
+
+	_, err := s.Run()
+	assert.Error(t, err, "The EVM did not handle an error")
+	assert.Equal(t, s.ip, 0, "The EVM did not executingon first error.")
 }
