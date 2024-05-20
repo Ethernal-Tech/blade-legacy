@@ -126,12 +126,18 @@ func CreateTx(testNetMagic uint,
 	}
 
 	change := inputs.Sum - outputsSum - fee
-	if change < wallet.MinUTxODefaultValue {
-		return []byte{}, "", fmt.Errorf("change too small, should be greater or equal than %v but change = %v",
-			wallet.MinUTxODefaultValue, change)
+	// handle overflow or insufficient amount
+	if change > inputs.Sum || (change > 0 && change < wallet.MinUTxODefaultValue) {
+		return []byte{}, "", fmt.Errorf("insufficient amount %d for %d or min utxo not satisfied",
+			inputs.Sum, outputsSum+fee)
 	}
 
-	builder.UpdateOutputAmount(-1, change)
+	if change == 0 {
+		builder.RemoveOutput(-1)
+	} else {
+		builder.UpdateOutputAmount(-1, change)
+	}
+
 	builder.SetFee(fee)
 
 	return builder.Build()
