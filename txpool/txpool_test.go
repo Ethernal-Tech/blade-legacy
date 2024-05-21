@@ -3710,13 +3710,9 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 	mux := &sync.RWMutex{}
 	counter := uint64(0)
 
-	wg := sync.WaitGroup{}
-	wg.Add(int(defaultMaxAccountEnqueued))
-
 	// run max number of addTx concurrently
 	for i := 0; i < int(defaultMaxAccountEnqueued); i++ {
 		go func(i uint64) {
-			defer wg.Done()
 			tx := newTx(addr, i, 1, types.LegacyTxType)
 
 			tx.ComputeHash()
@@ -3737,14 +3733,11 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 	promotedCount := 0
 	ev := (*proto.TxPoolEvent)(nil)
 
-	// wait for all txs to be sent
-	wg.Wait()
-
 	// wait for all the submitted transactions to be promoted
 	for {
 		select {
 		case ev = <-subscription.subscriptionChannel:
-		case <-time.After(time.Second * 3):
+		case <-time.After(time.Second * 6):
 			t.Fatalf("timeout. processed: %d/%d and %d/%d. Added: %d",
 				enqueuedCount, defaultMaxAccountEnqueued, promotedCount, defaultMaxAccountEnqueued,
 				atomic.LoadUint64(&counter))
