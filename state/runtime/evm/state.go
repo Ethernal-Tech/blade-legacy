@@ -44,7 +44,7 @@ var (
 	errInvalidJump           = errors.New("invalid jump destination")
 	errOpCodeNotFound        = errors.New("opcode not found")
 	errReturnDataOutOfBounds = errors.New("return data out of bounds")
-	errInvalidGasValue       = errors.New("invalid gas value")
+	errInvalidBalanceValue   = errors.New("invalid balance value")
 	errInvalidMessageValue   = errors.New("invalid message value")
 )
 
