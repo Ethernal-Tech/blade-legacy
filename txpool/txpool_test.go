@@ -3752,6 +3752,9 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 		}
 	}()
 
+	// wait a little bit to start a previous routine
+	time.Sleep(100 * time.Millisecond)
+
 	// run max number of addTx concurrently
 	for i := 0; i < int(defaultMaxAccountEnqueued); i++ {
 		go func(i uint64) {

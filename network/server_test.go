@@ -796,6 +796,9 @@ func TestSubscribe(t *testing.T) {
 		// wait for ctx to close
 		<-ctx.Done()
 
+		// since Subscribe routine also needs to process ctx Done we have to wait a little bit
+		time.Sleep(100 * time.Millisecond)
+
 		server.EmitEvent(event)
 
 		_, received := waitForEvent(t, eventCh, time.Second*5)
@@ -819,6 +822,9 @@ func TestSubscribe(t *testing.T) {
 
 		// wait for server to close
 		<-server.closeCh
+
+		// since Subscribe routine needs to process closeCh we have to wait a little bit
+		time.Sleep(100 * time.Millisecond)
 
 		server.EmitEvent(event)
 
