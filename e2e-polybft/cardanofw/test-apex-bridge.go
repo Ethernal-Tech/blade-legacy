@@ -349,7 +349,6 @@ func (a *ApexSystem) CreateAndFundUser(t *testing.T, ctx context.Context, sendAm
 	// Fund prime address
 	primeGenesisWallet := a.GetPrimeGenesisWallet(t)
 
-	// sendAmount := uint64(5_000_000)
 	user.SendToUser(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, true)
 
 	fmt.Printf("Prime user address funded\n")
