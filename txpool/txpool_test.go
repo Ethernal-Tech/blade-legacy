@@ -1820,6 +1820,8 @@ func TestResetAccount(t *testing.T) {
 						addr1: test.newNonce,
 					})
 					pool.handlePromoteRequest(<-pool.promoteReqCh)
+					// wait for resetAccounts routine to execute before asserts
+					time.Sleep(100 * time.Millisecond)
 				} else {
 					pool.resetAccounts(map[types.Address]uint64{
 						addr1: test.newNonce,
