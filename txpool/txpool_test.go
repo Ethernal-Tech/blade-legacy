@@ -3708,13 +3708,16 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 	subscription := pool.eventManager.subscribe([]proto.EventType{proto.EventType_ENQUEUED, proto.EventType_PROMOTED})
 
 	txHashMap := map[types.Hash]struct{}{}
-	// mutex for txHashMap
-	mux := &sync.RWMutex{}
-	counter := uint64(0)
-	enqueuedCount := 0
-	promotedCount := 0
-	ev := (*proto.TxPoolEvent)(nil)
-	wg := sync.WaitGroup{}
+
+	var (
+		mux           sync.RWMutex // mutex for txHashMap
+		counter       uint64
+		enqueuedCount int
+		promotedCount int
+		ev            *proto.TxPoolEvent
+		wg            sync.WaitGroup
+	)
+
 	wg.Add(1)
 
 	// wait for all the submitted transactions to be promoted
@@ -3731,9 +3734,9 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 			}
 
 			// check if valid transaction hash
-			mux.Lock()
+			mux.RLock()
 			_, hashExists := txHashMap[types.StringToHash(ev.TxHash)]
-			mux.Unlock()
+			mux.RUnlock()
 
 			assert.True(t, hashExists)
 
