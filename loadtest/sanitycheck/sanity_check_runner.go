@@ -161,9 +161,10 @@ func (r *SanityCheckTestRunner) Run() error {
 	}
 
 	printUxSeparator()
-	fmt.Println("Sanity check results:")
 
 	if !r.config.ResultsToJSON {
+		fmt.Println("Sanity check results:")
+
 		for _, result := range results {
 			fmt.Println(result.String())
 		}

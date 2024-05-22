@@ -162,6 +162,10 @@ func (p *genesisParams) validateFlags() error {
 	}
 
 	if p.isPolyBFTConsensus() {
+		if p.epochSize == 0 {
+			return errInvalidEpochSize
+		}
+
 		if err := p.extractNativeTokenMetadata(); err != nil {
 			return err
 		}
