@@ -5,7 +5,10 @@ on: # yamllint disable-line rule:truthy
     outputs:
       workflow_output:
         description: E2E ApexBridge Tests output
-        value: ${{ jobs.apex.outputs.e2e_apex_output_failure }} 
+        value: ${{ jobs.apex.outputs.e2e_apex_output_failure }}
+  secrets:
+    PERSONAL_ACCESS_TOKEN:
+      required: true
 
 jobs:
   e2e_apex_bridge:
@@ -41,20 +44,12 @@ jobs:
         uses: milos-ethernal/cardano-node-action@5a3bce7266cc1500d96e8fa63b3bb97135988482
       - name: Install ogmios
         uses: milos-ethernal/ogmios-action@13e2be0b00da80f26bb8583fa129bd7c08856a49
-      - name: Verify PERSONAL_ACCESS_TOKEN
-        run: |
-          if [ -z "${{ secrets.PERSONAL_ACCESS_TOKEN }}" ]; then
-            echo "PERSONAL_ACCESS_TOKEN is not set"
-            exit 1
-          else
-            echo "PERSONAL_ACCESS_TOKEN is set"
-          fi
       - name: Checkout apex-bridge repo
         uses: actions/checkout@v4.1.1
         with:
           repository: Ethernal-Tech/apex-bridge
           ref: main
-          token: ${{ secrets.APEX_ACCESS_TOKEN }}
+          token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
       - name: Build apex-bridge
         run: |
           go build

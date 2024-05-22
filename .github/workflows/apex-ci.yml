@@ -87,3 +87,5 @@ jobs:
       inputs.e2e_polybft_test || 
       github.event_name == 'pull_request' || 
       (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+    secrets:
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
