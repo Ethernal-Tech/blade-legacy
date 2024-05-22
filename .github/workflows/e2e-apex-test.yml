@@ -1,6 +1,5 @@
 name: E2E ApexBridge Tests
 on: # yamllint disable-line rule:truthy
-  push:
   workflow_call:
     outputs:
       workflow_output:
