@@ -1,0 +1,89 @@
+name: ApexBridge CI
+on: # yamllint disable-line rule:truthy
+  push:
+    branches:
+      - feature/apex-bridge
+  pull_request:
+    branches:
+        - feature/apex-bridge
+  workflow_dispatch:
+    inputs:
+      build_blade:
+        description: Build Blade
+        type: boolean
+        default: true
+      lint:
+        description: Lint
+        type: boolean
+        default: true
+      # unit_test:
+      #   description: Unit Tests
+      #   type: boolean
+      #   default: true
+      e2e_apex_tests:
+        description: E2E ApexBridge Tests
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      build_blade:
+        description: Build Blade
+        type: boolean
+      lint:
+        description: Lint
+        type: boolean
+        required: true
+      # unit_test:
+      #   description: Unit Tests
+      #   type: boolean
+      #   required: true
+      e2e_apex_tests:
+        description: E2E ApexBridge Tests
+        type: boolean
+        default: true
+    outputs:
+      build_blade:
+        description: Build Blade output
+        value: ${{ jobs.build_blade.outputs.workflow_output }}
+      lint:
+        description: Lint output
+        value: ${{ jobs.lint.outputs.workflow_output }}
+      unit_test:
+        description: Unit Tests output
+        value: ${{ jobs.unit_test.outputs.workflow_output }}
+      e2e_apex_tests:
+        description: E2E ApexBridge Tests output
+        value: ${{ jobs.e2e_apex_tests.outputs.workflow_output }}
+
+jobs:
+  build_blade:
+    name: Build Blade
+    uses: ./.github/workflows/build.yml
+    if: |
+      inputs.build_blade || 
+      github.event_name == 'pull_request' || 
+      (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+  lint:
+    name: Lint
+    uses: ./.github/workflows/lint.yml
+    needs: build_blade
+    if: |
+      inputs.lint || 
+      github.event_name == 'pull_request' || 
+      (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+  # unit_test:
+  #   name: Unit Tests
+  #   uses: ./.github/workflows/unit-test.yml
+  #   needs: build_blade
+  #   if: |
+  #     inputs.unit_test || 
+  #     github.event_name == 'pull_request' || 
+  #     (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+  e2e_apex_test:
+    name: E2E ApexBridge Tests
+    uses: ./.github/workflows/e2e-apex-test.yml
+    needs: build_blade
+    if: |
+      inputs.e2e_polybft_test || 
+      github.event_name == 'pull_request' || 
+      (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
