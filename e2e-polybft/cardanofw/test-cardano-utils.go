@@ -286,7 +286,7 @@ func ExecuteWithRetryIfNeeded(ctx context.Context, handler func() error) error {
 		if err == nil || !IsRecoverableError(err) {
 			return err
 		} else if i == retriesMaxCount {
-			return fmt.Errorf("failed to send tx after %d retries: %w", retriesMaxCount, err)
+			return fmt.Errorf("execution failed after %d retries: %w", retriesMaxCount, err)
 		}
 
 		select {
