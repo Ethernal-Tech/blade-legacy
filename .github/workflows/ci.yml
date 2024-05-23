@@ -5,8 +5,6 @@ on: # yamllint disable-line rule:truthy
     branches:
       - main
       - develop
-    branches-ignore:
-      - feature/apex-bridge
   pull_request:
     branches-ignore:
       - feature/apex-bridge
@@ -109,61 +107,63 @@ jobs:
     uses: ./.github/workflows/build.yml
     if: |
       inputs.build_blade || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
   lint:
     name: Lint
     uses: ./.github/workflows/lint.yml
     needs: build_blade
     if: |
       inputs.lint || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
   unit_test:
     name: Unit Tests
     uses: ./.github/workflows/unit-test.yml
     needs: build_blade
     if: |
       inputs.unit_test || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
   e2e_polybft_test:
     name: E2E PolyBFT Tests
     uses: ./.github/workflows/e2e-polybft-test.yml
     needs: build_blade
     if: |
       inputs.e2e_polybft_test || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
+    secrets:
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
   e2e_legacy_test:
     name: E2E Legacy Tests
     uses: ./.github/workflows/e2e-legacy-test.yml
     needs: build_blade
     if: |
       inputs.e2e_legacy_test || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
   property_polybft_test:
     name: Property PolyBFT Tests
     uses: ./.github/workflows/property-polybft-test.yml
     needs: build_blade
     if: |
       inputs.property_polybft_test || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
   fuzz_test:
     name: Fuzz Tests
     uses: ./.github/workflows/fuzz-test.yml
     needs: build_blade
     if: |
       inputs.fuzz_test || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
   benchmark_test:
     name: Benchmark Tests
     uses: ./.github/workflows/benchmark-test.yml
     needs: build_blade
     if: |
       inputs.benchmark_test || 
-      github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'))
+      (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
+      (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))

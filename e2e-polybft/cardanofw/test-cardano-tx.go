@@ -67,7 +67,7 @@ func SendTx(ctx context.Context,
 func GetGenesisWalletFromCluster(
 	dirPath string,
 	keyID uint,
-) (*wallet.Wallet, error) {
+) (wallet.IWallet, error) {
 	keyFileName := strings.Join([]string{"utxo", fmt.Sprint(keyID)}, "")
 
 	sKey, err := wallet.NewKey(path.Join(dirPath, "utxo-keys", strings.Join([]string{keyFileName, "skey"}, ".")))

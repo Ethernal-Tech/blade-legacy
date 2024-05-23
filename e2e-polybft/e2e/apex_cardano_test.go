@@ -14,7 +14,7 @@ import (
 	"github.com/umbracle/ethgo/abi"
 )
 
-func TestE2E_TestCardanoVerifySignaturePrecompile(t *testing.T) {
+func TestE2E_ApexBridge_TestCardanoVerifySignaturePrecompile(t *testing.T) {
 	admin, err := wallet.GenerateAccount()
 	require.NoError(t, err)
 
