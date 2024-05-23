@@ -185,7 +185,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, numOfRetries, waitTime)
+	}, numOfRetries, waitTime, IsRecoverableError)
 	require.NoError(t, err)
 
 	fmt.Printf("Prime multisig addr funded\n")
@@ -196,7 +196,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderPrime, cb.PrimeMultisigFeeAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, numOfRetries, waitTime)
+	}, numOfRetries, waitTime, IsRecoverableError)
 	require.NoError(t, err)
 
 	fmt.Printf("Prime multisig fee addr funded\n")
@@ -210,7 +210,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, numOfRetries, waitTime)
+	}, numOfRetries, waitTime, IsRecoverableError)
 	require.NoError(t, err)
 
 	fmt.Printf("Vector multisig addr funded\n")
@@ -221,7 +221,7 @@ func SetupAndRunApexBridge(
 
 	err = wallet.WaitForAmount(context.Background(), txProviderVector, cb.VectorMultisigFeeAddr, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(sendAmount)) == 0
-	}, numOfRetries, waitTime)
+	}, numOfRetries, waitTime, IsRecoverableError)
 	require.NoError(t, err)
 
 	fmt.Printf("Vector multisig fee addr funded\n")
