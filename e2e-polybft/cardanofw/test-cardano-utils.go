@@ -21,6 +21,9 @@ import (
 
 const (
 	InvalidState = "InvalidRequest"
+
+	retryWait       = time.Millisecond * 1000
+	retriesMaxCount = 10
 )
 
 func ResolveCardanoCliBinary() string {
@@ -256,10 +259,44 @@ type BridgingRequestStateResponse struct {
 
 // GetTokenAmount returns token amount for address
 func GetTokenAmount(ctx context.Context, txProvider wallet.ITxProvider, addr string) (*big.Int, error) {
-	utxos, err := txProvider.GetUtxos(ctx, addr)
+	var utxos []wallet.Utxo
+
+	err := ExecuteWithRetryIfNeeded(ctx, func() (err error) {
+		utxos, err = txProvider.GetUtxos(ctx, addr)
+
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
 
 	return wallet.GetUtxosSum(utxos), nil
+}
+
+// WaitForAmount waits for address to have amount specified by cmpHandler
+func WaitForAmount(ctx context.Context, txRetriever wallet.IUTxORetriever,
+	addr string, cmpHandler func(*big.Int) bool, numRetries int, waitTime time.Duration,
+) error {
+	return wallet.WaitForAmount(ctx, txRetriever, addr, cmpHandler, numRetries, waitTime, IsRecoverableError)
+}
+
+func ExecuteWithRetryIfNeeded(ctx context.Context, handler func() error) error {
+	for i := 1; ; i++ {
+		err := handler()
+		if err == nil || !IsRecoverableError(err) {
+			return err
+		} else if i == retriesMaxCount {
+			return fmt.Errorf("failed to send tx after %d retries: %w", retriesMaxCount, err)
+		}
+
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(retryWait):
+		}
+	}
+}
+
+func IsRecoverableError(err error) bool {
+	return strings.Contains(err.Error(), "status code 500")
 }
