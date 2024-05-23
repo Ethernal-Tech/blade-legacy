@@ -133,6 +133,8 @@ jobs:
       inputs.e2e_polybft_test || 
       (github.event_name == 'pull_request' && github.ref != 'refs/heads/feature/apex-bridge') || 
       (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop' || github.ref != 'refs/heads/feature/apex-bridge'))
+    secrets:
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
   e2e_legacy_test:
     name: E2E Legacy Tests
     uses: ./.github/workflows/e2e-legacy-test.yml
