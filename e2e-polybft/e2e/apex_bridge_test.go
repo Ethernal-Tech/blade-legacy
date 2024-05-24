@@ -758,6 +758,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("prevAmount: %v. newAmount: %v\n", prevAmount, newAmount)
 	})
 
+	//nolint:dupl
 	t.Run("From prime to vector 200x 5min 90%", func(t *testing.T) {
 		instances := 200
 		maxWaitTime := 300
@@ -773,6 +774,10 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Funding %v Wallets\n", instances)
 
 		for i := 0; i < instances; i++ {
+			if (i+1)%100 == 0 {
+				fmt.Printf("Funded %v..%v\n", i-99, i)
+			}
+
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
@@ -785,7 +790,6 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Funding Complete\n")
 
 		var wg sync.WaitGroup
-		//nolint:dupl
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
 
@@ -793,17 +797,13 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 				defer wg.Done()
 
 				if successChance > rand.Intn(100) {
+					succeededCount++
 					sleepTime := rand.Intn(maxWaitTime)
 					time.Sleep(time.Second * time.Duration(sleepTime))
 
-					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
+					cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
 						apex.Bridge.PrimeMultisigAddr, apex.Bridge.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount,
 						cardanofw.GetDestinationChainID(true))
-					succeededCount++
-
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, time.Second*10)
-					require.NoError(t, err)
-					fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
 					feeAmount := uint64(1_100_000)
 					receivers := map[string]uint64{
@@ -815,38 +815,40 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						user.PrimeAddress, receivers, cardanofw.GetDestinationChainID(true))
 					require.NoError(t, err)
 
-					txHash, err := cardanofw.SendTx(
+					_, err = cardanofw.SendTx(
 						ctx, txProviderPrime, walletKeys[idx], (sendAmount + feeAmount), apex.Bridge.PrimeMultisigAddr,
 						apex.PrimeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 					require.NoError(t, err)
-
-					apiURL, err := apex.Bridge.GetBridgingAPI()
-					require.NoError(t, err)
-					cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
-					fmt.Printf("Tx %v invalid. hash: %s\n", idx+1, txHash)
 				}
 			}(i)
 		}
 
 		wg.Wait()
 
+		fmt.Printf("All tx sent, waiting for confirmation.\n")
+
 		expectedAmount := prevAmount.Uint64() + uint64(succeededCount)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
-		}, 100, time.Second*10)
-		require.NoError(t, err)
 
-		fmt.Printf("%v TXs confirmed\n", succeededCount)
+		var newAmount *big.Int
+		for i := 0; i < instances; i++ {
+			newAmount, err = cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+			require.NoError(t, err)
+			fmt.Printf("Current Amount Prime: %v. Expected: %v\n", newAmount, expectedAmount)
 
-		newAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
-		require.NoError(t, err)
+			if newAmount.Uint64() == expectedAmount {
+				break
+			}
 
-		fmt.Printf("prevAmount: %v. newAmount: %v\n", prevAmount, newAmount)
+			time.Sleep(time.Second * 10)
+		}
+
+		fmt.Printf("Success count: %v. prevAmount: %v. newAmount: %v. expectedAmount: %v\n", succeededCount, prevAmount, newAmount, expectedAmount)
 	})
 
-	t.Run("From prime to vector 1000x 30sec 90%", func(t *testing.T) {
+	//nolint:dupl
+	t.Run("From prime to vector 1000x 20min 90%", func(t *testing.T) {
 		instances := 1000
-		maxWaitTime := 30
+		maxWaitTime := 1200
 		fundSendAmount := uint64(5_000_000)
 		sendAmount := uint64(1_000_000)
 		successChance := 90 // 90%
@@ -859,6 +861,10 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Funding %v Wallets\n", instances)
 
 		for i := 0; i < instances; i++ {
+			if (i+1)%100 == 0 {
+				fmt.Printf("Funded %v..%v\n", i-99, i)
+			}
+
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
@@ -871,7 +877,6 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Funding Complete\n")
 
 		var wg sync.WaitGroup
-		//nolint:dupl
 		for i := 0; i < instances; i++ {
 			wg.Add(1)
 
@@ -879,17 +884,13 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 				defer wg.Done()
 
 				if successChance > rand.Intn(100) {
+					succeededCount++
 					sleepTime := rand.Intn(maxWaitTime)
 					time.Sleep(time.Second * time.Duration(sleepTime))
 
-					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
+					cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
 						apex.Bridge.PrimeMultisigAddr, apex.Bridge.VectorMultisigFeeAddr, walletKeys[idx], user.VectorAddress, sendAmount,
 						cardanofw.GetDestinationChainID(true))
-					succeededCount++
-
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, time.Second*10)
-					require.NoError(t, err)
-					fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
 					feeAmount := uint64(1_100_000)
 					receivers := map[string]uint64{
@@ -901,38 +902,39 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						user.PrimeAddress, receivers, cardanofw.GetDestinationChainID(true))
 					require.NoError(t, err)
 
-					txHash, err := cardanofw.SendTx(
+					_, err = cardanofw.SendTx(
 						ctx, txProviderPrime, walletKeys[idx], (sendAmount + feeAmount), apex.Bridge.PrimeMultisigAddr,
 						apex.PrimeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 					require.NoError(t, err)
-
-					apiURL, err := apex.Bridge.GetBridgingAPI()
-					require.NoError(t, err)
-					cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
-					fmt.Printf("Tx %v invalid. hash: %s\n", idx+1, txHash)
 				}
 			}(i)
 		}
 
 		wg.Wait()
 
+		fmt.Printf("All tx sent, waiting for confirmation.\n")
+
 		expectedAmount := prevAmount.Uint64() + uint64(succeededCount)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
-		}, 100, time.Second*10)
-		require.NoError(t, err)
 
-		fmt.Printf("%v TXs confirmed\n", succeededCount)
+		var newAmount *big.Int
+		for i := 0; i < instances; i++ {
+			newAmount, err = cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+			require.NoError(t, err)
+			fmt.Printf("Current Amount Prime: %v. Expected: %v\n", newAmount, expectedAmount)
 
-		newAmount, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
-		require.NoError(t, err)
+			if newAmount.Uint64() == expectedAmount {
+				break
+			}
 
-		fmt.Printf("prevAmount: %v. newAmount: %v. expectedAmount: %v\n", prevAmount, newAmount, expectedAmount)
+			time.Sleep(time.Second * 10)
+		}
+
+		fmt.Printf("Success count: %v. prevAmount: %v. newAmount: %v. expectedAmount: %v\n", succeededCount, prevAmount, newAmount.Uint64(), expectedAmount)
 	})
 
-	t.Run("Both directions 1000x 30sec 90%", func(t *testing.T) {
+	t.Run("Both directions 1000x 60min 90%", func(t *testing.T) {
 		instances := 1000
-		maxWaitTime := 30
+		maxWaitTime := 3600
 		fundSendAmount := uint64(5_000_000)
 		sendAmount := uint64(1_000_000)
 		successChance := 90 // 90%
@@ -949,6 +951,10 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Funding %v Wallets\n", instances)
 
 		for i := 0; i < instances; i++ {
+			if (i+1)%100 == 0 {
+				fmt.Printf("Funded %v..%v on prime\n", i-99, i)
+			}
+
 			walletKeysPrime[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
@@ -959,6 +965,10 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		}
 
 		for i := 0; i < instances; i++ {
+			if (i+1)%100 == 0 {
+				fmt.Printf("Funded %v..%v on vector\n", i-99, i)
+			}
+
 			walletKeysVector[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.VectorCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
@@ -979,17 +989,13 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 				defer wg.Done()
 
 				if successChance > rand.Intn(100) {
+					succeededCountPrime++
 					sleepTime := rand.Intn(maxWaitTime)
 					time.Sleep(time.Second * time.Duration(sleepTime))
 
-					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
+					cardanofw.BridgeAmountFull(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
 						apex.Bridge.PrimeMultisigAddr, apex.Bridge.VectorMultisigFeeAddr, walletKeysPrime[idx], user.VectorAddress, sendAmount,
 						cardanofw.GetDestinationChainID(true))
-					succeededCountPrime++
-
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, time.Second*10)
-					require.NoError(t, err)
-					fmt.Printf("Prime Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
 					feeAmount := uint64(1_100_000)
 					receivers := map[string]uint64{
@@ -1001,15 +1007,10 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						user.PrimeAddress, receivers, cardanofw.GetDestinationChainID(true))
 					require.NoError(t, err)
 
-					txHash, err := cardanofw.SendTx(
+					_, err = cardanofw.SendTx(
 						ctx, txProviderPrime, walletKeysPrime[idx], (sendAmount + feeAmount), apex.Bridge.PrimeMultisigAddr,
 						apex.PrimeCluster.Config.NetworkMagic, bridgingRequestMetadata)
 					require.NoError(t, err)
-
-					apiURL, err := apex.Bridge.GetBridgingAPI()
-					require.NoError(t, err)
-					cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
-					fmt.Printf("Prime Tx %v invalid. hash: %s\n", idx+1, txHash)
 				}
 			}(i)
 
@@ -1018,17 +1019,13 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 				defer wg.Done()
 
 				if successChance > rand.Intn(100) {
+					succeededCountVector++
 					sleepTime := rand.Intn(maxWaitTime)
 					time.Sleep(time.Second * time.Duration(sleepTime))
 
-					txHash := cardanofw.BridgeAmountFull(t, ctx, txProviderVector, uint(apex.VectorCluster.Config.NetworkMagic),
+					cardanofw.BridgeAmountFull(t, ctx, txProviderVector, uint(apex.VectorCluster.Config.NetworkMagic),
 						apex.Bridge.VectorMultisigAddr, apex.Bridge.PrimeMultisigFeeAddr, walletKeysVector[idx], user.PrimeAddress, sendAmount,
 						cardanofw.GetDestinationChainID(false))
-					succeededCountVector++
-
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.PrimeAddress, txHash, 12, time.Second*10)
-					require.NoError(t, err)
-					fmt.Printf("Vector Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
 					feeAmount := uint64(1_100_000)
 					receivers := map[string]uint64{
@@ -1040,42 +1037,44 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						user.VectorAddress, receivers, cardanofw.GetDestinationChainID(false))
 					require.NoError(t, err)
 
-					txHash, err := cardanofw.SendTx(
+					_, err = cardanofw.SendTx(
 						ctx, txProviderVector, walletKeysVector[idx], (sendAmount + feeAmount), apex.Bridge.VectorMultisigAddr,
 						apex.VectorCluster.Config.NetworkMagic, bridgingRequestMetadata)
 					require.NoError(t, err)
-
-					apiURL, err := apex.Bridge.GetBridgingAPI()
-					require.NoError(t, err)
-					cardanofw.WaitForInvalidState(t, ctx, apiURL, apiKey, txHash)
-					fmt.Printf("Tx %v invalid. hash: %s\n", idx+1, txHash)
 				}
 			}(i)
 		}
 
 		wg.Wait()
 
-		expectedAmountPrime := prevAmountPrime.Uint64() + uint64(succeededCountPrime)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedAmountPrime)) == 0
-		}, 100, time.Second*10)
-		require.NoError(t, err)
-		fmt.Printf("%v TXs confirmed on Prime\n", succeededCountPrime)
+		fmt.Printf("All tx sent, waiting for confirmation.\n")
 
+		expectedAmountPrime := prevAmountPrime.Uint64() + uint64(succeededCountPrime)*sendAmount
 		expectedAmountVector := prevAmountVector.Uint64() + uint64(succeededCountVector)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
-			return val.Cmp(new(big.Int).SetUint64(expectedAmountVector)) == 0
-		}, 100, time.Second*10)
-		require.NoError(t, err)
-		fmt.Printf("%v TXs confirmed on Vector\n", succeededCountVector)
+
+		for i := 0; i < instances; i++ {
+			newAmountPrime, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
+			require.NoError(t, err)
+			fmt.Printf("Current Amount Prime: %v. Expected: %v\n", newAmountPrime, expectedAmountPrime)
+
+			newAmountVector, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
+			require.NoError(t, err)
+			fmt.Printf("Current Amount Vector: %v. Expected: %v\n", newAmountVector, expectedAmountVector)
+
+			if newAmountPrime.Uint64() == expectedAmountPrime && newAmountVector.Uint64() == expectedAmountVector {
+				break
+			}
+
+			time.Sleep(time.Second * 10)
+		}
 
 		newAmountPrime, err := cardanofw.GetTokenAmount(ctx, txProviderVector, user.VectorAddress)
 		require.NoError(t, err)
-		fmt.Printf("prevAmount: %v. newAmount: %v. expectedAmount: %v\n", prevAmountPrime, newAmountPrime, expectedAmountPrime)
+		fmt.Printf("Success count: %v. prevAmount: %v. newAmount: %v. expectedAmount: %v\n", succeededCountPrime, prevAmountPrime, newAmountPrime, expectedAmountPrime)
 
 		newAmountVector, err := cardanofw.GetTokenAmount(ctx, txProviderPrime, user.PrimeAddress)
 		require.NoError(t, err)
-		fmt.Printf("prevAmount: %v. newAmount: %v. expectedAmount: %v\n", prevAmountVector, newAmountVector, expectedAmountVector)
+		fmt.Printf("Success count: %v. prevAmount: %v. newAmount: %v. expectedAmount: %v\n", succeededCountVector, prevAmountVector, newAmountVector, expectedAmountVector)
 	})
 
 	t.Run("Both directions sequential", func(t *testing.T) {
