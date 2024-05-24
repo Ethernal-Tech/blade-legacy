@@ -801,7 +801,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						cardanofw.GetDestinationChainID(true))
 					succeededCount++
 
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, 10)
+					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, time.Second*10)
 					require.NoError(t, err)
 					fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
@@ -887,7 +887,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						cardanofw.GetDestinationChainID(true))
 					succeededCount++
 
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, 10)
+					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, time.Second*10)
 					require.NoError(t, err)
 					fmt.Printf("Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
@@ -987,7 +987,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						cardanofw.GetDestinationChainID(true))
 					succeededCountPrime++
 
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, 10)
+					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.VectorAddress, txHash, 12, time.Second*10)
 					require.NoError(t, err)
 					fmt.Printf("Prime Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
@@ -1026,7 +1026,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 						cardanofw.GetDestinationChainID(false))
 					succeededCountVector++
 
-					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.PrimeAddress, txHash, 12, 10)
+					err = wallet.WaitForTxHashInUtxos(ctx, txProviderVector, user.PrimeAddress, txHash, 12, time.Second*10)
 					require.NoError(t, err)
 					fmt.Printf("Vector Tx %v sent. hash: %s\n", idx+1, txHash)
 				} else {
