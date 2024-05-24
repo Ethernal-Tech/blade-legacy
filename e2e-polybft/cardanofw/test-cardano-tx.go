@@ -21,6 +21,23 @@ func SendTx(ctx context.Context,
 	receiver string,
 	testnetMagic int,
 	metadata []byte,
+) (res string, err error) {
+	err = ExecuteWithRetryIfNeeded(ctx, func() error {
+		res, err = sendTx(ctx, txProvider, cardanoWallet, amount, receiver, testnetMagic, metadata)
+
+		return err
+	})
+
+	return res, err
+}
+
+func sendTx(ctx context.Context,
+	txProvider wallet.ITxProvider,
+	cardanoWallet wallet.IWallet,
+	amount uint64,
+	receiver string,
+	testnetMagic int,
+	metadata []byte,
 ) (string, error) {
 	cardanoWalletAddr, _, err := wallet.GetWalletAddress(cardanoWallet, uint(testnetMagic))
 	if err != nil {

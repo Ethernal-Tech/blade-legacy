@@ -65,7 +65,7 @@ func TestE2E_ApexBridge(t *testing.T) {
 		apex.Bridge.VectorMultisigFeeAddr, sendAmount, true)
 
 	time.Sleep(time.Second * 60)
-	err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+	err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 		return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 	}, 200, time.Second*20)
 	require.NoError(t, err)
@@ -233,7 +233,8 @@ func TestE2E_ApexBridge_InvalidScenarios(t *testing.T) {
 			txHash, err := cardanofw.SendTx(ctx, txProviderPrime, primeGenesisWallet,
 				fundSendAmount, walletAddress, apex.PrimeCluster.Config.NetworkMagic, []byte{})
 			require.NoError(t, err)
-			err = wallet.WaitForTxHashInUtxos(ctx, txProviderPrime, walletAddress, txHash, 60, time.Second*2)
+			err = wallet.WaitForTxHashInUtxos(ctx, txProviderPrime, walletAddress, txHash,
+				60, time.Second*2, cardanofw.IsRecoverableError)
 			require.NoError(t, err)
 		}
 
@@ -497,7 +498,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 			expectedAmount := prevAmount.Uint64() + sendAmount
 			fmt.Printf("%v - expectedAmount %v\n", i+1, expectedAmount)
 
-			err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+			err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 				return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 			}, 20, time.Second*10)
 			require.NoError(t, err)
@@ -518,7 +519,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		}
 
 		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 20, time.Second*10)
 		require.NoError(t, err)
@@ -561,7 +562,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		wg.Wait()
 
 		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)
@@ -587,7 +588,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		}
 
 		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 20, time.Second*10)
 		require.NoError(t, err)
@@ -630,7 +631,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		wg.Wait()
 
 		expectedAmount := prevAmount.Uint64() + uint64(instances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)
@@ -687,7 +688,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Waiting for %v TXs\n", sequentialInstances*parallelInstances)
 
 		expectedAmount := prevAmount.Uint64() + uint64(sequentialInstances)*uint64(parallelInstances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)
@@ -722,7 +723,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 
 		fmt.Printf("Waiting for %v TXs on vector\n", instances)
 		expectedAmountOnVector := prevAmountOnVector.Uint64() + uint64(instances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnVector)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)
@@ -734,7 +735,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 
 		fmt.Printf("Waiting for %v TXs on prime\n", instances)
 		expectedAmountOnPrime := prevAmountOnPrime.Uint64() + uint64(instances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnPrime)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)
@@ -823,7 +824,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Waiting for %v TXs on vector:\n", sequentialInstances*parallelInstances)
 
 		expectedAmountOnVector := prevAmountOnVector.Uint64() + uint64(sequentialInstances)*uint64(parallelInstances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderVector, user.VectorAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnVector)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)
@@ -837,7 +838,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("Waiting for %v TXs on prime\n", sequentialInstances*parallelInstances)
 
 		expectedAmountOnPrime := prevAmountOnPrime.Uint64() + uint64(sequentialInstances)*uint64(parallelInstances)*sendAmount
-		err = wallet.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
+		err = cardanofw.WaitForAmount(context.Background(), txProviderPrime, user.PrimeAddress, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(expectedAmountOnPrime)) == 0
 		}, 100, time.Second*10)
 		require.NoError(t, err)

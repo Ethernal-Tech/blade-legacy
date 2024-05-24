@@ -86,7 +86,7 @@ func (u *TestApexUser) SendToUser(
 	err = wallet.WaitForAmount(
 		context.Background(), txProvider, addr, func(val *big.Int) bool {
 			return val.Cmp(prevAmount) > 0
-		}, 60, time.Second*2)
+		}, 60, time.Second*2, IsRecoverableError)
 	require.NoError(t, err)
 }
 
@@ -114,7 +114,7 @@ func (u *TestApexUser) SendToAddress(
 	err = wallet.WaitForAmount(
 		context.Background(), txProvider, receiver, func(val *big.Int) bool {
 			return val.Cmp(new(big.Int).SetUint64(prevAmount.Uint64()+sendAmount)) == 0
-		}, 60, time.Second*2)
+		}, 60, time.Second*2, IsRecoverableError)
 	require.NoError(t, err)
 }
 
@@ -199,7 +199,8 @@ func BridgeAmountFull(
 		sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
 	require.NoError(t, err)
 
-	err = wallet.WaitForTxHashInUtxos(context.Background(), txProvider, multisigAddr, txHash, 60, time.Second*2)
+	err = wallet.WaitForTxHashInUtxos(
+		context.Background(), txProvider, multisigAddr, txHash, 60, time.Second*2, IsRecoverableError)
 	require.NoError(t, err)
 
 	return txHash

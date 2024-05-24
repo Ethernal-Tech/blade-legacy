@@ -32,7 +32,7 @@ const (
 
 	defaultSprintSize               = uint64(5) // in blocks
 	defaultEpochReward              = 1         // in blocks
-	defaultBlockTime                = 5 * time.Second
+	defaultBlockTime                = 3 * time.Second
 	defaultBlockTimeDrift           = uint64(10) // in seconds
 	defaultBlockTrackerPollInterval = time.Second
 	defaultCheckpointInterval       = uint64(900) // in blocks
