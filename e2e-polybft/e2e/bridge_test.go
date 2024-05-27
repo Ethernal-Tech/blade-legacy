@@ -146,7 +146,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 		// assert that all deposits are executed successfully
 		// because of the token mapping with the first deposit
-		checkStateSyncResultLogs(t, logs, transfersCount+1)
+		assertStateSyncResultSuccess(t, logs, transfersCount+1)
 
 		// get child token address
 		childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
@@ -282,7 +282,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.NoError(t, err)
 
 		// assert that all state syncs are executed successfully
-		checkStateSyncResultLogs(t, logs, transfersCount)
+		assertStateSyncResultSuccess(t, logs, transfersCount)
 	})
 }
 
@@ -384,7 +384,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 			// assert that all deposits are executed successfully.
 			// All deposits are sent using a single transaction, so arbitrary message bridge emits two state sync events:
 			// MAP_TOKEN_SIG and DEPOSIT_BATCH_SIG state sync events
-			checkStateSyncResultLogs(t, logs, stateSyncedLogsCount)
+			assertStateSyncResultSuccess(t, logs, stateSyncedLogsCount)
 
 			break
 		}
@@ -558,7 +558,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 			// assert that all deposits are executed successfully.
 			// All deposits are sent using a single transaction, so arbitrary message bridge emits two state sync events:
 			// MAP_TOKEN_SIG and DEPOSIT_BATCH_SIG state sync events
-			checkStateSyncResultLogs(t, logs, stateSyncedLogsCount)
+			assertStateSyncResultSuccess(t, logs, stateSyncedLogsCount)
 
 			break
 		}
@@ -1146,7 +1146,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 		// assert that all deposits are executed successfully
 		// (token mapping and transferCount of deposits)
-		checkStateSyncResultLogs(t, logs, transfersCount+1)
+		assertStateSyncResultSuccess(t, logs, transfersCount+1)
 
 		// get child token address
 		childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
@@ -1256,6 +1256,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		numBlockConfirmations = uint64(2)
 		exitEventsCount       = uint64(2)
 		tokensToTransfer      = ethgo.Gwei(10)
+		tenMilionTokens       = ethgo.Ether(10000000)
 		bigZero               = big.NewInt(0)
 	)
 
@@ -1290,7 +1291,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			tcc.Premine = append(tcc.Premine,
 				fmt.Sprintf("%s:%s:%s",
 					nonValidatorKey.Address(),
-					command.DefaultPremineBalance.String(),
+					new(big.Int).Mul(big.NewInt(10), tenMilionTokens).String(),
 					nonValidatorKeyString))
 
 			// do premine to reward wallet address
@@ -1301,13 +1302,12 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 					rewardWalletKeyString))
 		}),
 	)
+	defer cluster.Stop()
 
 	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
 	require.NoError(t, err)
 
 	childEthEndpoint := cluster.Servers[0].JSONRPC()
-
-	defer cluster.Stop()
 
 	cluster.WaitForReady(t)
 
@@ -1354,7 +1354,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	})
 
 	// this test case will check first if they can withdraw some of the premined amount of non-mintable token
-	t.Run("Do a withdraw for premined validator address and premined non-validator address", func(t *testing.T) {
+	t.Run("do a withdraw for premined validator address and premined non-validator address", func(t *testing.T) {
 		validatorSrv := cluster.Servers[1]
 		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
@@ -1422,7 +1422,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		checkBalancesFn(types.Address(nonValidatorKey.Address()), tokensToTransfer, nonValidatorBalanceAfterWithdraw, false)
 	})
 
-	t.Run("Do a deposit to some validator and non-validator address", func(t *testing.T) {
+	t.Run("do a deposit to some validator and non-validator address", func(t *testing.T) {
 		validatorSrv := cluster.Servers[4]
 		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
@@ -1456,7 +1456,50 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 			if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
 				// assert that all deposits are executed successfully
-				checkStateSyncResultLogs(t, logs, stateSyncedLogsCount)
+				assertStateSyncResultSuccess(t, logs, stateSyncedLogsCount)
+
+				break
+			}
+
+			require.NoError(t, cluster.WaitForBlock(finalBlockNum+(i+1)*epochSize, time.Minute))
+		}
+	})
+
+	t.Run("transfer more native tokens than 0x0 address has", func(t *testing.T) {
+		t.Log("Bridging native tokens to", nonValidatorKey.Address())
+		currentBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
+		require.NoError(t, err)
+
+		require.NoError(t, cluster.Bridge.Deposit(
+			common.ERC20,
+			polybftCfg.Bridge.RootNativeERC20Addr,
+			polybftCfg.Bridge.RootERC20PredicateAddr,
+			bridgeHelper.TestAccountPrivKey,
+			strings.Join([]string{nonValidatorKey.Address().String()}, ","),
+			strings.Join([]string{tenMilionTokens.String()}, ","),
+			"",
+			cluster.Bridge.JSONRPCAddr(),
+			bridgeHelper.TestAccountPrivKey,
+			false),
+		)
+
+		// wait for couple of epoches
+		finalBlockNum := currentBlock.Header.Number + 2*epochSize
+		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
+
+		// the transaction is processed and there should be a success event
+		var stateSyncedResult contractsapi.StateSyncResultEvent
+
+		for i := uint64(0); i < numberOfAttempts; i++ {
+			logs, err := getFilteredLogs(stateSyncedResult.Sig(), currentBlock.Number()+1, finalBlockNum+i*epochSize, childEthEndpoint)
+			require.NoError(t, err)
+
+			if len(logs) == 1 || i == numberOfAttempts-1 {
+				// assert that sent deposit has failed
+				checkStateSyncResultLogs(t, logs, len(logs),
+					func(t *testing.T, ssre contractsapi.StateSyncResultEvent) {
+						require.False(t, ssre.Status)
+					})
 
 				break
 			}
