@@ -84,7 +84,7 @@ func checkStateSyncResultLogs(
 // assertStateSyncResultSuccess asserts that:
 // 1. there are required amount of logs,
 // 2. they are of contractsapi.StateSyncResult type
-// 3. status is true, meaning that the state syncs were executed succesfully
+// 3. status is true, meaning that the state syncs were executed successfully
 func assertStateSyncResultSuccess(
 	t *testing.T,
 	logs []*ethgo.Log,
@@ -92,6 +92,8 @@ func assertStateSyncResultSuccess(
 	t.Helper()
 	checkStateSyncResultLogs(t, logs, expectedCount,
 		func(t *testing.T, ssre contractsapi.StateSyncResultEvent) {
+			t.Helper()
+
 			require.True(t, ssre.Status)
 		})
 }
