@@ -43,10 +43,10 @@ func NewTestApexUser(t *testing.T, primeNetworkMagic, vectorNetworkMagic uint) *
 		path.Join(basePath, "vector"), true)
 	require.NoError(t, err)
 
-	primeUserAddress, _, err := wallet.GetWalletAddress(primeWallet, primeNetworkMagic)
+	primeUserAddress, _, err := wallet.GetWalletAddressCli(primeWallet, primeNetworkMagic)
 	require.NoError(t, err)
 
-	vectorUserAddress, _, err := wallet.GetWalletAddress(vectorWallet, vectorNetworkMagic)
+	vectorUserAddress, _, err := wallet.GetWalletAddressCli(vectorWallet, vectorNetworkMagic)
 	require.NoError(t, err)
 
 	return &TestApexUser{
@@ -55,6 +55,44 @@ func NewTestApexUser(t *testing.T, primeNetworkMagic, vectorNetworkMagic uint) *
 		VectorWallet:       vectorWallet,
 		PrimeAddress:       primeUserAddress,
 		VectorAddress:      vectorUserAddress,
+		primeNetworkMagic:  primeNetworkMagic,
+		vectorNetworkMagic: vectorNetworkMagic,
+	}
+}
+
+func NewTestApexUserWithExistingWallets(
+	t *testing.T, primePrivateKey, vectorPrivateKey string, primeNetworkMagic, vectorNetworkMagic uint,
+) *TestApexUser {
+	t.Helper()
+
+	basePath, err := os.MkdirTemp("/tmp", "apex-user")
+	require.NoError(t, err)
+
+	primePrivateKeyBytes, err := (wallet.Key{Hex: primePrivateKey}).GetKeyBytes()
+	require.NoError(t, err)
+
+	vectorPrivateKeyBytes, err := (wallet.Key{Hex: vectorPrivateKey}).GetKeyBytes()
+	require.NoError(t, err)
+
+	primeWallet := wallet.NewWallet(
+		wallet.GetVerificationKeyFromSigningKey(primePrivateKeyBytes), primePrivateKeyBytes)
+	vectorWallet := wallet.NewWallet(
+		wallet.GetVerificationKeyFromSigningKey(vectorPrivateKeyBytes), vectorPrivateKeyBytes)
+
+	primeUserAddress, err := wallet.NewEnterpriseAddress(
+		wallet.TestNetNetwork, primeWallet.GetVerificationKey())
+	require.NoError(t, err)
+
+	vectorUserAddress, err := wallet.NewEnterpriseAddress(
+		wallet.TestNetNetwork, vectorWallet.GetVerificationKey())
+	require.NoError(t, err)
+
+	return &TestApexUser{
+		basePath:           basePath,
+		PrimeWallet:        primeWallet,
+		VectorWallet:       vectorWallet,
+		PrimeAddress:       primeUserAddress.String(),
+		VectorAddress:      vectorUserAddress.String(),
 		primeNetworkMagic:  primeNetworkMagic,
 		vectorNetworkMagic: vectorNetworkMagic,
 	}
@@ -184,7 +222,7 @@ func BridgeAmountFull(
 
 	const feeAmount = 1_100_000
 
-	senderAddr, _, err := wallet.GetWalletAddress(sender, networkMagic)
+	senderAddr, _, err := wallet.GetWalletAddressCli(sender, networkMagic)
 	require.NoError(t, err)
 
 	var receivers = map[string]uint64{

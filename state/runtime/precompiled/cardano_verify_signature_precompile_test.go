@@ -61,8 +61,11 @@ func Test_cardanoVerifySignaturePrecompile_ValidSignature(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, abiBoolTrue, value)
 
+	keyHash, err := cardano_wallet.GetKeyHash(walletBasic.GetVerificationKey())
+	require.NoError(t, err)
+
 	// message
-	message := []byte(fmt.Sprintf("Hello world! My keyHash is: %s", walletBasic.GetKeyHash()))
+	message := []byte(fmt.Sprintf("Hello world! My keyHash is: %s", keyHash))
 	signature, err = cardano_wallet.SignMessage(
 		walletBasic.GetSigningKey(), walletBasic.GetVerificationKey(), message)
 	require.NoError(t, err)
@@ -118,8 +121,11 @@ func Test_cardanoVerifySignaturePrecompile_InvalidSignature(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, abiBoolFalse, value)
 
+	keyHash, err := cardano_wallet.GetKeyHash(walletBasic.GetVerificationKey())
+	require.NoError(t, err)
+
 	// message
-	message := []byte(fmt.Sprintf("Hello world! My keyHash is: %s", walletBasic.GetKeyHash()))
+	message := []byte(fmt.Sprintf("Hello world! My keyHash is: %s", keyHash))
 	signature, err = cardano_wallet.SignMessage(
 		walletBasic.GetSigningKey(), walletBasic.GetVerificationKey(), message)
 	require.NoError(t, err)
@@ -250,7 +256,7 @@ func createTx(t *testing.T) (string, string) {
 				Index: 2,
 			},
 		},
-		Sum: cardano_wallet.MinUTxODefaultValue + 20,
+		Sum: cardano_wallet.MinUTxODefaultValue*2 + 20,
 	}
 
 	multiSigFeeInputs := cardano_wallet.TxInputs{
@@ -260,7 +266,7 @@ func createTx(t *testing.T) (string, string) {
 				Index: 0,
 			},
 		},
-		Sum: cardano_wallet.MinUTxODefaultValue,
+		Sum: cardano_wallet.MinUTxODefaultValue * 2,
 	}
 
 	builder.SetTimeToLive(ttl).SetProtocolParameters(protocolParameters)

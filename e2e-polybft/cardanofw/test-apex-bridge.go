@@ -85,7 +85,7 @@ func SetupAndRunApexCardanoChains(
 				WithID(id+1),
 				WithNodesCount(4),
 				WithStartTimeDelay(time.Second*5),
-				WithPort(5000+id*100),
+				WithPort(5100+id*100),
 				WithOgmiosPort(1337+id),
 				WithLogsDir(logsDir),
 				WithNetworkMagic(42+id),
@@ -340,6 +340,37 @@ func (a *ApexSystem) CreateAndFundUser(t *testing.T, ctx context.Context, sendAm
 
 	user := NewTestApexUser(
 		t, uint(a.PrimeCluster.Config.NetworkMagic), uint(a.VectorCluster.Config.NetworkMagic))
+
+	t.Cleanup(user.Dispose)
+
+	txProviderPrime := a.GetPrimeTxProvider()
+	txProviderVector := a.GetVectorTxProvider()
+
+	// Fund prime address
+	primeGenesisWallet := a.GetPrimeGenesisWallet(t)
+
+	user.SendToUser(t, ctx, txProviderPrime, primeGenesisWallet, sendAmount, true)
+
+	fmt.Printf("Prime user address funded\n")
+
+	// Fund vector address
+	vectorGenesisWallet := a.GetVectorGenesisWallet(t)
+
+	user.SendToUser(t, ctx, txProviderVector, vectorGenesisWallet, sendAmount, false)
+
+	fmt.Printf("Vector user address funded\n")
+
+	return user
+}
+
+func (a *ApexSystem) CreateAndFundExistingUser(
+	t *testing.T, ctx context.Context, primePrivateKey, vectorPrivateKey string, sendAmount uint64,
+) *TestApexUser {
+	t.Helper()
+
+	user := NewTestApexUserWithExistingWallets(
+		t, primePrivateKey, vectorPrivateKey,
+		uint(a.PrimeCluster.Config.NetworkMagic), uint(a.VectorCluster.Config.NetworkMagic))
 
 	t.Cleanup(user.Dispose)
 

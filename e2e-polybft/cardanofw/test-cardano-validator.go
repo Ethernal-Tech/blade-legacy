@@ -126,6 +126,7 @@ func (cv *TestCardanoValidator) GenerateConfigs(
 	apiPort int,
 	apiKey string,
 	ttlInc uint64,
+	telemetryConfig string,
 ) error {
 	cv.APIPort = apiPort
 
@@ -149,6 +150,7 @@ func (cv *TestCardanoValidator) GenerateConfigs(
 		"--bridge-validator-data-dir", cv.server.DataDir(),
 		"--api-port", fmt.Sprint(apiPort),
 		"--api-keys", apiKey,
+		"--telemetry", telemetryConfig,
 	}
 
 	if ttlInc > 0 {
