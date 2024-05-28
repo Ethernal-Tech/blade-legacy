@@ -1486,7 +1486,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		)
 
 		// wait for couple of epoches
-		finalBlockNum := currentBlock.Header.Number + 2*epochSize
+		finalBlockNum := currentBlock.Header.Number + epochSize
 		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
 		// the transaction is processed and there should be a success event
