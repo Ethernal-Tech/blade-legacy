@@ -1466,6 +1466,8 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	})
 
 	t.Run("transfer more native tokens than 0x0 balance is", func(t *testing.T) {
+		const expectedStateSyncsCount = 1
+
 		// since bridging native token is essentially minting
 		// (i.e. transferring tokens from 0x0 to receiver address using native transfer precompile),
 		// this test tries to deposit more tokens than 0x0 address has on its balance
@@ -1496,9 +1498,9 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			logs, err := getFilteredLogs(stateSyncedResult.Sig(), currentBlock.Number()+1, finalBlockNum+i*epochSize, childEthEndpoint)
 			require.NoError(t, err)
 
-			if len(logs) == 1 || i == numberOfAttempts-1 {
+			if len(logs) == expectedStateSyncsCount || i == numberOfAttempts-1 {
 				// assert that sent deposit has failed
-				checkStateSyncResultLogs(t, logs, len(logs),
+				checkStateSyncResultLogs(t, logs, expectedStateSyncsCount,
 					func(t *testing.T, ssre contractsapi.StateSyncResultEvent) {
 						t.Helper()
 
