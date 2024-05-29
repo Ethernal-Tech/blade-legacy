@@ -183,44 +183,49 @@ func (s *syncer) Sync(callback func(*types.FullBlock) bool) error {
 		// Wait for a new event to arrive
 		select {
 		case <-s.newStatusCh:
-		case <-time.After(blockTimeout * 2):
-			// fetch local latest block
-			if header := s.blockchain.Header(); header != nil {
-				localLatest = header.Number
-			}
+			s.logger.Debug("new peer status arrived, start syncing")
+		case <-time.After(blockTimeout):
+			s.logger.Debug("timeout while waiting for new peer status, start manual syncing")
+		}
 
-			// pick one best peer
-			bestPeer := s.peerMap.BestPeer(skipList)
-			if bestPeer == nil {
-				// Empty skipList map if there are no best peers
-				skipList = make(map[peer.ID]bool)
+		// fetch local latest block
+		if header := s.blockchain.Header(); header != nil {
+			localLatest = header.Number
+		}
 
-				continue
-			}
+		// pick one best peer
+		bestPeer := s.peerMap.BestPeer(skipList)
+		if bestPeer == nil {
+			// Empty skipList map if there are no best peers
+			skipList = make(map[peer.ID]bool)
 
-			// if the bestPeer does not have a new block continue
-			if bestPeer.Number <= localLatest {
-				continue
-			}
+			continue
+		}
 
-			// fetch block from the peer
-			lastNumber, shouldTerminate, err := s.bulkSyncWithPeer(bestPeer.ID, bestPeer.Number, callback)
-			if err != nil {
-				s.logger.Warn("failed to complete bulk sync with peer, try to next one", "peer ID", "error", bestPeer.ID, err)
-			}
+		// if the bestPeer does not have a new block continue
+		if bestPeer.Number <= localLatest {
+			continue
+		}
 
-			if lastNumber < bestPeer.Number {
-				skipList[bestPeer.ID] = true
+		// fetch block from the peer
+		lastNumber, shouldTerminate, err := s.bulkSyncWithPeer(bestPeer.ID, bestPeer.Number, callback)
+		if err != nil {
+			s.logger.Warn("failed to complete bulk sync with peer, try to next one", "peer ID", "error", bestPeer.ID, err)
+		}
 
-				// continue to next peer
-				continue
-			}
+		if lastNumber < bestPeer.Number {
+			skipList[bestPeer.ID] = true
 
-			if shouldTerminate {
-				return nil
-			}
+			// continue to next peer
+			continue
+		}
+
+		if shouldTerminate {
+			break
 		}
 	}
+
+	return nil
 }
 
 // bulkSyncWithPeer syncs block with a given peer
