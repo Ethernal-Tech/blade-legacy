@@ -176,10 +176,14 @@ func (s *syncer) Sync(callback func(*types.FullBlock) bool) error {
 	skipList := make(map[peer.ID]bool)
 
 	for {
+		s.lock.RLock()
+		blockTimeout := s.blockTimeout
+		s.lock.RUnlock()
+
 		// Wait for a new event to arrive
 		select {
 		case <-s.newStatusCh:
-		case <-time.After(s.blockTimeout * 2):
+		case <-time.After(blockTimeout * 2):
 			// fetch local latest block
 			if header := s.blockchain.Header(); header != nil {
 				localLatest = header.Number
