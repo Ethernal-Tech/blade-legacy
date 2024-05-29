@@ -22,6 +22,8 @@ func TestSlots(t *testing.T) {
 		assert.False(t, closed)
 	}
 
+	tm := time.Now().UTC()
+
 	go func() {
 		time.Sleep(time.Millisecond * 500)
 		slots.Release() // return one slot after 500 milis
@@ -29,13 +31,11 @@ func TestSlots(t *testing.T) {
 		slots.Release() // return another slot after 1 seconds
 	}()
 
-	tm := time.Now().UTC()
-
 	closed1 := slots.Take(context.Background())
-	closed2 := slots.Take(context.Background())
-
 	assert.False(t, closed1)
 	assert.GreaterOrEqual(t, time.Now().UTC(), tm.Add(time.Millisecond*500))
+
+	closed2 := slots.Take(context.Background())
 	assert.False(t, closed2)
 	assert.GreaterOrEqual(t, time.Now().UTC(), tm.Add(time.Millisecond*500*2))
 }

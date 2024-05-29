@@ -31,7 +31,7 @@ const (
 	blockTimeDriftFlag = "block-time-drift"
 
 	defaultSprintSize               = uint64(5) // in blocks
-	defaultEpochReward              = 1         // in blocks
+	defaultEpochReward              = 1         // in wei
 	defaultBlockTime                = 2 * time.Second
 	defaultBlockTimeDrift           = uint64(10) // in seconds
 	defaultBlockTrackerPollInterval = time.Second
@@ -67,10 +67,8 @@ const (
 var (
 	errNoGenesisValidators      = errors.New("genesis validators aren't provided")
 	errProxyAdminNotProvided    = errors.New("proxy contracts admin address must be set")
-	errProxyAdminIsZeroAddress  = errors.New("proxy contracts admin address must not be zero address")
 	errProxyAdminIsSystemCaller = errors.New("proxy contracts admin address must not be system caller address")
 	errBladeAdminNotProvided    = errors.New("blade admin address must be set")
-	errBladeAdminIsZeroAddress  = errors.New("blade admin address must not be zero address")
 	errBladeAdminIsSystemCaller = errors.New("blade admin address must not be system caller address")
 	errNoPremineAllowed         = errors.New("native token is not mintable" +
 		"so no premine is allowed except for zero address")

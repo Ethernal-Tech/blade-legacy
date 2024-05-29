@@ -8,24 +8,25 @@ import (
 )
 
 const (
-	mnemonicFlag     = "mnemonic"
+	MnemonicFlag        = "mnemonic"
+	SaveToJSONFlag      = "to-json"
+	ReceiptsTimeoutFlag = "receipts-timeout"
+
 	loadTestTypeFlag = "type"
 	loadTestNameFlag = "name"
 
-	receiptsTimeoutFlag = "receipts-timeout"
-	txPoolTimeoutFlag   = "txpool-timeout"
+	txPoolTimeoutFlag = "txpool-timeout"
 
 	vusFlag        = "vus"
 	txsPerUserFlag = "txs-per-user"
 	dynamicTxsFlag = "dynamic"
 	batchSizeFlag  = "batch-size"
 
-	saveToJSONFlag           = "to-json"
 	waitForTxPoolToEmptyFlag = "wait-txpool"
 )
 
 var (
-	errNoMnemonicProvided      = errors.New("no mnemonic provided")
+	ErrNoMnemonicProvided      = errors.New("no mnemonic provided")
 	errNoLoadTestTypeProvided  = errors.New("no load test type provided")
 	errUnsupportedLoadTestType = errors.New("unsupported load test type")
 	errInvalidVUs              = errors.New("vus must be greater than 0")
@@ -53,7 +54,7 @@ type loadTestParams struct {
 
 func (ltp *loadTestParams) validateFlags() error {
 	if ltp.mnemonic == "" {
-		return errNoMnemonicProvided
+		return ErrNoMnemonicProvided
 	}
 
 	if ltp.loadTestType == "" {

@@ -86,7 +86,8 @@ func TestSimpleGossip(t *testing.T) {
 	for {
 		select {
 		case <-time.After(time.Second * 15):
-			t.Fatalf("Multicast messages not received before timeout")
+			t.Fatalf("Multicast messages not received before timeout. "+
+				"Received: %d, expected: %d", messagesGossiped, len(servers))
 		case message := <-messageCh:
 			if message.Message == sentMessage {
 				messagesGossiped++

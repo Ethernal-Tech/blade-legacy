@@ -37,7 +37,7 @@ func preRunCommand(cmd *cobra.Command, _ []string) error {
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.mnemonic,
-		mnemonicFlag,
+		MnemonicFlag,
 		"",
 		"the mnemonic used to generate and fund virtual users",
 	)
@@ -79,7 +79,7 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().DurationVar(
 		&params.receiptsTimeout,
-		receiptsTimeoutFlag,
+		ReceiptsTimeoutFlag,
 		30*time.Second,
 		"the timeout for waiting for transaction receipts",
 	)
@@ -93,7 +93,7 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(
 		&params.toJSON,
-		saveToJSONFlag,
+		SaveToJSONFlag,
 		false,
 		"saves results to JSON file",
 	)
@@ -112,7 +112,7 @@ func setFlags(cmd *cobra.Command) {
 		"size of a batch of transactions to send to rpc node",
 	)
 
-	_ = cmd.MarkFlagRequired(mnemonicFlag)
+	_ = cmd.MarkFlagRequired(MnemonicFlag)
 	_ = cmd.MarkFlagRequired(loadTestTypeFlag)
 }
 

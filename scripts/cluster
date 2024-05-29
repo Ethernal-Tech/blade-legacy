@@ -63,7 +63,8 @@ function createGenesis() {
     --premine 0x85da99c8a7c2c95964c8efd687e95e632fc533d6 \
     --premine 0x0000000000000000000000000000000000000000 \
     --epoch-size 10 \
-    --reward-wallet 0xDEADBEEF:1000000 \
+    --epoch-reward 1000000000 \
+    --reward-wallet 0xDEADBEEF \
     --native-token-config "Blade:BLADE:18:true" \
     --blade-admin $address1 \
     --proxy-contracts-admin 0x5aaeb6053f3e94c9b9a09f33669435e7ef1beaed \

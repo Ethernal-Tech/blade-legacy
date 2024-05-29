@@ -24,6 +24,10 @@ import (
 
 const nativeTokenNonMintableConfig = "Blade:BLD:18:false"
 
+var (
+	stateSyncResultEvent contractsapi.StateSyncResultEvent
+)
+
 func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contractAddress types.Address, senderAddr types.Address, method string, params ...interface{}) (string, error) {
 	input, err := artifact.Abi.GetMethod(method).Encode(params)
 	if err != nil {
@@ -59,11 +63,11 @@ func checkStateSyncResultLogs(
 	t *testing.T,
 	logs []*ethgo.Log,
 	expectedCount int,
+	handler func(*testing.T, contractsapi.StateSyncResultEvent),
 ) {
 	t.Helper()
 	require.Equal(t, expectedCount, len(logs))
 
-	var stateSyncResultEvent contractsapi.StateSyncResultEvent
 	for _, log := range logs {
 		doesMatch, err := stateSyncResultEvent.ParseLog(log)
 		require.NoError(t, err)
@@ -71,8 +75,27 @@ func checkStateSyncResultLogs(
 
 		t.Logf("Block Number=%d, Decoded Log=%+v\n", log.BlockNumber, stateSyncResultEvent)
 
-		require.True(t, stateSyncResultEvent.Status)
+		if handler != nil {
+			handler(t, stateSyncResultEvent)
+		}
 	}
+}
+
+// assertStateSyncResultSuccess asserts that:
+// 1. there are required amount of logs,
+// 2. they are of contractsapi.StateSyncResult type
+// 3. status is true, meaning that the state syncs were executed successfully
+func assertStateSyncResultSuccess(
+	t *testing.T,
+	logs []*ethgo.Log,
+	expectedCount int) {
+	t.Helper()
+	checkStateSyncResultLogs(t, logs, expectedCount,
+		func(t *testing.T, ssre contractsapi.StateSyncResultEvent) {
+			t.Helper()
+
+			require.True(t, ssre.Status)
+		})
 }
 
 // getCheckpointBlockNumber gets current checkpoint block number from checkpoint manager smart contract

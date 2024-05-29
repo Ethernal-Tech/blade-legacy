@@ -13,7 +13,26 @@ import (
 func TestThrottling(t *testing.T) {
 	t.Parallel()
 
-	th := NewThrottling(5, time.Millisecond*50)
+	var attempts = []struct {
+		duration time.Duration
+		delay    time.Duration
+		isError  bool
+	}{
+		// 1st 5 starts immediately, no error, order of execution is irrelevant
+		{200 * time.Millisecond, 0, false},
+		{1000 * time.Millisecond, 0, false},
+		{1000 * time.Millisecond, 0, false},
+		{1000 * time.Millisecond, 0, false},
+		{1000 * time.Millisecond, 0, false},
+
+		// 6th & 8th attempt should fail, from now on order of execution is relevant, hence delay > 0
+		{20 * time.Millisecond, 100 * time.Millisecond, true},
+		{200 * time.Millisecond, 300 * time.Millisecond, false},
+		{20 * time.Millisecond, 400 * time.Millisecond, true},
+		{200 * time.Millisecond, 600 * time.Millisecond, false},
+	}
+
+	th := NewThrottling(5, 20*time.Millisecond)
 	sfn := func(value int, sleep time.Duration) func() (interface{}, error) {
 		return func() (interface{}, error) {
 			time.Sleep(sleep)
@@ -25,71 +44,22 @@ func TestThrottling(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(9)
 
-	go func() {
-		defer wg.Done()
-
-		res, err := th.AttemptRequest(context.Background(), sfn(100, time.Millisecond*500))
-
-		require.NoError(t, err)
-		assert.Equal(t, 100, res.(int))
-	}()
-
-	time.Sleep(time.Millisecond * 100)
-
-	for i := 2; i <= 5; i++ {
-		go func() {
+	for i := 0; i < len(attempts); i++ {
+		go func(value int, duration time.Duration, delay time.Duration, isError bool) {
 			defer wg.Done()
+			time.Sleep(delay)
 
-			res, err := th.AttemptRequest(context.Background(), sfn(100, time.Millisecond*1000))
+			res, err := th.AttemptRequest(context.Background(), sfn(value, duration))
 
-			require.NoError(t, err)
-			assert.Equal(t, 100, res.(int))
-		}()
+			if isError {
+				require.ErrorIs(t, err, errRequestLimitExceeded)
+				assert.Nil(t, res)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, value, res.(int))
+			}
+		}(i, attempts[i].duration, attempts[i].delay, attempts[i].isError)
 	}
-
-	go func() {
-		time.Sleep(time.Millisecond * 50)
-
-		defer wg.Done()
-
-		res, err := th.AttemptRequest(context.Background(), sfn(100, time.Millisecond*100))
-
-		require.ErrorIs(t, err, errRequestLimitExceeded)
-		assert.Nil(t, res)
-	}()
-
-	go func() {
-		time.Sleep(time.Millisecond * 620)
-
-		defer wg.Done()
-
-		res, err := th.AttemptRequest(context.Background(), sfn(10, time.Millisecond*100))
-
-		require.NoError(t, err)
-		assert.Equal(t, 10, res.(int))
-	}()
-
-	go func() {
-		time.Sleep(time.Millisecond * 640)
-
-		defer wg.Done()
-
-		res, err := th.AttemptRequest(context.Background(), sfn(100, time.Millisecond*100))
-
-		require.ErrorIs(t, err, errRequestLimitExceeded)
-		assert.Nil(t, res)
-	}()
-
-	go func() {
-		time.Sleep(time.Millisecond * 1000)
-
-		defer wg.Done()
-
-		res, err := th.AttemptRequest(context.Background(), sfn(1, time.Millisecond*100))
-
-		require.NoError(t, err)
-		assert.Equal(t, 1, res.(int))
-	}()
 
 	wg.Wait()
 }

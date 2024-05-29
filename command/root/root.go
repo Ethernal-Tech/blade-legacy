@@ -15,6 +15,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/monitor"
 	"github.com/0xPolygon/polygon-edge/command/peers"
 	"github.com/0xPolygon/polygon-edge/command/regenesis"
+	"github.com/0xPolygon/polygon-edge/command/sanitycheck"
 	"github.com/0xPolygon/polygon-edge/command/secrets"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/command/server"
@@ -59,6 +60,7 @@ func (rc *RootCommand) registerSubCommands() {
 		mint.GetCommand(),
 		validator.GetCommand(),
 		loadtest.GetCommand(),
+		sanitycheck.GetCommand(),
 	)
 }
 
