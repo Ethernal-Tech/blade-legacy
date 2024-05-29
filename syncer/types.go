@@ -70,6 +70,8 @@ type Syncer interface {
 	HasSyncPeer() bool
 	// Sync starts routine to sync blocks
 	Sync(func(*types.FullBlock) bool) error
+	// UpdateBlockTimeout updates block timeout in syncer
+	UpdateBlockTimeout(time.Duration)
 }
 
 type Progression interface {

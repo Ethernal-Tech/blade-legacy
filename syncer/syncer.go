@@ -3,6 +3,7 @@ package syncer
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/helper/progress"
@@ -38,6 +39,8 @@ type syncer struct {
 
 	// Channel to notify Sync that a new status arrived
 	newStatusCh chan struct{}
+
+	lock sync.RWMutex
 }
 
 func NewSyncer(
@@ -56,6 +59,14 @@ func NewSyncer(
 		newStatusCh:     make(chan struct{}),
 		peerMap:         new(PeerMap),
 	}
+}
+
+// UpdateBlockTimeout updates block timeout in syncer
+func (s *syncer) UpdateBlockTimeout(timeout time.Duration) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.blockTimeout = timeout
 }
 
 // Start starts goroutine processes
@@ -166,46 +177,46 @@ func (s *syncer) Sync(callback func(*types.FullBlock) bool) error {
 
 	for {
 		// Wait for a new event to arrive
-		<-s.newStatusCh
+		select {
+		case <-s.newStatusCh:
+		case <-time.After(s.blockTimeout * 2):
+			// fetch local latest block
+			if header := s.blockchain.Header(); header != nil {
+				localLatest = header.Number
+			}
 
-		// fetch local latest block
-		if header := s.blockchain.Header(); header != nil {
-			localLatest = header.Number
-		}
+			// pick one best peer
+			bestPeer := s.peerMap.BestPeer(skipList)
+			if bestPeer == nil {
+				// Empty skipList map if there are no best peers
+				skipList = make(map[peer.ID]bool)
 
-		// pick one best peer
-		bestPeer := s.peerMap.BestPeer(skipList)
-		if bestPeer == nil {
-			// Empty skipList map if there are no best peers
-			skipList = make(map[peer.ID]bool)
+				continue
+			}
 
-			continue
-		}
+			// if the bestPeer does not have a new block continue
+			if bestPeer.Number <= localLatest {
+				continue
+			}
 
-		// if the bestPeer does not have a new block continue
-		if bestPeer.Number <= localLatest {
-			continue
-		}
+			// fetch block from the peer
+			lastNumber, shouldTerminate, err := s.bulkSyncWithPeer(bestPeer.ID, bestPeer.Number, callback)
+			if err != nil {
+				s.logger.Warn("failed to complete bulk sync with peer, try to next one", "peer ID", "error", bestPeer.ID, err)
+			}
 
-		// fetch block from the peer
-		lastNumber, shouldTerminate, err := s.bulkSyncWithPeer(bestPeer.ID, bestPeer.Number, callback)
-		if err != nil {
-			s.logger.Warn("failed to complete bulk sync with peer, try to next one", "peer ID", "error", bestPeer.ID, err)
-		}
+			if lastNumber < bestPeer.Number {
+				skipList[bestPeer.ID] = true
 
-		if lastNumber < bestPeer.Number {
-			skipList[bestPeer.ID] = true
+				// continue to next peer
+				continue
+			}
 
-			// continue to next peer
-			continue
-		}
-
-		if shouldTerminate {
-			break
+			if shouldTerminate {
+				return nil
+			}
 		}
 	}
-
-	return nil
 }
 
 // bulkSyncWithPeer syncs block with a given peer
@@ -214,7 +225,11 @@ func (s *syncer) bulkSyncWithPeer(peerID peer.ID, peerLatestBlock uint64,
 	localLatest := s.blockchain.Header().Number
 	shouldTerminate := false
 
-	blockCh, err := s.syncPeerClient.GetBlocks(peerID, localLatest+1, s.blockTimeout)
+	s.lock.RLock()
+	blockTimeout := s.blockTimeout
+	s.lock.RUnlock()
+
+	blockCh, err := s.syncPeerClient.GetBlocks(peerID, localLatest+1, blockTimeout)
 	if err != nil {
 		return 0, false, err
 	}
@@ -266,7 +281,7 @@ func (s *syncer) bulkSyncWithPeer(peerID peer.ID, peerLatestBlock uint64,
 			shouldTerminate = newBlockCallback(fullBlock)
 
 			lastReceivedNumber = block.Number()
-		case <-time.After(s.blockTimeout):
+		case <-time.After(blockTimeout):
 			return lastReceivedNumber, shouldTerminate, errTimeout
 		}
 	}

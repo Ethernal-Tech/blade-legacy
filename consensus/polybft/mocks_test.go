@@ -408,6 +408,10 @@ func (tp *syncerMock) Sync(func(*types.FullBlock) bool) error {
 	return args.Error(0)
 }
 
+func (tp *syncerMock) UpdateBlockTimeout(time.Duration) {
+	tp.Called()
+}
+
 func init() {
 	// setup custom hash header func
 	setupHeaderHashFunc()
