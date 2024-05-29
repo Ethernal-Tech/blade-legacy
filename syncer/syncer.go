@@ -186,6 +186,7 @@ func (s *syncer) Sync(callback func(*types.FullBlock) bool) error {
 			s.logger.Debug("new peer status arrived, start syncing")
 		case <-time.After(blockTimeout):
 			s.logger.Debug("timeout while waiting for new peer status, start manual syncing")
+			s.initializePeerMap() // fetch peer statuses just in case
 		}
 
 		// fetch local latest block
