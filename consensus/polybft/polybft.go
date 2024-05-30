@@ -770,11 +770,13 @@ func (p *Polybft) GetValidatorsWithTx(blockNumber uint64, parents []*types.Heade
 func (p *Polybft) SetBlockTime(blockTime time.Duration) {
 	// if block time is greater than default base round timeout,
 	// set base round timeout as twice the block time
+	syncerBlockTimeout := blockTime * 3
 	if blockTime >= core.DefaultBaseRoundTimeout {
 		p.ibft.SetBaseRoundTimeout(blockTime * baseRoundTimeoutScaleFactor)
+		syncerBlockTimeout *= baseRoundTimeoutScaleFactor
 	}
 
-	p.syncer.UpdateBlockTimeout(blockTime * 3)
+	p.syncer.UpdateBlockTimeout(syncerBlockTimeout)
 }
 
 // ProcessHeaders updates the snapshot based on the verified headers
