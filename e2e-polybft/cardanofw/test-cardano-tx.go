@@ -39,9 +39,24 @@ func sendTx(ctx context.Context,
 	testnetMagic int,
 	metadata []byte,
 ) (string, error) {
-	cardanoWalletAddr, _, err := wallet.GetWalletAddress(cardanoWallet, uint(testnetMagic))
-	if err != nil {
-		return "", err
+	var cardanoWalletAddr string
+
+	if len(cardanoWallet.GetStakeVerificationKey()) > 0 {
+		caddr, err := wallet.NewBaseAddress(
+			wallet.TestNetNetwork, cardanoWallet.GetVerificationKey(), cardanoWallet.GetStakeVerificationKey())
+		if err != nil {
+			return "", err
+		}
+
+		cardanoWalletAddr = caddr.String()
+	} else {
+		caddr, err := wallet.NewEnterpriseAddress(
+			wallet.TestNetNetwork, cardanoWallet.GetVerificationKey())
+		if err != nil {
+			return "", err
+		}
+
+		cardanoWalletAddr = caddr.String()
 	}
 
 	protocolParams, err := txProvider.GetProtocolParameters(ctx)
@@ -107,7 +122,7 @@ func GetGenesisWalletFromCluster(
 		return nil, err
 	}
 
-	return wallet.NewWallet(vKeyBytes, sKeyBytes, ""), nil
+	return wallet.NewWallet(vKeyBytes, sKeyBytes), nil
 }
 
 // CreateTx creates tx and returns cbor of raw transaction data, tx hash and error

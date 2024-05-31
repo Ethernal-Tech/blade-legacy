@@ -138,9 +138,9 @@ func (cb *TestCardanoBridge) StopValidators() {
 
 func (cb *TestCardanoBridge) RegisterChains(
 	primeTokenSupply *big.Int,
-	primeBlockfrostURL string,
+	primeOgmiosURL string,
 	vectorTokenSupply *big.Int,
-	vectorBlockfrostURL string,
+	vectorOgmiosURL string,
 ) error {
 	errs := make([]error, len(cb.validators))
 	wg := sync.WaitGroup{}
@@ -153,7 +153,7 @@ func (cb *TestCardanoBridge) RegisterChains(
 
 			errs[indx] = validator.RegisterChain(
 				ChainIDPrime, cb.PrimeMultisigAddr, cb.PrimeMultisigFeeAddr,
-				primeTokenSupply, primeBlockfrostURL,
+				primeTokenSupply, primeOgmiosURL,
 			)
 			if errs[indx] != nil {
 				return
@@ -161,7 +161,7 @@ func (cb *TestCardanoBridge) RegisterChains(
 
 			errs[indx] = validator.RegisterChain(
 				ChainIDVector, cb.VectorMultisigAddr, cb.VectorMultisigFeeAddr,
-				vectorTokenSupply, vectorBlockfrostURL,
+				vectorTokenSupply, vectorOgmiosURL,
 			)
 			if errs[indx] != nil {
 				return
@@ -177,10 +177,10 @@ func (cb *TestCardanoBridge) RegisterChains(
 func (cb *TestCardanoBridge) GenerateConfigs(
 	primeNetworkAddress string,
 	primeNetworkMagic int,
-	primeBlockfrostURL string,
+	primeOgmiosURL string,
 	vectorNetworkAddress string,
 	vectorNetworkMagic int,
-	vectorBlockfrostURL string,
+	vectorOgmiosURL string,
 ) error {
 	errs := make([]error, len(cb.validators))
 	wg := sync.WaitGroup{}
@@ -191,16 +191,22 @@ func (cb *TestCardanoBridge) GenerateConfigs(
 		go func(validator *TestCardanoValidator, indx int) {
 			defer wg.Done()
 
+			telemetryConfig := ""
+			if indx == 0 {
+				telemetryConfig = "0.0.0.0:5001,localhost:8126"
+			}
+
 			errs[indx] = validator.GenerateConfigs(
 				primeNetworkAddress,
 				primeNetworkMagic,
-				primeBlockfrostURL,
+				primeOgmiosURL,
 				vectorNetworkAddress,
 				vectorNetworkMagic,
-				vectorBlockfrostURL,
+				vectorOgmiosURL,
 				cb.apiPortStart+indx,
 				cb.apiKey,
 				cb.ttlInc,
+				telemetryConfig,
 			)
 		}(validator, i)
 	}
