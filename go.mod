@@ -34,7 +34,7 @@ require (
 	github.com/quasilyte/go-ruleguard v0.4.2
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22
 	github.com/ryanuber/columnize v2.1.2+incompatible
-	github.com/schollz/progressbar/v3 v3.14.2
+	github.com/schollz/progressbar/v3 v3.14.3
 	github.com/sethvargo/go-retry v0.2.4
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.9.0
