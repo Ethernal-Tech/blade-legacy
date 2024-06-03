@@ -356,15 +356,14 @@ func opSar(c *state) {
 func opMLoad(c *state) {
 	v := c.top()
 
-	var ok bool
-	c.tmp, ok = c.get2(c.tmp[:0], *v, *wordSize256)
-
-	// ### Error handling?
-	if !ok {
+	if !c.allocateMemory(*v, *wordSize256) {
 		return
 	}
 
-	v.SetBytes(c.tmp)
+	offset := v.Uint64()
+	size := wordSize256.Uint64()
+
+	v.SetBytes(c.memory[offset : offset+size])
 }
 
 func opMStore(c *state) {
