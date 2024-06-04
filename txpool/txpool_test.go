@@ -337,7 +337,7 @@ func TestAddTxErrors(t *testing.T) {
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
 		tx = signTx(tx)
 
-		//	enqueue tx
+		// enqueue tx
 		assert.NoError(t, pool.addTx(local, tx))
 		<-pool.promoteReqCh
 	})
@@ -354,8 +354,11 @@ func TestAddTxErrors(t *testing.T) {
 		tx := newTx(defaultAddr, 0, 1, types.LegacyTxType)
 		tx = signTx(tx)
 
-		//	enqueue tx
+		// enqueue tx
 		assert.NoError(t, pool.AddTx(tx))
+
+		_, exists := pool.index.get(tx.Hash())
+		assert.True(t, exists)
 		<-pool.promoteReqCh
 	})
 
@@ -4277,7 +4280,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 		}
 	})
 
-	b.Run("benchmark more accounts add one tx", func(b *testing.B) {
+	b.Run("benchmark multiple accounts add one tx", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
 
 		txs := make([]*types.Transaction, defaultMaxAccountEnqueued)
@@ -4303,7 +4306,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 		}
 	})
 
-	b.Run("benchmark more accounts add more transactions", func(b *testing.B) {
+	b.Run("benchmark multiple accounts add multiple transactions", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
 		txs := make([]*types.Transaction, accountNumber*defaultMaxAccountEnqueued)
 
@@ -4331,7 +4334,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 		}
 	})
 
-	b.Run("benchmark more accounts more add transaction and transaction replacement", func(b *testing.B) {
+	b.Run("benchmark multiple accounts add multiple transactions with transaction replacement", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
 		txs := make([]*types.Transaction, accountNumber*defaultMaxAccountEnqueued)
 
