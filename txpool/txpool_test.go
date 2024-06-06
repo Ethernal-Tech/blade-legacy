@@ -3735,7 +3735,7 @@ func TestFreeSlots(t *testing.T) {
 	require.NoError(t, err)
 
 	freeslot := pool.gauge.freeSlots()
-	require.NotEqualValues(t, uint64(0), freeslot)
+	require.Greater(t, freeslot, uint64(0))
 }
 
 func TestGetNonceAccountNotExist(t *testing.T) {
@@ -3806,8 +3806,8 @@ func TestGetCapacity(t *testing.T) {
 	assert.NoError(t, pool.addTx(local, tx))
 
 	read, max := pool.GetCapacity()
-	assert.NotEqual(t, uint64(0), read)
-	assert.NotEqual(t, uint64(0), max)
+	assert.Greater(t, read, uint64(0))
+	assert.Greater(t, max, uint64(0))
 }
 
 func TestSetSealing(t *testing.T) {
