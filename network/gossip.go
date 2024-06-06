@@ -107,6 +107,8 @@ func (t *Topic) readLoop(sub *pubsub.Subscription, handler func(obj interface{},
 		}
 
 		go func() {
+			t.logger.Debug("gossip message", "size", len(msg.Data))
+
 			obj := t.createObj()
 			if err := proto.Unmarshal(msg.Data, obj); err != nil {
 				t.logger.Error("failed to unmarshal topic", "err", err)
