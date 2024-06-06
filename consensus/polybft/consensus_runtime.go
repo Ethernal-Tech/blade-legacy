@@ -900,6 +900,12 @@ func (c *consensusRuntime) BuildPrePrepareMessage(
 	certificate *proto.RoundChangeCertificate,
 	view *proto.View,
 ) *proto.Message {
+	// Add debug log for cases when RCC is not nil
+	if certificate != nil {
+		c.logger.Debug("BuildPrePrepareMessage", "rawProposal length", len(rawProposal),
+			"certificate length", len(certificate.String()))
+	}
+
 	if len(rawProposal) == 0 {
 		c.logger.Error("can not build pre-prepare message, since proposal is empty")
 
