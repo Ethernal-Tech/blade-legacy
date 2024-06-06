@@ -1024,7 +1024,7 @@ func opPush(n int) instruction {
 func opDup(n int) instruction {
 	return func(c *state) {
 		if !c.stackAtLeast(n) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: n})
+			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: n})
 		} else {
 			val := c.peekAt(n)
 			c.push(val)
@@ -1035,7 +1035,7 @@ func opDup(n int) instruction {
 func opSwap(n int) instruction {
 	return func(c *state) {
 		if !c.stackAtLeast(n + 1) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: n + 1})
+			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: n + 1})
 		} else {
 			c.swap(n)
 		}
@@ -1053,7 +1053,7 @@ func opLog(size int) instruction {
 		}
 
 		if !c.stackAtLeast(2 + size) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: 2 + size})
+			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: 2 + size})
 
 			return
 		}
