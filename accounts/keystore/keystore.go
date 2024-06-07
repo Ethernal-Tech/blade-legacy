@@ -15,6 +15,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/accounts/event"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/hashicorp/go-hclog"
 )
 
 var (
@@ -51,19 +52,19 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-func NewKeyStore(keyDir string, scryptN, scryptP int) *KeyStore {
+func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
 	keyDir, _ = filepath.Abs(keyDir)
 	ks := &KeyStore{storage: &keyStorePassphrase{keyDir, scryptN, scryptP, false}}
-	ks.init(keyDir)
+	ks.init(keyDir, logger)
 	return ks
 }
 
-func (ks *KeyStore) init(keyDir string) {
+func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 
 	ks.unlocked = make(map[types.Address]*unlocked)
-	ks.cache, ks.changes = newAccountCache(keyDir)
+	ks.cache, ks.changes = newAccountCache(keyDir, logger)
 
 	runtime.SetFinalizer(ks, func(m *KeyStore) {
 		m.cache.close()

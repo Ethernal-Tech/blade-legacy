@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/0xPolygon/polygon-edge/accounts/event"
 	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/crypto/sha3"
@@ -158,4 +159,22 @@ const (
 type WalletEvent struct {
 	Wallet Wallet          // Wallet instance arrived or departed
 	Kind   WalletEventType // Event type that happened in the system
+}
+
+type Backend interface {
+	// Wallets retrieves the list of wallets the backend is currently aware of.
+	//
+	// The returned wallets are not opened by default. For software HD wallets this
+	// means that no base seeds are decrypted, and for hardware wallets that no actual
+	// connection is established.
+	//
+	// The resulting wallet list will be sorted alphabetically based on its internal
+	// URL assigned by the backend. Since wallets (especially hardware) may come and
+	// go, the same wallet might appear at a different positions in the list during
+	// subsequent retrievals.
+	Wallets() []Wallet
+
+	// Subscribe creates an async subscription to receive notifications when the
+	// backend detects the arrival or departure of a wallet.
+	Subscribe(sink chan<- WalletEvent) event.Subscription
 }

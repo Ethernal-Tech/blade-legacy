@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/types"
 	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/hashicorp/go-hclog"
 )
 
 func byURL(a, b accounts.Account) int {
@@ -26,6 +27,7 @@ const minReloadInterval = 2 * time.Second
 
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
+	logger   hclog.Logger
 	keydir   string
 	watcher  *watcher
 	mu       sync.Mutex
@@ -36,8 +38,9 @@ type accountCache struct {
 	fileC    fileCache
 }
 
-func newAccountCache(keyDir string) (*accountCache, chan struct{}) {
+func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan struct{}) {
 	ac := &accountCache{
+		logger: logger,
 		keydir: keyDir,
 		byAddr: make(map[types.Address][]accounts.Account),
 		notify: make(chan struct{}, 1),
@@ -183,7 +186,9 @@ func (ac *accountCache) maybeReload() {
 	ac.watcher.start()
 	ac.throttle.Reset(minReloadInterval)
 	ac.mu.Unlock()
-	ac.scanAccounts()
+	if err := ac.scanAccounts(); err != nil {
+		ac.logger.Info("reload", "failed to scan accounts", err)
+	}
 }
 func (ac *accountCache) close() {
 	ac.mu.Lock()
@@ -204,7 +209,7 @@ func (ac *accountCache) scanAccounts() error {
 	// Scan the entire folder metadata for file changes
 	creates, deletes, updates, err := ac.fileC.scan(ac.keydir)
 	if err != nil {
-		//TO DO log.Debug("Failed to reload keystore contents", "err", err)
+		ac.logger.Debug("Failed to reload keystore contents", "err", err)
 		return err
 	}
 	if creates.Cardinality() == 0 && deletes.Cardinality() == 0 && updates.Cardinality() == 0 {
@@ -220,7 +225,7 @@ func (ac *accountCache) scanAccounts() error {
 	readAccount := func(path string) *accounts.Account {
 		fd, err := os.Open(path)
 		if err != nil {
-			//TO DO log.Trace("Failed to open keystore file", "path", path, "err", err)
+			ac.logger.Trace("Failed to open keystore file", "path", path, "err", err)
 			return nil
 		}
 		defer fd.Close()
@@ -231,9 +236,9 @@ func (ac *accountCache) scanAccounts() error {
 		addr := types.StringToAddress(key.Address)
 		switch {
 		case err != nil:
-			//TO DO log.Debug("Failed to decode keystore key", "path", path, "err", err)
+			ac.logger.Debug("Failed to decode keystore key", "path", path, "err", err)
 		case addr == types.Address{}:
-			//TO DO log.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
+			ac.logger.Debug("Failed to decode keystore key", "path", path, "err", "missing or zero address")
 		default:
 			return &accounts.Account{
 				Address: addr,
@@ -243,7 +248,7 @@ func (ac *accountCache) scanAccounts() error {
 		return nil
 	}
 	// Process all the file diffs
-	//start := time.Now()
+	start := time.Now()
 
 	for _, path := range creates.ToSlice() {
 		if a := readAccount(path); a != nil {
@@ -259,12 +264,12 @@ func (ac *accountCache) scanAccounts() error {
 			ac.add(*a)
 		}
 	}
-	//end := time.Now()
+	end := time.Now()
 
 	select {
 	case ac.notify <- struct{}{}:
 	default:
 	}
-	//TO DO log.Trace("Handled keystore changes", "time", end.Sub(start))
+	ac.logger.Trace("Handled keystore changes", "time", end.Sub(start))
 	return nil
 }

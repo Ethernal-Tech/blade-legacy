@@ -15,6 +15,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -99,7 +101,7 @@ func TestWatchNoDir(t *testing.T) {
 	t.Parallel()
 	// Create ks but not the directory that it watches.
 	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-watchnodir-test-%d-%d", os.Getpid(), rand.Int()))
-	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
+	ks := NewKeyStore(dir, LightScryptN, LightScryptP, hclog.NewNullLogger())
 	list := ks.Accounts()
 	if len(list) > 0 {
 		t.Error("initial account list not empty:", list)
@@ -109,7 +111,7 @@ func TestWatchNoDir(t *testing.T) {
 		t.Fatal("keystore watcher didn't start in time")
 	}
 	// Create the directory and copy a key file into it.
-	os.MkdirAll(dir, 0700)
+	require.NoError(t, os.MkdirAll(dir, 0700))
 	defer os.RemoveAll(dir)
 	file := filepath.Join(dir, "aaa")
 	if err := cp.CopyFile(file, cachetestAccounts[0].URL.Path); err != nil {
@@ -137,7 +139,7 @@ func TestWatchNoDir(t *testing.T) {
 
 func TestCacheInitialReload(t *testing.T) {
 	t.Parallel()
-	cache, _ := newAccountCache(cachetestDir)
+	cache, _ := newAccountCache(cachetestDir, hclog.NewNullLogger())
 	accounts := cache.accounts()
 	if !reflect.DeepEqual(accounts, cachetestAccounts) {
 		t.Fatalf("got initial accounts: %swant %s", spew.Sdump(accounts), spew.Sdump(cachetestAccounts))
@@ -146,7 +148,7 @@ func TestCacheInitialReload(t *testing.T) {
 
 func TestCacheAddDeleteOrder(t *testing.T) {
 	t.Parallel()
-	cache, _ := newAccountCache("testdata/no-such-dir")
+	cache, _ := newAccountCache("testdata/no-such-dir", hclog.NewNullLogger())
 	cache.watcher.running = true // prevent unexpected reloads
 
 	accs := []accounts.Account{
@@ -232,7 +234,7 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 func TestCacheFind(t *testing.T) {
 	t.Parallel()
 	dir := filepath.Join("testdata", "dir")
-	cache, _ := newAccountCache(dir)
+	cache, _ := newAccountCache(dir, hclog.NewNullLogger())
 	cache.watcher.running = true // prevent unexpected reloads
 
 	accs := []accounts.Account{
@@ -310,7 +312,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 
 	// Create a temporary keystore to test with
 	dir := filepath.Join(os.TempDir(), fmt.Sprintf("eth-keystore-updatedkeyfilecontents-test-%d-%d", os.Getpid(), rand.Int()))
-	ks := NewKeyStore(dir, LightScryptN, LightScryptP)
+	ks := NewKeyStore(dir, LightScryptN, LightScryptP, hclog.NewNullLogger())
 
 	list := ks.Accounts()
 	if len(list) > 0 {
@@ -320,7 +322,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		t.Fatal("keystore watcher didn't start in time")
 	}
 	// Create the directory and copy a key file into it.
-	os.MkdirAll(dir, 0700)
+	require.NoError(t, os.MkdirAll(dir, 0700))
 	defer os.RemoveAll(dir)
 	file := filepath.Join(dir, "aaa")
 

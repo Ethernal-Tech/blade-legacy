@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
 	"encoding/json"
@@ -8,11 +9,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/btcsuite/btcd/btcec/v2"
 	"github.com/google/uuid"
 )
 
@@ -124,7 +127,7 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	}
 	key := &Key{
 		Id:         id,
-		Address:    crypto.PubKeyToAddress(&privateKeyECDSA.PublicKey), // get more time for this pointer
+		Address:    crypto.PubKeyToAddress(&privateKeyECDSA.PublicKey), //TO DO get more time for this pointer
 		PrivateKey: privateKeyECDSA,
 	}
 	return key
@@ -179,6 +182,24 @@ func newKey(rand io.Reader) (*Key, error) {
 	return newKeyFromECDSA(privateKeyECDSA), nil
 }
 
+func NewKeyForDirectICAP(rand io.Reader) *Key {
+	randBytes := make([]byte, 64)
+	_, err := rand.Read(randBytes)
+	if err != nil {
+		panic("key generation: could not read from random source: " + err.Error())
+	}
+	reader := bytes.NewReader(randBytes)
+	privateKeyECDSA, err := ecdsa.GenerateKey(btcec.S256(), reader)
+	if err != nil {
+		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
+	}
+	key := newKeyFromECDSA(privateKeyECDSA)
+	if !strings.HasPrefix(key.Address.String(), "0x00") {
+		return NewKeyForDirectICAP(rand)
+	}
+	return key
+}
+
 func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
 	key, err := newKey(rand)
 	if err != nil {
@@ -193,4 +214,12 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 		return nil, a, err
 	}
 	return key, a, err
+}
+
+func writeKeyFile(file string, content []byte) error {
+	name, err := writeTemporaryKeyFile(file, content)
+	if err != nil {
+		return err
+	}
+	return os.Rename(name, file)
 }

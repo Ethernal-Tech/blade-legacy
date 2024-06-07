@@ -16,6 +16,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/hashicorp/go-hclog"
 )
 
 var testSigData = make([]byte, 32)
@@ -444,5 +445,5 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 
 func tmpKeyStore(t *testing.T) (string, *KeyStore) {
 	d := t.TempDir()
-	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP)
+	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
 }

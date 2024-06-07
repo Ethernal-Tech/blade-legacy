@@ -55,7 +55,11 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 	case strings.TrimSpace(components[0]) == "m":
 		components = components[1:]
 	default:
-		result = append(result, DefaultBaseDerivationPath...)
+		result = append(result, DefaultRootDerivationPath...)
+	}
+
+	if len(components) == 0 {
+		return nil, errors.New("empty derivation path")
 	}
 
 	for _, component := range components {
