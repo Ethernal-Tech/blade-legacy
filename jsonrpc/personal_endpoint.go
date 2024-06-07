@@ -17,8 +17,8 @@ type Personal struct {
 	accManager *accounts.Manager
 }
 
-func (p *Personal) ListAccounts() []types.Address {
-	return p.accManager.Accounts()
+func (p *Personal) ListAccounts() ([]types.Address, Error) {
+	return p.accManager.Accounts(), nil
 }
 
 func (p *Personal) NewAccount(password string) (types.Address, error) {
