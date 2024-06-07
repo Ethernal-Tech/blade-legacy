@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
@@ -26,7 +27,11 @@ var (
 	// ErrAccountAlreadyExists is returned if an account attempted to import is
 	// already present in the keystore.
 	ErrAccountAlreadyExists = errors.New("account already exists")
+
+	DefaultStorage, _ = filepath.Abs(filepath.Join("data-storage"))
 )
+
+var KeyStoreType = reflect.TypeOf(&KeyStore{})
 
 // Maximum time between wallet refreshes (if filesystem notifications don't work).
 const walletRefreshCycle = 3 * time.Second
@@ -53,9 +58,14 @@ type unlocked struct {
 }
 
 func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
-	keyDir, _ = filepath.Abs(keyDir)
-	ks := &KeyStore{storage: &keyStorePassphrase{keyDir, scryptN, scryptP, false}}
-	ks.init(keyDir, logger)
+	var ks *KeyStore
+	if keyDir == "" {
+		ks = &KeyStore{storage: &keyStorePassphrase{DefaultStorage, scryptN, scryptP, false}}
+	} else {
+		ks = &KeyStore{storage: &keyStorePassphrase{keyDir, scryptN, scryptP, false}}
+	}
+
+	ks.init(keyDir, hclog.NewNullLogger()) //TO DO LOGGER
 
 	return ks
 }
