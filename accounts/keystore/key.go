@@ -179,6 +179,7 @@ func newKey(rand io.Reader) (*Key, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return newKeyFromECDSA(privateKeyECDSA), nil
 }
 
@@ -188,15 +189,19 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	if err != nil {
 		panic("key generation: could not read from random source: " + err.Error()) //nolint:gocritic
 	}
+
 	reader := bytes.NewReader(randBytes)
 	privateKeyECDSA, err := ecdsa.GenerateKey(btcec.S256(), reader)
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error()) //nolint:gocritic
 	}
+
 	key := newKeyFromECDSA(privateKeyECDSA)
+
 	if !strings.HasPrefix(key.Address.String(), "0x00") {
 		return NewKeyForDirectICAP(rand)
 	}
+
 	return key
 }
 
@@ -205,14 +210,17 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 	if err != nil {
 		return nil, accounts.Account{}, err
 	}
+
 	a := accounts.Account{
 		Address: key.Address,
 		URL:     accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))},
 	}
+
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
 		return nil, a, err
 	}
+
 	return key, a, err
 }
 

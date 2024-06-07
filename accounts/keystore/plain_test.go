@@ -123,6 +123,8 @@ func TestV3_PBKDF2_1(t *testing.T) {
 var testsSubmodule = filepath.Join("..", "..", "tests", "testdata", "KeyStoreTests")
 
 func skipIfSubmoduleMissing(t *testing.T) {
+	t.Helper()
+
 	if !common.FileExists(testsSubmodule) {
 		t.Skipf("can't find JSON tests from submodule at %s", testsSubmodule)
 	}
@@ -188,6 +190,8 @@ func TestV1_2(t *testing.T) {
 }
 
 func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
+	t.Helper()
+
 	privBytes, _, err := decryptKeyV3(&test.JSON, test.Password)
 	if err != nil {
 		t.Fatal(err)
@@ -199,6 +203,8 @@ func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
 }
 
 func testDecryptV1(t *testing.T, test KeyStoreTestV1) {
+	t.Helper()
+
 	privBytes, _, err := decryptKeyV1(&test.JSON, test.Password)
 	if err != nil {
 		t.Fatal(err)
@@ -234,8 +240,8 @@ func loadKeyStoreTestV1(t *testing.T, file string) map[string]KeyStoreTestV1 {
 func TestKeyForDirectICAP(t *testing.T) {
 	t.Parallel()
 	key := NewKeyForDirectICAP(rand.Reader)
-	if !strings.HasPrefix(types.AddressToString(key.Address), "0x00") {
-		t.Errorf("Expected first address byte to be zero, have: %s", types.AddressToString(key.Address))
+	if !strings.HasPrefix(key.Address.String(), "0x00") {
+		t.Errorf("Expected first address byte to be zero, have: %s", key.Address.String())
 	}
 }
 
