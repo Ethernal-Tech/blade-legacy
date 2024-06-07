@@ -135,40 +135,6 @@ func TestV3_Scrypt_2(t *testing.T) {
 	testDecryptV3(t, tests["test2"])
 }
 
-/*
-	 func TestV1_2(t *testing.T) {
-		t.Parallel()
-
-		ks := &keyStorePassphrase{LightScryptN, LightScryptP}
-		addr := types.StringToAddress("cb61d5a9c4896fb9658090b597ef0e7be6f7b67e")
-		file := "testdata/v1/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e"
-
-		keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		keyEncrypted := new(encryptedKeyJSONV3)
-
-		keyEncrypted :=
-
-		k, err := ks.GetKey(addr, file, "g")
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		privKey, err := crypto.MarshalECDSAPrivateKey(k.PrivateKey)
-		require.NoError(t, err)
-
-		privHex := hex.EncodeToString(privKey)
-
-		expectedHex := "d1b1178d3529626a1a93e073f65028370d14c7eb0936eb42abef05db6f37ad7d"
-		if privHex != expectedHex {
-			t.Fatal(fmt.Errorf("Unexpected privkey: %v, expected %v", privHex, expectedHex))
-		}
-	}
-*/
-
 func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
 	t.Helper()
 
