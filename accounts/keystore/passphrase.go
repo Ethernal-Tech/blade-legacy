@@ -74,6 +74,7 @@ func (ks keyStorePassphrase) GetKey(addr types.Address, filename, auth string) (
 // StoreKey generates a key, encrypts with 'auth' and stores in the given directory
 func StoreKey(dir, auth string, scryptN, scryptP int) (accounts.Account, error) {
 	_, a, err := storeNewKey(&keyStorePassphrase{dir, scryptN, scryptP, false}, rand.Reader, auth)
+
 	return a, err
 }
 
@@ -82,19 +83,23 @@ func (ks keyStorePassphrase) StoreKey(filename string, key *Key, auth string) er
 	if err != nil {
 		return err
 	}
+
 	// Write into temporary file
 	tmpName, err := writeTemporaryKeyFile(filename, keyjson)
 	if err != nil {
 		return err
 	}
+
 	if !ks.skipKeyFileVerification {
 		// Verify that we can decrypt the file with the given password.
 		_, err = ks.GetKey(key.Address, tmpName, auth)
 		if err != nil {
-			msg := "an error was encountered when saving and verifying the keystore file. \n"
+			msg := "an error was encountered when saving and verifying the keystore file"
+
 			return fmt.Errorf(msg, tmpName, err)
 		}
 	}
+
 	return os.Rename(tmpName, filename)
 }
 
@@ -102,29 +107,35 @@ func (ks keyStorePassphrase) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
 	}
+
 	return filepath.Join(ks.keysDirPath, filename)
 }
 
 // EncryptDataV3 encrypts the data given as 'data' with the password 'auth'.
 func EncryptDataV3(data, auth []byte, scryptN, scryptP int) (CryptoJSON, error) {
 	salt := make([]byte, 32)
+
 	if _, err := io.ReadFull(rand.Reader, salt); err != nil {
 		panic("reading from crypto/rand failed: " + err.Error()) //nolint:gocritic
 	}
+
 	derivedKey, err := scrypt.Key(auth, salt, scryptN, scryptR, scryptP, scryptDKLen)
 	if err != nil {
 		return CryptoJSON{}, err
 	}
+
 	encryptKey := derivedKey[:16]
 
 	iv := make([]byte, aes.BlockSize) // 16
 	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
 		panic("reading from crypto/rand failed: " + err.Error()) //nolint:gocritic
 	}
+
 	cipherText, err := aesCTRXOR(encryptKey, data, iv)
 	if err != nil {
 		return CryptoJSON{}, err
 	}
+
 	mac := crypto.Keccak256(derivedKey[16:32], cipherText)
 
 	scryptParamsJSON := make(map[string]interface{}, 5)
@@ -145,6 +156,7 @@ func EncryptDataV3(data, auth []byte, scryptN, scryptP int) (CryptoJSON, error) 
 		KDFParams:    scryptParamsJSON,
 		MAC:          hex.EncodeToString(mac),
 	}
+
 	return cryptoStruct, nil
 }
 
@@ -160,12 +172,14 @@ func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	encryptedKeyJSONV3 := encryptedKeyJSONV3{
 		hex.EncodeToString(key.Address[:]),
 		cryptoStruct,
 		key.ID.String(),
 		version,
 	}
+
 	return json.Marshal(encryptedKeyJSONV3)
 }
 
@@ -183,31 +197,39 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		keyBytes, keyID []byte
 		err             error
 	)
+
 	if version, ok := m["version"].(string); ok && version == "1" {
 		k := new(encryptedKeyJSONV1)
+
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
+
 		keyBytes, keyID, err = decryptKeyV1(k, auth)
 	} else {
 		k := new(encryptedKeyJSONV3)
+
 		if err := json.Unmarshal(keyjson, k); err != nil {
 			return nil, err
 		}
+
 		keyBytes, keyID, err = decryptKeyV3(k, auth)
 	}
 	// Handle any decryption errors and return the key
 	if err != nil {
 		return nil, err
 	}
+
 	key, err := crypto.DToECDSA(keyBytes, true) //TO DO maybe wrong
 	if err != nil {
 		return nil, fmt.Errorf("invalid key: %w", err)
 	}
+
 	id, err := uuid.FromBytes(keyID)
 	if err != nil {
 		return nil, fmt.Errorf("invalid UUID: %w", err)
 	}
+
 	return &Key{
 		ID:         id,
 		Address:    crypto.PubKeyToAddress(&key.PublicKey),
@@ -219,6 +241,7 @@ func DecryptDataV3(cryptoJSON CryptoJSON, auth string) ([]byte, error) {
 	if cryptoJSON.Cipher != "aes-128-ctr" {
 		return nil, fmt.Errorf("cipher not supported: %v", cryptoJSON.Cipher)
 	}
+
 	mac, err := hex.DecodeString(cryptoJSON.MAC)
 	if err != nil {
 		return nil, err
@@ -248,6 +271,7 @@ func DecryptDataV3(cryptoJSON CryptoJSON, auth string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return plainText, err
 }
 
@@ -255,15 +279,19 @@ func decryptKeyV3(keyProtected *encryptedKeyJSONV3, auth string) (keyBytes []byt
 	if keyProtected.Version != version {
 		return nil, nil, fmt.Errorf("version not supported: %v", keyProtected.Version)
 	}
+
 	keyUUID, err := uuid.Parse(keyProtected.ID)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	keyID = keyUUID[:]
+
 	plainText, err := DecryptDataV3(keyProtected.Crypto, auth)
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return plainText, keyID, err
 }
 
@@ -272,7 +300,9 @@ func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, nil, err
 	}
+
 	keyID = keyUUID[:]
+
 	mac, err := hex.DecodeString(keyProtected.Crypto.MAC)
 	if err != nil {
 		return nil, nil, err
@@ -302,29 +332,36 @@ func decryptKeyV1(keyProtected *encryptedKeyJSONV1, auth string) (keyBytes []byt
 	if err != nil {
 		return nil, nil, err
 	}
+
 	return plainText, keyID, err
 }
 
 func getKDFKey(cryptoJSON CryptoJSON, auth string) ([]byte, error) {
 	authArray := []byte(auth)
+
 	salt, err := hex.DecodeString(cryptoJSON.KDFParams["salt"].(string))
 	if err != nil {
 		return nil, err
 	}
+
 	dkLen := ensureInt(cryptoJSON.KDFParams["dklen"])
 
 	if cryptoJSON.KDF == keyHeaderKDF {
 		n := ensureInt(cryptoJSON.KDFParams["n"])
 		r := ensureInt(cryptoJSON.KDFParams["r"])
 		p := ensureInt(cryptoJSON.KDFParams["p"])
+
 		return scrypt.Key(authArray, salt, n, r, p, dkLen)
 	} else if cryptoJSON.KDF == "pbkdf2" {
 		c := ensureInt(cryptoJSON.KDFParams["c"])
 		prf := cryptoJSON.KDFParams["prf"].(string) //nolint:forcetypeassert
+
 		if prf != "hmac-sha256" {
 			return nil, fmt.Errorf("unsupported PBKDF2 PRF: %s", prf)
 		}
+
 		key := pbkdf2.Key(authArray, salt, c, dkLen, sha256.New)
+
 		return key, nil
 	}
 
@@ -336,5 +373,6 @@ func ensureInt(x interface{}) int {
 	if !ok {
 		res = int(x.(float64)) //nolint:forcetypeassert
 	}
+
 	return res
 }

@@ -123,6 +123,7 @@ func (path DerivationPath) MarshalJSON() ([]byte, error) {
 
 func (path *DerivationPath) UnmarshalJSON(b []byte) error {
 	var dp string
+
 	var err error
 
 	if err = json.Unmarshal(b, &dp); err != nil {
@@ -130,6 +131,7 @@ func (path *DerivationPath) UnmarshalJSON(b []byte) error {
 	}
 
 	*path, err = ParseDerivationPath(dp)
+
 	return err
 }
 
@@ -137,10 +139,12 @@ func DefaultIterator(base DerivationPath) func() DerivationPath {
 	path := make(DerivationPath, len(base))
 
 	copy(path[:], base[:])
+
 	path[len(path)-1]--
 
 	return func() DerivationPath {
 		path[len(path)-1]++
+
 		return path
 	}
 }
@@ -149,10 +153,12 @@ func LedgerLiveIterator(base DerivationPath) func() DerivationPath {
 	path := make(DerivationPath, len(base))
 
 	copy(path[:], base[:])
+
 	path[2]--
 
 	return func() DerivationPath {
 		path[2]++
+
 		return path
 	}
 }

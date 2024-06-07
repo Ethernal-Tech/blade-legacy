@@ -59,11 +59,13 @@ func (sc *SubscriptionScope) Track(s Subscription) Subscription {
 func (sc *SubscriptionScope) Close() {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+
 	if sc.closed {
 		return
 	}
 
 	sc.closed = true
+
 	for s := range sc.subs {
 		s.s.Unsubscribe()
 	}

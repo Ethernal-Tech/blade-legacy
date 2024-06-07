@@ -18,14 +18,19 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 	if err != nil {
 		return nil, err
 	}
+
 	defer fd.Close()
+
 	key := new(Key)
+
 	if err := json.NewDecoder(fd).Decode(key); err != nil {
 		return nil, err
 	}
+
 	if key.Address != addr {
 		return nil, fmt.Errorf("key content mismatch: have address %x, want %x", key.Address, addr)
 	}
+
 	return key, nil
 }
 
@@ -34,6 +39,7 @@ func (ks keyStorePlain) StoreKey(filename string, key *Key, auth string) error {
 	if err != nil {
 		return err
 	}
+
 	return writeKeyFile(filename, content)
 }
 
@@ -41,5 +47,6 @@ func (ks keyStorePlain) JoinPath(filename string) string {
 	if filepath.IsAbs(filename) {
 		return filename
 	}
+
 	return filepath.Join(ks.keysDirPath, filename)
 }

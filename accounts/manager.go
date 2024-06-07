@@ -90,7 +90,9 @@ func (am *Manager) Config() *Config {
 
 func (am *Manager) AddBackend(backend Backend) {
 	done := make(chan struct{})
+
 	am.newBackends <- newBackendEvent{backend, done}
+
 	<-done
 }
 
@@ -133,6 +135,7 @@ func (am *Manager) update() {
 			errc <- nil
 
 			close(am.term)
+
 			return
 		}
 	}
@@ -155,6 +158,7 @@ func (am *Manager) Wallets() []Wallet {
 func (am *Manager) walletsNoLock() []Wallet {
 	cpy := make([]Wallet, len(am.wallets))
 	copy(cpy, am.wallets)
+
 	return cpy
 }
 
@@ -200,6 +204,7 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 			return wallet, nil
 		}
 	}
+
 	return nil, ErrUnknownAccount
 }
 
@@ -216,6 +221,7 @@ func merge(slice []Wallet, wallets ...Wallet) []Wallet {
 
 		slice = append(slice[:n], slice[n+1:]...)
 	}
+
 	return slice
 }
 

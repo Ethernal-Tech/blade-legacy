@@ -31,7 +31,9 @@ func (w *watcher) start() {
 	if w.starting || w.running {
 		return
 	}
+
 	w.starting = true
+
 	go w.loop()
 }
 
@@ -51,6 +53,7 @@ func (w *watcher) loop() {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		w.logger.Error("Failed to start filesystem watcher", "err", err)
+
 		return
 	}
 
@@ -60,6 +63,7 @@ func (w *watcher) loop() {
 		if !os.IsNotExist(err) {
 			w.logger.Info("Failed to watch keystore folder", "err", err)
 		}
+
 		return
 	}
 
@@ -67,7 +71,9 @@ func (w *watcher) loop() {
 	defer w.logger.Trace("Stopped watching keystore folder")
 
 	w.ac.mu.Lock()
+
 	w.running = true
+
 	w.ac.mu.Unlock()
 
 	var (
@@ -79,7 +85,9 @@ func (w *watcher) loop() {
 	if !debounce.Stop() {
 		<-debounce.C
 	}
+
 	defer debounce.Stop()
+
 	for {
 		select {
 		case <-w.quit:
@@ -91,6 +99,7 @@ func (w *watcher) loop() {
 
 			if !rescanTriggered {
 				debounce.Reset(debounceDuration)
+
 				rescanTriggered = true
 			}
 
@@ -98,11 +107,13 @@ func (w *watcher) loop() {
 			if !ok {
 				return
 			}
+
 			w.logger.Info("Filesystem watcher error", "err", err)
 		case <-debounce.C:
 			if err := w.ac.scanAccounts(); err != nil {
 				w.logger.Info("loop", "scanAccounts", err)
 			}
+
 			rescanTriggered = false
 		}
 	}

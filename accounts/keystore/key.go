@@ -87,27 +87,34 @@ func (k *Key) MarshalJSON() (j []byte, err error) {
 		k.ID.String(),
 		version,
 	}
+
 	j, err = json.Marshal(jStruct)
+
 	return j, err
 }
 
 func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	keyJSON := new(plainKeyJSON)
+
 	err = json.Unmarshal(j, &keyJSON)
 	if err != nil {
 		return err
 	}
 
 	u := new(uuid.UUID)
+
 	*u, err = uuid.Parse(keyJSON.ID)
 	if err != nil {
 		return err
 	}
+
 	k.ID = *u
+
 	addr, err := hex.DecodeString(keyJSON.Address)
 	if err != nil {
 		return err
 	}
+
 	privkey, err := crypto.HexToECDSA(keyJSON.PrivateKey)
 	if err != nil {
 		return err
@@ -125,11 +132,13 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	if err != nil {
 		panic(fmt.Sprintf("Could not create random uuid: %v", err)) //nolint:gocritic
 	}
+
 	key := &Key{
 		ID:         id,
 		Address:    crypto.PubKeyToAddress(&privateKeyECDSA.PublicKey), //TO DO get more time for this pointer
 		PrivateKey: privateKeyECDSA,
 	}
+
 	return key
 }
 
@@ -137,17 +146,21 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 // UTC--<created_at UTC ISO8601>-<address hex>
 func keyFileName(keyAddr types.Address) string {
 	ts := time.Now().UTC()
+
 	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
 }
 
 func toISO8601(t time.Time) string {
 	var tz string
+
 	name, offset := t.Zone()
+
 	if name == "UTC" {
 		tz = "Z"
 	} else {
 		tz = fmt.Sprintf("%03d00", offset/3600)
 	}
+
 	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s",
 		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
@@ -165,12 +178,16 @@ func writeTemporaryKeyFile(file string, content []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if _, err := f.Write(content); err != nil {
 		f.Close()
 		os.Remove(f.Name())
+
 		return "", err
 	}
+
 	f.Close()
+
 	return f.Name(), nil
 }
 
@@ -186,11 +203,13 @@ func newKey(rand io.Reader) (*Key, error) {
 func NewKeyForDirectICAP(rand io.Reader) *Key {
 	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
+
 	if err != nil {
 		panic("key generation: could not read from random source: " + err.Error()) //nolint:gocritic
 	}
 
 	reader := bytes.NewReader(randBytes)
+
 	privateKeyECDSA, err := ecdsa.GenerateKey(btcec.S256(), reader)
 	if err != nil {
 		panic("key generation: ecdsa.GenerateKey failed: " + err.Error()) //nolint:gocritic
@@ -218,6 +237,7 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Accou
 
 	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
 		zeroKey(key.PrivateKey)
+
 		return nil, a, err
 	}
 
@@ -229,5 +249,6 @@ func writeKeyFile(file string, content []byte) error {
 	if err != nil {
 		return err
 	}
+
 	return os.Rename(name, file)
 }

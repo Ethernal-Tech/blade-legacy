@@ -51,12 +51,15 @@ type AmbiguousAddrError struct {
 
 func (err *AmbiguousAddrError) Error() string {
 	files := ""
+
 	for i, a := range err.Matches {
 		files += a.URL.Path
+
 		if i < len(err.Matches)-1 {
 			files += ", "
 		}
 	}
+
 	return fmt.Sprintf("multiple keys match address (%s)", files)
 }
 
@@ -65,13 +68,17 @@ func LoadJSON(file string, val interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	if err := json.Unmarshal(content, val); err != nil {
 		if syntaxerr, ok := err.(*json.SyntaxError); ok { //nolint:errorlint
 			line := findLine(content, syntaxerr.Offset)
+
 			return fmt.Errorf("JSON syntax error at %v:%v: %w", file, line, err)
 		}
+
 		return fmt.Errorf("JSON unmarshal error in %v: %w", file, err)
 	}
+
 	return nil
 }
 

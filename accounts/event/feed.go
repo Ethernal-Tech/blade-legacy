@@ -84,6 +84,7 @@ func (f *Feed) remove(sub *feedSub) {
 	// Delete from inbox first, which covers channels
 	// that have not been added to f.sendCases yet.
 	ch := sub.channel.Interface()
+
 	f.mu.Lock()
 	index := f.inbox.find(ch)
 

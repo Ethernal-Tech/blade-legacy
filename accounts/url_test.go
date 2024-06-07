@@ -10,13 +10,17 @@ const (
 
 func TestURLParsing(t *testing.T) {
 	t.Parallel()
+
 	url, err := parseURL(bladeURLWithPrefix)
+
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
 	if url.Scheme != "https" {
 		t.Errorf("expected: %v, got: %v", "https", url.Scheme)
 	}
+
 	if url.Path != bladeURL {
 		t.Errorf("expected: %v, got: %v", bladeURL, url.Path)
 	}
@@ -30,12 +34,15 @@ func TestURLParsing(t *testing.T) {
 
 func TestURLString(t *testing.T) {
 	t.Parallel()
+
 	url := URL{Scheme: "https", Path: bladeURL}
+
 	if url.String() != bladeURLWithPrefix {
 		t.Errorf("expected: %v, got: %v", bladeURLWithPrefix, url.String())
 	}
 
 	url = URL{Scheme: "", Path: bladeURL}
+
 	if url.String() != bladeURL {
 		t.Errorf("expected: %v, got: %v", bladeURL, url.String())
 	}
@@ -43,11 +50,14 @@ func TestURLString(t *testing.T) {
 
 func TestURLMarshalJSON(t *testing.T) {
 	t.Parallel()
+
 	url := URL{Scheme: "https", Path: bladeURL}
+
 	json, err := url.MarshalJSON()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
 	if string(json) != bladeURLJSON {
 		t.Errorf("expected: %v, got: %v", bladeURLJSON, string(json))
 	}
@@ -55,14 +65,18 @@ func TestURLMarshalJSON(t *testing.T) {
 
 func TestURLUnmarshalJSON(t *testing.T) {
 	t.Parallel()
+
 	url := &URL{}
+
 	err := url.UnmarshalJSON([]byte(bladeURLJSON))
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
+
 	if url.Scheme != "https" {
 		t.Errorf("expected: %v, got: %v", "https", url.Scheme)
 	}
+
 	if url.Path != bladeURL {
 		t.Errorf("expected: %v, got: %v", "https", url.Path)
 	}
@@ -70,6 +84,7 @@ func TestURLUnmarshalJSON(t *testing.T) {
 
 func TestURLComparison(t *testing.T) {
 	t.Parallel()
+
 	tests := []struct {
 		urlA   URL
 		urlB   URL
@@ -83,6 +98,7 @@ func TestURLComparison(t *testing.T) {
 
 	for i, tt := range tests {
 		result := tt.urlA.Cmp(tt.urlB)
+
 		if result != tt.expect {
 			t.Errorf("test %d: cmp mismatch: expected: %d, got: %d", i, tt.expect, result)
 		}

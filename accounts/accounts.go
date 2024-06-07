@@ -129,6 +129,7 @@ type Wallet interface {
 
 func TextHash(data []byte) []byte {
 	hash, _ := TextAndHash(data)
+
 	return hash
 }
 

@@ -31,6 +31,7 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set[string], mapset.Set[string]
 	mods := mapset.NewThreadUnsafeSet[string]()
 
 	var newLastMod time.Time
+
 	for _, fi := range files {
 		if nonKeyFile(fi) {
 			continue
@@ -49,6 +50,7 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set[string], mapset.Set[string]
 		if modified.After(fc.lastMod) {
 			mods.Add(path)
 		}
+
 		if modified.After(newLastMod) {
 			newLastMod = modified
 		}
@@ -73,5 +75,6 @@ func nonKeyFile(fi os.DirEntry) bool {
 	if fi.IsDir() || !fi.Type().IsRegular() {
 		return true
 	}
+
 	return false
 }
