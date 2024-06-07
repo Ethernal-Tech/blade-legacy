@@ -385,7 +385,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 	require.NoError(t, os.Chtimes(file, time.Now().UTC().Add(-time.Second), time.Now().UTC().Add(-time.Second)))
 
 	// Now replace file contents
-	if err := forceCopyFile(cachetestAccounts[1].URL.Path, file); err != nil {
+	if err := cp.CopyFileOverwrite(file, cachetestAccounts[1].URL.Path); err != nil {
 		t.Fatal(err)
 
 		return
@@ -405,7 +405,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 	require.NoError(t, os.Chtimes(file, time.Now().UTC().Add(-time.Second), time.Now().UTC().Add(-time.Second)))
 
 	// Now replace file contents again
-	if err := forceCopyFile(cachetestAccounts[2].URL.Path, file); err != nil {
+	if err := cp.CopyFileOverwrite(file, cachetestAccounts[2].URL.Path); err != nil {
 		t.Fatal(err)
 
 		return
