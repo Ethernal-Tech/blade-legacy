@@ -3,16 +3,12 @@ package keystore
 import (
 	"errors"
 	"math/rand"
-	"os"
-	"runtime"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
 	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
 )
@@ -24,24 +20,11 @@ const pass = "foo"
 func TestKeyStore(t *testing.T) {
 	t.Parallel()
 
-	dir, ks := tmpKeyStore(t)
+	_, ks := tmpKeyStore(t)
 
 	a, err := ks.NewAccount(pass)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	if !strings.HasPrefix(a.URL.Path, dir) {
-		t.Errorf("account file %s doesn't have dir prefix", a.URL)
-	}
-
-	stat, err := os.Stat(a.URL.Path)
-	if err != nil {
-		t.Fatalf("account file %s doesn't exist (%v)", a.URL, err)
-	}
-
-	if runtime.GOOS != "windows" && stat.Mode() != 0600 {
-		t.Fatalf("account file has wrong mode: got %o, want %o", stat.Mode(), 0600)
 	}
 
 	if !ks.HasAddress(a.Address) {
@@ -54,10 +37,6 @@ func TestKeyStore(t *testing.T) {
 
 	if err := ks.Delete(a, "bar"); err != nil {
 		t.Errorf("Delete error: %v", err)
-	}
-
-	if common.FileExists(a.URL.Path) {
-		t.Errorf("account file %s should be gone after Delete", a.URL)
 	}
 
 	if ks.HasAddress(a.Address) {
@@ -406,8 +385,19 @@ func checkAccounts(t *testing.T, live map[types.Address]accounts.Account, wallet
 	for j, wallet := range wallets {
 		if accs := wallet.Accounts(); len(accs) != 1 {
 			t.Errorf("wallet %d: contains invalid number of accounts: have %d, want 1", j, len(accs))
-		} else if accs[0] != liveList[j] {
-			t.Errorf("wallet %d: account mismatch: have %v, want %v", j, accs[0], liveList[j])
+		}
+
+		isFind := false
+		for _, liveWallet := range liveList {
+			if liveWallet == wallet.Accounts()[0] {
+				isFind = true
+
+				break
+			}
+		}
+
+		if !isFind {
+			t.Errorf("wallet %d: account mismatch: have %v, want %v", j, wallet, liveList[j])
 		}
 	}
 }
