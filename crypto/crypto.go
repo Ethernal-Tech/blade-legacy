@@ -367,15 +367,18 @@ func LatestSignerForChainID(chaidID uint64) TxSigner {
 	if chaidID == 0 { // TO DO maybe wrong
 		return NewHomesteadSigner()
 	}
+
 	return NewLondonSigner(chaidID)
 }
 
 func DToECDSA(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = btcec.S256()
+
 	if strict && 8*len(d) != priv.Params().BitSize {
 		return nil, fmt.Errorf("invalid length, need %d bits", priv.Params().BitSize)
 	}
+
 	priv.D = new(big.Int).SetBytes(d)
 
 	if priv.D.Cmp(secp256k1N) >= 0 {

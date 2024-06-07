@@ -28,7 +28,7 @@ var (
 	// already present in the keystore.
 	ErrAccountAlreadyExists = errors.New("account already exists")
 
-	DefaultStorage, _ = filepath.Abs(filepath.Join("data-storage"))
+	DefaultStorage, _ = filepath.Abs(filepath.Join("data-storage")) //nolint:gocritic
 )
 
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
@@ -65,7 +65,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyS
 		ks = &KeyStore{storage: &keyStorePassphrase{keyDir, scryptN, scryptP, false}}
 	}
 
-	ks.init(keyDir, hclog.NewNullLogger()) //TO DO LOGGER
+	ks.init(keyDir, hclog.NewNullLogger()) // TO DO LOGGER
 
 	return ks
 }

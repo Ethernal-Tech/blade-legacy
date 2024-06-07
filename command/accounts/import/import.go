@@ -91,7 +91,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	privKey, err := crypto.BytesToECDSAPrivateKey(dec)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("Failed to initialize private key"))
+		outputter.SetError(fmt.Errorf("failed to initialize private key"))
 	}
 
 	backends := am.Backends(keystore.KeyStoreType)

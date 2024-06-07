@@ -253,6 +253,7 @@ func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
 	if err != nil {
 		return nil, errors.New("invalid address")
 	}
+
 	return &MixedcaseAddress{addr: addr, original: addr.String()}, nil
 }
 
@@ -266,6 +267,7 @@ func (ma *MixedcaseAddress) String() string {
 	if ma.ValidChecksum() {
 		return fmt.Sprintf("%s [chksum ok]", ma.original)
 	}
+
 	return fmt.Sprintf("%s [chksum INVALID]", ma.original)
 }
 

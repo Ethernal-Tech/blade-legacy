@@ -163,7 +163,7 @@ func EncryptDataV3(data, auth []byte, scryptN, scryptP int) (CryptoJSON, error) 
 // EncryptKey encrypts a key using the specified scrypt parameters into a json
 // blob that can be decrypted later on.
 func EncryptKey(key *Key, auth string, scryptN, scryptP int) ([]byte, error) {
-	keyBytes, err := crypto.MarshalECDSAPrivateKey(key.PrivateKey) //TO DO maybe wrong
+	keyBytes, err := crypto.MarshalECDSAPrivateKey(key.PrivateKey) // TO DO maybe wrong
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +220,7 @@ func DecryptKey(keyjson []byte, auth string) (*Key, error) {
 		return nil, err
 	}
 
-	key, err := crypto.DToECDSA(keyBytes, true) //TO DO maybe wrong
+	key, err := crypto.DToECDSA(keyBytes, true) // TO DO maybe wrong
 	if err != nil {
 		return nil, fmt.Errorf("invalid key: %w", err)
 	}

@@ -60,7 +60,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	account, err := keystore.StoreKey("", params.Passphrase, scryptN, scryptP)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("Cant create account"))
+		outputter.SetError(fmt.Errorf("can't create account"))
 	}
 
 	outputter.SetCommandResult(command.Results{&createResult{Address: account.Address, PrivateKeyPath: account.URL.Path}})
