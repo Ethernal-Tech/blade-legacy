@@ -2,68 +2,29 @@ package keystore
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
 // fileCache is a cache of files seen during scan of keystore.
 type fileCache struct {
-	all     map[types.Address]encryptedKeyJSONV3 // Set of all files from the keystore folder
-	lastMod time.Time                            // Last time instance when a file was modified
-	mu      sync.Mutex
-	keyDir  string
+	all    map[types.Address]encryptedKeyJSONV3
+	mu     sync.Mutex
+	keyDir string
 }
 
-/*func (fc *fileCache) scan(keyDir string) (mapset.Set[string], mapset.Set[string], mapset.Set[string], error) {
-	// List all the files from the keystore folder
-	files, err := os.ReadDir(keyDir)
-	if err != nil {
-		return nil, nil, nil, err
+func NewFileCache(keyPath string) *fileCache {
+	fc := &fileCache{all: make(map[types.Address]encryptedKeyJSONV3), keyDir: keyPath}
+
+	if _, err := os.Stat(keyPath); errors.Is(err, os.ErrNotExist) {
+		os.Create(fc.keyDir)
 	}
 
-	fc.mu.Lock()
-	defer fc.mu.Unlock()
-
-	all := mapset.NewThreadUnsafeSet[string]()
-	mods := mapset.NewThreadUnsafeSet[string]()
-
-	var newLastMod time.Time
-
-	for _, fi := range files {
-		if nonKeyFile(fi) {
-			continue
-		}
-
-		path := filepath.Join(keyDir, fi.Name())
-
-		all.Add(path)
-
-		info, err := fi.Info()
-		if err != nil {
-			return nil, nil, nil, err
-		}
-
-		modified := info.ModTime()
-		if modified.After(fc.lastMod) {
-			mods.Add(path)
-		}
-
-		if modified.After(newLastMod) {
-			newLastMod = modified
-		}
-	}
-
-	deletes := fc.all.Difference(all)
-	creates := all.Difference(fc.all)
-	updates := mods.Difference(creates)
-
-	fc.all, fc.lastMod = all, newLastMod
-
-	return creates, deletes, updates, nil
-}  */
+	return fc
+}
 
 func (fc *fileCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) error {
 	fi, err := os.Create(fc.keyDir)

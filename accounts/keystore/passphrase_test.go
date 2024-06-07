@@ -3,15 +3,14 @@ package keystore
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
-	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
@@ -25,42 +24,30 @@ const (
 func TestKeyStorePassphrase(t *testing.T) {
 	t.Parallel()
 
-	d := t.TempDir()
-
-	ks := &keyStorePassphrase{d, veryLightScryptN, veryLightScryptP, true}
+	ks := &keyStorePassphrase{veryLightScryptN, veryLightScryptP}
 
 	k1, account, err := storeNewKey(ks, rand.Reader, pass)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	k2, err := ks.GetKey(k1.Address, account.URL.Path, pass)
-	if err != nil {
-		t.Fatal(err)
-	}
+	k2, err := ks.GetKey(k1, pass)
+	require.NoError(t, err)
 
-	if !reflect.DeepEqual(k1.Address, k2.Address) {
-		t.Fatal(err)
-	}
+	require.Equal(t, types.StringToAddress(k1.Address), k2.Address)
 
-	if !reflect.DeepEqual(k1.PrivateKey, k2.PrivateKey) {
-		t.Fatal(err)
-	}
+	require.Equal(t, k2.Address, account.Address)
 }
 
 func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 	t.Parallel()
 
-	d := t.TempDir()
+	ks := &keyStorePassphrase{veryLightScryptN, veryLightScryptP}
 
-	ks := &keyStorePassphrase{d, veryLightScryptN, veryLightScryptP, true}
-
-	k1, account, err := storeNewKey(ks, rand.Reader, pass)
+	k1, _, err := storeNewKey(ks, rand.Reader, pass)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err = ks.GetKey(k1.Address, account.URL.Path, "bar"); err.Error() != ErrDecrypt.Error() {
+	if _, err = ks.GetKey(k1, "bar"); err.Error() != ErrDecrypt.Error() {
 		t.Fatalf("wrong error for invalid password\ngot %q\nwant %q", err, ErrDecrypt)
 	}
 }
@@ -68,9 +55,7 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 func TestImportPreSaleKey(t *testing.T) {
 	t.Parallel()
 
-	d := t.TempDir()
-
-	ks := &keyStorePassphrase{d, veryLightScryptN, veryLightScryptP, true}
+	ks := &keyStorePassphrase{veryLightScryptN, veryLightScryptP}
 
 	// file content of a presale key file generated with:
 	// python pyethsaletool.py genwallet
@@ -85,22 +70,12 @@ func TestImportPreSaleKey(t *testing.T) {
 	if account.Address != types.StringToAddress("d4584b5f6229b7be90727b0fc8c6b91bb427821f") {
 		t.Errorf("imported account has wrong address %x", account.Address)
 	}
-
-	if !strings.HasPrefix(account.URL.Path, d) {
-		t.Errorf("imported account file not in keystore directory: %q", account.URL)
-	}
 }
 
 // Test and utils for the key store tests in the Ethereum JSON tests;
 // testdataKeyStoreTests/basic_tests.json
 type KeyStoreTestV3 struct {
 	JSON     encryptedKeyJSONV3
-	Password string
-	Priv     string
-}
-
-type KeyStoreTestV1 struct {
-	JSON     encryptedKeyJSONV1
 	Password string
 	Priv     string
 }
@@ -160,35 +135,39 @@ func TestV3_Scrypt_2(t *testing.T) {
 	testDecryptV3(t, tests["test2"])
 }
 
-func TestV1_1(t *testing.T) {
-	t.Parallel()
+/*
+	 func TestV1_2(t *testing.T) {
+		t.Parallel()
 
-	tests := loadKeyStoreTestV1(t, "testdata/v1_test_vector.json")
-	testDecryptV1(t, tests["test1"])
-}
+		ks := &keyStorePassphrase{LightScryptN, LightScryptP}
+		addr := types.StringToAddress("cb61d5a9c4896fb9658090b597ef0e7be6f7b67e")
+		file := "testdata/v1/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e"
 
-func TestV1_2(t *testing.T) {
-	t.Parallel()
+		keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	ks := &keyStorePassphrase{"testdata/v1", LightScryptN, LightScryptP, true}
-	addr := types.StringToAddress("cb61d5a9c4896fb9658090b597ef0e7be6f7b67e")
-	file := "testdata/v1/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e/cb61d5a9c4896fb9658090b597ef0e7be6f7b67e"
+		keyEncrypted := new(encryptedKeyJSONV3)
 
-	k, err := ks.GetKey(addr, file, "g")
-	if err != nil {
-		t.Fatal(err)
+		keyEncrypted :=
+
+		k, err := ks.GetKey(addr, file, "g")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		privKey, err := crypto.MarshalECDSAPrivateKey(k.PrivateKey)
+		require.NoError(t, err)
+
+		privHex := hex.EncodeToString(privKey)
+
+		expectedHex := "d1b1178d3529626a1a93e073f65028370d14c7eb0936eb42abef05db6f37ad7d"
+		if privHex != expectedHex {
+			t.Fatal(fmt.Errorf("Unexpected privkey: %v, expected %v", privHex, expectedHex))
+		}
 	}
-
-	privKey, err := crypto.MarshalECDSAPrivateKey(k.PrivateKey)
-	require.NoError(t, err)
-
-	privHex := hex.EncodeToString(privKey)
-
-	expectedHex := "d1b1178d3529626a1a93e073f65028370d14c7eb0936eb42abef05db6f37ad7d"
-	if privHex != expectedHex {
-		t.Fatal(fmt.Errorf("Unexpected privkey: %v, expected %v", privHex, expectedHex))
-	}
-}
+*/
 
 func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
 	t.Helper()
@@ -204,37 +183,10 @@ func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
 	}
 }
 
-func testDecryptV1(t *testing.T, test KeyStoreTestV1) {
-	t.Helper()
-
-	privBytes, _, err := decryptKeyV1(&test.JSON, test.Password)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	privHex := hex.EncodeToString(privBytes)
-	if test.Priv != privHex {
-		t.Fatal(fmt.Errorf("Decrypted bytes not equal to test, expected %v have %v", test.Priv, privHex))
-	}
-}
-
 func loadKeyStoreTestV3(t *testing.T, file string) map[string]KeyStoreTestV3 {
 	t.Helper()
 
 	tests := make(map[string]KeyStoreTestV3)
-
-	err := accounts.LoadJSON(file, &tests)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return tests
-}
-
-func loadKeyStoreTestV1(t *testing.T, file string) map[string]KeyStoreTestV1 {
-	t.Helper()
-
-	tests := make(map[string]KeyStoreTestV1)
 
 	err := accounts.LoadJSON(file, &tests)
 	if err != nil {
@@ -270,11 +222,14 @@ func TestV3_30_Byte_Key(t *testing.T) {
 // Tests that a json key file can be decrypted and encrypted in multiple rounds.
 func TestKeyEncryptDecrypt(t *testing.T) {
 	t.Parallel()
+	keyEncrypted := new(encryptedKeyJSONV3)
 
 	keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	json.Unmarshal(keyjson, keyEncrypted)
 
 	password := ""
 	address := types.StringToAddress("45dea0fb0bba44f4fcf290bba71fd57d7117cbb8")
@@ -282,11 +237,11 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	// Do a few rounds of decryption and encryption
 	for i := 0; i < 3; i++ {
 		// Try a bad password first
-		if _, err := DecryptKey(keyjson, password+"bad"); err == nil {
+		if _, err := DecryptKey(*keyEncrypted, password+"bad"); err == nil {
 			t.Errorf("test %d: json key decrypted with bad password", i)
 		}
 		// Decrypt with the correct password
-		key, err := DecryptKey(keyjson, password)
+		key, err := DecryptKey(*keyEncrypted, password)
 		if err != nil {
 			t.Fatalf("test %d: json key failed to decrypt: %v", i, err)
 		}
@@ -296,7 +251,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		}
 		// Recrypt with a new password and start over
 		password += "new data appended"
-		if keyjson, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP); err != nil {
+		if *keyEncrypted, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP); err != nil {
 			t.Errorf("test %d: failed to re-encrypt key %v", i, err)
 		}
 	}

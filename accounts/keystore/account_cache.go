@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"errors"
-	"os"
 	"path"
 	"sync"
 	"time"
@@ -24,7 +23,7 @@ type accountCache struct {
 	allMap   map[types.Address]encryptedKeyJSONV3
 	throttle *time.Timer
 	notify   chan struct{}
-	fileC    fileCache
+	fileC    *fileCache
 }
 
 func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan struct{}) {
@@ -32,15 +31,12 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 		logger: logger,
 		keydir: keyDir,
 		notify: make(chan struct{}, 1),
+		allMap: make(map[types.Address]encryptedKeyJSONV3),
 	}
 
 	keyPath := path.Join(keyDir, "keys.txt")
 
-	ac.fileC = fileCache{all: make(map[types.Address]encryptedKeyJSONV3), keyDir: keyPath}
-
-	if _, err := os.Stat(keyPath); errors.Is(err, os.ErrNotExist) {
-		os.Create(keyDir)
-	}
+	ac.fileC = NewFileCache(keyPath)
 
 	ac.scanAccounts()
 
@@ -54,8 +50,11 @@ func (ac *accountCache) accounts() []accounts.Account {
 	defer ac.mu.Unlock()
 
 	cpy := make([]accounts.Account, len(ac.allMap))
+	i := 0
+
 	for addr := range ac.allMap {
-		cpy = append(cpy, accounts.Account{Address: addr})
+		cpy[i] = accounts.Account{Address: addr}
+		i++
 	}
 
 	return cpy
@@ -72,27 +71,52 @@ func (ac *accountCache) hasAddress(addr types.Address) bool {
 	return ok
 }
 
-func (ac *accountCache) add(newAccount accounts.Account) {
+func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3) error {
 	ac.scanAccounts()
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
 	if _, ok := ac.allMap[newAccount.Address]; ok {
-		return
+		return errors.New("account already exists")
 	}
 
-	ac.allMap[newAccount.Address] = encryptedKeyJSONV3{} // TO DO
+	ac.allMap[newAccount.Address] = key
 
-	ac.fileC.saveData(ac.allMap)
+	err := ac.fileC.saveData(ac.allMap)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3) error {
+	ac.scanAccounts()
+
+	ac.mu.Lock()
+	defer ac.mu.Unlock()
+
+	if _, ok := ac.allMap[account.Address]; !ok {
+		return errors.New("this account doesn't exists")
+	} else {
+		ac.allMap[account.Address] = key
+	}
+
+	err := ac.fileC.saveData(ac.allMap)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // note: removed needs to be unique here (i.e. both File and Address must be set).
 func (ac *accountCache) delete(removed accounts.Account) {
+	ac.scanAccounts()
+
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
-
-	ac.scanAccounts()
 
 	delete(ac.allMap, removed.Address)
 
@@ -102,17 +126,17 @@ func (ac *accountCache) delete(removed accounts.Account) {
 // find returns the cached account for address if there is a unique match.
 // The exact matching rules are explained by the documentation of accounts.Account.
 // Callers must hold ac.mu.
-func (ac *accountCache) find(a accounts.Account) (accounts.Account, error) {
+func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKeyJSONV3, error) {
 	ac.scanAccounts()
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
-	if _, ok := ac.allMap[a.Address]; ok {
-		return a, nil
+	if encryptedKey, ok := ac.allMap[a.Address]; ok {
+		return a, encryptedKey, nil
 	}
 
-	return accounts.Account{}, accounts.ErrNoMatch
+	return accounts.Account{}, encryptedKeyJSONV3{}, accounts.ErrNoMatch
 }
 
 func (ac *accountCache) close() {
@@ -151,8 +175,10 @@ func (ac *accountCache) scanAccounts() error {
 		ac.allMap[addr] = key
 	}
 
-	ac.notify <- struct{}{}
-
+	select {
+	case ac.notify <- struct{}{}:
+	default:
+	}
 	ac.logger.Trace("Handled keystore changes")
 
 	return nil

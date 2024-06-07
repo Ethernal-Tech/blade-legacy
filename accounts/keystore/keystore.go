@@ -59,9 +59,9 @@ type unlocked struct {
 func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
 	var ks *KeyStore
 	if keyDir == "" {
-		ks = &KeyStore{storage: &keyStorePassphrase{DefaultStorage, scryptN, scryptP, false}}
+		ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
 	} else {
-		ks = &KeyStore{storage: &keyStorePassphrase{keyDir, scryptN, scryptP, false}}
+		ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
 	}
 
 	ks.init(keyDir, hclog.NewNullLogger()) // TO DO LOGGER
@@ -330,12 +330,6 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 	return nil
 }
 
-func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
-	a, err := ks.cache.find(a)
-
-	return a, err
-}
-
 func (ks *KeyStore) expire(addr types.Address, u *unlocked, timeout time.Duration) {
 	t := time.NewTimer(timeout)
 	defer t.Stop()
@@ -359,67 +353,27 @@ func (ks *KeyStore) expire(addr types.Address, u *unlocked, timeout time.Duratio
 }
 
 func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
-	a, err := ks.Find(a)
+	a, encryptedKeyJSONV3, err := ks.cache.find(a)
 	if err != nil {
 		return a, nil, err
 	}
 
-	key, err := ks.storage.GetKey(a.Address, a.URL.Path, auth)
+	key, err := ks.storage.GetKey(encryptedKeyJSONV3, auth)
 
 	return a, key, err
 }
 
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	_, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+	encryptedKey, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
 
 	if err != nil {
 		return accounts.Account{}, err
 	}
 
-	ks.cache.add(account)
+	ks.cache.add(account, encryptedKey)
 	ks.refreshWallets()
 
 	return account, nil
-}
-
-func (ks *KeyStore) Export(a accounts.Account, passphrase, newPassphrase string) (keyJSON []byte, err error) {
-	_, key, err := ks.getDecryptedKey(a, passphrase)
-	if err != nil {
-		return nil, err
-	}
-
-	var N, P int
-
-	if store, ok := ks.storage.(*keyStorePassphrase); ok {
-		N, P = store.scryptN, store.scryptP
-	} else {
-		N, P = StandardScryptN, StandardScryptP
-	}
-
-	return EncryptKey(key, newPassphrase, N, P)
-}
-
-func (ks *KeyStore) Import(keyJSON []byte, passphrase, newPassphrase string) (accounts.Account, error) {
-	key, err := DecryptKey(keyJSON, passphrase)
-
-	if key != nil && key.PrivateKey != nil {
-		defer zeroKey(key.PrivateKey)
-	}
-
-	if err != nil {
-		return accounts.Account{}, err
-	}
-
-	ks.importMu.Lock()
-	defer ks.importMu.Unlock()
-
-	if ks.cache.hasAddress(key.Address) {
-		return accounts.Account{
-			Address: key.Address,
-		}, ErrAccountAlreadyExists
-	}
-
-	return ks.importKey(key, newPassphrase)
 }
 
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
@@ -437,14 +391,14 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 }
 
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
-	a := accounts.Account{Address: key.Address,
-		URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address}
 
-	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
+	encryptedKeyJSONV3, err := ks.storage.StoreKey(key, passphrase)
+	if err != nil {
 		return accounts.Account{}, err
 	}
 
-	ks.cache.add(a)
+	ks.cache.add(a, encryptedKeyJSONV3)
 	ks.refreshWallets()
 
 	return a, nil
@@ -456,17 +410,22 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 		return err
 	}
 
-	return ks.storage.StoreKey(a.URL.Path, key, newPassphrase)
+	encryptedKey, err := ks.storage.StoreKey(key, newPassphrase)
+	if err != nil {
+		return err
+	}
+
+	return ks.cache.update(a, encryptedKey)
 }
 
 func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (accounts.Account, error) {
-	a, _, err := importPreSaleKey(ks.storage, keyJSON, passphrase)
+	a, encryptedKey, err := importPreSaleKey(ks.storage, keyJSON, passphrase)
 
 	if err != nil {
 		return a, err
 	}
 
-	ks.cache.add(a)
+	ks.cache.add(a, encryptedKey)
 	ks.refreshWallets()
 
 	return a, nil

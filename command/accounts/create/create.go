@@ -59,7 +59,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		scryptP = keystore.LightScryptP
 	}
 
-	account, err := keystore.StoreKey("", params.Passphrase, scryptN, scryptP)
+	account, err := keystore.StoreKey(params.Passphrase, scryptN, scryptP)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("can't create account"))
 	}

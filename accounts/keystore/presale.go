@@ -15,28 +15,24 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accounts.Account, *Key, error) {
+func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accounts.Account, encryptedKeyJSONV3, error) {
 	key, err := decryptPreSaleKey(keyJSON, password)
 	if err != nil {
-		return accounts.Account{}, nil, err
+		return accounts.Account{}, encryptedKeyJSONV3{}, err
 	}
 
 	key.ID, err = uuid.NewRandom()
 	if err != nil {
-		return accounts.Account{}, nil, err
+		return accounts.Account{}, encryptedKeyJSONV3{}, err
 	}
 
 	a := accounts.Account{
 		Address: key.Address,
-		URL: accounts.URL{
-			Scheme: KeyStoreScheme,
-			Path:   keyStore.JoinPath(keyFileName(key.Address)),
-		},
 	}
 
-	err = keyStore.StoreKey(a.URL.Path, key, password)
+	encryptKey, err := keyStore.StoreKey(key, password)
 
-	return a, key, err
+	return a, encryptKey, err
 }
 
 func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error) {

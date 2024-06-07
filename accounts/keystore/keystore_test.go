@@ -6,8 +6,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -386,83 +384,6 @@ func TestImportECDSA(t *testing.T) {
 
 	if _, err = ks.ImportECDSA(key, "new"); err == nil {
 		t.Errorf("importing same key twice succeeded")
-	}
-}
-
-// TestImportExport tests the import and export functionality of a keystore.
-func TestImportExport(t *testing.T) {
-	t.Parallel()
-
-	_, ks := tmpKeyStore(t)
-
-	acc, err := ks.NewAccount("old")
-	if err != nil {
-		t.Fatalf("failed to create account: %v", acc)
-	}
-
-	json, err := ks.Export(acc, "old", "new")
-	if err != nil {
-		t.Fatalf("failed to export account: %v", acc)
-	}
-
-	_, ks2 := tmpKeyStore(t)
-
-	if _, err = ks2.Import(json, "old", "old"); err == nil {
-		t.Errorf("importing with invalid password succeeded")
-	}
-
-	acc2, err := ks2.Import(json, "new", "new")
-	if err != nil {
-		t.Errorf("importing failed: %v", err)
-	}
-
-	if acc.Address != acc2.Address {
-		t.Error("imported account does not match exported account")
-	}
-
-	if _, err = ks2.Import(json, "new", "new"); err == nil {
-		t.Errorf("importing a key twice succeeded")
-	}
-}
-
-// TestImportRace tests the keystore on races.
-// This test should fail under -race if importing races.
-func TestImportRace(t *testing.T) {
-	t.Parallel()
-
-	_, ks := tmpKeyStore(t)
-
-	acc, err := ks.NewAccount("old")
-	if err != nil {
-		t.Fatalf("failed to create account: %v", acc)
-	}
-
-	json, err := ks.Export(acc, "old", "new")
-	if err != nil {
-		t.Fatalf("failed to export account: %v", acc)
-	}
-
-	_, ks2 := tmpKeyStore(t)
-
-	var atom atomic.Uint32
-
-	var wg sync.WaitGroup
-
-	wg.Add(2)
-
-	for i := 0; i < 2; i++ {
-		go func() {
-			defer wg.Done()
-
-			if _, err := ks2.Import(json, "new", "new"); err != nil {
-				atom.Add(1)
-			}
-		}()
-	}
-	wg.Wait()
-
-	if atom.Load() != 1 {
-		t.Errorf("Import is racy")
 	}
 }
 

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/ecdsa"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -33,18 +32,9 @@ type Key struct {
 
 type keyStore interface {
 	// Loads and decrypts the key from disk.
-	GetKey(addr types.Address, filename string, auth string) (*Key, error)
+	GetKey(encryptedKey encryptedKeyJSONV3, auth string) (*Key, error)
 	// Writes and encrypts the key.
-	StoreKey(filename string, k *Key, auth string) error
-	// Joins filename with the key directory unless it is already absolute.
-	JoinPath(filename string) string
-}
-
-type plainKeyJSON struct {
-	Address    string `json:"address"`
-	PrivateKey string `json:"privatekey"`
-	ID         string `json:"id"`
-	Version    int    `json:"version"`
+	StoreKey(k *Key, auth string) (encryptedKeyJSONV3, error)
 }
 
 type encryptedKeyJSONV3 struct {
@@ -52,13 +42,6 @@ type encryptedKeyJSONV3 struct {
 	Crypto  CryptoJSON `json:"crypto"`
 	ID      string     `json:"id"`
 	Version int        `json:"version"`
-}
-
-type encryptedKeyJSONV1 struct {
-	Address string     `json:"address"`
-	Crypto  CryptoJSON `json:"crypto"`
-	ID      string     `json:"id"`
-	Version string     `json:"version"`
 }
 
 type CryptoJSON struct {
@@ -72,58 +55,6 @@ type CryptoJSON struct {
 
 type cipherparamsJSON struct {
 	IV string `json:"iv"`
-}
-
-// TO DO marshall private key
-func (k *Key) MarshalJSON() (j []byte, err error) {
-	privKey, err := crypto.MarshalECDSAPrivateKey(k.PrivateKey) // get more time for this
-	if err != nil {
-		return nil, err
-	}
-
-	jStruct := plainKeyJSON{
-		hex.EncodeToString(k.Address[:]),
-		hex.EncodeToString(privKey),
-		k.ID.String(),
-		version,
-	}
-
-	j, err = json.Marshal(jStruct)
-
-	return j, err
-}
-
-func (k *Key) UnmarshalJSON(j []byte) (err error) {
-	keyJSON := new(plainKeyJSON)
-
-	err = json.Unmarshal(j, &keyJSON)
-	if err != nil {
-		return err
-	}
-
-	u := new(uuid.UUID)
-
-	*u, err = uuid.Parse(keyJSON.ID)
-	if err != nil {
-		return err
-	}
-
-	k.ID = *u
-
-	addr, err := hex.DecodeString(keyJSON.Address)
-	if err != nil {
-		return err
-	}
-
-	privkey, err := crypto.HexToECDSA(keyJSON.PrivateKey)
-	if err != nil {
-		return err
-	}
-
-	k.Address = types.BytesToAddress(addr)
-	k.PrivateKey = privkey
-
-	return nil
 }
 
 // TO DO newKeyFromECDSA
@@ -224,24 +155,24 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	return key
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (*Key, accounts.Account, error) {
+func storeNewKey(ks keyStore, rand io.Reader, auth string) (encryptedKeyJSONV3, accounts.Account, error) {
 	key, err := newKey(rand)
 	if err != nil {
-		return nil, accounts.Account{}, err
+		return encryptedKeyJSONV3{}, accounts.Account{}, err
 	}
 
 	a := accounts.Account{
 		Address: key.Address,
-		URL:     accounts.URL{Scheme: KeyStoreScheme, Path: ks.JoinPath(keyFileName(key.Address))},
 	}
 
-	if err := ks.StoreKey(a.URL.Path, key, auth); err != nil {
+	encryptedKey, err := ks.StoreKey(key, auth)
+	if err != nil {
 		zeroKey(key.PrivateKey)
 
-		return nil, a, err
+		return encryptedKeyJSONV3{}, a, err
 	}
 
-	return key, a, err
+	return encryptedKey, a, err
 }
 
 func writeKeyFile(file string, content []byte) error {
