@@ -1,23 +1,23 @@
 package keystore
 
 import (
+	"encoding/json"
 	"os"
-	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
-	mapset "github.com/deckarep/golang-set/v2"
+	"github.com/0xPolygon/polygon-edge/types"
 )
 
 // fileCache is a cache of files seen during scan of keystore.
 type fileCache struct {
-	all     mapset.Set[string] // Set of all files from the keystore folder
-	lastMod time.Time          // Last time instance when a file was modified
+	all     map[types.Address]encryptedKeyJSONV3 // Set of all files from the keystore folder
+	lastMod time.Time                            // Last time instance when a file was modified
 	mu      sync.Mutex
+	keyDir  string
 }
 
-func (fc *fileCache) scan(keyDir string) (mapset.Set[string], mapset.Set[string], mapset.Set[string], error) {
+/*func (fc *fileCache) scan(keyDir string) (mapset.Set[string], mapset.Set[string], mapset.Set[string], error) {
 	// List all the files from the keystore folder
 	files, err := os.ReadDir(keyDir)
 	if err != nil {
@@ -63,18 +63,46 @@ func (fc *fileCache) scan(keyDir string) (mapset.Set[string], mapset.Set[string]
 	fc.all, fc.lastMod = all, newLastMod
 
 	return creates, deletes, updates, nil
+}  */
+
+func (fc *fileCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) error {
+	fi, err := os.Create(fc.keyDir)
+	if err != nil {
+		return err
+	}
+
+	defer fi.Close()
+
+	byteAccount, err := json.Marshal(accounts)
+	if err != nil {
+		return err
+	}
+
+	if _, err := fi.Write(byteAccount); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// nonKeyFile ignores editor backups, hidden files and folders/symlinks.
-func nonKeyFile(fi os.DirEntry) bool {
-	// Skip editor backups and UNIX-style hidden files.
-	if strings.HasSuffix(fi.Name(), "~") || strings.HasPrefix(fi.Name(), ".") {
-		return true
-	}
-	// Skip misc special files, directories (yes, symlinks too).
-	if fi.IsDir() || !fi.Type().IsRegular() {
-		return true
+func (fc *fileCache) scanOneFile() (map[types.Address]encryptedKeyJSONV3, error) {
+	fi, err := os.ReadFile(fc.keyDir)
+	if err != nil {
+		return nil, err
 	}
 
-	return false
+	if len(fi) == 0 {
+		return nil, nil
+	}
+
+	var accounts = make(map[types.Address]encryptedKeyJSONV3)
+
+	err = json.Unmarshal(fi, &accounts)
+	if err != nil {
+		return nil, err
+	}
+
+	fc.all = accounts
+
+	return accounts, nil
 }

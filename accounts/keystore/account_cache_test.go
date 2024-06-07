@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"testing"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/hashicorp/go-hclog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -24,35 +24,15 @@ var (
 	cachetestAccounts = []accounts.Account{
 		{
 			Address: types.StringToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "UTC--2016-03-22T12-57-55.920751759Z--7ef5a6135f1fd6a02593eedc869c6d41d934aef8")},
 		},
 		{
 			Address: types.StringToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "aaa")},
 		},
 		{
 			Address: types.StringToAddress("289d485d9771714cce91d3393d764e1311907acc"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(cachetestDir, "zzz")},
 		},
 	}
 )
-
-// waitWatcherStart waits up to 1s for the keystore watcher to start.
-func waitWatcherStart(ks *KeyStore) bool {
-	// On systems where file watch is not supported, just return "ok".
-	if !ks.cache.watcher.enabled() {
-		return true
-	}
-
-	// The watcher should start, and then exit.
-	for t0 := time.Now().UTC(); time.Since(t0) < 1*time.Second; time.Sleep(100 * time.Millisecond) {
-		if ks.cache.watcherStarted() {
-			return true
-		}
-	}
-
-	return false
-}
 
 func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	var list []accounts.Account
@@ -81,9 +61,6 @@ func TestWatchNewFile(t *testing.T) {
 	// Ensure the watcher is started before adding any files.
 	ks.Accounts()
 
-	if !waitWatcherStart(ks) {
-		t.Fatal("keystore watcher didn't start in time")
-	}
 	// Move in the files.
 	wantAccounts := make([]accounts.Account, len(cachetestAccounts))
 	for i := range cachetestAccounts {
@@ -113,10 +90,6 @@ func TestWatchNoDir(t *testing.T) {
 
 	if len(list) > 0 {
 		t.Error("initial account list not empty:", list)
-	}
-	// The watcher should start, and then exit.
-	if !waitWatcherStart(ks) {
-		t.Fatal("keystore watcher didn't start in time")
 	}
 	// Create the directory and copy a key file into it.
 	require.NoError(t, os.MkdirAll(dir, 0700))
@@ -162,13 +135,13 @@ func TestCacheInitialReload(t *testing.T) {
 	if !reflect.DeepEqual(accounts, cachetestAccounts) {
 		t.Fatalf("got initial accounts: %swant %s", spew.Sdump(accounts), spew.Sdump(cachetestAccounts))
 	}
+
 }
 
 func TestCacheAddDeleteOrder(t *testing.T) {
 	t.Parallel()
 
 	cache, _ := newAccountCache("testdata/no-such-dir", hclog.NewNullLogger())
-	cache.watcher.running = true // prevent unexpected reloads
 
 	accs := []accounts.Account{
 		{
@@ -212,8 +185,6 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 	wantAccounts := make([]accounts.Account, len(accs))
 
 	copy(wantAccounts, accs)
-
-	slices.SortFunc(wantAccounts, byURL)
 
 	list := cache.accounts()
 
@@ -264,28 +235,25 @@ func TestCacheAddDeleteOrder(t *testing.T) {
 func TestCacheFind(t *testing.T) {
 	t.Parallel()
 
-	dir := filepath.Join("testdata", "dir")
+	file := filepath.Join(filepath.Join("testdata", "dir"), "keys.txt")
 
-	cache, _ := newAccountCache(dir, hclog.NewNullLogger())
+	absPath, err := filepath.Abs(file)
+	require.NoError(t, err)
 
-	cache.watcher.running = true // prevent unexpected reloads
+	cache, _ := newAccountCache(absPath, hclog.NewNullLogger())
 
 	accs := []accounts.Account{
 		{
 			Address: types.StringToAddress("095e7baea6a6c7c4c2dfeb977efac326af552d87"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "a.key")},
 		},
 		{
 			Address: types.StringToAddress("2cac1adea150210703ba75ed097ddfe24e14f213"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "b.key")},
 		},
 		{
 			Address: types.StringToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "c.key")},
 		},
 		{
 			Address: types.StringToAddress("d49ff4eeb0b2686ed89c0fc0f2b6ea533ddbbd5e"),
-			URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "c2.key")},
 		},
 	}
 
@@ -295,7 +263,6 @@ func TestCacheFind(t *testing.T) {
 
 	nomatchAccount := accounts.Account{
 		Address: types.StringToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
-		URL:     accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Join(dir, "something")},
 	}
 
 	tests := []struct {
@@ -305,22 +272,10 @@ func TestCacheFind(t *testing.T) {
 	}{
 		// by address
 		{Query: accounts.Account{Address: accs[0].Address}, WantResult: accs[0]},
-		// by file
-		{Query: accounts.Account{URL: accs[0].URL}, WantResult: accs[0]},
-		// by basename
-		{Query: accounts.Account{URL: accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Base(accs[0].URL.Path)}}, WantResult: accs[0]},
 		// by file and address
 		{Query: accs[0], WantResult: accs[0]},
 		// ambiguous address, tie resolved by file
 		{Query: accs[2], WantResult: accs[2]},
-		// ambiguous address error
-		{
-			Query: accounts.Account{Address: accs[2].Address},
-			WantError: &accounts.AmbiguousAddrError{
-				Addr:    accs[2].Address,
-				Matches: []accounts.Account{accs[2], accs[3]},
-			},
-		},
 		// no match error
 		{Query: nomatchAccount, WantError: accounts.ErrNoMatch},
 		{Query: accounts.Account{URL: nomatchAccount.URL}, WantError: accounts.ErrNoMatch},
@@ -330,17 +285,10 @@ func TestCacheFind(t *testing.T) {
 
 	for i, test := range tests {
 		a, err := cache.find(test.Query)
-		if !reflect.DeepEqual(err, test.WantError) {
-			t.Errorf("test %d: error mismatch for query %v\ngot %q\nwant %q", i, test.Query, err, test.WantError)
 
-			continue
-		}
+		assert.Equal(t, test.WantError, err, fmt.Sprintf("Error mismatch test %d", i))
 
-		if a != test.WantResult {
-			t.Errorf("test %d: result mismatch for query %v\ngot %v\nwant %v", i, test.Query, a, test.WantResult)
-
-			continue
-		}
+		assert.Equal(t, test.WantResult, a, fmt.Sprintf("Not same result %d", i))
 	}
 }
 
@@ -361,9 +309,6 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		t.Error("initial account list not empty:", list)
 	}
 
-	if !waitWatcherStart(ks) {
-		t.Fatal("keystore watcher didn't start in time")
-	}
 	// Create the directory and copy a key file into it.
 	require.NoError(t, os.MkdirAll(dir, 0700))
 	defer os.RemoveAll(dir)

@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"os"
 	"runtime"
-	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -482,8 +481,6 @@ func checkAccounts(t *testing.T, live map[types.Address]accounts.Account, wallet
 	for _, account := range live {
 		liveList = append(liveList, account)
 	}
-
-	slices.SortFunc(liveList, byURL)
 
 	for j, wallet := range wallets {
 		if accs := wallet.Accounts(); len(accs) != 1 {

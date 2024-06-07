@@ -5,7 +5,6 @@ import (
 	crand "crypto/rand"
 	"errors"
 	"math/big"
-	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -111,45 +110,57 @@ func zeroKey(k *ecdsa.PrivateKey) {
 
 func (ks *KeyStore) refreshWallets() {
 	ks.mu.Lock()
+
 	accs := ks.cache.accounts()
 
 	var ( //nolint:prealloc
 		wallets = make([]accounts.Wallet, 0, len(accs))
 		events  []accounts.WalletEvent
+		find    = false
 	)
 
 	for _, account := range accs {
-		for len(ks.wallets) > 0 && ks.wallets[0].URL().Cmp(account.URL) < 0 {
-			events = append(events, accounts.WalletEvent{Wallet: ks.wallets[0], Kind: accounts.WalletDropped})
-			ks.wallets = ks.wallets[1:]
+		find = false
+		for _, wallet := range ks.wallets {
+			if wallet.Accounts()[0] == account {
+				wallets = append(wallets, wallet)
+				find = true
+
+				break
+			}
 		}
 
-		if len(ks.wallets) == 0 || ks.wallets[0].URL().Cmp(account.URL) > 0 {
+		if !find {
 			wallet := &keyStoreWallet{account: account, keyStore: ks}
-
-			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
 			wallets = append(wallets, wallet)
 
-			continue
-		}
-
-		if ks.wallets[0].Accounts()[0] == account {
-			wallets = append(wallets, ks.wallets[0])
-			ks.wallets = ks.wallets[1:]
+			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
 		}
 	}
 
-	for _, wallet := range ks.wallets {
-		events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletDropped})
+	for _, oldWallet := range ks.wallets {
+		find = false
+		for _, newWallet := range wallets {
+			if newWallet == oldWallet {
+				find = true
+
+				break
+			}
+		}
+
+		if !find {
+			events = append(events, accounts.WalletEvent{Wallet: oldWallet, Kind: accounts.WalletDropped})
+		}
 	}
 
 	ks.wallets = wallets
+
 	ks.mu.Unlock()
 
 	for _, event := range events {
 		ks.updateFeed.Send(event)
-		_ = event
 	}
+
 }
 
 func (ks *KeyStore) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
@@ -207,14 +218,9 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 	if err != nil {
 		return err
 	}
-	// The order is crucial here. The key is dropped from the
-	// cache after the file is gone so that a reload happening in
-	// between won't insert it into the cache again.
-	err = os.Remove(a.URL.Path)
-	if err == nil {
-		ks.cache.delete(a)
-		ks.refreshWallets()
-	}
+
+	ks.cache.delete(a)
+	ks.refreshWallets()
 
 	return err
 }
@@ -325,10 +331,7 @@ func (ks *KeyStore) TimedUnlock(a accounts.Account, passphrase string, timeout t
 }
 
 func (ks *KeyStore) Find(a accounts.Account) (accounts.Account, error) {
-	ks.cache.maybeReload()
-	ks.cache.mu.Lock()
 	a, err := ks.cache.find(a)
-	ks.cache.mu.Unlock()
 
 	return a, err
 }
