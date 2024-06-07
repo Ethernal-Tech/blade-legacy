@@ -60,7 +60,8 @@ func (ksw *keyStoreWallet) SignData(account accounts.Account, mimeType string, d
 	return ksw.signHash(account, crypto.Keccak256(data))
 }
 
-func (ksw *keyStoreWallet) SignDataWithPassphrase(account accounts.Account, passhphrase, mimeType string, data []byte) ([]byte, error) {
+func (ksw *keyStoreWallet) SignDataWithPassphrase(account accounts.Account,
+	passhphrase, mimeType string, data []byte) ([]byte, error) {
 	if !ksw.Contains(account) {
 		return nil, accounts.ErrUnknownAccount
 	}
@@ -72,7 +73,8 @@ func (ksw *keyStoreWallet) SignText(account accounts.Account, text []byte) ([]by
 	return ksw.signHash(account, accounts.TextHash(text))
 }
 
-func (ksw *keyStoreWallet) SignTextWithPassphrase(account accounts.Account, passphrase string, text []byte) ([]byte, error) {
+func (ksw *keyStoreWallet) SignTextWithPassphrase(account accounts.Account,
+	passphrase string, text []byte) ([]byte, error) {
 	if !ksw.Contains(account) {
 		return nil, accounts.ErrUnknownAccount
 	}
@@ -80,7 +82,8 @@ func (ksw *keyStoreWallet) SignTextWithPassphrase(account accounts.Account, pass
 	return ksw.keyStore.SignHashWithPassphrase(account, passphrase, accounts.TextHash(text))
 }
 
-func (ksw *keyStoreWallet) SignTx(account accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func (ksw *keyStoreWallet) SignTx(account accounts.Account,
+	tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	if !ksw.Contains(account) {
 		return nil, errors.New("unknown account")
 	}
@@ -88,7 +91,8 @@ func (ksw *keyStoreWallet) SignTx(account accounts.Account, tx *types.Transactio
 	return ksw.keyStore.SignTx(account, tx, chainID)
 }
 
-func (ksw *keyStoreWallet) SignTxWithPassphrase(account accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func (ksw *keyStoreWallet) SignTxWithPassphrase(account accounts.Account,
+	passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	if !ksw.Contains(account) {
 		return nil, errors.New("unknown account")
 	}

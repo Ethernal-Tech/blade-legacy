@@ -1,6 +1,7 @@
 package keystore
 
 import (
+	"errors"
 	"math/rand"
 	"os"
 	"runtime"
@@ -21,11 +22,13 @@ import (
 
 var testSigData = make([]byte, 32)
 
+const pass = "foo"
+
 func TestKeyStore(t *testing.T) {
 	t.Parallel()
 	dir, ks := tmpKeyStore(t)
 
-	a, err := ks.NewAccount("foo")
+	a, err := ks.NewAccount(pass)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -42,7 +45,7 @@ func TestKeyStore(t *testing.T) {
 	if !ks.HasAddress(a.Address) {
 		t.Errorf("HasAccount(%x) should've returned true", a.Address)
 	}
-	if err := ks.Update(a, "foo", "bar"); err != nil {
+	if err := ks.Update(a, pass, "bar"); err != nil {
 		t.Errorf("Update error: %v", err)
 	}
 	if err := ks.Delete(a, "bar"); err != nil {
@@ -105,7 +108,6 @@ func TestTimedUnlock(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStore(t)
 
-	pass := "foo"
 	a1, err := ks.NewAccount(pass)
 	if err != nil {
 		t.Fatal(err)
@@ -113,7 +115,7 @@ func TestTimedUnlock(t *testing.T) {
 
 	// Signing without passphrase fails because account is locked
 	_, err = ks.SignHash(accounts.Account{Address: a1.Address}, testSigData)
-	if err != ErrLocked {
+	if !errors.Is(err, ErrLocked) {
 		t.Fatal("Signing should've failed with ErrLocked before unlocking, got ", err)
 	}
 
@@ -131,7 +133,7 @@ func TestTimedUnlock(t *testing.T) {
 	// Signing fails again after automatic locking
 	time.Sleep(250 * time.Millisecond)
 	_, err = ks.SignHash(accounts.Account{Address: a1.Address}, testSigData)
-	if err != ErrLocked {
+	if !errors.Is(err, ErrLocked) {
 		t.Fatal("Signing should've failed with ErrLocked timeout expired, got ", err)
 	}
 }
@@ -140,7 +142,6 @@ func TestOverrideUnlock(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStore(t)
 
-	pass := "foo"
 	a1, err := ks.NewAccount(pass)
 	if err != nil {
 		t.Fatal(err)
@@ -171,7 +172,7 @@ func TestOverrideUnlock(t *testing.T) {
 	// Signing fails again after automatic locking
 	time.Sleep(250 * time.Millisecond)
 	_, err = ks.SignHash(accounts.Account{Address: a1.Address}, testSigData)
-	if err != ErrLocked {
+	if !errors.Is(err, ErrLocked) {
 		t.Fatal("Signing should've failed with ErrLocked timeout expired, got ", err)
 	}
 }
@@ -190,9 +191,9 @@ func TestSignRace(t *testing.T) {
 	if err := ks.TimedUnlock(a1, "", 15*time.Millisecond); err != nil {
 		t.Fatal("could not unlock the test account", err)
 	}
-	end := time.Now().Add(500 * time.Millisecond)
-	for time.Now().Before(end) {
-		if _, err := ks.SignHash(accounts.Account{Address: a1.Address}, testSigData); err == ErrLocked {
+	end := time.Now().UTC().Add(500 * time.Millisecond)
+	for time.Now().UTC().Before(end) {
+		if _, err := ks.SignHash(accounts.Account{Address: a1.Address}, testSigData); errors.Is(err, ErrLocked) {
 			return
 		} else if err != nil {
 			t.Errorf("Sign error: %v", err)
@@ -210,7 +211,7 @@ func TestSignRace(t *testing.T) {
 func waitForKsUpdating(t *testing.T, ks *KeyStore, wantStatus bool, maxTime time.Duration) bool {
 	t.Helper()
 	// Wait max 250 ms, then return false
-	for t0 := time.Now(); time.Since(t0) < maxTime; {
+	for t0 := time.Now().UTC(); time.Since(t0) < maxTime; {
 		if ks.isUpdating() == wantStatus {
 			return true
 		}
@@ -273,7 +274,7 @@ func TestWalletNotifications(t *testing.T) {
 	_, ks := tmpKeyStore(t)
 
 	// Subscribe to the wallet feed and collect events.
-	var (
+	var ( //nolint:prealloc
 		events  []walletEvent
 		updates = make(chan accounts.WalletEvent)
 		sub     = ks.Subscribe(updates)
@@ -310,6 +311,7 @@ func TestWalletNotifications(t *testing.T) {
 			var account accounts.Account
 			for _, a := range live {
 				account = a
+
 				break
 			}
 			if err := ks.Delete(account, ""); err != nil {
@@ -409,6 +411,8 @@ func TestImportRace(t *testing.T) {
 
 // checkAccounts checks that all known live accounts are present in the wallet list.
 func checkAccounts(t *testing.T, live map[types.Address]accounts.Account, wallets []accounts.Wallet) {
+	t.Helper()
+
 	if len(live) != len(wallets) {
 		t.Errorf("wallet list doesn't match required accounts: have %d, want %d", len(wallets), len(live))
 		return
@@ -429,6 +433,8 @@ func checkAccounts(t *testing.T, live map[types.Address]accounts.Account, wallet
 
 // checkEvents checks that all events in 'want' are present in 'have'. Events may be present multiple times.
 func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
+	t.Helper()
+
 	for _, wantEv := range want {
 		nmatch := 0
 		for ; len(have) > 0; nmatch++ {
@@ -444,6 +450,8 @@ func checkEvents(t *testing.T, want []walletEvent, have []walletEvent) {
 }
 
 func tmpKeyStore(t *testing.T) (string, *KeyStore) {
+	t.Helper()
+
 	d := t.TempDir()
 	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
 }

@@ -20,7 +20,7 @@ func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accou
 	if err != nil {
 		return accounts.Account{}, nil, err
 	}
-	key.Id, err = uuid.NewRandom()
+	key.ID, err = uuid.NewRandom()
 	if err != nil {
 		return accounts.Account{}, nil, err
 	}
@@ -70,7 +70,7 @@ func decryptPreSaleKey(fileContent []byte, password string) (key *Key, err error
 	}
 
 	key = &Key{
-		Id:         uuid.UUID{},
+		ID:         uuid.UUID{},
 		Address:    crypto.PubKeyToAddress(&ecKey.PublicKey),
 		PrivateKey: ecKey,
 	}

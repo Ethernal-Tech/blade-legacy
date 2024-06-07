@@ -47,6 +47,7 @@ func NewManager(config *Config, backends ...Backend) *Manager {
 	updates := make(chan WalletEvent, managerSubBufferSize)
 
 	subs := make([]event.Subscription, len(backends))
+
 	for i, backend := range backends {
 		subs[i] = backend.Subscribe(updates)
 	}
@@ -61,10 +62,12 @@ func NewManager(config *Config, backends ...Backend) *Manager {
 		quit:        make(chan chan error),
 		term:        make(chan struct{}),
 	}
+
 	for _, backend := range backends {
 		kind := reflect.TypeOf(backend)
 		am.backends[kind] = append(am.backends[kind], backend)
 	}
+
 	go am.update()
 
 	return am
@@ -94,9 +97,11 @@ func (am *Manager) AddBackend(backend Backend) {
 func (am *Manager) update() {
 	defer func() {
 		am.lock.Lock()
+
 		for _, sub := range am.updaters {
 			sub.Unsubscribe()
 		}
+
 		am.updaters = nil
 		am.lock.Unlock()
 	}()
@@ -161,6 +166,7 @@ func (am *Manager) Wallet(url string) (Wallet, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for _, wallet := range am.walletsNoLock() {
 		if wallet.URL() == parsed {
 			return wallet, nil
@@ -175,6 +181,7 @@ func (am *Manager) Accounts() []types.Address {
 	defer am.lock.RUnlock()
 
 	addresses := make([]types.Address, 0)
+
 	for _, wallet := range am.wallets {
 		for _, account := range wallet.Accounts() {
 			addresses = append(addresses, account.Address)
@@ -206,6 +213,7 @@ func merge(slice []Wallet, wallets ...Wallet) []Wallet {
 		if n == len(slice) {
 			continue
 		}
+
 		slice = append(slice[:n], slice[n+1:]...)
 	}
 	return slice
@@ -218,7 +226,9 @@ func drop(slice []Wallet, wallets ...Wallet) []Wallet {
 		if n == len(slice) {
 			continue
 		}
+
 		slice = append(slice[:n], slice[n+1:]...)
 	}
+
 	return slice
 }

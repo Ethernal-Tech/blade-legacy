@@ -57,14 +57,17 @@ func (f *Feed) init(etype reflect.Type) {
 func (f *Feed) Subscribe(channel interface{}) Subscription {
 	chanval := reflect.ValueOf(channel)
 	chantyp := chanval.Type()
+
 	if chantyp.Kind() != reflect.Chan || chantyp.ChanDir()&reflect.SendDir == 0 {
-		panic(errBadChannel)
+		panic(errBadChannel) //nolint:gocritic
 	}
+
 	sub := &feedSub{feed: f, channel: chanval, err: make(chan error, 1)}
 
 	f.once.Do(func() { f.init(chantyp.Elem()) })
+
 	if f.etype != chantyp.Elem() {
-		panic(feedTypeError{op: "Subscribe", got: chantyp, want: reflect.ChanOf(reflect.SendDir, f.etype)})
+		panic(feedTypeError{op: "Subscribe", got: chantyp, want: reflect.ChanOf(reflect.SendDir, f.etype)}) //nolint:gocritic
 	}
 
 	f.mu.Lock()
@@ -73,6 +76,7 @@ func (f *Feed) Subscribe(channel interface{}) Subscription {
 	// The next Send will add it to f.sendCases.
 	cas := reflect.SelectCase{Dir: reflect.SelectSend, Chan: chanval}
 	f.inbox = append(f.inbox, cas)
+
 	return sub
 }
 
@@ -82,11 +86,14 @@ func (f *Feed) remove(sub *feedSub) {
 	ch := sub.channel.Interface()
 	f.mu.Lock()
 	index := f.inbox.find(ch)
+
 	if index != -1 {
 		f.inbox = f.inbox.delete(index)
 		f.mu.Unlock()
+
 		return
 	}
+
 	f.mu.Unlock()
 
 	select {
@@ -105,8 +112,9 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 	rvalue := reflect.ValueOf(value)
 
 	f.once.Do(func() { f.init(rvalue.Type()) })
+
 	if f.etype != rvalue.Type() {
-		panic(feedTypeError{op: "Send", got: rvalue.Type(), want: f.etype})
+		panic(feedTypeError{op: "Send", got: rvalue.Type(), want: f.etype}) //nolint:gocritic
 	}
 
 	<-f.sendLock
@@ -126,6 +134,7 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 	// of sendCases. When a send succeeds, the corresponding case moves to the end of
 	// 'cases' and it shrinks by one element.
 	cases := f.sendCases
+
 	for {
 		// Fast path: try sending without blocking before adding to the select set.
 		// This should usually succeed if subscribers are fast enough and have free
@@ -137,14 +146,17 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 				i--
 			}
 		}
+
 		if len(cases) == firstSubSendCase {
 			break
 		}
 		// Select on all the receivers, waiting for them to unblock.
 		chosen, recv, _ := reflect.Select(cases)
+
 		if chosen == 0 /* <-f.removeSub */ {
 			index := f.sendCases.find(recv.Interface())
 			f.sendCases = f.sendCases.delete(index)
+
 			if index >= 0 && index < len(cases) {
 				// Shrink 'cases' too because the removed case was still active.
 				cases = f.sendCases[:len(cases)-1]
@@ -160,6 +172,7 @@ func (f *Feed) Send(value interface{}) (nsent int) {
 		f.sendCases[i].Send = reflect.Value{}
 	}
 	f.sendLock <- struct{}{}
+
 	return nsent
 }
 
@@ -190,6 +203,7 @@ func (cs caseList) find(channel interface{}) int {
 			return i
 		}
 	}
+
 	return -1
 }
 
@@ -202,5 +216,6 @@ func (cs caseList) delete(index int) caseList {
 func (cs caseList) deactivate(index int) caseList {
 	last := len(cs) - 1
 	cs[index], cs[last] = cs[last], cs[index]
+
 	return cs[:last]
 }

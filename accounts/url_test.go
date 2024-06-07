@@ -2,20 +2,26 @@ package accounts
 
 import "testing"
 
+const (
+	bladeURL           = "blade.org"
+	bladeURLWithPrefix = "https://blade.org"
+	bladeURLJSON       = "\"https://blade.org\""
+)
+
 func TestURLParsing(t *testing.T) {
 	t.Parallel()
-	url, err := parseURL("https://ethereum.org")
+	url, err := parseURL(bladeURLWithPrefix)
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if url.Scheme != "https" {
 		t.Errorf("expected: %v, got: %v", "https", url.Scheme)
 	}
-	if url.Path != "ethereum.org" {
-		t.Errorf("expected: %v, got: %v", "ethereum.org", url.Path)
+	if url.Path != bladeURL {
+		t.Errorf("expected: %v, got: %v", bladeURL, url.Path)
 	}
 
-	for _, u := range []string{"ethereum.org", ""} {
+	for _, u := range []string{bladeURL, ""} {
 		if _, err = parseURL(u); err == nil {
 			t.Errorf("input %v, expected err, got: nil", u)
 		}
@@ -24,40 +30,40 @@ func TestURLParsing(t *testing.T) {
 
 func TestURLString(t *testing.T) {
 	t.Parallel()
-	url := URL{Scheme: "https", Path: "ethereum.org"}
-	if url.String() != "https://ethereum.org" {
-		t.Errorf("expected: %v, got: %v", "https://ethereum.org", url.String())
+	url := URL{Scheme: "https", Path: bladeURL}
+	if url.String() != bladeURLWithPrefix {
+		t.Errorf("expected: %v, got: %v", bladeURLWithPrefix, url.String())
 	}
 
-	url = URL{Scheme: "", Path: "ethereum.org"}
-	if url.String() != "ethereum.org" {
-		t.Errorf("expected: %v, got: %v", "ethereum.org", url.String())
+	url = URL{Scheme: "", Path: bladeURL}
+	if url.String() != bladeURL {
+		t.Errorf("expected: %v, got: %v", bladeURL, url.String())
 	}
 }
 
 func TestURLMarshalJSON(t *testing.T) {
 	t.Parallel()
-	url := URL{Scheme: "https", Path: "ethereum.org"}
+	url := URL{Scheme: "https", Path: bladeURL}
 	json, err := url.MarshalJSON()
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
-	if string(json) != "\"https://ethereum.org\"" {
-		t.Errorf("expected: %v, got: %v", "\"https://ethereum.org\"", string(json))
+	if string(json) != bladeURLJSON {
+		t.Errorf("expected: %v, got: %v", bladeURLJSON, string(json))
 	}
 }
 
 func TestURLUnmarshalJSON(t *testing.T) {
 	t.Parallel()
 	url := &URL{}
-	err := url.UnmarshalJSON([]byte("\"https://ethereum.org\""))
+	err := url.UnmarshalJSON([]byte(bladeURLJSON))
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 	if url.Scheme != "https" {
 		t.Errorf("expected: %v, got: %v", "https", url.Scheme)
 	}
-	if url.Path != "ethereum.org" {
+	if url.Path != bladeURL {
 		t.Errorf("expected: %v, got: %v", "https", url.Path)
 	}
 }
@@ -69,10 +75,10 @@ func TestURLComparison(t *testing.T) {
 		urlB   URL
 		expect int
 	}{
-		{URL{"https", "ethereum.org"}, URL{"https", "ethereum.org"}, 0},
-		{URL{"http", "ethereum.org"}, URL{"https", "ethereum.org"}, -1},
-		{URL{"https", "ethereum.org/a"}, URL{"https", "ethereum.org"}, 1},
-		{URL{"https", "abc.org"}, URL{"https", "ethereum.org"}, -1},
+		{URL{"https", bladeURL}, URL{"https", bladeURL}, 0},
+		{URL{"http", bladeURL}, URL{"https", bladeURL}, -1},
+		{URL{"https", bladeURL + "/a"}, URL{"https", bladeURL}, 1},
+		{URL{"https", "abc.org"}, URL{"https", bladeURL}, -1},
 	}
 
 	for i, tt := range tests {

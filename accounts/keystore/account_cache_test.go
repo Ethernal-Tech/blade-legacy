@@ -43,18 +43,20 @@ func waitWatcherStart(ks *KeyStore) bool {
 	if !ks.cache.watcher.enabled() {
 		return true
 	}
+
 	// The watcher should start, and then exit.
-	for t0 := time.Now(); time.Since(t0) < 1*time.Second; time.Sleep(100 * time.Millisecond) {
+	for t0 := time.Now().UTC(); time.Since(t0) < 1*time.Second; time.Sleep(100 * time.Millisecond) {
 		if ks.cache.watcherStarted() {
 			return true
 		}
 	}
+
 	return false
 }
 
 func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	var list []accounts.Account
-	for t0 := time.Now(); time.Since(t0) < 5*time.Second; time.Sleep(100 * time.Millisecond) {
+	for t0 := time.Now().UTC(); time.Since(t0) < 5*time.Second; time.Sleep(100 * time.Millisecond) {
 		list = ks.Accounts()
 		if reflect.DeepEqual(list, wantAccounts) {
 			// ks should have also received change notifications
@@ -63,6 +65,7 @@ func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 			default:
 				return errors.New("wasn't notified of new accounts")
 			}
+
 			return nil
 		}
 	}
@@ -296,10 +299,12 @@ func TestCacheFind(t *testing.T) {
 		a, err := cache.find(test.Query)
 		if !reflect.DeepEqual(err, test.WantError) {
 			t.Errorf("test %d: error mismatch for query %v\ngot %q\nwant %q", i, test.Query, err, test.WantError)
+
 			continue
 		}
 		if a != test.WantResult {
 			t.Errorf("test %d: result mismatch for query %v\ngot %v\nwant %v", i, test.Query, a, test.WantResult)
+
 			continue
 		}
 	}
@@ -339,7 +344,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 		return
 	}
 	// needed so that modTime of `file` is different to its current value after forceCopyFile
-	os.Chtimes(file, time.Now().Add(-time.Second), time.Now().Add(-time.Second))
+	require.NoError(t, os.Chtimes(file, time.Now().UTC().Add(-time.Second), time.Now().UTC().Add(-time.Second)))
 
 	// Now replace file contents
 	if err := forceCopyFile(file, cachetestAccounts[1].URL.Path); err != nil {
@@ -355,7 +360,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 	}
 
 	// needed so that modTime of `file` is different to its current value after forceCopyFile
-	os.Chtimes(file, time.Now().Add(-time.Second), time.Now().Add(-time.Second))
+	require.NoError(t, os.Chtimes(file, time.Now().UTC().Add(-time.Second), time.Now().UTC().Add(-time.Second)))
 
 	// Now replace file contents again
 	if err := forceCopyFile(file, cachetestAccounts[2].URL.Path); err != nil {
@@ -371,7 +376,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 	}
 
 	// needed so that modTime of `file` is different to its current value after os.WriteFile
-	os.Chtimes(file, time.Now().Add(-time.Second), time.Now().Add(-time.Second))
+	require.NoError(t, os.Chtimes(file, time.Now().UTC().Add(-time.Second), time.Now().UTC().Add(-time.Second)))
 
 	// Now replace file contents with crap
 	if err := os.WriteFile(file, []byte("foo"), 0600); err != nil {

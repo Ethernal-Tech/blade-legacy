@@ -51,7 +51,6 @@ func TestKeyStorePassphrase(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStoreIface(t, true)
 
-	pass := "foo"
 	k1, account, err := storeNewKey(ks, rand.Reader, pass)
 	if err != nil {
 		t.Fatal(err)
@@ -72,7 +71,6 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStoreIface(t, true)
 
-	pass := "foo"
 	k1, account, err := storeNewKey(ks, rand.Reader, pass)
 	if err != nil {
 		t.Fatal(err)
@@ -90,7 +88,6 @@ func TestImportPreSaleKey(t *testing.T) {
 	// python pyethsaletool.py genwallet
 	// with password "foo"
 	fileContent := "{\"encseed\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\", \"ethaddr\": \"d4584b5f6229b7be90727b0fc8c6b91bb427821f\", \"email\": \"gustav.simonsson@gmail.com\", \"btcaddr\": \"1EVknXyFC68kKNLkh6YnKzW41svSRoaAcx\"}"
-	pass := "foo"
 	account, _, err := importPreSaleKey(ks, []byte(fileContent), pass)
 	if err != nil {
 		t.Fatal(err)
@@ -106,21 +103,21 @@ func TestImportPreSaleKey(t *testing.T) {
 // Test and utils for the key store tests in the Ethereum JSON tests;
 // testdataKeyStoreTests/basic_tests.json
 type KeyStoreTestV3 struct {
-	Json     encryptedKeyJSONV3
+	JSON     encryptedKeyJSONV3
 	Password string
 	Priv     string
 }
 
 type KeyStoreTestV1 struct {
-	Json     encryptedKeyJSONV1
+	JSON     encryptedKeyJSONV1
 	Password string
 	Priv     string
 }
 
 func TestV3_PBKDF2_1(t *testing.T) {
 	t.Parallel()
-	tests := loadKeyStoreTestV3("testdata/v3_test_vector.json", t)
-	testDecryptV3(tests["wikipage_test_vector_pbkdf2"], t)
+	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	testDecryptV3(t, tests["wikipage_test_vector_pbkdf2"])
 }
 
 var testsSubmodule = filepath.Join("..", "..", "tests", "testdata", "KeyStoreTests")
@@ -134,41 +131,41 @@ func skipIfSubmoduleMissing(t *testing.T) {
 func TestV3_PBKDF2_2(t *testing.T) {
 	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
-	testDecryptV3(tests["test1"], t)
+	tests := loadKeyStoreTestV3(t, filepath.Join(testsSubmodule, "basic_tests.json"))
+	testDecryptV3(t, tests["test1"])
 }
 
 func TestV3_PBKDF2_3(t *testing.T) {
 	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
-	testDecryptV3(tests["python_generated_test_with_odd_iv"], t)
+	tests := loadKeyStoreTestV3(t, filepath.Join(testsSubmodule, "basic_tests.json"))
+	testDecryptV3(t, tests["python_generated_test_with_odd_iv"])
 }
 
 func TestV3_PBKDF2_4(t *testing.T) {
 	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
-	testDecryptV3(tests["evilnonce"], t)
+	tests := loadKeyStoreTestV3(t, filepath.Join(testsSubmodule, "basic_tests.json"))
+	testDecryptV3(t, tests["evilnonce"])
 }
 
 func TestV3_Scrypt_1(t *testing.T) {
 	t.Parallel()
-	tests := loadKeyStoreTestV3("testdata/v3_test_vector.json", t)
-	testDecryptV3(tests["wikipage_test_vector_scrypt"], t)
+	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	testDecryptV3(t, tests["wikipage_test_vector_scrypt"])
 }
 
 func TestV3_Scrypt_2(t *testing.T) {
 	skipIfSubmoduleMissing(t)
 	t.Parallel()
-	tests := loadKeyStoreTestV3(filepath.Join(testsSubmodule, "basic_tests.json"), t)
-	testDecryptV3(tests["test2"], t)
+	tests := loadKeyStoreTestV3(t, filepath.Join(testsSubmodule, "basic_tests.json"))
+	testDecryptV3(t, tests["test2"])
 }
 
 func TestV1_1(t *testing.T) {
 	t.Parallel()
-	tests := loadKeyStoreTestV1("testdata/v1_test_vector.json", t)
-	testDecryptV1(tests["test1"], t)
+	tests := loadKeyStoreTestV1(t, "testdata/v1_test_vector.json")
+	testDecryptV1(t, tests["test1"])
 }
 
 func TestV1_2(t *testing.T) {
@@ -190,8 +187,8 @@ func TestV1_2(t *testing.T) {
 	}
 }
 
-func testDecryptV3(test KeyStoreTestV3, t *testing.T) {
-	privBytes, _, err := decryptKeyV3(&test.Json, test.Password)
+func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
+	privBytes, _, err := decryptKeyV3(&test.JSON, test.Password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,8 +198,8 @@ func testDecryptV3(test KeyStoreTestV3, t *testing.T) {
 	}
 }
 
-func testDecryptV1(test KeyStoreTestV1, t *testing.T) {
-	privBytes, _, err := decryptKeyV1(&test.Json, test.Password)
+func testDecryptV1(t *testing.T, test KeyStoreTestV1) {
+	privBytes, _, err := decryptKeyV1(&test.JSON, test.Password)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -212,7 +209,9 @@ func testDecryptV1(test KeyStoreTestV1, t *testing.T) {
 	}
 }
 
-func loadKeyStoreTestV3(file string, t *testing.T) map[string]KeyStoreTestV3 {
+func loadKeyStoreTestV3(t *testing.T, file string) map[string]KeyStoreTestV3 {
+	t.Helper()
+
 	tests := make(map[string]KeyStoreTestV3)
 	err := accounts.LoadJSON(file, &tests)
 	if err != nil {
@@ -221,7 +220,9 @@ func loadKeyStoreTestV3(file string, t *testing.T) map[string]KeyStoreTestV3 {
 	return tests
 }
 
-func loadKeyStoreTestV1(file string, t *testing.T) map[string]KeyStoreTestV1 {
+func loadKeyStoreTestV1(t *testing.T, file string) map[string]KeyStoreTestV1 {
+	t.Helper()
+
 	tests := make(map[string]KeyStoreTestV1)
 	err := accounts.LoadJSON(file, &tests)
 	if err != nil {
@@ -240,12 +241,12 @@ func TestKeyForDirectICAP(t *testing.T) {
 
 func TestV3_31_Byte_Key(t *testing.T) {
 	t.Parallel()
-	tests := loadKeyStoreTestV3("testdata/v3_test_vector.json", t)
-	testDecryptV3(tests["31_byte_key"], t)
+	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	testDecryptV3(t, tests["31_byte_key"])
 }
 
 func TestV3_30_Byte_Key(t *testing.T) {
 	t.Parallel()
-	tests := loadKeyStoreTestV3("testdata/v3_test_vector.json", t)
-	testDecryptV3(tests["30_byte_key"], t)
+	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	testDecryptV3(t, tests["30_byte_key"])
 }

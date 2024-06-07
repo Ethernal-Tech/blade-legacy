@@ -39,14 +39,18 @@ type scopeSub struct {
 func (sc *SubscriptionScope) Track(s Subscription) Subscription {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+
 	if sc.closed {
 		return nil
 	}
+
 	if sc.subs == nil {
 		sc.subs = make(map[*scopeSub]struct{})
 	}
+
 	ss := &scopeSub{sc, s}
 	sc.subs[ss] = struct{}{}
+
 	return ss
 }
 
@@ -58,10 +62,12 @@ func (sc *SubscriptionScope) Close() {
 	if sc.closed {
 		return
 	}
+
 	sc.closed = true
 	for s := range sc.subs {
 		s.s.Unsubscribe()
 	}
+
 	sc.subs = nil
 }
 
@@ -70,6 +76,7 @@ func (sc *SubscriptionScope) Close() {
 func (sc *SubscriptionScope) Count() int {
 	sc.mu.Lock()
 	defer sc.mu.Unlock()
+
 	return len(sc.subs)
 }
 

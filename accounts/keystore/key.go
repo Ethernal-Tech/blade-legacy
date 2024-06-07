@@ -24,7 +24,7 @@ const (
 )
 
 type Key struct {
-	Id uuid.UUID
+	ID uuid.UUID
 
 	Address types.Address
 
@@ -43,21 +43,21 @@ type keyStore interface {
 type plainKeyJSON struct {
 	Address    string `json:"address"`
 	PrivateKey string `json:"privatekey"`
-	Id         string `json:"id"`
+	ID         string `json:"id"`
 	Version    int    `json:"version"`
 }
 
 type encryptedKeyJSONV3 struct {
 	Address string     `json:"address"`
 	Crypto  CryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
+	ID      string     `json:"id"`
 	Version int        `json:"version"`
 }
 
 type encryptedKeyJSONV1 struct {
 	Address string     `json:"address"`
 	Crypto  CryptoJSON `json:"crypto"`
-	Id      string     `json:"id"`
+	ID      string     `json:"id"`
 	Version string     `json:"version"`
 }
 
@@ -84,7 +84,7 @@ func (k *Key) MarshalJSON() (j []byte, err error) {
 	jStruct := plainKeyJSON{
 		hex.EncodeToString(k.Address[:]),
 		hex.EncodeToString(privKey),
-		k.Id.String(),
+		k.ID.String(),
 		version,
 	}
 	j, err = json.Marshal(jStruct)
@@ -99,11 +99,11 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 	}
 
 	u := new(uuid.UUID)
-	*u, err = uuid.Parse(keyJSON.Id)
+	*u, err = uuid.Parse(keyJSON.ID)
 	if err != nil {
 		return err
 	}
-	k.Id = *u
+	k.ID = *u
 	addr, err := hex.DecodeString(keyJSON.Address)
 	if err != nil {
 		return err
@@ -123,10 +123,10 @@ func (k *Key) UnmarshalJSON(j []byte) (err error) {
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id, err := uuid.NewRandom()
 	if err != nil {
-		panic(fmt.Sprintf("Could not create random uuid: %v", err))
+		panic(fmt.Sprintf("Could not create random uuid: %v", err)) //nolint:gocritic
 	}
 	key := &Key{
-		Id:         id,
+		ID:         id,
 		Address:    crypto.PubKeyToAddress(&privateKeyECDSA.PublicKey), //TO DO get more time for this pointer
 		PrivateKey: privateKeyECDSA,
 	}
@@ -186,12 +186,12 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	randBytes := make([]byte, 64)
 	_, err := rand.Read(randBytes)
 	if err != nil {
-		panic("key generation: could not read from random source: " + err.Error())
+		panic("key generation: could not read from random source: " + err.Error()) //nolint:gocritic
 	}
 	reader := bytes.NewReader(randBytes)
 	privateKeyECDSA, err := ecdsa.GenerateKey(btcec.S256(), reader)
 	if err != nil {
-		panic("key generation: ecdsa.GenerateKey failed: " + err.Error())
+		panic("key generation: ecdsa.GenerateKey failed: " + err.Error()) //nolint:gocritic
 	}
 	key := newKeyFromECDSA(privateKeyECDSA)
 	if !strings.HasPrefix(key.Address.String(), "0x00") {

@@ -1,12 +1,15 @@
 package keystore
 
 import (
+	"os"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/hashicorp/go-hclog"
 )
 
 type watcher struct {
+	logger   hclog.Logger
 	ac       *accountCache
 	running  bool // set to true when runloop begins
 	runEnded bool // set to true when runloop ends
@@ -14,10 +17,11 @@ type watcher struct {
 	quit     chan struct{}
 }
 
-func newWatcher(ac *accountCache) *watcher {
+func newWatcher(ac *accountCache, logger hclog.Logger) *watcher {
 	return &watcher{
-		ac:   ac,
-		quit: make(chan struct{}),
+		logger: logger,
+		ac:     ac,
+		quit:   make(chan struct{}),
 	}
 }
 
@@ -46,16 +50,21 @@ func (w *watcher) loop() {
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		//TO DO add log
+		w.logger.Error("Failed to start filesystem watcher", "err", err)
 		return
 	}
 
 	defer watcher.Close()
 
 	if err := watcher.Add(w.ac.keydir); err != nil {
-		//TO DO logger
+		if !os.IsNotExist(err) {
+			w.logger.Info("Failed to watch keystore folder", "err", err)
+		}
 		return
 	}
+
+	w.logger.Trace("Started watching keystore folder", "folder", w.ac.keydir)
+	defer w.logger.Trace("Stopped watching keystore folder")
 
 	w.ac.mu.Lock()
 	w.running = true
@@ -89,11 +98,12 @@ func (w *watcher) loop() {
 			if !ok {
 				return
 			}
-			// TO DO log.Info("Filesystem watcher error", "err", err)
+			w.logger.Info("Filesystem watcher error", "err", err)
 		case <-debounce.C:
-			w.ac.scanAccounts()
+			if err := w.ac.scanAccounts(); err != nil {
+				w.logger.Info("loop", "scanAccounts", err)
+			}
 			rescanTriggered = false
 		}
 	}
-
 }

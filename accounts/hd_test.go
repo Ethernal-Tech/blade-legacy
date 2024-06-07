@@ -53,6 +53,7 @@ func TestHDPathParsing(t *testing.T) {
 		{"m/2147483648'", nil}, // Overflows 32 bit integer
 		{"m/-1'", nil},         // Cannot contain negative number
 	}
+
 	for i, tt := range tests {
 		if path, err := ParseDerivationPath(tt.input); !reflect.DeepEqual(path, tt.output) {
 			t.Errorf("test %d: parse mismatch: have %v (%v), want %v", i, path, err, tt.output)

@@ -20,14 +20,7 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 	}
 	defer fd.Close()
 	key := new(Key)
-
-	fileStat, err := fd.Stat()
-	if err != nil {
-		return nil, err
-	}
-	keyBytes := make([]byte, fileStat.Size())
-	_, err = fd.Read(keyBytes)
-	if err := json.Unmarshal(keyBytes, key); err != nil {
+	if err := json.NewDecoder(fd).Decode(key); err != nil {
 		return nil, err
 	}
 	if key.Address != addr {

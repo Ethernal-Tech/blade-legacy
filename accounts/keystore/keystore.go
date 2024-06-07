@@ -99,7 +99,7 @@ func (ks *KeyStore) refreshWallets() {
 	ks.mu.Lock()
 	accs := ks.cache.accounts()
 
-	var (
+	var ( //nolint:prealloc
 		wallets = make([]accounts.Wallet, 0, len(accs))
 		events  []accounts.WalletEvent
 	)
@@ -115,6 +115,7 @@ func (ks *KeyStore) refreshWallets() {
 
 			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
 			wallets = append(wallets, wallet)
+
 			continue
 		}
 
@@ -226,7 +227,8 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 	return signer.SignTx(tx, unlockedKey.PrivateKey)
 }
 
-func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account, passphrase string, hash []byte) (signature []byte, err error) {
+func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account,
+	passphrase string, hash []byte) (signature []byte, err error) {
 	_, key, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {
 		return nil, err
@@ -237,7 +239,8 @@ func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account, passphrase string
 	return crypto.Sign(key.PrivateKey, hash)
 }
 
-func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string,
+	tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
 	_, key, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {
 		return nil, err
@@ -393,7 +396,8 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 }
 
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
-	a := accounts.Account{Address: key.Address, URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}}
+	a := accounts.Account{Address: key.Address,
+		URL: accounts.URL{Scheme: KeyStoreScheme, Path: ks.storage.JoinPath(keyFileName(key.Address))}}
 	if err := ks.storage.StoreKey(a.URL.Path, key, passphrase); err != nil {
 		return accounts.Account{}, err
 	}

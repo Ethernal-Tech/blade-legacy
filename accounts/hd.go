@@ -44,9 +44,10 @@ var LegacyLedgerBaseDerivationPath = DerivationPath{0x80000000 + 44, 0x80000000 
 type DerivationPath []uint32
 
 func ParseDerivationPath(path string) (DerivationPath, error) {
-	var result DerivationPath
+	var result DerivationPath //nolint:prealloc
 
 	components := strings.Split(path, "/")
+
 	switch {
 	case len(components) == 0:
 		return nil, errors.New("empty derivation path")
@@ -64,6 +65,7 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 
 	for _, component := range components {
 		component = strings.TrimSpace(component)
+
 		var value uint32
 
 		if strings.HasSuffix(component, "'") {
@@ -75,13 +77,17 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 		if !ok {
 			return nil, fmt.Errorf("invalid component: %s", component)
 		}
+
 		max := math.MaxUint32 - value
+
 		if bigValue.Sign() < 0 || bigValue.Cmp(big.NewInt(int64(max))) > 0 {
 			if value == 0 {
 				return nil, fmt.Errorf("component %v out of allowed range [0, %d]", bigValue, max)
 			}
+
 			return nil, fmt.Errorf("component %v out of allowed hardened range [0, %d]", bigValue, max)
 		}
+
 		value += uint32(bigValue.Uint64())
 
 		result = append(result, value)
@@ -92,17 +98,22 @@ func ParseDerivationPath(path string) (DerivationPath, error) {
 
 func (path DerivationPath) String() string {
 	result := "m"
+
 	for _, component := range path {
 		var hardened bool
+
 		if component >= 0x80000000 {
 			component -= 0x80000000
 			hardened = true
 		}
+
 		result = fmt.Sprintf("%s/%d", result, component)
+
 		if hardened {
 			result += "'"
 		}
 	}
+
 	return result
 }
 
@@ -113,9 +124,11 @@ func (path DerivationPath) MarshalJSON() ([]byte, error) {
 func (path *DerivationPath) UnmarshalJSON(b []byte) error {
 	var dp string
 	var err error
+
 	if err = json.Unmarshal(b, &dp); err != nil {
 		return err
 	}
+
 	*path, err = ParseDerivationPath(dp)
 	return err
 }

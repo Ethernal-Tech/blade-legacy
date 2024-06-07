@@ -46,7 +46,7 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 		notify: make(chan struct{}, 1),
 		fileC:  fileCache{all: mapset.NewThreadUnsafeSet[string]()},
 	}
-	ac.watcher = newWatcher(ac)
+	ac.watcher = newWatcher(ac, logger)
 
 	return ac, ac.notify
 }
@@ -228,12 +228,14 @@ func (ac *accountCache) scanAccounts() error {
 			ac.logger.Trace("Failed to open keystore file", "path", path, "err", err)
 			return nil
 		}
+
 		defer fd.Close()
 		buf.Reset(fd)
 		// Parse the address.
 		key.Address = ""
 		err = json.NewDecoder(buf).Decode(&key)
 		addr := types.StringToAddress(key.Address)
+
 		switch {
 		case err != nil:
 			ac.logger.Debug("Failed to decode keystore key", "path", path, "err", err)
@@ -245,31 +247,37 @@ func (ac *accountCache) scanAccounts() error {
 				URL:     accounts.URL{Scheme: KeyStoreScheme, Path: path},
 			}
 		}
+
 		return nil
 	}
 	// Process all the file diffs
-	start := time.Now()
+	start := time.Now().UTC()
 
 	for _, path := range creates.ToSlice() {
 		if a := readAccount(path); a != nil {
 			ac.add(*a)
 		}
 	}
+
 	for _, path := range deletes.ToSlice() {
 		ac.deleteByFile(path)
 	}
+
 	for _, path := range updates.ToSlice() {
 		ac.deleteByFile(path)
+
 		if a := readAccount(path); a != nil {
 			ac.add(*a)
 		}
 	}
-	end := time.Now()
+
+	end := time.Now().UTC()
 
 	select {
 	case ac.notify <- struct{}{}:
 	default:
 	}
 	ac.logger.Trace("Handled keystore changes", "time", end.Sub(start))
+
 	return nil
 }
