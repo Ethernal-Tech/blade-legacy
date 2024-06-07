@@ -36,15 +36,20 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 
 	keyPath := path.Join(keyDir, "keys.txt")
 
-	ac.fileC = NewFileCache(keyPath)
+	ac.fileC, _ = NewFileCache(keyPath)
 
-	ac.scanAccounts()
+	ac.scanAccounts() //nolint:errcheck
 
 	return ac, ac.notify
 }
 
 func (ac *accountCache) accounts() []accounts.Account {
-	ac.scanAccounts()
+	err := ac.scanAccounts()
+	if err != nil {
+		ac.logger.Debug("can't scan account's", "err", err)
+
+		return []accounts.Account{}
+	}
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -61,7 +66,10 @@ func (ac *accountCache) accounts() []accounts.Account {
 }
 
 func (ac *accountCache) hasAddress(addr types.Address) bool {
-	ac.scanAccounts()
+	err := ac.scanAccounts()
+	if err != nil {
+		ac.logger.Debug("can't scan account's", "err", err)
+	}
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -72,7 +80,10 @@ func (ac *accountCache) hasAddress(addr types.Address) bool {
 }
 
 func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3) error {
-	ac.scanAccounts()
+	err := ac.scanAccounts()
+	if err != nil {
+		return err
+	}
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -83,7 +94,7 @@ func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3)
 
 	ac.allMap[newAccount.Address] = key
 
-	err := ac.fileC.saveData(ac.allMap)
+	err = ac.fileC.saveData(ac.allMap)
 	if err != nil {
 		return err
 	}
@@ -92,7 +103,9 @@ func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3)
 }
 
 func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3) error {
-	ac.scanAccounts()
+	if err := ac.scanAccounts(); err != nil {
+		return err
+	}
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
@@ -103,8 +116,7 @@ func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3)
 		ac.allMap[account.Address] = key
 	}
 
-	err := ac.fileC.saveData(ac.allMap)
-	if err != nil {
+	if err := ac.fileC.saveData(ac.allMap); err != nil {
 		return err
 	}
 
@@ -113,21 +125,27 @@ func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3)
 
 // note: removed needs to be unique here (i.e. both File and Address must be set).
 func (ac *accountCache) delete(removed accounts.Account) {
-	ac.scanAccounts()
+	if err := ac.scanAccounts(); err != nil {
+		ac.logger.Debug("can't scan account's", "err", err)
+	}
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
 	delete(ac.allMap, removed.Address)
 
-	ac.fileC.saveData(ac.allMap)
+	if err := ac.fileC.saveData(ac.allMap); err != nil {
+		ac.logger.Debug("cant't save data in file,", "err", err)
+	}
 }
 
 // find returns the cached account for address if there is a unique match.
 // The exact matching rules are explained by the documentation of accounts.Account.
 // Callers must hold ac.mu.
 func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKeyJSONV3, error) {
-	ac.scanAccounts()
+	if err := ac.scanAccounts(); err != nil {
+		return accounts.Account{}, encryptedKeyJSONV3{}, err
+	}
 
 	ac.mu.Lock()
 	defer ac.mu.Unlock()

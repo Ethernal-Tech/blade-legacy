@@ -16,14 +16,17 @@ type fileCache struct {
 	keyDir string
 }
 
-func NewFileCache(keyPath string) *fileCache {
+func NewFileCache(keyPath string) (*fileCache, error) {
 	fc := &fileCache{all: make(map[types.Address]encryptedKeyJSONV3), keyDir: keyPath}
 
 	if _, err := os.Stat(keyPath); errors.Is(err, os.ErrNotExist) {
-		os.Create(fc.keyDir)
+		if _, err := os.Create(fc.keyDir); err != nil {
+			return nil, err
+		}
+
 	}
 
-	return fc
+	return fc, nil
 }
 
 func (fc *fileCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) error {

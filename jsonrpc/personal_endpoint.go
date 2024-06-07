@@ -29,7 +29,7 @@ func (p *Personal) NewAccount(password string) (types.Address, error) {
 
 	acc, err := ks.NewAccount(password)
 	if err != nil {
-		return types.Address{}, fmt.Errorf("Cant create new account")
+		return types.Address{}, fmt.Errorf("can't create new account")
 	}
 
 	return acc.Address, nil
@@ -53,13 +53,15 @@ func (p *Personal) ImportRawKey(privKey string, password string) (types.Address,
 
 func (p *Personal) UnlockAccount(addr types.Address, password string, duration uint64) (bool, error) {
 	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
+
 	var d time.Duration
 
-	if duration == 0 {
+	switch {
+	case duration == 0:
 		d = 300 * time.Second
-	} else if duration > max {
+	case duration > max:
 		return false, errors.New("unlock duration is too large")
-	} else {
+	default:
 		d = time.Duration(duration) * time.Second
 	}
 
@@ -84,7 +86,7 @@ func (s *Personal) LockAccount(addr types.Address) bool {
 	return false
 }
 
-func (p *Personal) EcRecover(data, sig []byte) (types.Address, error) {
+func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) {
 	if len(sig) != crypto.ECDSASignatureLength {
 		return types.Address{}, fmt.Errorf("signature must be %d bytes long", crypto.ECDSASignatureLength)
 	}
@@ -105,7 +107,7 @@ func (p *Personal) EcRecover(data, sig []byte) (types.Address, error) {
 
 func getKeystore(am *accounts.Manager) (*keystore.KeyStore, error) {
 	if ks := am.Backends(keystore.KeyStoreType); len(ks) > 0 {
-		return ks[0].(*keystore.KeyStore), nil
+		return ks[0].(*keystore.KeyStore), nil //nolint:forcetypeassert
 	}
 
 	return nil, errors.New("local keystore not used")
