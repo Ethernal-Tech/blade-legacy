@@ -6,7 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/google/uuid"
 )
 
 type keyStorePlain struct {
@@ -19,11 +21,34 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 		return nil, err
 	}
 
-	defer fd.Close()
-
 	key := new(Key)
 
-	if err := json.NewDecoder(fd).Decode(key); err != nil {
+	defer fd.Close()
+
+	stat, err := fd.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	var (
+		dat      map[string]interface{}
+		jsonData = make([]byte, stat.Size())
+	)
+	_, err = fd.Read(jsonData)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(jsonData, &dat); err != nil {
+		return nil, err
+	}
+
+	key.Address = types.StringToAddress(dat["address"].(string))
+
+	key.ID = uuid.MustParse(dat["id"].(string))
+
+	key.PrivateKey, err = crypto.BytesToECDSAPrivateKey([]byte(dat["privatekey"].(string)))
+	if err != nil {
 		return nil, err
 	}
 
