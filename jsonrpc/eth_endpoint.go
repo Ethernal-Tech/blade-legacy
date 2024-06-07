@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/gasprice"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -101,6 +102,7 @@ type Eth struct {
 	chainID       uint64
 	filterManager *FilterManager
 	priceLimit    uint64
+	accManager    *accounts.Manager
 }
 
 // ChainId returns the chain id of the client

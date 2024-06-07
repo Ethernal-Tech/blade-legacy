@@ -76,7 +76,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		scryptP = keystore.LightScryptP
 	}
 
-	am := accounts.NewManager(&accounts.Config{})
+	am := accounts.NewManager(&accounts.Config{}, nil)
 
 	am.AddBackend(keystore.NewKeyStore(params.KeyDir, scryptN, scryptP, nil))
 
@@ -99,7 +99,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		outputter.SetError(fmt.Errorf("keystore is not available"))
 	}
 
-	ks := backends[0].(*keystore.KeyStore)
+	ks := backends[0].(*keystore.KeyStore) //nolint:forcetypeassert
 
 	acct, err := ks.ImportECDSA(privKey, params.Passphrase)
 	if err != nil {

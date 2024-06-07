@@ -43,11 +43,11 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 		return nil, err
 	}
 
-	key.Address = types.StringToAddress(dat["address"].(string))
+	key.Address = types.StringToAddress(dat["address"].(string)) //nolint:forcetypeassert
 
-	key.ID = uuid.MustParse(dat["id"].(string))
+	key.ID = uuid.MustParse(dat["id"].(string)) //nolint:forcetypeassert
 
-	key.PrivateKey, err = crypto.BytesToECDSAPrivateKey([]byte(dat["privatekey"].(string)))
+	key.PrivateKey, err = crypto.BytesToECDSAPrivateKey([]byte(dat["privatekey"].(string))) //nolint:forcetypeassert
 	if err != nil {
 		return nil, err
 	}

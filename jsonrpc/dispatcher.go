@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	jsonIter "github.com/json-iterator/go"
@@ -75,7 +76,7 @@ func (dp dispatcherParams) isExceedingBatchLengthLimit(value uint64) bool {
 func newDispatcher(
 	logger hclog.Logger,
 	store JSONRPCStore,
-	params *dispatcherParams,
+	params *dispatcherParams, manager *accounts.Manager,
 ) (*Dispatcher, error) {
 	d := &Dispatcher{
 		logger: logger.Named("dispatcher"),
@@ -87,20 +88,21 @@ func newDispatcher(
 		go d.filterManager.Run()
 	}
 
-	if err := d.registerEndpoints(store); err != nil {
+	if err := d.registerEndpoints(store, manager); err != nil {
 		return nil, err
 	}
 
 	return d, nil
 }
 
-func (d *Dispatcher) registerEndpoints(store JSONRPCStore) error {
+func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager *accounts.Manager) error {
 	d.endpoints.Eth = &Eth{
 		d.logger,
 		store,
 		d.params.chainID,
 		d.filterManager,
 		d.params.priceLimit,
+		manager,
 	}
 	d.endpoints.Net = &Net{
 		store,

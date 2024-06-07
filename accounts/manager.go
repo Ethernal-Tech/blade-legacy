@@ -7,6 +7,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts/event"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/hashicorp/go-hclog"
 )
 
 const managerSubBufferSize = 50
@@ -33,11 +34,13 @@ type Manager struct {
 
 	quit chan chan error
 
+	logger hclog.Logger
+
 	term chan struct{}
 	lock sync.RWMutex
 }
 
-func NewManager(config *Config, backends ...Backend) *Manager {
+func NewManager(config *Config, logger hclog.Logger, backends ...Backend) *Manager {
 	var wallets []Wallet
 
 	for _, backend := range backends {

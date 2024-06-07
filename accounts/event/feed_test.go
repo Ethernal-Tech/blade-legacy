@@ -66,7 +66,7 @@ func checkPanic(want error, fn func()) (err error) {
 		if panicErr == nil {
 			err = errors.New("didn't panic")
 		} else if !reflect.DeepEqual(panicErr, want) {
-			err = fmt.Errorf("panicked with wrong error: got %w, want %w", panicErr, want)
+			err = fmt.Errorf("panicked with wrong error: got %v, want %w", panicErr, want)
 		}
 	}()
 

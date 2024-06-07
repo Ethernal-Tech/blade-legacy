@@ -17,6 +17,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/archive"
 	"github.com/0xPolygon/polygon-edge/blockchain"
 	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
@@ -75,6 +76,8 @@ type Server struct {
 
 	// libp2p network
 	network *network.Server
+
+	accManager *accounts.Manager
 
 	// transaction pool
 	txpool *txpool.TxPool
@@ -205,6 +208,11 @@ func NewServer(config *Config) (*Server, error) {
 		}
 
 		m.network = network
+	}
+
+	// setup account manager
+	{
+		m.accManager = accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: true}, nil)
 	}
 
 	// start blockchain object
@@ -899,7 +907,7 @@ func (s *Server) setupJSONRPC() error {
 		SecretsManager:           s.secretsManager,
 	}
 
-	srv, err := jsonrpc.NewJSONRPC(s.logger, conf)
+	srv, err := jsonrpc.NewJSONRPC(s.logger, conf, s.accManager)
 	if err != nil {
 		return err
 	}

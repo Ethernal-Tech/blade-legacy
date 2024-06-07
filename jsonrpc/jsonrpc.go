@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/secrets"
 	"github.com/0xPolygon/polygon-edge/versioning"
 	"github.com/gorilla/websocket"
@@ -59,7 +60,7 @@ type Config struct {
 }
 
 // NewJSONRPC returns the JSONRPC http server
-func NewJSONRPC(logger hclog.Logger, config *Config) (*JSONRPC, error) {
+func NewJSONRPC(logger hclog.Logger, config *Config, manager *accounts.Manager) (*JSONRPC, error) {
 	d, err := newDispatcher(
 		logger,
 		config.Store,
@@ -71,6 +72,7 @@ func NewJSONRPC(logger hclog.Logger, config *Config) (*JSONRPC, error) {
 			blockRangeLimit:         config.BlockRangeLimit,
 			concurrentRequestsDebug: config.ConcurrentRequestsDebug,
 		},
+		manager,
 	)
 
 	if err != nil {

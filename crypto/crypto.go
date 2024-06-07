@@ -370,13 +370,13 @@ func LatestSignerForChainID(chaidID uint64) TxSigner {
 	return NewLondonSigner(chaidID)
 }
 
-func DToECDSA(D []byte, strict bool) (*ecdsa.PrivateKey, error) {
+func DToECDSA(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = btcec.S256()
-	if strict && 8*len(D) != priv.Params().BitSize {
+	if strict && 8*len(d) != priv.Params().BitSize {
 		return nil, fmt.Errorf("invalid length, need %d bits", priv.Params().BitSize)
 	}
-	priv.D = new(big.Int).SetBytes(D)
+	priv.D = new(big.Int).SetBytes(d)
 
 	if priv.D.Cmp(secp256k1N) >= 0 {
 		return nil, errors.New("invalid private key, >= N")
@@ -386,11 +386,10 @@ func DToECDSA(D []byte, strict bool) (*ecdsa.PrivateKey, error) {
 		return nil, errors.New("invalid private key, zero or negative")
 	}
 
-	priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(D)
+	priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d)
 	if priv.PublicKey.X == nil {
 		return nil, errors.New("invalid private key")
 	}
 
 	return priv, nil
-
 }

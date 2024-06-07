@@ -76,7 +76,7 @@ type cipherparamsJSON struct {
 
 // TO DO marshall private key
 func (k *Key) MarshalJSON() (j []byte, err error) {
-	privKey, err := crypto.MarshalECDSAPrivateKey(k.PrivateKey) //get more time for this
+	privKey, err := crypto.MarshalECDSAPrivateKey(k.PrivateKey) // get more time for this
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +135,7 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 
 	key := &Key{
 		ID:         id,
-		Address:    crypto.PubKeyToAddress(&privateKeyECDSA.PublicKey), //TO DO get more time for this pointer
+		Address:    crypto.PubKeyToAddress(&privateKeyECDSA.PublicKey), // TO DO get more time for this pointer
 		PrivateKey: privateKeyECDSA,
 	}
 
@@ -192,7 +192,7 @@ func writeTemporaryKeyFile(file string, content []byte) (string, error) {
 }
 
 func newKey(rand io.Reader) (*Key, error) {
-	privateKeyECDSA, err := crypto.GenerateECDSAPrivateKey() //TO DO maybe not valid
+	privateKeyECDSA, err := crypto.GenerateECDSAPrivateKey() // TO DO maybe not valid
 	if err != nil {
 		return nil, err
 	}
