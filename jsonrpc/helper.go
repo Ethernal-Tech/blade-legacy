@@ -187,7 +187,7 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 	// set default values
 	if arg.From == nil {
 		arg.From = &types.ZeroAddress
-		arg.Nonce = argUintPtr(0)
+		arg.Nonce = ArgUintPtr(0)
 	} else if arg.Nonce == nil || forceSetNonce {
 		// get nonce from the pool
 		nonce, err := GetNextNonce(*arg.From, LatestBlockNumber, store)
@@ -195,23 +195,23 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 			return nil, err
 		}
 
-		arg.Nonce = argUintPtr(nonce)
+		arg.Nonce = ArgUintPtr(nonce)
 	}
 
 	if arg.Value == nil {
-		arg.Value = argBytesPtr([]byte{})
+		arg.Value = ArgBytesPtr([]byte{})
 	}
 
 	if arg.GasPrice == nil {
-		arg.GasPrice = argBytesPtr([]byte{})
+		arg.GasPrice = ArgBytesPtr([]byte{})
 	}
 
 	if arg.GasTipCap == nil {
-		arg.GasTipCap = argBytesPtr([]byte{})
+		arg.GasTipCap = ArgBytesPtr([]byte{})
 	}
 
 	if arg.GasFeeCap == nil {
-		arg.GasFeeCap = argBytesPtr([]byte{})
+		arg.GasFeeCap = ArgBytesPtr([]byte{})
 	}
 
 	var input []byte
@@ -230,7 +230,7 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 	}
 
 	if arg.Gas == nil {
-		arg.Gas = argUintPtr(0)
+		arg.Gas = ArgUintPtr(0)
 	}
 
 	txType := types.LegacyTxType

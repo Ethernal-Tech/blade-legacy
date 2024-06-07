@@ -351,7 +351,7 @@ func TestUpdatedKeyfileContents(t *testing.T) {
 	//t.Parallel()
 
 	// Create a temporary keystore to test with
-	dir, err := filepath.Abs(filepath.Join(fmt.Sprintf("eth-keystore-updatedkeyfilecontents-test-%d-%d", os.Getpid(), rand.Int()))) //nolint:gocritic
+	dir, err := filepath.Abs(filepath.Join(fmt.Sprintf("eth-keystore-updatedkeyfilecontents-test-%d-%d", os.Getpid(), rand.Int())))
 	require.NoError(t, err)
 
 	ks := NewKeyStore(dir, LightScryptN, LightScryptP, hclog.NewNullLogger())

@@ -15,6 +15,57 @@ type Subscription interface {
 	Unsubscribe()      // cancels sending of events, closing the error channel
 }
 
+func NewSubscription(producer func(<-chan struct{}) error) Subscription {
+	s := &funcSub{unsub: make(chan struct{}), err: make(chan error, 1)}
+	go func() {
+		defer close(s.err)
+
+		err := producer(s.unsub)
+		s.mu.Lock()
+
+		defer s.mu.Unlock()
+
+		if !s.unsubscribed {
+			if err != nil {
+				s.err <- err
+			}
+
+			s.unsubscribed = true
+		}
+	}()
+
+	return s
+}
+
+type funcSub struct {
+	unsub        chan struct{}
+	err          chan error
+	mu           sync.Mutex
+	unsubscribed bool
+}
+
+func (s *funcSub) Unsubscribe() {
+	s.mu.Lock()
+
+	if s.unsubscribed {
+		s.mu.Unlock()
+
+		return
+	}
+
+	s.unsubscribed = true
+
+	close(s.unsub)
+
+	s.mu.Unlock()
+	// Wait for producer shutdown.
+	<-s.err
+}
+
+func (s *funcSub) Err() <-chan error {
+	return s.err
+}
+
 // SubscriptionScope provides a facility to unsubscribe multiple subscriptions at once.
 //
 // For code that handle more than one subscription, a scope can be used to conveniently

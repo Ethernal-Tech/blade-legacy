@@ -34,7 +34,7 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 		dat      map[string]interface{}
 		jsonData = make([]byte, stat.Size())
 	)
-	_, err = fd.Read(jsonData)
+	_, err = fd.Read(jsonData) //nolint:wsl
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 
 	key.ID = uuid.MustParse(dat["id"].(string)) //nolint:forcetypeassert
 
-	key.PrivateKey, err = crypto.BytesToECDSAPrivateKey([]byte(dat["privatekey"].(string))) //nolint:forcetypeassert
+	key.PrivateKey, err = crypto.BytesToECDSAPrivateKey([]byte(dat["privatekey"].(string)))
 	if err != nil {
 		return nil, err
 	}

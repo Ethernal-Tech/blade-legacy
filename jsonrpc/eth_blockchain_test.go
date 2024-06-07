@@ -134,7 +134,7 @@ func TestEth_Block_BlockNumber(t *testing.T) {
 
 	num, err := eth.BlockNumber()
 	assert.NoError(t, err)
-	assert.Equal(t, argUintPtr(10), num)
+	assert.Equal(t, ArgUintPtr(10), num)
 }
 
 func TestEth_Block_GetBlockTransactionCountByHash(t *testing.T) {
@@ -560,11 +560,11 @@ func TestEth_Call(t *testing.T) {
 		contractCall := &txnArgs{
 			From:     &addr0,
 			To:       &addr1,
-			Gas:      argUintPtr(100000),
-			GasPrice: argBytesPtr([]byte{0x64}),
-			Value:    argBytesPtr([]byte{0x64}),
+			Gas:      ArgUintPtr(100000),
+			GasPrice: ArgBytesPtr([]byte{0x64}),
+			Value:    ArgBytesPtr([]byte{0x64}),
 			Data:     nil,
-			Nonce:    argUintPtr(0),
+			Nonce:    ArgUintPtr(0),
 		}
 
 		res, err := eth.Call(contractCall, BlockNumberOrHash{}, nil)
@@ -584,11 +584,11 @@ func TestEth_Call(t *testing.T) {
 		contractCall := &txnArgs{
 			From:     &addr0,
 			To:       &addr1,
-			Gas:      argUintPtr(100000),
-			GasPrice: argBytesPtr([]byte{0x64}),
-			Value:    argBytesPtr([]byte{0x64}),
+			Gas:      ArgUintPtr(100000),
+			GasPrice: ArgBytesPtr([]byte{0x64}),
+			Value:    ArgBytesPtr([]byte{0x64}),
 			Data:     nil,
-			Nonce:    argUintPtr(0),
+			Nonce:    ArgUintPtr(0),
 		}
 
 		res, err := eth.Call(contractCall, BlockNumberOrHash{}, nil)
@@ -610,11 +610,11 @@ func TestEth_Call(t *testing.T) {
 		contractCall := &txnArgs{
 			From:     &addr0,
 			To:       &addr1,
-			Gas:      argUintPtr(100000),
-			GasPrice: argBytesPtr([]byte{0x64}),
-			Value:    argBytesPtr([]byte{0x64}),
+			Gas:      ArgUintPtr(100000),
+			GasPrice: ArgBytesPtr([]byte{0x64}),
+			Value:    ArgBytesPtr([]byte{0x64}),
 			Data:     nil,
-			Nonce:    argUintPtr(0),
+			Nonce:    ArgUintPtr(0),
 		}
 
 		res, err := eth.Call(contractCall, BlockNumberOrHash{}, nil)
@@ -644,11 +644,11 @@ func TestEth_CreateAccessList(t *testing.T) {
 	txn := &txnArgs{
 		From:     &addr0,
 		To:       &addr1,
-		Gas:      argUintPtr(100000),
-		GasPrice: argBytesPtr([]byte{0x64}),
-		Value:    argBytesPtr([]byte{0x64}),
+		Gas:      ArgUintPtr(100000),
+		GasPrice: ArgBytesPtr([]byte{0x64}),
+		Value:    ArgBytesPtr([]byte{0x64}),
 		Data:     nil,
-		Nonce:    argUintPtr(0),
+		Nonce:    ArgUintPtr(0),
 	}
 
 	cases := []struct {

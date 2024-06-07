@@ -28,7 +28,7 @@ var (
 	// already present in the keystore.
 	ErrAccountAlreadyExists = errors.New("account already exists")
 
-	DefaultStorage, _ = filepath.Abs(filepath.Join("data-storage")) //nolint:gocritic
+	DefaultStorage, _ = filepath.Abs(filepath.Join("data-storage"))
 )
 
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
