@@ -6,7 +6,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -41,12 +40,6 @@ func (ksw *keyStoreWallet) Accounts() []accounts.Account {
 func (ksw *keyStoreWallet) Contains(account accounts.Account) bool {
 	return account.Address == ksw.account.Address && (account.URL == accounts.URL{} || account.URL == ksw.account.URL)
 }
-
-func (ksw *keyStoreWallet) Derive(path accounts.DerivationPath, pin bool) (accounts.Account, error) {
-	return accounts.Account{}, accounts.ErrNotSupported
-}
-
-func (ksw *keyStoreWallet) SelfDerive(bases []accounts.DerivationPath, state *state.Transition) {}
 
 func (ksw *keyStoreWallet) signHash(account accounts.Account, hash []byte) ([]byte, error) {
 	if !ksw.Contains(account) {

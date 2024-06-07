@@ -5,7 +5,6 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/accounts/event"
-	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/crypto/sha3"
 )
@@ -51,27 +50,6 @@ type Wallet interface {
 
 	// Contains returns whether an account is part of this particular wallet or not.
 	Contains(account Account) bool
-
-	// Derive attempts to explicitly derive a hierarchical deterministic account at
-	// the specified derivation path. If requested, the derived account will be added
-	// to the wallet's tracked account list.
-	Derive(path DerivationPath, pin bool) (Account, error)
-
-	// SelfDerive sets a base account derivation path from which the wallet attempts
-	// to discover non zero accounts and automatically add them to list of tracked
-	// accounts.
-	//
-	// Note, self derivation will increment the last component of the specified path
-	// opposed to descending into a child path to allow discovering accounts starting
-	// from non zero components.
-	//
-	// Some hardware wallets switched derivation paths through their evolution, so
-	// this method supports providing multiple bases to discover old user accounts
-	// too. Only the last base will be used to derive the next empty account.
-	//
-	// You can disable automatic account discovery by calling SelfDerive with a nil
-	// chain state reader.
-	SelfDerive(bases []DerivationPath, state *state.Transition)
 
 	// SignData requests the wallet to sign the hash of the given data
 	// It looks up the account specified either solely via its address contained within,
