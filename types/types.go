@@ -249,6 +249,7 @@ func NewMixedcaseAddress(addr Address) *MixedcaseAddress {
 // NewMixedcaseAddressFromString is mainly meant for unit-testing
 func NewMixedcaseAddressFromString(hexaddr string) (*MixedcaseAddress, error) {
 	var addr Address
+
 	addr, err := IsValidAddress(hexaddr, false)
 	if err != nil {
 		return nil, errors.New("invalid address")
