@@ -348,7 +348,7 @@ func TestCacheFind(t *testing.T) {
 // is noticed by the watcher, and the account cache is updated accordingly
 func TestUpdatedKeyfileContents(t *testing.T) {
 	t.Skip()
-	//t.Parallel()
+	// t.Parallel()
 
 	// Create a temporary keystore to test with
 	dir, err := filepath.Abs(filepath.Join(fmt.Sprintf("eth-keystore-updatedkeyfilecontents-test-%d-%d", os.Getpid(), rand.Int()))) //nolint:gocritic

@@ -34,6 +34,7 @@ func (ks keyStorePlain) GetKey(addr types.Address, filename, auth string) (*Key,
 		dat      map[string]interface{}
 		jsonData = make([]byte, stat.Size())
 	)
+
 	_, err = fd.Read(jsonData) //nolint:wsl
 	if err != nil {
 		return nil, err

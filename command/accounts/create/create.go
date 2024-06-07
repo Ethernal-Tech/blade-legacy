@@ -53,6 +53,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	scryptN := keystore.StandardScryptN
 	scryptP := keystore.StandardScryptP
+
 	if false {
 		scryptN = keystore.LightScryptN
 		scryptP = keystore.LightScryptP
