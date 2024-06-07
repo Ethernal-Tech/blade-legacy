@@ -39,12 +39,13 @@ func (f *funcData) numParams() int {
 }
 
 type endpoints struct {
-	Eth    *Eth
-	Web3   *Web3
-	Net    *Net
-	TxPool *TxPool
-	Bridge *Bridge
-	Debug  *Debug
+	Eth      *Eth
+	Web3     *Web3
+	Net      *Net
+	TxPool   *TxPool
+	Bridge   *Bridge
+	Debug    *Debug
+	Personal *Personal
 }
 
 // Dispatcher handles all json rpc requests by delegating
@@ -118,6 +119,7 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager *accounts.Man
 		store,
 	}
 	d.endpoints.Debug = NewDebug(store, d.params.concurrentRequestsDebug)
+	d.endpoints.Personal = &Personal{accManager: manager}
 
 	var err error
 
@@ -138,6 +140,10 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager *accounts.Man
 	}
 
 	if err = d.registerService("bridge", d.endpoints.Bridge); err != nil {
+		return err
+	}
+
+	if err = d.registerService("personal", d.endpoints.Personal); err != nil {
 		return err
 	}
 
