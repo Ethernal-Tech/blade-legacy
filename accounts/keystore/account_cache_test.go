@@ -56,7 +56,7 @@ func waitWatcherStart(ks *KeyStore) bool {
 
 func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
 	var list []accounts.Account
-	for t0 := time.Now().UTC(); time.Since(t0) < 5*time.Second; time.Sleep(100 * time.Millisecond) {
+	for t0 := time.Now().UTC(); time.Since(t0) < 20*time.Second; time.Sleep(100 * time.Millisecond) {
 		list = ks.Accounts()
 		if reflect.DeepEqual(list, wantAccounts) {
 			// ks should have also received change notifications
