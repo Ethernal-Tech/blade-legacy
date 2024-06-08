@@ -58,11 +58,8 @@ type unlocked struct {
 
 func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
 	var ks *KeyStore
-	if keyDir == "" {
-		ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
-	} else {
-		ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
-	}
+
+	ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
 
 	ks.init(keyDir, hclog.NewNullLogger()) // TO DO LOGGER
 
@@ -160,7 +157,6 @@ func (ks *KeyStore) refreshWallets() {
 	for _, event := range events {
 		ks.updateFeed.Send(event)
 	}
-
 }
 
 func (ks *KeyStore) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
@@ -370,7 +366,10 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 		return accounts.Account{}, err
 	}
 
-	ks.cache.add(account, encryptedKey)
+	if err := ks.cache.add(account, encryptedKey); err != nil {
+		return accounts.Account{}, err
+	}
+
 	ks.refreshWallets()
 
 	return account, nil
@@ -398,7 +397,10 @@ func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, er
 		return accounts.Account{}, err
 	}
 
-	ks.cache.add(a, encryptedKeyJSONV3)
+	if err := ks.cache.add(a, encryptedKeyJSONV3); err != nil {
+		return accounts.Account{}, err
+	}
+
 	ks.refreshWallets()
 
 	return a, nil
@@ -425,7 +427,10 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 		return a, err
 	}
 
-	ks.cache.add(a, encryptedKey)
+	if err := ks.cache.add(a, encryptedKey); err != nil {
+		return accounts.Account{}, err
+	}
+
 	ks.refreshWallets()
 
 	return a, nil

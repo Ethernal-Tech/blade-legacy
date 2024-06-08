@@ -23,7 +23,6 @@ func NewFileCache(keyPath string) (*fileCache, error) {
 		if _, err := os.Create(fc.keyDir); err != nil {
 			return nil, err
 		}
-
 	}
 
 	return fc, nil

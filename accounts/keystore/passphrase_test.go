@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -43,13 +42,10 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 	ks := &keyStorePassphrase{veryLightScryptN, veryLightScryptP}
 
 	k1, _, err := storeNewKey(ks, rand.Reader, pass)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if _, err = ks.GetKey(k1, "bar"); err.Error() != ErrDecrypt.Error() {
-		t.Fatalf("wrong error for invalid password\ngot %q\nwant %q", err, ErrDecrypt)
-	}
+	_, err = ks.GetKey(k1, "bar")
+	require.Equal(t, err.Error(), ErrDecrypt.Error())
 }
 
 func TestImportPreSaleKey(t *testing.T) {
@@ -63,13 +59,9 @@ func TestImportPreSaleKey(t *testing.T) {
 	fileContent := "{\"encseed\": \"26d87f5f2bf9835f9a47eefae571bc09f9107bb13d54ff12a4ec095d01f83897494cf34f7bed2ed34126ecba9db7b62de56c9d7cd136520a0427bfb11b8954ba7ac39b90d4650d3448e31185affcd74226a68f1e94b1108e6e0a4a91cdd83eba\", \"ethaddr\": \"d4584b5f6229b7be90727b0fc8c6b91bb427821f\", \"email\": \"gustav.simonsson@gmail.com\", \"btcaddr\": \"1EVknXyFC68kKNLkh6YnKzW41svSRoaAcx\"}"
 
 	account, _, err := importPreSaleKey(ks, []byte(fileContent), pass)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
-	if account.Address != types.StringToAddress("d4584b5f6229b7be90727b0fc8c6b91bb427821f") {
-		t.Errorf("imported account has wrong address %x", account.Address)
-	}
+	require.Equal(t, account.Address, types.StringToAddress("d4584b5f6229b7be90727b0fc8c6b91bb427821f"))
 }
 
 // Test and utils for the key store tests in the Ethereum JSON tests;
@@ -139,14 +131,10 @@ func testDecryptV3(t *testing.T, test KeyStoreTestV3) {
 	t.Helper()
 
 	privBytes, _, err := decryptKeyV3(&test.JSON, test.Password)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	privHex := hex.EncodeToString(privBytes)
-	if test.Priv != privHex {
-		t.Fatal(fmt.Errorf("Decrypted bytes not equal to test, expected %v have %v", test.Priv, privHex))
-	}
+	require.Equal(t, test.Priv, privHex)
 }
 
 func loadKeyStoreTestV3(t *testing.T, file string) map[string]KeyStoreTestV3 {
@@ -155,9 +143,7 @@ func loadKeyStoreTestV3(t *testing.T, file string) map[string]KeyStoreTestV3 {
 	tests := make(map[string]KeyStoreTestV3)
 
 	err := accounts.LoadJSON(file, &tests)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	return tests
 }
@@ -166,9 +152,7 @@ func TestKeyForDirectICAP(t *testing.T) {
 	t.Parallel()
 
 	key := NewKeyForDirectICAP(rand.Reader)
-	if !strings.HasPrefix(key.Address.String(), "0x00") {
-		t.Errorf("Expected first address byte to be zero, have: %s", key.Address.String())
-	}
+	require.True(t, strings.HasPrefix(key.Address.String(), "0x00"))
 }
 
 func TestV3_31_Byte_Key(t *testing.T) {
@@ -191,9 +175,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	keyEncrypted := new(encryptedKeyJSONV3)
 
 	keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 
 	json.Unmarshal(keyjson, keyEncrypted)
 

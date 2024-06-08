@@ -78,12 +78,17 @@ func (p *Personal) UnlockAccount(addr types.Address, password string, duration u
 	return true, nil
 }
 
-func (s *Personal) LockAccount(addr types.Address) bool {
-	if ks, err := getKeystore(s.accManager); err == nil {
-		return ks.Lock(addr) == nil
+func (s *Personal) LockAccount(addr types.Address) (bool, error) {
+	ks, err := getKeystore(s.accManager)
+	if err == nil {
+		if err := ks.Lock(addr); err != nil {
+			return false, err
+		}
+
+		return true, nil
 	}
 
-	return false
+	return false, err
 }
 
 func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) {

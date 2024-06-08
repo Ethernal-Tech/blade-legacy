@@ -64,7 +64,6 @@ func TestCacheInitialReload(t *testing.T) {
 	unwantedAccount := accounts.Account{Address: types.StringToAddress("2cac1adea150210703ba75ed097ddfe24e14f213")}
 
 	require.False(t, cache.hasAddress(unwantedAccount.Address))
-
 }
 
 func TestCacheAddDelete(t *testing.T) {
@@ -114,7 +113,7 @@ func TestCacheAddDelete(t *testing.T) {
 		require.True(t, cache.hasAddress(a.Address))
 	}
 
-	// Expected to return false because this addres is not contained in cache
+	// Expected to return false because this address is not contained in cache
 	require.False(t, cache.hasAddress(types.StringToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e")))
 
 	// Delete a few keys from the cache.

@@ -15,7 +15,8 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-func importPreSaleKey(keyStore keyStore, keyJSON []byte, password string) (accounts.Account, encryptedKeyJSONV3, error) {
+func importPreSaleKey(keyStore keyStore,
+	keyJSON []byte, password string) (accounts.Account, encryptedKeyJSONV3, error) {
 	key, err := decryptPreSaleKey(keyJSON, password)
 	if err != nil {
 		return accounts.Account{}, encryptedKeyJSONV3{}, err
