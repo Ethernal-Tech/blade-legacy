@@ -4272,14 +4272,17 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
-			var wg sync.WaitGroup
-			wg.Add(len(txs))
 
-			for i := 0; i < len(txs); i++ {
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
 				tx := txs[i]
 
 				go func() {
 					defer wg.Done()
+
 					errAdd := pool.addTx(local, tx)
 					require.NoError(b, errAdd)
 				}()
@@ -4307,14 +4310,17 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
-			var wg sync.WaitGroup
-			wg.Add(len(txs))
 
-			for i := 0; i < len(txs); i++ {
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
 				tx := txs[i]
 
 				go func() {
 					defer wg.Done()
+
 					errAdd := pool.addTx(local, tx)
 					require.NoError(b, errAdd)
 				}()
@@ -4344,14 +4350,17 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
-			var wg sync.WaitGroup
-			wg.Add(len(txs))
 
-			for i := 0; i < len(txs); i++ {
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
 				tx := txs[i]
 
 				go func() {
 					defer wg.Done()
+
 					errAdd := pool.addTx(local, tx)
 					require.NoError(b, errAdd)
 				}()
@@ -4389,16 +4398,18 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
-			var wg sync.WaitGroup
-			wg.Add(len(txs))
 
-			for i := 0; i < len(txs); i++ {
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
 				tx := txs[i]
 
 				go func() {
 					defer wg.Done()
-					errAdd := pool.addTx(local, tx)
 
+					errAdd := pool.addTx(local, tx)
 					if err != nil {
 						assert.ErrorIs(b, errAdd, ErrReplacementUnderpriced)
 					}
