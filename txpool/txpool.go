@@ -583,29 +583,6 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrNegativeValue
 	}
 
-	// Check if the transaction is signed properly
-	// Extract the sender
-	from, signerErr := p.signer.Sender(tx)
-	if signerErr != nil {
-		metrics.IncrCounter([]string{txPoolMetrics, "invalid_signature_txs"}, 1)
-
-		return fmt.Errorf("%w. %w", ErrExtractSignature, signerErr)
-	}
-
-	// If the from field is set, check that
-	// it matches the signer
-	if tx.From() != types.ZeroAddress &&
-		tx.From() != from {
-		metrics.IncrCounter([]string{txPoolMetrics, "invalid_sender_txs"}, 1)
-
-		return ErrInvalidSender
-	}
-
-	// If no address was set, update it
-	if tx.From() == types.ZeroAddress {
-		tx.SetFrom(from)
-	}
-
 	// Grab current block number
 	currentHeader := p.store.Header()
 	currentBlockNumber := currentHeader.Number
@@ -759,6 +736,26 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrBlockLimitExceeded
 	}
 
+	// Check if the transaction is signed properly
+	// Extract the sender
+	from, signerErr := p.signer.Sender(tx)
+	if signerErr != nil {
+		metrics.IncrCounter([]string{txPoolMetrics, "invalid_signature_txs"}, 1)
+
+		return fmt.Errorf("%w. %w", ErrExtractSignature, signerErr)
+	}
+
+	// If no address was set, update it
+	// If the from field is set, check that
+	// it matches the signer
+	if tx.From() == types.ZeroAddress {
+		tx.SetFrom(from)
+	} else if tx.From() != from {
+		metrics.IncrCounter([]string{txPoolMetrics, "invalid_sender_txs"}, 1)
+
+		return ErrInvalidSender
+	}
+
 	return nil
 }
 
@@ -806,7 +803,9 @@ func (p *TxPool) pruneAccountsWithNonceHoles() {
 // successful, an account is created for this address
 // (only once) and an enqueueRequest is signaled.
 func (p *TxPool) addTx(origin txOrigin, tx *types.Transaction) error {
-	p.logger.Trace("add tx", "origin", origin.String(), "hash", tx.Hash().String(), "type", tx.Type())
+	if p.logger.IsTrace() {
+		p.logger.Trace("add tx", "origin", origin.String(), "hash", tx.Hash().String(), "type", tx.Type())
+	}
 
 	// validate incoming tx
 	if err := p.validateTx(tx); err != nil {
@@ -920,7 +919,9 @@ func (p *TxPool) addTx(origin txOrigin, tx *types.Transaction) error {
 func (p *TxPool) invokePromotion(tx *types.Transaction, callPromote bool) {
 	p.eventManager.signalEvent(proto.EventType_ADDED, tx.Hash())
 
-	p.logger.Trace("enqueue request", "hash", tx.Hash().String())
+	if p.logger.IsTrace() {
+		p.logger.Trace("enqueue request", "hash", tx.Hash().String())
+	}
 
 	p.eventManager.signalEvent(proto.EventType_ENQUEUED, tx.Hash())
 
@@ -941,7 +942,9 @@ func (p *TxPool) handlePromoteRequest(req promoteRequest) {
 
 	// promote enqueued txs
 	promoted, pruned := account.promote()
-	p.logger.Trace("promote request", "promoted", promoted, "addr", addr.String())
+	if p.logger.IsTrace() {
+		p.logger.Trace("promote request", "promoted", promoted, "addr", addr.String())
+	}
 
 	p.index.remove(pruned...)
 	p.gauge.decrease(slotsRequired(pruned...))
