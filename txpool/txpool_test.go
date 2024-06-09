@@ -4272,11 +4272,20 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
+			var wg sync.WaitGroup
+			wg.Add(len(txs))
 
 			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+				tx := txs[i]
+
+				go func() {
+					defer wg.Done()
+					errAdd := pool.addTx(local, tx)
+					require.NoError(b, errAdd)
+				}()
 			}
+
+			wg.Wait()
 		}
 	})
 
@@ -4298,11 +4307,20 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
+			var wg sync.WaitGroup
+			wg.Add(len(txs))
 
 			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+				tx := txs[i]
+
+				go func() {
+					defer wg.Done()
+					errAdd := pool.addTx(local, tx)
+					require.NoError(b, errAdd)
+				}()
 			}
+
+			wg.Wait()
 		}
 	})
 
@@ -4326,11 +4344,20 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
+			var wg sync.WaitGroup
+			wg.Add(len(txs))
 
 			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+				tx := txs[i]
+
+				go func() {
+					defer wg.Done()
+					errAdd := pool.addTx(local, tx)
+					require.NoError(b, errAdd)
+				}()
 			}
+
+			wg.Wait()
 		}
 	})
 
@@ -4347,7 +4374,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 
 			i := (uint64)(0)
 			for i < defaultMaxAccountEnqueued {
-				tx := newTx(addr, i%10, uint64(1), types.LegacyTxType)
+				tx := newTx(addr, i%30, uint64(1), types.LegacyTxType)
 				tx.SetGasPrice(big.NewInt(0).SetUint64(i + 1))
 				txs[n*defaultMaxAccountEnqueued+i], err = signer.SignTx(tx, key)
 				require.NoError(b, err)
@@ -4362,11 +4389,23 @@ func BenchmarkAddTxTime(b *testing.B) {
 			pool, err := newTestPool()
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
+			var wg sync.WaitGroup
+			wg.Add(len(txs))
 
 			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+				tx := txs[i]
+
+				go func() {
+					defer wg.Done()
+					errAdd := pool.addTx(local, tx)
+
+					if err != nil {
+						assert.ErrorIs(b, errAdd, ErrReplacementUnderpriced)
+					}
+				}()
 			}
+
+			wg.Wait()
 		}
 	})
 }
