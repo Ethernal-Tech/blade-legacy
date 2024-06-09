@@ -695,27 +695,6 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		return ErrUnderpriced
 	}
 
-	// Check nonce ordering
-	if p.store.GetNonce(stateRoot, tx.From()) > tx.Nonce() {
-		metrics.IncrCounter([]string{txPoolMetrics, "nonce_too_low_tx"}, 1)
-
-		return ErrNonceTooLow
-	}
-
-	accountBalance, balanceErr := p.store.GetBalance(stateRoot, tx.From())
-	if balanceErr != nil {
-		metrics.IncrCounter([]string{txPoolMetrics, "invalid_account_state_tx"}, 1)
-
-		return ErrInvalidAccountState
-	}
-
-	// Check if the sender has enough funds to execute the transaction
-	if accountBalance.Cmp(tx.Cost()) < 0 {
-		metrics.IncrCounter([]string{txPoolMetrics, "insufficient_funds_tx"}, 1)
-
-		return ErrInsufficientFunds
-	}
-
 	// Make sure the transaction has more gas than the basic transaction fee
 	intrinsicGas, err := state.TransactionGasCost(tx, forks.Homestead, forks.Istanbul)
 	if err != nil {
@@ -754,6 +733,27 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 		metrics.IncrCounter([]string{txPoolMetrics, "invalid_sender_txs"}, 1)
 
 		return ErrInvalidSender
+	}
+
+	// Check nonce ordering
+	if p.store.GetNonce(stateRoot, tx.From()) > tx.Nonce() {
+		metrics.IncrCounter([]string{txPoolMetrics, "nonce_too_low_tx"}, 1)
+
+		return ErrNonceTooLow
+	}
+
+	accountBalance, balanceErr := p.store.GetBalance(stateRoot, tx.From())
+	if balanceErr != nil {
+		metrics.IncrCounter([]string{txPoolMetrics, "invalid_account_state_tx"}, 1)
+
+		return ErrInvalidAccountState
+	}
+
+	// Check if the sender has enough funds to execute the transaction
+	if accountBalance.Cmp(tx.Cost()) < 0 {
+		metrics.IncrCounter([]string{txPoolMetrics, "insufficient_funds_tx"}, 1)
+
+		return ErrInsufficientFunds
 	}
 
 	return nil
