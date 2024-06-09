@@ -6,8 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -57,7 +55,7 @@ type cipherparamsJSON struct {
 	IV string `json:"iv"`
 }
 
-// TO DO newKeyFromECDSA
+// return new key
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id, err := uuid.NewRandom()
 	if err != nil {
@@ -96,33 +94,7 @@ func toISO8601(t time.Time) string {
 		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
 
-func writeTemporaryKeyFile(file string, content []byte) (string, error) {
-	// Create the keystore directory with appropriate permissions
-	// in case it is not present yet.
-	const dirPerm = 0700
-	if err := os.MkdirAll(filepath.Dir(file), dirPerm); err != nil {
-		return "", err
-	}
-	// Atomic write: create a temporary hidden file first
-	// then move it into place. TempFile assigns mode 0600.
-	f, err := os.CreateTemp(filepath.Dir(file), "."+filepath.Base(file)+".tmp")
-	if err != nil {
-		return "", err
-	}
-
-	if _, err := f.Write(content); err != nil {
-		f.Close()
-		os.Remove(f.Name())
-
-		return "", err
-	}
-
-	f.Close()
-
-	return f.Name(), nil
-}
-
-func newKey(rand io.Reader) (*Key, error) {
+func newKey() (*Key, error) {
 	privateKeyECDSA, err := crypto.GenerateECDSAPrivateKey() // TO DO maybe not valid
 	if err != nil {
 		return nil, err
@@ -155,8 +127,8 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	return key
 }
 
-func storeNewKey(ks keyStore, rand io.Reader, auth string) (encryptedKeyJSONV3, accounts.Account, error) {
-	key, err := newKey(rand)
+func storeNewKey(ks keyStore, auth string) (encryptedKeyJSONV3, accounts.Account, error) {
+	key, err := newKey()
 	if err != nil {
 		return encryptedKeyJSONV3{}, accounts.Account{}, err
 	}
@@ -173,13 +145,4 @@ func storeNewKey(ks keyStore, rand io.Reader, auth string) (encryptedKeyJSONV3, 
 	}
 
 	return encryptedKey, a, err
-}
-
-func writeKeyFile(file string, content []byte) error {
-	name, err := writeTemporaryKeyFile(file, content)
-	if err != nil {
-		return err
-	}
-
-	return os.Rename(name, file)
 }

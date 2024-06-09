@@ -172,11 +172,8 @@ func (ac *accountCache) close() {
 	ac.mu.Unlock()
 }
 
-// scanAccounts checks if any changes have occurred on the filesystem, and
-// updates the account cache accordingly
+// scanAccounts refresh data of  account map
 func (ac *accountCache) scanAccounts() error {
-	// Scan the entire folder metadata for file changes
-
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 

@@ -25,7 +25,7 @@ func TestKeyStorePassphrase(t *testing.T) {
 
 	ks := &keyStorePassphrase{veryLightScryptN, veryLightScryptP}
 
-	k1, account, err := storeNewKey(ks, rand.Reader, pass)
+	k1, account, err := storeNewKey(ks, pass)
 	require.NoError(t, err)
 
 	k2, err := ks.GetKey(k1, pass)
@@ -41,7 +41,7 @@ func TestKeyStorePassphraseDecryptionFail(t *testing.T) {
 
 	ks := &keyStorePassphrase{veryLightScryptN, veryLightScryptP}
 
-	k1, _, err := storeNewKey(ks, rand.Reader, pass)
+	k1, _, err := storeNewKey(ks, pass)
 	require.NoError(t, err)
 
 	_, err = ks.GetKey(k1, "bar")
@@ -172,12 +172,13 @@ func TestV3_30_Byte_Key(t *testing.T) {
 // Tests that a json key file can be decrypted and encrypted in multiple rounds.
 func TestKeyEncryptDecrypt(t *testing.T) {
 	t.Parallel()
+
 	keyEncrypted := new(encryptedKeyJSONV3)
 
 	keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
 	require.NoError(t, err)
 
-	json.Unmarshal(keyjson, keyEncrypted)
+	require.NoError(t, json.Unmarshal(keyjson, keyEncrypted))
 
 	password := ""
 	address := types.StringToAddress("45dea0fb0bba44f4fcf290bba71fd57d7117cbb8")
@@ -185,22 +186,16 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	// Do a few rounds of decryption and encryption
 	for i := 0; i < 3; i++ {
 		// Try a bad password first
-		if _, err := DecryptKey(*keyEncrypted, password+"bad"); err == nil {
-			t.Errorf("test %d: json key decrypted with bad password", i)
-		}
+		_, err := DecryptKey(*keyEncrypted, password+"bad")
+		require.NoError(t, err)
 		// Decrypt with the correct password
 		key, err := DecryptKey(*keyEncrypted, password)
-		if err != nil {
-			t.Fatalf("test %d: json key failed to decrypt: %v", i, err)
-		}
+		require.NoError(t, err)
 
-		if key.Address != address {
-			t.Errorf("test %d: key address mismatch: have %x, want %x", i, key.Address, address)
-		}
+		require.Equal(t, address, key.Address)
 		// Recrypt with a new password and start over
 		password += "new data appended"
-		if *keyEncrypted, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP); err != nil {
-			t.Errorf("test %d: failed to re-encrypt key %v", i, err)
-		}
+		_, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
+		require.NoError(t, err)
 	}
 }

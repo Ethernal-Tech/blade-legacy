@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"crypto/ecdsa"
-	crand "crypto/rand"
 	"errors"
 	"math/big"
 	"path/filepath"
@@ -110,14 +109,15 @@ func (ks *KeyStore) refreshWallets() {
 
 	accs := ks.cache.accounts()
 
-	var ( //nolint:prealloc
+	var (
 		wallets = make([]accounts.Wallet, 0, len(accs))
 		events  []accounts.WalletEvent
-		find    = false
+		find    bool
 	)
 
 	for _, account := range accs {
 		find = false
+
 		for _, wallet := range ks.wallets {
 			if wallet.Accounts()[0] == account {
 				wallets = append(wallets, wallet)
@@ -137,6 +137,7 @@ func (ks *KeyStore) refreshWallets() {
 
 	for _, oldWallet := range ks.wallets {
 		find = false
+
 		for _, newWallet := range wallets {
 			if newWallet == oldWallet {
 				find = true
@@ -360,7 +361,7 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 }
 
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	encryptedKey, account, err := storeNewKey(ks.storage, crand.Reader, passphrase)
+	encryptedKey, account, err := storeNewKey(ks.storage, passphrase)
 
 	if err != nil {
 		return accounts.Account{}, err

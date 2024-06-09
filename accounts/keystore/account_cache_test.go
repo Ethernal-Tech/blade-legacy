@@ -243,4 +243,6 @@ func TestCacheUpdate(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, listOfEncryptedKeys[1], encryptedKey)
+
+	require.Equal(t, wantAccount.Address.String(), encryptedKey.Address)
 }

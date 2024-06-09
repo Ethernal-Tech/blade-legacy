@@ -388,6 +388,7 @@ func checkAccounts(t *testing.T, live map[types.Address]accounts.Account, wallet
 		}
 
 		isFind := false
+
 		for _, liveWallet := range liveList {
 			if liveWallet == wallet.Accounts()[0] {
 				isFind = true

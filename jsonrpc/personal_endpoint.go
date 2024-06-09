@@ -91,7 +91,7 @@ func (s *Personal) LockAccount(addr types.Address) (bool, error) {
 	return false, err
 }
 
-func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) {
+func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) { //nolint:stylecheck
 	if len(sig) != crypto.ECDSASignatureLength {
 		return types.Address{}, fmt.Errorf("signature must be %d bytes long", crypto.ECDSASignatureLength)
 	}
