@@ -4374,7 +4374,9 @@ func BenchmarkAddTxTime(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
 		txs := make([]*types.Transaction, accountNumber*defaultMaxAccountEnqueued)
 
+		const differentNonce uint64 = 30
 		n := (uint64)(0)
+
 		for n < accountNumber {
 			key, err := crypto.GenerateECDSAPrivateKey()
 			require.NoError(b, err)
@@ -4383,7 +4385,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 
 			i := (uint64)(0)
 			for i < defaultMaxAccountEnqueued {
-				tx := newTx(addr, i%30, uint64(1), types.LegacyTxType)
+				tx := newTx(addr, i%differentNonce, uint64(1), types.LegacyTxType)
 				tx.SetGasPrice(big.NewInt(0).SetUint64(i + 1))
 				txs[n*defaultMaxAccountEnqueued+i], err = signer.SignTx(tx, key)
 				require.NoError(b, err)
@@ -4410,13 +4412,14 @@ func BenchmarkAddTxTime(b *testing.B) {
 					defer wg.Done()
 
 					errAdd := pool.addTx(local, tx)
-					if err != nil {
+					if errAdd != nil {
 						assert.ErrorIs(b, errAdd, ErrReplacementUnderpriced)
 					}
 				}()
 			}
 
 			wg.Wait()
+			assert.Len(b, pool.index.all, (int)(differentNonce*accountNumber))
 		}
 	})
 }
