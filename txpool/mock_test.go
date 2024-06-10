@@ -64,7 +64,7 @@ type faultyMockStore struct {
 }
 
 func (fms faultyMockStore) Header() *types.Header {
-	return &types.Header{}
+	return mockHeader
 }
 
 func (fms faultyMockStore) GetNonce(root types.Hash, addr types.Address) uint64 {
