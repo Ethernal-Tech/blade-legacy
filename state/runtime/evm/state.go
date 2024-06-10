@@ -246,7 +246,7 @@ func (c *state) Run() ([]byte, error) {
 
 		// In case there was an error set in current instruction, let the execution trace
 		// to allow easier debugging and stop the execution.
-		if err := c.err; err != nil {
+		if c.err != nil {
 			break
 		}
 
