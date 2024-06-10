@@ -31,7 +31,7 @@ func TestBasicTypes_Encode(t *testing.T) {
 		},
 		{
 			argUint64(10),
-			ArgUintPtr(0),
+			argUintPtr(0),
 			"0xa",
 		},
 		{
@@ -234,7 +234,7 @@ func mockTxn() *transaction {
 
 	tt := &transaction{
 		Nonce:       1,
-		GasPrice:    ArgBigPtr(big.NewInt(10)),
+		GasPrice:    argBigPtr(big.NewInt(10)),
 		Gas:         100,
 		To:          &to,
 		Value:       argBig(*big.NewInt(1000)),
@@ -245,8 +245,8 @@ func mockTxn() *transaction {
 		Hash:        types.Hash{0x2},
 		From:        types.Address{0x3},
 		BlockHash:   &types.ZeroHash,
-		BlockNumber: ArgUintPtr(1),
-		TxIndex:     ArgUintPtr(2),
+		BlockNumber: argUintPtr(1),
+		TxIndex:     argUintPtr(2),
 		Type:        argUint64(types.LegacyTxType),
 	}
 

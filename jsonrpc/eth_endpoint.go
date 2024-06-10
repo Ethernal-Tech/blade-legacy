@@ -109,7 +109,7 @@ type Eth struct {
 //
 //nolint:stylecheck
 func (e *Eth) ChainId() (interface{}, error) {
-	return ArgUintPtr(e.chainID), nil
+	return argUintPtr(e.chainID), nil
 }
 
 func (e *Eth) Syncing() (interface{}, error) {
@@ -317,7 +317,7 @@ func (e *Eth) BlockNumber() (interface{}, error) {
 		return nil, ErrHeaderNotFound
 	}
 
-	return ArgUintPtr(h.Number), nil
+	return argUintPtr(h.Number), nil
 }
 
 // SendRawTransaction sends a raw transaction
@@ -516,13 +516,13 @@ func (e *Eth) GetStorageAt(
 	result, err := e.store.GetStorage(header.StateRoot, address, index)
 	if err != nil {
 		if errors.Is(err, ErrStateNotFound) {
-			return ArgBytesPtr(types.ZeroHash[:]), nil
+			return argBytesPtr(types.ZeroHash[:]), nil
 		}
 
 		return nil, err
 	}
 
-	return ArgBytesPtr(result), nil
+	return argBytesPtr(result), nil
 }
 
 // GasPrice exposes "getGasPrice"'s function logic to public RPC interface
@@ -619,7 +619,7 @@ func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *StateOve
 		return nil, fmt.Errorf("unable to execute call: %w", result.Err)
 	}
 
-	return ArgBytesPtr(result.ReturnValue), nil
+	return argBytesPtr(result.ReturnValue), nil
 }
 
 // EstimateGas estimates the gas needed to execute a transaction
@@ -870,12 +870,12 @@ func (e *Eth) GetBalance(address types.Address, filter BlockNumberOrHash) (inter
 	acc, err := e.store.GetAccount(header.StateRoot, address)
 	if errors.Is(err, ErrStateNotFound) {
 		// Account not found, return an empty account
-		return ArgUintPtr(0), nil
+		return argUintPtr(0), nil
 	} else if err != nil {
 		return nil, err
 	}
 
-	return ArgBigPtr(acc.Balance), nil
+	return argBigPtr(acc.Balance), nil
 }
 
 // GetTransactionCount returns account nonce
@@ -905,13 +905,13 @@ func (e *Eth) GetTransactionCount(address types.Address, filter BlockNumberOrHas
 	nonce, err := GetNextNonce(address, blockNumber, e.store)
 	if err != nil {
 		if errors.Is(err, ErrStateNotFound) {
-			return ArgUintPtr(0), nil
+			return argUintPtr(0), nil
 		}
 
 		return nil, err
 	}
 
-	return ArgUintPtr(nonce), nil
+	return argUintPtr(nonce), nil
 }
 
 // GetCode returns account code at given block number
@@ -929,10 +929,10 @@ func (e *Eth) GetCode(address types.Address, filter BlockNumberOrHash) (interfac
 		// return the default value
 		return "0x", nil
 	} else if err != nil {
-		return ArgBytesPtr(emptySlice), err
+		return argBytesPtr(emptySlice), err
 	}
 
-	return ArgBytesPtr(code), nil
+	return argBytesPtr(code), nil
 }
 
 // NewFilter creates a filter object, based on filter options, to notify when the state changes (logs).
@@ -967,7 +967,7 @@ func (e *Eth) MaxPriorityFeePerGas() (interface{}, error) {
 		return nil, err
 	}
 
-	return ArgBigPtr(priorityFee), nil
+	return argBigPtr(priorityFee), nil
 }
 
 func (e *Eth) FeeHistory(blockCount argUint64, newestBlock BlockNumber,
@@ -1009,7 +1009,7 @@ func (e *Eth) FeeHistory(blockCount argUint64, newestBlock BlockNumber,
 	rewardResult := <-rewardCh
 
 	result := &feeHistoryResult{
-		OldestBlock:   *ArgUintPtr(history.OldestBlock),
+		OldestBlock:   *argUintPtr(history.OldestBlock),
 		BaseFeePerGas: baseFeePerGasResult,
 		GasUsedRatio:  gasUsedRatioResult,
 		Reward:        rewardResult,

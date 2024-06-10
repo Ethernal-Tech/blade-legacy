@@ -138,14 +138,14 @@ func TestEth_State_GetBalance(t *testing.T) {
 						t.Fatalf("invalid type assertion")
 					}
 
-					assert.Equal(t, *ArgUintPtr(0), *uintBalance)
+					assert.Equal(t, *argUintPtr(0), *uintBalance)
 				} else {
 					bigBalance, ok := balance.(*argBig)
 					if !ok {
 						t.Fatalf("invalid type assertion")
 					}
 
-					assert.Equal(t, *ArgBigPtr(big.NewInt(tt.expectedBalance)), *bigBalance)
+					assert.Equal(t, *argBigPtr(big.NewInt(tt.expectedBalance)), *bigBalance)
 				}
 			}
 		})
@@ -264,7 +264,7 @@ func TestEth_State_GetTransactionCount(t *testing.T) {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, ArgUintPtr(tt.expectedNonce), nonce)
+				assert.Equal(t, argUintPtr(tt.expectedNonce), nonce)
 			}
 		})
 	}
@@ -388,7 +388,7 @@ func TestEth_State_GetCode(t *testing.T) {
 				if tt.target.String() == uninitializedAddress.String() {
 					assert.Equal(t, "0x", code)
 				} else {
-					assert.Equal(t, ArgBytesPtr(tt.expectedCode), code)
+					assert.Equal(t, argBytesPtr(tt.expectedCode), code)
 				}
 			}
 		})
@@ -442,7 +442,7 @@ func TestEth_State_GetStorageAt(t *testing.T) {
 			blockNumber:  nil,
 			blockHash:    nil,
 			succeeded:    true,
-			expectedData: ArgBytesPtr(hash1[:]),
+			expectedData: argBytesPtr(hash1[:]),
 		},
 		{
 			name: "should return 32 bytes filled with zero for undefined slot",
@@ -456,7 +456,7 @@ func TestEth_State_GetStorageAt(t *testing.T) {
 			blockNumber:  &blockNumberLatest,
 			blockHash:    nil,
 			succeeded:    true,
-			expectedData: ArgBytesPtr(types.ZeroHash[:]),
+			expectedData: argBytesPtr(types.ZeroHash[:]),
 		},
 		{
 			name: "should return 32 bytes filled with zero for non-existing account",
@@ -469,7 +469,7 @@ func TestEth_State_GetStorageAt(t *testing.T) {
 			index:        hash2,
 			blockNumber:  &blockNumberLatest,
 			succeeded:    true,
-			expectedData: ArgBytesPtr(types.ZeroHash[:]),
+			expectedData: argBytesPtr(types.ZeroHash[:]),
 		},
 		{
 			name: "should return error for invalid block number",
@@ -497,7 +497,7 @@ func TestEth_State_GetStorageAt(t *testing.T) {
 			blockNumber:  &blockNumberZero,
 			blockHash:    nil,
 			succeeded:    true,
-			expectedData: ArgBytesPtr(hash1[:]),
+			expectedData: argBytesPtr(hash1[:]),
 		},
 		{
 			name: "should not return an error for valid block hash",
@@ -511,7 +511,7 @@ func TestEth_State_GetStorageAt(t *testing.T) {
 			blockNumber:  nil,
 			blockHash:    &types.ZeroHash,
 			succeeded:    true,
-			expectedData: ArgBytesPtr(hash1[:]),
+			expectedData: argBytesPtr(hash1[:]),
 		},
 		{
 			name: "should return error for invalid block hash",
@@ -539,7 +539,7 @@ func TestEth_State_GetStorageAt(t *testing.T) {
 			blockNumber:  &blockNumberEarliest,
 			blockHash:    nil,
 			succeeded:    true,
-			expectedData: ArgBytesPtr(hash1[:]),
+			expectedData: argBytesPtr(hash1[:]),
 		},
 	}
 
@@ -583,9 +583,9 @@ func constructMockTx(gasLimit *argUint64, data *argBytes) *txnArgs {
 		From:     &addr0,
 		To:       &addr1,
 		Gas:      gasLimit,
-		GasPrice: ArgBytesPtr([]byte{0x0}),
-		Value:    ArgBytesPtr([]byte{0x0}),
-		Nonce:    ArgUintPtr(0),
+		GasPrice: argBytesPtr([]byte{0x0}),
+		Value:    argBytesPtr([]byte{0x0}),
+		Nonce:    argUintPtr(0),
 		Data:     data,
 	}
 }
@@ -634,19 +634,19 @@ func TestEth_EstimateGas_GasLimit(t *testing.T) {
 			"valid gas limit from the latest block for contract interaction",
 			state.TxGasContractCreation,
 			nil,
-			constructMockTx(nil, ArgBytesPtr([]byte{0x12})),
+			constructMockTx(nil, argBytesPtr([]byte{0x12})),
 		},
 		{
 			"valid gas limit from the transaction",
 			state.TxGas,
 			nil,
-			constructMockTx(ArgUintPtr(30000), nil),
+			constructMockTx(argUintPtr(30000), nil),
 		},
 		{
 			"insufficient gas limit from the transaction",
 			state.TxGas,
 			state.ErrNotEnoughIntrinsicGas,
-			constructMockTx(ArgUintPtr(state.TxGas/2), nil),
+			constructMockTx(argUintPtr(state.TxGas/2), nil),
 		},
 	}
 
@@ -786,7 +786,7 @@ func TestEth_EstimateGas_ValueTransfer(t *testing.T) {
 	from := types.StringToAddress("0xSenderAddress")
 	to := types.StringToAddress("0xReceiverAddress")
 	mockTx := constructMockTx(nil, nil)
-	mockTx.Value = ArgBytesPtr([]byte{0x1})
+	mockTx.Value = argBytesPtr([]byte{0x1})
 	mockTx.From = &from
 	mockTx.To = &to
 
@@ -814,7 +814,7 @@ func TestEth_EstimateGas_ContractCreation(t *testing.T) {
 	from := types.StringToAddress("0xSenderAddress")
 	mockTx := constructMockTx(nil, nil)
 	mockTx.From = &from
-	mockTx.Input = ArgBytesPtr([]byte{})
+	mockTx.Input = argBytesPtr([]byte{})
 	mockTx.To = nil
 
 	// Run the estimation
