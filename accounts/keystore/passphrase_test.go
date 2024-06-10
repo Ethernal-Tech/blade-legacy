@@ -74,7 +74,7 @@ type KeyStoreTestV3 struct {
 
 func TestV3_PBKDF2_1(t *testing.T) {
 	t.Parallel()
-	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	tests := loadKeyStoreTestV3(t, "testdata/test-keys.json")
 	testDecryptV3(t, tests["wikipage_test_vector_pbkdf2"])
 }
 
@@ -115,7 +115,7 @@ func TestV3_PBKDF2_4(t *testing.T) {
 func TestV3_Scrypt_1(t *testing.T) {
 	t.Parallel()
 
-	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	tests := loadKeyStoreTestV3(t, "testdata/test-keys.json")
 	testDecryptV3(t, tests["wikipage_test_vector_scrypt"])
 }
 
@@ -158,14 +158,14 @@ func TestKeyForDirectICAP(t *testing.T) {
 func TestV3_31_Byte_Key(t *testing.T) {
 	t.Parallel()
 
-	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	tests := loadKeyStoreTestV3(t, "testdata/test-keys.json")
 	testDecryptV3(t, tests["31_byte_key"])
 }
 
 func TestV3_30_Byte_Key(t *testing.T) {
 	t.Parallel()
 
-	tests := loadKeyStoreTestV3(t, "testdata/v3_test_vector.json")
+	tests := loadKeyStoreTestV3(t, "testdata/test-keys.json")
 	testDecryptV3(t, tests["30_byte_key"])
 }
 
@@ -175,7 +175,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 
 	keyEncrypted := new(encryptedKeyJSONV3)
 
-	keyjson, err := os.ReadFile("testdata/very-light-scrypt.json")
+	keyjson, err := os.ReadFile("testdata/light-test-key.json")
 	require.NoError(t, err)
 
 	require.NoError(t, json.Unmarshal(keyjson, keyEncrypted))
