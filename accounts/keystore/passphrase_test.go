@@ -195,7 +195,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		require.Equal(t, address, key.Address)
 		// Recrypt with a new password and start over
 		password += "new data appended"
-		_, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
+		*keyEncrypted, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
 		require.NoError(t, err)
 	}
 }
