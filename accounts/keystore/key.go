@@ -59,7 +59,7 @@ type cipherparamsJSON struct {
 func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	id, err := uuid.NewRandom()
 	if err != nil {
-		panic(fmt.Sprintf("Could not create random uuid: %v", err)) //nolint:gocritic
+		return nil
 	}
 
 	key := &Key{
@@ -100,7 +100,12 @@ func newKey() (*Key, error) {
 		return nil, err
 	}
 
-	return newKeyFromECDSA(privateKeyECDSA), nil
+	key := newKeyFromECDSA(privateKeyECDSA)
+	if key == nil {
+		return nil, fmt.Errorf("can't create key")
+	}
+
+	return key, nil
 }
 
 func NewKeyForDirectICAP(rand io.Reader) *Key {
@@ -108,17 +113,20 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	_, err := rand.Read(randBytes)
 
 	if err != nil {
-		panic("key generation: could not read from random source: " + err.Error()) //nolint:gocritic
+		return nil
 	}
 
 	reader := bytes.NewReader(randBytes)
 
 	privateKeyECDSA, err := ecdsa.GenerateKey(btcec.S256(), reader)
 	if err != nil {
-		panic("key generation: ecdsa.GenerateKey failed: " + err.Error()) //nolint:gocritic
+		return nil
 	}
 
 	key := newKeyFromECDSA(privateKeyECDSA)
+	if key == nil {
+		return nil
+	}
 
 	if !strings.HasPrefix(key.Address.String(), "0x00") {
 		return NewKeyForDirectICAP(rand)

@@ -187,7 +187,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		// Try a bad password first
 		_, err := DecryptKey(*keyEncrypted, password+"bad")
-		require.NoError(t, err)
+		require.Error(t, err)
 		// Decrypt with the correct password
 		key, err := DecryptKey(*keyEncrypted, password)
 		require.NoError(t, err)
