@@ -904,6 +904,10 @@ func (c *consensusRuntime) BuildPrePrepareMessage(
 	if certificate != nil {
 		c.logger.Debug("BuildPrePrepareMessage", "rawProposal length", len(rawProposal),
 			"certificate length", len(certificate.String()))
+
+		for i, rcMsg := range certificate.RoundChangeMessages {
+			c.logger.Debug("BuildPrePrepareMessage", "RC msg index", i, "RC msg length", len(rcMsg.String()))
+		}
 	}
 
 	if len(rawProposal) == 0 {
