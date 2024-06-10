@@ -1,7 +1,9 @@
 package keystore
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"path"
 	"sync"
 	"time"
@@ -18,25 +20,32 @@ const minReloadInterval = 2 * time.Second
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
 	logger   hclog.Logger
-	keydir   string
+	keyDir   string
 	mu       sync.Mutex
 	allMap   map[types.Address]encryptedKeyJSONV3
 	throttle *time.Timer
 	notify   chan struct{}
-	fileC    *fileCache
 }
 
 func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan struct{}) {
 	ac := &accountCache{
 		logger: logger,
-		keydir: keyDir,
+		keyDir: keyDir,
 		notify: make(chan struct{}, 1),
 		allMap: make(map[types.Address]encryptedKeyJSONV3),
 	}
 
-	keyPath := path.Join(keyDir, "keys.txt")
+	keysPath := path.Join(keyDir, "keys.txt")
 
-	ac.fileC, _ = NewFileCache(keyPath)
+	ac.keyDir = keysPath
+
+	if _, err := os.Stat(keysPath); errors.Is(err, os.ErrNotExist) {
+		if _, err := os.Create(keysPath); err != nil {
+			ac.logger.Info("can't create new file", "err", err)
+
+			return nil, nil
+		}
+	}
 
 	ac.scanAccounts() //nolint:errcheck
 
@@ -94,7 +103,7 @@ func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3)
 
 	ac.allMap[newAccount.Address] = key
 
-	err = ac.fileC.saveData(ac.allMap)
+	err = ac.saveData(ac.allMap)
 	if err != nil {
 		return err
 	}
@@ -110,15 +119,23 @@ func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3)
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
-	if _, ok := ac.allMap[account.Address]; !ok {
-		return errors.New("this account doesn't exists")
-	} else {
-		ac.allMap[account.Address] = key
+	newMap := make(map[types.Address]encryptedKeyJSONV3)
+
+	for mapKey, mapValue := range ac.allMap {
+		newMap[mapKey] = mapValue
 	}
 
-	if err := ac.fileC.saveData(ac.allMap); err != nil {
+	if _, ok := newMap[account.Address]; !ok {
+		return errors.New("this account doesn't exists")
+	} else {
+		newMap[account.Address] = key
+	}
+
+	if err := ac.saveData(newMap); err != nil {
 		return err
 	}
+
+	ac.allMap = newMap
 
 	return nil
 }
@@ -134,7 +151,7 @@ func (ac *accountCache) delete(removed accounts.Account) {
 
 	delete(ac.allMap, removed.Address)
 
-	if err := ac.fileC.saveData(ac.allMap); err != nil {
+	if err := ac.saveData(ac.allMap); err != nil {
 		ac.logger.Debug("cant't save data in file,", "err", err)
 	}
 }
@@ -177,7 +194,7 @@ func (ac *accountCache) scanAccounts() error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
-	accs, err := ac.fileC.scanOneFile()
+	accs, err := ac.scanFile()
 	if err != nil {
 		ac.logger.Debug("Failed to reload keystore contents", "err", err)
 
@@ -197,4 +214,44 @@ func (ac *accountCache) scanAccounts() error {
 	ac.logger.Trace("Handled keystore changes")
 
 	return nil
+}
+
+func (ac *accountCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) error {
+	fi, err := os.Create(ac.keyDir)
+	if err != nil {
+		return err
+	}
+
+	defer fi.Close()
+
+	byteAccount, err := json.Marshal(accounts)
+	if err != nil {
+		return err
+	}
+
+	if _, err := fi.Write(byteAccount); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ac *accountCache) scanFile() (map[types.Address]encryptedKeyJSONV3, error) {
+	fi, err := os.ReadFile(ac.keyDir)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(fi) == 0 {
+		return nil, nil
+	}
+
+	var accounts = make(map[types.Address]encryptedKeyJSONV3)
+
+	err = json.Unmarshal(fi, &accounts)
+	if err != nil {
+		return nil, err
+	}
+
+	return accounts, nil
 }

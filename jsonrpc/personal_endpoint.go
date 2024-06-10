@@ -10,7 +10,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/btcsuite/btcd/btcec/v2/ecdsa"
 )
 
 type Personal struct {
@@ -92,22 +91,12 @@ func (s *Personal) LockAccount(addr types.Address) (bool, error) {
 }
 
 func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) { //nolint:stylecheck
-	if len(sig) != crypto.ECDSASignatureLength {
-		return types.Address{}, fmt.Errorf("signature must be %d bytes long", crypto.ECDSASignatureLength)
-	}
-
-	if sig[64] != 27 && sig[64] != 28 {
-		return types.Address{}, errors.New("invalid Ethereum signature V is not 27 or 28")
-	}
-
-	sig[64] -= 27
-
-	rpk, _, err := ecdsa.RecoverCompact(sig, data)
+	addressRaw, err := crypto.Ecrecover(data, sig)
 	if err != nil {
 		return types.Address{}, err
 	}
 
-	return crypto.PubKeyToAddress(rpk.ToECDSA()), nil
+	return types.BytesToAddress(addressRaw), nil
 }
 
 func getKeystore(am *accounts.Manager) (*keystore.KeyStore, error) {
