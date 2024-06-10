@@ -1,4 +1,4 @@
-package accounts
+package create
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
 
@@ -28,14 +29,14 @@ func GetCommand() *cobra.Command {
 
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&params.Passphrase,
+		&params.passphrase,
 		PassphraseFlag,
 		"",
 		"passphrase for access to private key",
 	)
 
 	cmd.Flags().StringVar(
-		&params.ConfigDir,
+		&params.configDir,
 		ConfigDirFlag,
 		"",
 		"dir of config",
@@ -51,15 +52,12 @@ func runPreRun(cmd *cobra.Command, _ []string) {
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	scryptN := keystore.StandardScryptN
-	scryptP := keystore.StandardScryptP
+	scryptN := keystore.LightScryptN
+	scryptP := keystore.LightScryptP
 
-	if false {
-		scryptN = keystore.LightScryptN
-		scryptP = keystore.LightScryptP
-	}
+	ks := keystore.NewKeyStore(keystore.DefaultStorage, scryptN, scryptP, hclog.NewNullLogger())
 
-	account, err := keystore.StoreKey(params.Passphrase, scryptN, scryptP)
+	account, err := ks.NewAccount(params.passphrase)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("can't create account"))
 	}

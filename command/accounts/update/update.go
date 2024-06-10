@@ -1,7 +1,13 @@
-package accounts
+package update
 
 import (
+	"fmt"
+
+	"github.com/0xPolygon/polygon-edge/accounts"
+	"github.com/0xPolygon/polygon-edge/accounts/keystore"
+	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +20,7 @@ func GetCommand() *cobra.Command {
 		Use:     "update",
 		Short:   "Update existing account",
 		PreRunE: runPreRun,
-		RunE:    runCommand,
+		Run:     runCommand,
 	}
 
 	helper.RegisterJSONRPCFlag(updateCmd)
@@ -25,24 +31,44 @@ func GetCommand() *cobra.Command {
 
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&params.Address,
+		&params.rawAddress,
 		AddressFlag,
 		"",
 		"address of account",
 	)
 
 	cmd.Flags().StringVar(
-		&params.Passphrase,
+		&params.passphrase,
 		PassphraseFlag,
 		"",
 		"passphrase for access to private key",
 	)
+
+	cmd.Flags().StringVar(
+		&params.oldPassphrase,
+		OldPassphraseFlag,
+		"",
+		"old passphrase to unlock account",
+	)
 }
 
 func runPreRun(cmd *cobra.Command, _ []string) error {
-	return nil
+	return params.validateFlags()
 }
 
-func runCommand(cmd *cobra.Command, _ []string) error {
-	return nil
+func runCommand(cmd *cobra.Command, _ []string) {
+	outputter := command.InitializeOutputter(cmd)
+
+	scryptN := keystore.LightScryptN
+	scryptP := keystore.LightScryptP
+
+	ks := keystore.NewKeyStore(keystore.DefaultStorage, scryptN, scryptP, hclog.NewNullLogger())
+
+	if !ks.HasAddress(params.address) {
+		outputter.SetError(fmt.Errorf("this address doesn't exist"))
+	} else {
+		if err := ks.Update(accounts.Account{Address: params.address}, params.passphrase, params.oldPassphrase); err != nil {
+			outputter.SetError(fmt.Errorf("can't update account: %s", err))
+		}
+	}
 }

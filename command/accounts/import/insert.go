@@ -1,4 +1,4 @@
-package accounts
+package insert
 
 import (
 	"encoding/hex"
@@ -9,19 +9,20 @@ import (
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/crypto"
+	"github.com/hashicorp/go-hclog"
 	"github.com/spf13/cobra"
 )
 
 var (
-	params importParams
+	params insertParams
 )
 
 func GetCommand() *cobra.Command {
 	importCmd := &cobra.Command{
-		Use:    "import",
-		Short:  "Import existing account with private key and auth passphrase",
-		PreRun: runPreRun,
-		Run:    runCommand,
+		Use:     "insert",
+		Short:   "Import existing account with private key and auth passphrase",
+		PreRunE: runPreRun,
+		Run:     runCommand,
 	}
 
 	helper.RegisterJSONRPCFlag(importCmd)
@@ -32,60 +33,48 @@ func GetCommand() *cobra.Command {
 
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
-		&params.PrivateKey,
+		&params.privateKey,
 		PrivateKeyFlag,
 		"",
-		"privateKey for import account",
+		"privateKey for insert account",
 	)
 
 	cmd.Flags().StringVar(
-		&params.KeyDir,
+		&params.keyDir,
 		KeyDirFlag,
 		"",
 		"dir for document that contains private key",
 	)
 
 	cmd.Flags().StringVar(
-		&params.Passphrase,
+		&params.passphrase,
 		PassphraseFlag,
 		"",
 		"passphrase for access to private key",
 	)
 
-	cmd.Flags().StringVar(
-		&params.ConfigDir,
-		ConfigDirFlag,
-		"",
-		"dir of config file",
-	)
-
 	_ = cmd.MarkFlagRequired(PassphraseFlag)
 }
 
-func runPreRun(cmd *cobra.Command, _ []string) {
-	return
+func runPreRun(cmd *cobra.Command, _ []string) error {
+	return nil
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	scryptN := keystore.StandardScryptN
-	scryptP := keystore.StandardScryptP
-
-	if false {
-		scryptN = keystore.LightScryptN
-		scryptP = keystore.LightScryptP
-	}
+	scryptN := keystore.LightScryptN
+	scryptP := keystore.LightScryptP
 
 	am := accounts.NewManager(&accounts.Config{}, nil)
 
-	am.AddBackend(keystore.NewKeyStore(params.KeyDir, scryptN, scryptP, nil))
+	am.AddBackend(keystore.NewKeyStore(keystore.DefaultStorage, scryptN, scryptP, hclog.NewNullLogger()))
 
-	if params.PrivateKey == "" {
+	if params.privateKey == "" {
 		outputter.SetError(fmt.Errorf("private key empty"))
 	}
 
-	dec, err := hex.DecodeString(params.PrivateKey)
+	dec, err := hex.DecodeString(params.privateKey)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to decode private key"))
 	}
@@ -102,10 +91,10 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	ks := backends[0].(*keystore.KeyStore) //nolint:forcetypeassert
 
-	acct, err := ks.ImportECDSA(privKey, params.Passphrase)
+	acct, err := ks.ImportECDSA(privKey, params.passphrase)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("cannot import private key"))
 	}
 
-	outputter.SetCommandResult(command.Results{&importResult{Address: acct.Address}})
+	outputter.SetCommandResult(command.Results{&insertResult{Address: acct.Address}})
 }

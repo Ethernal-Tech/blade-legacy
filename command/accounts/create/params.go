@@ -1,4 +1,4 @@
-package accounts
+package create
 
 import (
 	"bytes"
@@ -14,8 +14,8 @@ const (
 )
 
 type createParams struct {
-	Passphrase string
-	ConfigDir  string
+	passphrase string
+	configDir  string
 }
 
 type createResult struct {

@@ -61,13 +61,6 @@ func (ks keyStorePassphrase) GetKey(encryptedKey encryptedKeyJSONV3, auth string
 	return key, nil
 }
 
-// StoreKey generates a key, encrypts with 'auth' and stores in the given directory
-func StoreKey(auth string, scryptN, scryptP int) (accounts.Account, error) {
-	_, a, err := storeNewKey(&keyStorePassphrase{scryptN, scryptP}, auth)
-
-	return a, err
-}
-
 func (ks keyStorePassphrase) StoreKey(key *Key, auth string) (encryptedKeyJSONV3, error) {
 	encryptedKey, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {

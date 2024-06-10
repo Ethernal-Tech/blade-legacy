@@ -1,4 +1,4 @@
-package accounts
+package insert
 
 import (
 	"bytes"
@@ -12,21 +12,19 @@ const (
 	PrivateKeyFlag = "private-key"
 	KeyDirFlag     = "key-dir"
 	PassphraseFlag = "passphrase"
-	ConfigDirFlag  = "config-dir"
 )
 
-type importParams struct {
-	PrivateKey string
-	KeyDir     string
-	Passphrase string
-	ConfigDir  string
+type insertParams struct {
+	privateKey string
+	keyDir     string
+	passphrase string
 }
 
-type importResult struct {
+type insertResult struct {
 	Address types.Address `json:"address"`
 }
 
-func (i *importResult) GetOutput() string {
+func (i *insertResult) GetOutput() string {
 	var buffer bytes.Buffer
 
 	vals := make([]string, 0, 1)
