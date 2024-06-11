@@ -70,15 +70,32 @@ func (s *OptimizedStack) top() (*uint256.Int, error) {
 }
 
 // peekAt returns the element at the nth position from the top of the stack,
-// without modifying the stack. It does not perform bounds checking and it
-// returns the value of the element, not the reference.
-func (s *OptimizedStack) peekAt(n int) uint256.Int {
-	return s.data[s.size()-n]
+// without modifying the stack. It returns the value of the element, not the
+// reference.
+func (s *OptimizedStack) peekAt(n int) (uint256.Int, error) {
+	if n < 0 || n > s.size() {
+		// Return nil and an error if n is out of bounds
+		return *uint256.NewInt(0), &runtime.StackOutOfBoundsError{StackLen: s.size(), RequestedIndex: n}
+	}
+
+	return s.data[s.size()-n], nil
 }
 
 // swap exchanges the top element of the stack with the element at the n-th position
-// from the top. It does not perform bounds checking and assumes valid input.
-func (s *OptimizedStack) swap(n int) {
-	sp := s.size() - 1
+// from the top.
+func (s *OptimizedStack) swap(n int) error {
+	size := s.size()
+	if size == 0 {
+		return &runtime.StackOutOfBoundsError{StackLen: s.size(), RequestedIndex: n}
+	}
+
+	if n < 0 || n >= size {
+		return &runtime.StackOutOfBoundsError{StackLen: s.size(), RequestedIndex: n}
+	}
+
+	sp := size - 1
+
 	s.data[sp], s.data[sp-n] = s.data[sp-n], s.data[sp]
+
+	return nil
 }

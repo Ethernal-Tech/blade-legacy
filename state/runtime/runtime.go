@@ -176,6 +176,17 @@ func (e *StackOverflowError) Error() string {
 	return fmt.Sprintf("stack limit reached %d (%d)", e.StackLen, e.Limit)
 }
 
+// StackOutOfBoundsError is used to signal that stack is accessed out of
+// its bounds
+type StackOutOfBoundsError struct {
+	StackLen       int
+	RequestedIndex int
+}
+
+func (e *StackOutOfBoundsError) Error() string {
+	return fmt.Sprintf("accessing index out of bounds %d (%d)", e.RequestedIndex, e.StackLen)
+}
+
 type CallType int
 
 const (

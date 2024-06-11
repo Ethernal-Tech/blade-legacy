@@ -1023,21 +1023,22 @@ func opPush(n int) instruction {
 
 func opDup(n int) instruction {
 	return func(c *state) {
-		if !c.stackAtLeast(n) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: n})
-		} else {
-			val := c.peekAt(n)
-			c.push(val)
+		val, err := c.peekAt(n)
+		if err != nil {
+			c.exit(err)
+
+			return
 		}
+
+		c.push(val)
 	}
 }
 
 func opSwap(n int) instruction {
 	return func(c *state) {
-		if !c.stackAtLeast(n + 1) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: n + 1})
-		} else {
-			c.swap(n)
+		err := c.swap(n)
+		if err != nil {
+			c.exit(err)
 		}
 	}
 }
@@ -1154,7 +1155,14 @@ func opCall(op OpCode) instruction {
 		c.resetReturnData()
 
 		if op == CALL && c.inStaticCall() {
-			if val := c.peekAt(3); val.BitLen() > 0 {
+			val, err := c.peekAt(3)
+			if err != nil {
+				c.exit(err)
+
+				return
+			}
+
+			if val.BitLen() > 0 {
 				c.exit(errWriteProtection)
 
 				return

@@ -75,11 +75,27 @@ func TestOptimizedStackPeekAt(t *testing.T) {
 	stack.push(*value1)
 	stack.push(*value2)
 
-	peekedValue := stack.peekAt(2)
+	peekedValue, err := stack.peekAt(2)
+
+	require.NoError(t, err)
 
 	require.Equal(t, peekedValue, *value1)
 
 	require.Equal(t, stack.size(), 2)
+}
+
+func TestOptimizedStackOutOfBoundsPeekAt(t *testing.T) {
+	var stack OptimizedStack
+
+	value1 := uint256.NewInt(1)
+	value2 := uint256.NewInt(2)
+
+	stack.push(*value1)
+	stack.push(*value2)
+
+	_, err := stack.peekAt(3)
+
+	require.Error(t, err, "expecting out of bounds error")
 }
 
 // TestSwap tests the swap function to ensure it correctly swaps elements in the stack.
@@ -99,4 +115,25 @@ func TestOptimizedStackSwap(t *testing.T) {
 	// Verify swap operation
 	require.Equal(t, stack.data[stack.size()-1], *value1)
 	require.Equal(t, stack.data[stack.size()-2], *value2)
+}
+
+func TestOptimizedStackOutOfBoundsSwap(t *testing.T) {
+	var stack OptimizedStack
+
+	err := stack.swap(1)
+	require.Error(t, err, "expecting out of bounds error")
+
+	err = stack.swap(-1)
+	require.Error(t, err, "expecting out of bounds error")
+
+	value1 := uint256.NewInt(1)
+	value2 := uint256.NewInt(2)
+
+	// Push two distinct values onto the stack
+	stack.push(*value1)
+	stack.push(*value2)
+
+	// Swap the top two elements
+	err = stack.swap(3)
+	require.Error(t, err, "expecting out of bounds error")
 }

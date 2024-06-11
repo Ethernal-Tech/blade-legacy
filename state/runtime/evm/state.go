@@ -163,12 +163,12 @@ func (c *state) pop() uint256.Int {
 	return v
 }
 
-func (c *state) peekAt(n int) uint256.Int {
+func (c *state) peekAt(n int) (uint256.Int, error) {
 	return c.stack.peekAt(n)
 }
 
-func (c *state) swap(n int) {
-	c.stack.swap(n)
+func (c *state) swap(n int) error {
+	return c.stack.swap(n)
 }
 
 func (c *state) consumeGas(gas uint64) bool {
