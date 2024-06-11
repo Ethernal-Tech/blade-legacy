@@ -2,7 +2,6 @@ package accounts
 
 import (
 	"reflect"
-	"sort"
 	"sync"
 
 	"github.com/0xPolygon/polygon-edge/accounts/event"
@@ -165,24 +164,6 @@ func (am *Manager) walletsNoLock() []Wallet {
 	return cpy
 }
 
-func (am *Manager) Wallet(url string) (Wallet, error) {
-	am.lock.RLock()
-	defer am.lock.RUnlock()
-
-	parsed, err := parseURL(url)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, wallet := range am.walletsNoLock() {
-		if wallet.URL() == parsed {
-			return wallet, nil
-		}
-	}
-
-	return nil, ErrUnknownWallet
-}
-
 func (am *Manager) Accounts() []types.Address {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
@@ -217,27 +198,20 @@ func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
 
 func merge(slice []Wallet, wallets ...Wallet) []Wallet {
 	for _, wallet := range wallets {
-		n := sort.Search(len(slice), func(i int) bool { return slice[i].URL().Cmp(wallet.URL()) >= 0 })
-		if n == len(slice) {
-			continue
-		}
-
-		slice = append(slice[:n], slice[n+1:]...)
+		slice = append(slice, wallet)
 	}
 
 	return slice
 }
 
-func drop(slice []Wallet, wallets ...Wallet) []Wallet {
-	for _, wallet := range wallets {
-		n := sort.Search(len(slice), func(i int) bool { return slice[i].URL().Cmp(wallet.URL()) >= 0 })
+func drop(slice []Wallet, wallet Wallet) []Wallet {
+	var droppedSlice []Wallet
 
-		if n == len(slice) {
-			continue
+	for _, internalWallet := range slice {
+		if internalWallet.Accounts()[0].Address != wallet.Accounts()[0].Address {
+			droppedSlice = append(droppedSlice, internalWallet)
 		}
-
-		slice = append(slice[:n], slice[n+1:]...)
 	}
 
-	return slice
+	return droppedSlice
 }

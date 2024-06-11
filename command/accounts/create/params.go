@@ -19,8 +19,7 @@ type createParams struct {
 }
 
 type createResult struct {
-	Address        types.Address `json:"address"`
-	PrivateKeyPath string        `json:"privkeypath"`
+	Address types.Address `json:"address"`
 }
 
 func (i *createResult) GetOutput() string {
@@ -28,7 +27,6 @@ func (i *createResult) GetOutput() string {
 
 	vals := make([]string, 0, 1)
 	vals = append(vals, fmt.Sprintf("Address|%s", i.Address.String()))
-	vals = append(vals, fmt.Sprintf("PrivateKeyPath:%s", i.PrivateKeyPath))
 
 	buffer.WriteString("\n[Import accounts]\n")
 	buffer.WriteString(helper.FormatKV(vals))

@@ -191,8 +191,6 @@ func TestCacheFind(t *testing.T) {
 		{Query: accs[2], WantResult: accs[2]},
 		// no match error
 		{Query: nomatchAccount, WantError: accounts.ErrNoMatch},
-		{Query: accounts.Account{URL: nomatchAccount.URL}, WantError: accounts.ErrNoMatch},
-		{Query: accounts.Account{URL: accounts.URL{Scheme: KeyStoreScheme, Path: filepath.Base(nomatchAccount.URL.Path)}}, WantError: accounts.ErrNoMatch},
 		{Query: accounts.Account{Address: nomatchAccount.Address}, WantError: accounts.ErrNoMatch},
 	}
 

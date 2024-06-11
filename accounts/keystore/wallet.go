@@ -14,10 +14,6 @@ type keyStoreWallet struct {
 	keyStore *KeyStore
 }
 
-func (ksw *keyStoreWallet) URL() accounts.URL {
-	return ksw.account.URL
-}
-
 func (ksw *keyStoreWallet) Status() (string, error) {
 	ksw.keyStore.mu.RLock()
 	defer ksw.keyStore.mu.RUnlock()
@@ -38,7 +34,7 @@ func (ksw *keyStoreWallet) Accounts() []accounts.Account {
 }
 
 func (ksw *keyStoreWallet) Contains(account accounts.Account) bool {
-	return account.Address == ksw.account.Address && (account.URL == accounts.URL{} || account.URL == ksw.account.URL)
+	return account.Address == ksw.account.Address
 }
 
 func (ksw *keyStoreWallet) signHash(account accounts.Account, hash []byte) ([]byte, error) {

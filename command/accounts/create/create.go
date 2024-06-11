@@ -62,5 +62,5 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		outputter.SetError(fmt.Errorf("can't create account"))
 	}
 
-	outputter.SetCommandResult(command.Results{&createResult{Address: account.Address, PrivateKeyPath: account.URL.Path}})
+	outputter.SetCommandResult(command.Results{&createResult{Address: account.Address}})
 }

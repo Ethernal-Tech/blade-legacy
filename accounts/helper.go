@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
-	"github.com/0xPolygon/polygon-edge/types"
 )
 
 var (
@@ -42,25 +40,6 @@ func NewAuthNeededError(needed string) error {
 
 func (err *AuthNeededError) Error() string {
 	return fmt.Sprintf("authentication needed: %s", err.Needed)
-}
-
-type AmbiguousAddrError struct {
-	Addr    types.Address
-	Matches []Account
-}
-
-func (err *AmbiguousAddrError) Error() string {
-	files := ""
-
-	for i, a := range err.Matches {
-		files += a.URL.Path
-
-		if i < len(err.Matches)-1 {
-			files += ", "
-		}
-	}
-
-	return fmt.Sprintf("multiple keys match address (%s)", files)
 }
 
 func LoadJSON(file string, val interface{}) error {
