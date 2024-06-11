@@ -62,7 +62,7 @@ func TestOptimizedStackReset(t *testing.T) {
 	stack.reset()
 
 	require.Zero(t, stack.size(), "Expected stack to be empty after reset")
-	require.Zero(t, len(stack.data), "Expected stack to be empty after reset")
+	require.Zero(t, len(stack), "Expected stack to be empty after reset")
 }
 
 // TestPeekAt tests the peekAt function for retrieving elements without modifying the stack.
@@ -113,8 +113,8 @@ func TestOptimizedStackSwap(t *testing.T) {
 	stack.swap(1)
 
 	// Verify swap operation
-	require.Equal(t, stack.data[stack.size()-1], *value1)
-	require.Equal(t, stack.data[stack.size()-2], *value2)
+	require.Equal(t, stack[stack.size()-1], *value1)
+	require.Equal(t, stack[stack.size()-2], *value2)
 }
 
 func TestOptimizedStackOutOfBoundsSwap(t *testing.T) {

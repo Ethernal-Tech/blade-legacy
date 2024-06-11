@@ -426,7 +426,7 @@ func TestRunWithTracer(t *testing.T) {
 			state.config = config
 
 			// make sure stack, memory, and returnData are empty
-			state.stack.data = make([]uint256.Int, 0)
+			state.stack = make([]uint256.Int, 0)
 			state.memory = make([]byte, 0)
 			state.returnData = make([]byte, 0)
 

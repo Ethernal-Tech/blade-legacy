@@ -1393,8 +1393,8 @@ func TestSwap(t *testing.T) {
 	instr := opSwap(4)
 	instr(s)
 
-	assert.Equal(t, *uint256.NewInt(5), s.stack.data[9])
-	assert.Equal(t, *uint256.NewInt(9), s.stack.data[5])
+	assert.Equal(t, *uint256.NewInt(5), s.stack[9])
+	assert.Equal(t, *uint256.NewInt(9), s.stack[5])
 }
 
 func TestLog(t *testing.T) {
@@ -1497,8 +1497,8 @@ var (
 	addr1 = types.StringToAddress("1")
 )
 
-func convertBigIntSliceToUint256(bigInts []*big.Int) []uint256.Int {
-	var uint256s = make([]uint256.Int, 0, len(bigInts))
+func convertBigIntSliceToUint256(bigInts []*big.Int) *OptimizedStack {
+	var uint256s = make(OptimizedStack, 0, len(bigInts))
 
 	for _, bi := range bigInts {
 		if bi.Sign() < 0 {
@@ -1513,7 +1513,7 @@ func convertBigIntSliceToUint256(bigInts []*big.Int) []uint256.Int {
 		uint256s = append(uint256s, *ui)
 	}
 
-	return uint256s
+	return &uint256s
 }
 
 func initializeStack(stackElements []uint256.Int) *OptimizedStack {
@@ -1705,9 +1705,8 @@ func Test_opSload(t *testing.T) {
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
 
-			for _, value := range convertBigIntSliceToUint256(tt.initState.stack) {
-				s.stack.push(value)
-			}
+			s.stack = *convertBigIntSliceToUint256(tt.initState.stack)
+
 			s.memory = tt.initState.memory
 			s.config = tt.config
 			tt.mockHost.accessList = tt.initState.accessList
@@ -1717,7 +1716,7 @@ func Test_opSload(t *testing.T) {
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
 			assert.Equal(t, tt.resultState.sp, s.stack.size(), "sp in state after execution is not correct")
-			assert.Equal(t, convertBigIntSliceToUint256(tt.resultState.stack), s.stack.data, "stack in state after execution is not correct")
+			assert.Equal(t, *convertBigIntSliceToUint256(tt.resultState.stack), s.stack, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
 			assert.Equal(t, tt.resultState.accessList, tt.mockHost.accessList, "accesslist in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
@@ -2033,9 +2032,8 @@ func TestCreate(t *testing.T) {
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
 
-			for _, value := range convertBigIntSliceToUint256(tt.initState.stack) {
-				s.stack.push(value)
-			}
+			s.stack = *convertBigIntSliceToUint256(tt.initState.stack)
+
 			s.memory = tt.initState.memory
 			s.config = tt.config
 			s.host = tt.mockHost
@@ -2044,7 +2042,7 @@ func TestCreate(t *testing.T) {
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
 			assert.Equal(t, tt.resultState.sp, s.stack.size(), "sp in state after execution is not correct")
-			assert.Equal(t, convertBigIntSliceToUint256(tt.resultState.stack), s.stack.data, "stack in state after execution is not correct")
+			assert.Equal(t, *convertBigIntSliceToUint256(tt.resultState.stack), s.stack, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
 			assert.Equal(t, tt.resultState.err, s.err, "err in state after execution is not correct")
@@ -2327,12 +2325,12 @@ func compareStates(a *state, b *state) bool {
 	}
 
 	// Deep comparison of stacks
-	if len(a.stack.data) != len(b.stack.data) {
+	if len(a.stack) != len(b.stack) {
 		return false
 	}
 
-	for i := range a.stack.data {
-		if a.stack.data[i] != b.stack.data[i] {
+	for i := range a.stack {
+		if a.stack[i] != b.stack[i] {
 			return false
 		}
 	}

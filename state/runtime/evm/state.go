@@ -360,7 +360,7 @@ func (c *state) captureState(opCode int) {
 
 	tracer.CaptureState(
 		c.memory,
-		c.stack.data,
+		c.stack,
 		opCode,
 		c.msg.Address,
 		c.stack.size(),
