@@ -16,6 +16,7 @@ type OptimizedStack []uint256.Int
 // internal stack slice to avoid unnecessary reallocations.
 func NewOptimizedStack(capacity int32) *OptimizedStack {
 	stack := make(OptimizedStack, 0, capacity)
+
 	return &stack
 }
 
