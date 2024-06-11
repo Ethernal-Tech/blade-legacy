@@ -1,0 +1,119 @@
+---
+name: ApexBridge Notification - Nightly
+on: # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      environment:
+        description: The environment to run against
+        type: string
+        required: true
+      build_blade_output:
+        description: Build Blade output
+        type: string
+        required: true
+      lint_output:
+        description: Lint output
+        type: string
+        required: true
+      unit_test_output:
+        description: Unit Tests output
+        type: string
+        required: true
+      e2e_polybft_test_output:
+        description: E2E PolyBFT Tests output
+        type: string
+        required: true
+      e2e_apex_test_output:
+        description: E2E ApexBridge Tests output
+        type: string
+        required: true
+    secrets:
+      APEX_SLACK_WEBHOOK_URL:
+        required: true
+
+jobs:
+  notification:
+    name: Notification
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Short SHA
+        id: short_sha
+        run: echo "value=`echo ${{ github.sha }} | cut -c1-7`" >> $GITHUB_OUTPUT
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.25.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.APEX_SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          succeed_bnt: 'primary'
+          failed_bnt: 'danger'
+          succeed_job: ':green:'
+          failed_job: ':red:'
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Nightly build"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Workflow Run"
+                      },
+                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_apex_test_output && env.succeed_bnt || env.failed_bnt }}",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Commit: *<https://github.com/${{ github.repository }}/tree/${{ github.sha }}|${{ steps.short_sha.outputs.value }}>*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "Environment: *${{ inputs.environment }}*"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.build_blade_output == '' && env.succeed_job || env.failed_job }} *Build*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.lint_output == '' && env.succeed_job || env.failed_job }} *Lint*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.unit_test_output == '' && env.succeed_job || env.failed_job }} *Unit Tests*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.e2e_polybft_test_output == '' && env.succeed_job || env.failed_job }} *E2E PolyBFT Tests*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.e2e_apex_test_output == '' && env.succeed_job || env.failed_job }} *E2E ApexBridge Tests*"
+                    }
+                  ]
+                }
+              ]
+            }

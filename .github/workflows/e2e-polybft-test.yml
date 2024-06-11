@@ -70,3 +70,10 @@ jobs:
           name: e2e-polybft-logs
           path: e2e-logs-*/
           retention-days: 30
+      - name: Archive e2e bridge data
+        if: always()
+        uses: actions/upload-artifact@v4.3.0
+        with:
+          name: e2e-bridge-data
+          path: e2e-bridge-data-tmp-*/
+          retention-days: 3

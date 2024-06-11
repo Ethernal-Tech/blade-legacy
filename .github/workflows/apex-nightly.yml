@@ -1,0 +1,32 @@
+---
+name: ApexBridge Nightly Build
+on: # yamllint disable-line rule:truthy
+  schedule:
+    # * is a special character in YAML so you have to quote this string
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  apex-ci:
+    name: ApexBridge CI
+    uses: ./.github/workflows/apex-ci.yml
+    with:
+      build_blade: true
+      lint: true
+      unit_test: true
+      e2e_polybft_test: true
+      e2e_apex_tests: true
+  notification_apex_nightly:
+    name: ApexBridge Nightly Notification
+    uses: ./.github/workflows/apex-notification-nightly.yml
+    needs: apex-ci
+    if: success() || failure()
+    with:
+      environment: nightly
+      build_blade_output: ${{ needs.apex-ci.outputs.build_blade }}
+      lint_output: ${{ needs.apex-ci.outputs.lint }}
+      unit_test_output: ${{ needs.apex-ci.outputs.unit_test }}
+      e2e_polybft_test_output: ${{ needs.apex-ci.outputs.e2e_polybft_test }}
+      e2e_apex_test_output: ${{ needs.apex-ci.outputs.e2e_apex_test }}
+    secrets:
+      APEX_SLACK_WEBHOOK_URL: ${{ secrets.APEX_SLACK_WEBHOOK_URL }}

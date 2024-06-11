@@ -17,11 +17,15 @@ on: # yamllint disable-line rule:truthy
         description: Lint
         type: boolean
         default: true
-      # unit_test:
-      #   description: Unit Tests
-      #   type: boolean
-      #   default: true
-      e2e_apex_tests:
+      unit_test:
+        description: Unit Tests
+        type: boolean
+        default: true
+      e2e_polybft_test:
+        description: E2E PolyBFT Tests
+        type: boolean
+        default: true
+      e2e_apex_test:
         description: E2E ApexBridge Tests
         type: boolean
         default: true
@@ -34,11 +38,15 @@ on: # yamllint disable-line rule:truthy
         description: Lint
         type: boolean
         required: true
-      # unit_test:
-      #   description: Unit Tests
-      #   type: boolean
-      #   required: true
-      e2e_apex_tests:
+      unit_test:
+        description: Unit Tests
+        type: boolean
+        required: true
+      e2e_polybft_test:
+        description: E2E PolyBFT Tests
+        type: boolean
+        required: true
+      e2e_apex_test:
         description: E2E ApexBridge Tests
         type: boolean
         default: true
@@ -52,9 +60,12 @@ on: # yamllint disable-line rule:truthy
       unit_test:
         description: Unit Tests output
         value: ${{ jobs.unit_test.outputs.workflow_output }}
-      e2e_apex_tests:
+      e2e_polybft_test:
+        description: E2E PolyBFT Tests output
+        value: ${{ jobs.e2e_polybft_test.outputs.workflow_output }}
+      e2e_apex_test:
         description: E2E ApexBridge Tests output
-        value: ${{ jobs.e2e_apex_tests.outputs.workflow_output }}
+        value: ${{ jobs.e2e_apex_test.outputs.workflow_output }}
 
 jobs:
   build_blade:
@@ -63,7 +74,7 @@ jobs:
     if: |
       inputs.build_blade || 
       github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+      github.event_name == 'push'
   lint:
     name: Lint
     uses: ./.github/workflows/lint.yml
@@ -71,15 +82,25 @@ jobs:
     if: |
       inputs.lint || 
       github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
-  # unit_test:
-  #   name: Unit Tests
-  #   uses: ./.github/workflows/unit-test.yml
-  #   needs: build_blade
-  #   if: |
-  #     inputs.unit_test || 
-  #     github.event_name == 'pull_request' || 
-  #     (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+      github.event_name == 'push'
+  unit_test:
+    name: Unit Tests
+    uses: ./.github/workflows/unit-test.yml
+    needs: build_blade
+    if: |
+      inputs.unit_test || 
+      github.event_name == 'pull_request' || 
+      github.event_name == 'push'
+  e2e_polybft_test:
+    name: E2E PolyBFT Tests
+    uses: ./.github/workflows/e2e-polybft-test.yml
+    needs: build_blade
+    if: |
+      inputs.e2e_polybft_test || 
+      github.event_name == 'pull_request' || 
+      github.event_name == 'push'
+    secrets:
+      PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
   e2e_apex_test:
     name: E2E ApexBridge Tests
     uses: ./.github/workflows/e2e-apex-test.yml
@@ -87,6 +108,6 @@ jobs:
     if: |
       inputs.e2e_polybft_test || 
       github.event_name == 'pull_request' || 
-      (github.event_name == 'push' && github.ref == 'refs/heads/feature/apex-bridge')
+      github.event_name == 'push'
     secrets:
       PERSONAL_ACCESS_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
