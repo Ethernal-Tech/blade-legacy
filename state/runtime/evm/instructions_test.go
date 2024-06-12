@@ -1517,13 +1517,13 @@ func convertBigIntSliceToUint256(bigInts []*big.Int) *OptimizedStack {
 }
 
 func initializeStack(stackElements []uint256.Int) *OptimizedStack {
-	stack := OptimizedStack{}
 	stack := &OptimizedStack{}
 	for _, element := range stackElements {
 		stack.push(element)
 	}
 
 	return stack
+}
 
 func Test_opSload(t *testing.T) {
 	t.Parallel()
