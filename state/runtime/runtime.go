@@ -184,7 +184,7 @@ type StackOutOfBoundsError struct {
 }
 
 func (e *StackOutOfBoundsError) Error() string {
-	return fmt.Sprintf("accessing index out of bounds %d (%d)", e.RequestedIndex, e.StackLen)
+	return fmt.Sprintf("accessing index out of bounds (index=%d, stack length=%d)", e.RequestedIndex, e.StackLen)
 }
 
 type CallType int
