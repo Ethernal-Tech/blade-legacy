@@ -220,21 +220,39 @@ func BridgeAmountFull(
 ) string {
 	t.Helper()
 
+	return BridgeAmountFullMultipleReceivers(
+		t, ctx, txProvider, networkMagic, multisigAddr, feeAddr, sender,
+		[]string{receiverAddr}, sendAmount, destinationChainID,
+	)
+}
+
+func BridgeAmountFullMultipleReceivers(
+	t *testing.T, ctx context.Context, txProvider wallet.ITxProvider, networkMagic uint,
+	multisigAddr, feeAddr string, sender wallet.IWallet, receiverAddrs []string, sendAmount uint64,
+	destinationChainID string,
+) string {
+	t.Helper()
+
+	require.Greater(t, len(receiverAddrs), 0)
+	require.Less(t, len(receiverAddrs), 5)
+
 	const feeAmount = 1_100_000
 
 	senderAddr, _, err := wallet.GetWalletAddressCli(sender, networkMagic)
 	require.NoError(t, err)
 
-	var receivers = map[string]uint64{
-		receiverAddr: sendAmount,
-		feeAddr:      feeAmount,
+	receivers := make(map[string]uint64, len(receiverAddrs)+1)
+	receivers[feeAddr] = feeAmount
+
+	for _, receiverAddr := range receiverAddrs {
+		receivers[receiverAddr] = sendAmount
 	}
 
 	bridgingRequestMetadata, err := CreateMetaData(senderAddr, receivers, destinationChainID)
 	require.NoError(t, err)
 
 	txHash, err := SendTx(ctx, txProvider, sender,
-		sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
+		uint64(len(receiverAddrs))*sendAmount+feeAmount, multisigAddr, int(networkMagic), bridgingRequestMetadata)
 	require.NoError(t, err)
 
 	err = wallet.WaitForTxHashInUtxos(

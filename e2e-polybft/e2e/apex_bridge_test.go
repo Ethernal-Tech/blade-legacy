@@ -759,6 +759,85 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 		fmt.Printf("prevAmount: %v. newAmount: %v\n", prevAmount, newAmount)
 	})
 
+	t.Run("From prime to vector sequential and parallel with max receivers", func(t *testing.T) {
+		const (
+			sequentialInstances = 5
+			parallelInstances   = 10
+			receivers           = 4
+			sendAmount          = uint64(1_000_000)
+		)
+
+		var wg sync.WaitGroup
+
+		destinationWalletKeys := make([]wallet.IWallet, receivers)
+		destinationWalletAddresses := make([]string, receivers)
+		destinationWalletPrevAmounts := make([]*big.Int, receivers)
+
+		for i := 0; i < receivers; i++ {
+			destinationWalletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.VectorCluster.Config.Dir("keys")), true)
+			require.NoError(t, err)
+
+			destinationWalletAddresses[i], _, err = wallet.GetWalletAddressCli(destinationWalletKeys[i], uint(apex.VectorCluster.Config.NetworkMagic))
+			require.NoError(t, err)
+
+			destinationWalletPrevAmounts[i], err = cardanofw.GetTokenAmount(ctx, txProviderVector, destinationWalletAddresses[i])
+			require.NoError(t, err)
+		}
+
+		for j := 0; j < sequentialInstances; j++ {
+			walletKeys := make([]wallet.IWallet, parallelInstances)
+
+			for i := 0; i < parallelInstances; i++ {
+				walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
+				require.NoError(t, err)
+
+				walletAddress, _, err := wallet.GetWalletAddressCli(walletKeys[i], uint(apex.PrimeCluster.Config.NetworkMagic))
+				require.NoError(t, err)
+
+				fundSendAmount := uint64(15_000_000)
+				user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, fundSendAmount, walletAddress, true)
+			}
+
+			fmt.Printf("run: %v. Funded %v wallets \n", j+1, parallelInstances)
+
+			for i := 0; i < parallelInstances; i++ {
+				wg.Add(1)
+
+				go func(run, idx int) {
+					defer wg.Done()
+
+					txHash := cardanofw.BridgeAmountFullMultipleReceivers(t, ctx, txProviderPrime, uint(apex.PrimeCluster.Config.NetworkMagic),
+						apex.Bridge.PrimeMultisigAddr, apex.Bridge.VectorMultisigFeeAddr, walletKeys[idx],
+						destinationWalletAddresses, sendAmount, cardanofw.GetDestinationChainID(true))
+					fmt.Printf("run: %v. Tx %v sent. hash: %s\n", run+1, idx+1, txHash)
+				}(j, i)
+			}
+
+			wg.Wait()
+		}
+
+		fmt.Printf("Waiting for %v TXs\n", sequentialInstances*parallelInstances)
+
+		var wgResult sync.WaitGroup
+
+		for i := 0; i < receivers; i++ {
+			wgResult.Add(1)
+
+			go func(receiverIdx int) {
+				defer wgResult.Done()
+
+				expectedAmount := destinationWalletPrevAmounts[receiverIdx].Uint64() + uint64(sequentialInstances)*uint64(parallelInstances)*sendAmount
+				err = cardanofw.WaitForAmount(context.Background(), txProviderVector, destinationWalletAddresses[receiverIdx], func(val *big.Int) bool {
+					return val.Cmp(new(big.Int).SetUint64(expectedAmount)) == 0
+				}, 100, time.Second*10)
+				require.NoError(t, err)
+				fmt.Printf("%v receiver, %v TXs confirmed\n", receiverIdx, sequentialInstances*parallelInstances)
+			}(i)
+		}
+
+		wgResult.Wait()
+	})
+
 	t.Run("Both directions sequential", func(t *testing.T) {
 		instances := 5
 		sendAmount := uint64(1_000_000)
