@@ -2,6 +2,8 @@ package precompiled
 
 import (
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -41,15 +43,18 @@ func (c *cardanoVerifySignaturePrecompile) run(input []byte, caller types.Addres
 	dataBytes := [3][]byte{}
 
 	for i := range dataBytes {
-		str, ok := data[strconv.Itoa(i)].(string)
-		if !ok {
-			return nil, runtime.ErrInvalidInputData
-		}
-
-		dataBytes[i], err = hex.DecodeString(strings.TrimPrefix(str, "0x"))
-		if err != nil {
-			// if not hex encoded then its just a plain string -> convert it to byte slice
-			dataBytes[i] = []byte(str)
+		switch dt := data[strconv.Itoa(i)].(type) {
+		case string:
+			dataBytes[i], err = hex.DecodeString(strings.TrimPrefix(dt, "0x"))
+			if err != nil {
+				dataBytes[i] = []byte(dt)
+			}
+		case []byte:
+			dataBytes[i] = dt
+		case [32]byte:
+			dataBytes[i] = dt[:]
+		default:
+			return nil, fmt.Errorf("%w: index %d", runtime.ErrInvalidInputData, i)
 		}
 	}
 
@@ -79,14 +84,14 @@ func (c *cardanoVerifySignaturePrecompile) run(input []byte, caller types.Addres
 		}
 	}
 
-	// golang unexpected behaviour fix?!?!
-	// `switch cardano_wallet.VerifyMessage(message, verifyingKey, signature)` acts strange
-	switch err = cardano_wallet.VerifyMessage(rawTxOrMessage, verifyingKey, signature); err { //nolint:errorlint
-	case nil:
-		return abiBoolTrue, nil
-	case cardano_wallet.ErrInvalidSignature:
-		return abiBoolFalse, nil
-	default:
+	err = cardano_wallet.VerifyMessage(rawTxOrMessage, verifyingKey, signature)
+	if err != nil {
+		if errors.Is(err, cardano_wallet.ErrInvalidSignature) {
+			return abiBoolFalse, nil
+		}
+
 		return nil, err
 	}
+
+	return abiBoolTrue, nil
 }
