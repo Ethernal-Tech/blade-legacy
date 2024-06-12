@@ -153,7 +153,7 @@ jobs:
       - name: Part of the day
         id: part_of_the_day
         run: |
-          if [ "$(date +"%H")" -ge 12 ]; then
+          if [ "$(date +"%H")" -ge 8 ]; then
             echo "name=Daily" >> $GITHUB_OUTPUT
           else
             echo "name=Nightly" >> $GITHUB_OUTPUT
