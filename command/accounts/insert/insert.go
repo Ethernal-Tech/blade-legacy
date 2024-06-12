@@ -2,6 +2,7 @@ package insert
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
@@ -20,7 +21,7 @@ var (
 func GetCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:     "insert",
-		Short:   "Import existing account with private key and auth passphrase",
+		Short:   "Insert existing account with private key and auth passphrase",
 		PreRunE: runPreRun,
 		Run:     runCommand,
 	}
@@ -34,26 +35,19 @@ func GetCommand() *cobra.Command {
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.privateKey,
-		PrivateKeyFlag,
+		privateKeyFlag,
 		"",
-		"privateKey for insert account",
-	)
-
-	cmd.Flags().StringVar(
-		&params.keyDir,
-		KeyDirFlag,
-		"",
-		"dir for document that contains private key",
+		"privateKey key of new account",
 	)
 
 	cmd.Flags().StringVar(
 		&params.passphrase,
-		PassphraseFlag,
+		passphraseFlag,
 		"",
 		"passphrase for access to private key",
 	)
 
-	_ = cmd.MarkFlagRequired(PassphraseFlag)
+	_ = cmd.MarkFlagRequired(passphraseFlag)
 }
 
 func runPreRun(cmd *cobra.Command, _ []string) error {
@@ -63,25 +57,22 @@ func runPreRun(cmd *cobra.Command, _ []string) error {
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	scryptN := keystore.LightScryptN
-	scryptP := keystore.LightScryptP
+	am := accounts.NewManager(nil)
 
-	am := accounts.NewManager(&accounts.Config{}, nil)
-
-	am.AddBackend(keystore.NewKeyStore(keystore.DefaultStorage, scryptN, scryptP, hclog.NewNullLogger()))
+	am.AddBackend(keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger()))
 
 	if params.privateKey == "" {
-		outputter.SetError(fmt.Errorf("private key empty"))
+		outputter.SetError(errors.New("private key empty"))
 	}
 
 	dec, err := hex.DecodeString(params.privateKey)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to decode private key"))
+		outputter.SetError(fmt.Errorf("failed to decode private ke: %w", err))
 	}
 
 	privKey, err := crypto.BytesToECDSAPrivateKey(dec)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to initialize private key"))
+		outputter.SetError(fmt.Errorf("failed to initialize private key: %w", err))
 	}
 
 	backends := am.Backends(keystore.KeyStoreType)
@@ -93,7 +84,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	acct, err := ks.ImportECDSA(privKey, params.passphrase)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("cannot import private key"))
+		outputter.SetError(fmt.Errorf("cannot import private key: %w", err))
 	}
 
 	outputter.SetCommandResult(command.Results{&insertResult{Address: acct.Address}})

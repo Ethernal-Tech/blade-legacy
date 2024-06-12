@@ -2,7 +2,7 @@ package accounts
 
 import (
 	"github.com/0xPolygon/polygon-edge/command/accounts/create"
-	insert "github.com/0xPolygon/polygon-edge/command/accounts/import"
+	"github.com/0xPolygon/polygon-edge/command/accounts/insert"
 	"github.com/0xPolygon/polygon-edge/command/accounts/update"
 	"github.com/spf13/cobra"
 )

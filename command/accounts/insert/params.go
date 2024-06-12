@@ -9,14 +9,12 @@ import (
 )
 
 const (
-	PrivateKeyFlag = "private-key"
-	KeyDirFlag     = "key-dir"
-	PassphraseFlag = "passphrase"
+	privateKeyFlag = "private-key"
+	passphraseFlag = "passphrase"
 )
 
 type insertParams struct {
 	privateKey string
-	keyDir     string
 	passphrase string
 }
 
@@ -27,10 +25,10 @@ type insertResult struct {
 func (i *insertResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	vals := make([]string, 0, 1)
+	vals := make([]string, 0, 2)
 	vals = append(vals, fmt.Sprintf("Address|%s", i.Address.String()))
 
-	buffer.WriteString("\n[Import accounts]\n")
+	buffer.WriteString("\n[Inserted accounts]\n")
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")
 

@@ -1,15 +1,15 @@
 package update
 
 import (
-	"fmt"
+	"errors"
 
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
 const (
-	AddressFlag       = "address"
-	PassphraseFlag    = "passphrase"
-	OldPassphraseFlag = "old-passphrase"
+	addressFlag       = "address"
+	passphraseFlag    = "new-passphrase"
+	oldPassphraseFlag = "old-passphrase"
 )
 
 type updateParams struct {
@@ -28,7 +28,7 @@ func (up *updateParams) validateFlags() error {
 	up.address = addr
 
 	if up.passphrase != up.oldPassphrase {
-		return fmt.Errorf("same old and new password")
+		return errors.New("same old and new password")
 	}
 
 	return nil

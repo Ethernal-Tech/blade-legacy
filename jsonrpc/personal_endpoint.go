@@ -23,12 +23,12 @@ func (p *Personal) ListAccounts() ([]types.Address, Error) {
 func (p *Personal) NewAccount(password string) (types.Address, error) {
 	ks, err := getKeystore(p.accManager)
 	if err != nil {
-		return types.Address{}, err
+		return types.ZeroAddress, err
 	}
 
 	acc, err := ks.NewAccount(password)
 	if err != nil {
-		return types.Address{}, fmt.Errorf("can't create new account")
+		return types.ZeroAddress, fmt.Errorf("can't create new account")
 	}
 
 	return acc.Address, nil
@@ -37,12 +37,12 @@ func (p *Personal) NewAccount(password string) (types.Address, error) {
 func (p *Personal) ImportRawKey(privKey string, password string) (types.Address, error) {
 	key, err := crypto.HexToECDSA(privKey)
 	if err != nil {
-		return types.Address{}, err
+		return types.ZeroAddress, err
 	}
 
 	ks, err := getKeystore(p.accManager)
 	if err != nil {
-		return types.Address{}, err
+		return types.ZeroAddress, err
 	}
 
 	acc, err := ks.ImportECDSA(key, password)
@@ -79,21 +79,21 @@ func (p *Personal) UnlockAccount(addr types.Address, password string, duration u
 
 func (s *Personal) LockAccount(addr types.Address) (bool, error) {
 	ks, err := getKeystore(s.accManager)
-	if err == nil {
-		if err := ks.Lock(addr); err != nil {
-			return false, err
-		}
-
-		return true, nil
+	if err != nil {
+		return false, err
 	}
 
-	return false, err
+	if err := ks.Lock(addr); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) { //nolint:stylecheck
+func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) {
 	addressRaw, err := crypto.Ecrecover(data, sig)
 	if err != nil {
-		return types.Address{}, err
+		return types.ZeroAddress, err
 	}
 
 	return types.BytesToAddress(addressRaw), nil

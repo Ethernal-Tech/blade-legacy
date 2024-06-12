@@ -16,10 +16,9 @@ var (
 
 func GetCommand() *cobra.Command {
 	createCmd := &cobra.Command{
-		Use:    "create",
-		Short:  "Create new account",
-		PreRun: runPreRun,
-		Run:    runCommand,
+		Use:   "create",
+		Short: "Create new account",
+		Run:   runCommand,
 	}
 
 	helper.RegisterJSONRPCFlag(createCmd)
@@ -30,36 +29,22 @@ func GetCommand() *cobra.Command {
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.passphrase,
-		PassphraseFlag,
+		passphraseFlag,
 		"",
 		"passphrase for access to private key",
 	)
 
-	cmd.Flags().StringVar(
-		&params.configDir,
-		ConfigDirFlag,
-		"",
-		"dir of config",
-	)
-
-	_ = cmd.MarkFlagRequired(PassphraseFlag)
-}
-
-func runPreRun(cmd *cobra.Command, _ []string) {
-
+	_ = cmd.MarkFlagRequired(passphraseFlag)
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	scryptN := keystore.LightScryptN
-	scryptP := keystore.LightScryptP
-
-	ks := keystore.NewKeyStore(keystore.DefaultStorage, scryptN, scryptP, hclog.NewNullLogger())
+	ks := keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger())
 
 	account, err := ks.NewAccount(params.passphrase)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("can't create account"))
+		outputter.SetError(fmt.Errorf("can't create account: %w", err))
 	}
 
 	outputter.SetCommandResult(command.Results{&createResult{Address: account.Address}})

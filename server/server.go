@@ -210,11 +210,6 @@ func NewServer(config *Config) (*Server, error) {
 		m.network = network
 	}
 
-	// setup account manager
-	{
-		m.accManager = accounts.NewManager(&accounts.Config{InsecureUnlockAllowed: true}, nil)
-	}
-
 	// start blockchain object
 	stateStorage, err := itrie.NewLevelDBStorage(filepath.Join(m.config.DataDir, "trie"), logger)
 	if err != nil {
@@ -316,6 +311,11 @@ func NewServer(config *Config) (*Server, error) {
 	config.Chain.Genesis.StateRoot = genesisRoot
 
 	signer := crypto.NewSigner(config.Chain.Params.Forks.At(0), uint64(m.config.Chain.Params.ChainID))
+
+	// setup account manager
+	{
+		m.accManager = accounts.NewManager(m.logger)
+	}
 
 	// create storage instance for blockchain
 	var db *storagev2.Storage

@@ -18,7 +18,7 @@ var (
 func GetCommand() *cobra.Command {
 	updateCmd := &cobra.Command{
 		Use:     "update",
-		Short:   "Update existing account",
+		Short:   "Update passphrase of existing account",
 		PreRunE: runPreRun,
 		Run:     runCommand,
 	}
@@ -32,21 +32,21 @@ func GetCommand() *cobra.Command {
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.rawAddress,
-		AddressFlag,
+		addressFlag,
 		"",
 		"address of account",
 	)
 
 	cmd.Flags().StringVar(
 		&params.passphrase,
-		PassphraseFlag,
+		passphraseFlag,
 		"",
-		"passphrase for access to private key",
+		"new passphrase for access to private key",
 	)
 
 	cmd.Flags().StringVar(
 		&params.oldPassphrase,
-		OldPassphraseFlag,
+		oldPassphraseFlag,
 		"",
 		"old passphrase to unlock account",
 	)
@@ -59,16 +59,13 @@ func runPreRun(cmd *cobra.Command, _ []string) error {
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	scryptN := keystore.LightScryptN
-	scryptP := keystore.LightScryptP
-
-	ks := keystore.NewKeyStore(keystore.DefaultStorage, scryptN, scryptP, hclog.NewNullLogger())
+	ks := keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger())
 
 	if !ks.HasAddress(params.address) {
 		outputter.SetError(fmt.Errorf("this address doesn't exist"))
 	} else {
 		if err := ks.Update(accounts.Account{Address: params.address}, params.passphrase, params.oldPassphrase); err != nil {
-			outputter.SetError(fmt.Errorf("can't update account: %s", err))
+			outputter.SetError(fmt.Errorf("can't update account: %w", err))
 		}
 	}
 }

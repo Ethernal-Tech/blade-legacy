@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -142,7 +143,7 @@ func loadKeyStoreTestV3(t *testing.T, file string) map[string]KeyStoreTestV3 {
 
 	tests := make(map[string]KeyStoreTestV3)
 
-	err := accounts.LoadJSON(file, &tests)
+	err := LoadJSON(t, file, &tests)
 	require.NoError(t, err)
 
 	return tests
@@ -198,4 +199,24 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 		*keyEncrypted, err = EncryptKey(key, password, veryLightScryptN, veryLightScryptP)
 		require.NoError(t, err)
 	}
+}
+
+func LoadJSON(t *testing.T, file string, val interface{}) error {
+	t.Helper()
+	content, err := os.ReadFile(file)
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(content, val); err != nil {
+		if syntaxerr, ok := err.(*json.SyntaxError); ok { //nolint:errorlint
+			line := accounts.FindLine(content, syntaxerr.Offset)
+
+			return fmt.Errorf("JSON syntax error at %v:%v: %w", file, line, err)
+		}
+
+		return fmt.Errorf("JSON unmarshal error in %v: %w", file, err)
+	}
+
+	return nil
 }

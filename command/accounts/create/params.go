@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	PassphraseFlag = "passphrase"
-	ConfigDirFlag  = "config-dir"
+	passphraseFlag = "passphrase"
+	configDirFlag  = "config-dir"
 )
 
 type createParams struct {
@@ -25,10 +25,10 @@ type createResult struct {
 func (i *createResult) GetOutput() string {
 	var buffer bytes.Buffer
 
-	vals := make([]string, 0, 1)
+	vals := make([]string, 0, 2)
 	vals = append(vals, fmt.Sprintf("Address|%s", i.Address.String()))
 
-	buffer.WriteString("\n[Import accounts]\n")
+	buffer.WriteString("\n[Created accounts]\n")
 	buffer.WriteString(helper.FormatKV(vals))
 	buffer.WriteString("\n")
 

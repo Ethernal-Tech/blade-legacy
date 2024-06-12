@@ -11,10 +11,6 @@ import (
 
 const managerSubBufferSize = 50
 
-type Config struct {
-	InsecureUnlockAllowed bool
-}
-
 type newBackendEvent struct {
 	backend Backend
 
@@ -22,7 +18,6 @@ type newBackendEvent struct {
 }
 
 type Manager struct {
-	config      *Config
 	backends    map[reflect.Type][]Backend
 	updaters    []event.Subscription
 	updates     chan WalletEvent
@@ -39,7 +34,7 @@ type Manager struct {
 	lock sync.RWMutex
 }
 
-func NewManager(config *Config, logger hclog.Logger, backends ...Backend) *Manager {
+func NewManager(logger hclog.Logger, backends ...Backend) *Manager {
 	var wallets []Wallet
 
 	for _, backend := range backends {
@@ -55,7 +50,6 @@ func NewManager(config *Config, logger hclog.Logger, backends ...Backend) *Manag
 	}
 
 	am := &Manager{
-		config:      config,
 		backends:    make(map[reflect.Type][]Backend),
 		updaters:    subs,
 		updates:     updates,
@@ -84,10 +78,6 @@ func (am *Manager) Close() error {
 	am.quit <- errc
 
 	return <-errc
-}
-
-func (am *Manager) Config() *Config {
-	return am.config
 }
 
 func (am *Manager) AddBackend(backend Backend) {
