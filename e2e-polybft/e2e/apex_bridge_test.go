@@ -781,7 +781,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
-			walletAddress, _, err := wallet.GetWalletAddress(walletKeys[i], uint(apex.PrimeCluster.Config.NetworkMagic))
+			walletAddress, _, err := wallet.GetWalletAddressCli(walletKeys[i], uint(apex.PrimeCluster.Config.NetworkMagic))
 			require.NoError(t, err)
 
 			user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, fundSendAmount, walletAddress, true)
@@ -868,7 +868,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 			walletKeys[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
-			walletAddress, _, err := wallet.GetWalletAddress(walletKeys[i], uint(apex.PrimeCluster.Config.NetworkMagic))
+			walletAddress, _, err := wallet.GetWalletAddressCli(walletKeys[i], uint(apex.PrimeCluster.Config.NetworkMagic))
 			require.NoError(t, err)
 
 			user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, fundSendAmount, walletAddress, true)
@@ -958,7 +958,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 			walletKeysPrime[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.PrimeCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
-			walletAddress, _, err := wallet.GetWalletAddress(walletKeysPrime[i], uint(apex.PrimeCluster.Config.NetworkMagic))
+			walletAddress, _, err := wallet.GetWalletAddressCli(walletKeysPrime[i], uint(apex.PrimeCluster.Config.NetworkMagic))
 			require.NoError(t, err)
 
 			user.SendToAddress(t, ctx, txProviderPrime, primeGenesisWallet, fundSendAmount, walletAddress, true)
@@ -972,7 +972,7 @@ func TestE2E_ApexBridge_ValidScenarios(t *testing.T) {
 			walletKeysVector[i], err = wallet.NewStakeWalletManager().Create(path.Join(apex.VectorCluster.Config.Dir("keys")), true)
 			require.NoError(t, err)
 
-			walletAddress, _, err := wallet.GetWalletAddress(walletKeysVector[i], uint(apex.VectorCluster.Config.NetworkMagic))
+			walletAddress, _, err := wallet.GetWalletAddressCli(walletKeysVector[i], uint(apex.VectorCluster.Config.NetworkMagic))
 			require.NoError(t, err)
 
 			user.SendToAddress(t, ctx, txProviderVector, vectorGenesisWallet, fundSendAmount, walletAddress, false)

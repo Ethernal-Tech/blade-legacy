@@ -220,7 +220,7 @@ func BridgeAmountFull(
 ) string {
 	t.Helper()
 
-	const feeAmount = 2_000_000
+	const feeAmount = 1_100_000
 
 	senderAddr, _, err := wallet.GetWalletAddressCli(sender, networkMagic)
 	require.NoError(t, err)
