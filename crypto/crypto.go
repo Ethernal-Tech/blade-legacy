@@ -363,14 +363,6 @@ func convertToBtcPrivKey(priv *ecdsa.PrivateKey) (*btcec.PrivateKey, error) {
 	return &btcPriv, nil
 }
 
-func LatestSignerForChainID(chaidID uint64) TxSigner {
-	if chaidID == 0 { // TO DO maybe wrong
-		return NewHomesteadSigner()
-	}
-
-	return NewLondonSigner(chaidID)
-}
-
 func DToECDSA(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
 	priv := new(ecdsa.PrivateKey)
 	priv.PublicKey.Curve = btcec.S256()

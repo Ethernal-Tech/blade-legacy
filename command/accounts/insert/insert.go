@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/keystore"
+	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -57,9 +57,7 @@ func runPreRun(cmd *cobra.Command, _ []string) error {
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	am := accounts.NewManager(nil)
-
-	am.AddBackend(keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger()))
+	ks := keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger(), chain.AllForksEnabled.At(0))
 
 	if params.privateKey == "" {
 		outputter.SetError(errors.New("private key empty"))
@@ -74,13 +72,6 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to initialize private key: %w", err))
 	}
-
-	backends := am.Backends(keystore.KeyStoreType)
-	if len(backends) == 0 {
-		outputter.SetError(fmt.Errorf("keystore is not available"))
-	}
-
-	ks := backends[0].(*keystore.KeyStore) //nolint:forcetypeassert
 
 	acct, err := ks.ImportECDSA(privKey, params.passphrase)
 	if err != nil {

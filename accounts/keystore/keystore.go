@@ -12,6 +12,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
+	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -45,6 +46,7 @@ type KeyStore struct {
 	updateFeed  event.Feed              // Event feed to notify wallet additions/removals
 	updateScope event.SubscriptionScope // Subscription scope tracking current live listeners
 	updating    bool                    // Whether the event notification loop is running
+	config      *chain.ForksInTime
 
 	mu       sync.RWMutex
 	importMu sync.Mutex // Import Mutex locks the import to prevent two insertions from racing
@@ -55,12 +57,12 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
+func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger, config chain.ForksInTime) *KeyStore {
 	var ks *KeyStore
 
 	ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
 
-	ks.init(keyDir, hclog.NewNullLogger()) // TO DO LOGGER
+	ks.init(keyDir, logger)
 
 	return ks
 }
@@ -244,7 +246,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 		return nil, ErrLocked
 	}
 
-	signer := crypto.LatestSignerForChainID(chainID.Uint64())
+	signer := crypto.NewSigner(*ks.config, chainID.Uint64())
 
 	return signer.SignTx(tx, unlockedKey.PrivateKey)
 }
@@ -270,7 +272,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string,
 
 	defer zeroKey(key.PrivateKey)
 
-	signer := crypto.LatestSignerForChainID(chainID.Uint64())
+	signer := crypto.NewSigner(*ks.config, chainID.Uint64())
 
 	return signer.SignTx(tx, key.PrivateKey)
 }

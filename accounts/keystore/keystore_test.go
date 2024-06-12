@@ -8,6 +8,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
+	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -429,5 +430,5 @@ func tmpKeyStore(t *testing.T) (string, *KeyStore) {
 
 	d := t.TempDir()
 
-	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
+	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger(), chain.AllForksEnabled.At(0))
 }
