@@ -85,19 +85,18 @@ func toTransaction(
 		BlockHash:   blockHash,
 	}
 
-	if t.GasPrice() != nil && t.Type() != types.DynamicFeeTxType {
-		gasPrice := argBig(*(t.GasPrice()))
-		res.GasPrice = &gasPrice
+	if t.GasPrice() != nil {
+		res.GasPrice = argBigPtr(t.GasPrice())
 	}
 
-	if t.GasTipCap() != nil && t.Type() == types.DynamicFeeTxType {
-		gasTipCap := argBig(*(t.GasTipCap()))
-		res.GasTipCap = &gasTipCap
-	}
+	if t.Type() == types.DynamicFeeTxType {
+		if t.GasTipCap() != nil {
+			res.GasTipCap = argBigPtr(t.GasTipCap())
+		}
 
-	if t.GasFeeCap() != nil && t.Type() == types.DynamicFeeTxType {
-		gasFeeCap := argBig(*(t.GasFeeCap()))
-		res.GasFeeCap = &gasFeeCap
+		if t.GasFeeCap() != nil {
+			res.GasFeeCap = argBigPtr(t.GasFeeCap())
+		}
 	}
 
 	if t.ChainID() != nil {
