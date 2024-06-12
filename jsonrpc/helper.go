@@ -54,13 +54,9 @@ func GetTransactionByBlockAndIndex(block *types.Block, index argUint64) (interfa
 		return nil, ErrIndexOutOfRange
 	}
 
-	tx := block.Transactions[index]
-	tx.SetGasPrice(tx.GetGasPrice(block.Header.BaseFee))
-
 	return toTransaction(
-		tx,
-		argUintPtr(block.Number()),
-		argHashPtr(block.Hash()),
+		block.Transactions[index],
+		block.Header,
 		&idx,
 	), nil
 }

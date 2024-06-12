@@ -59,30 +59,33 @@ func (h transactionHash) MarshalText() ([]byte, error) {
 }
 
 func toPendingTransaction(t *types.Transaction) *transaction {
-	return toTransaction(t, nil, nil, nil)
+	return toTransaction(t, nil, nil)
 }
 
 func toTransaction(
 	t *types.Transaction,
-	blockNumber *argUint64,
-	blockHash *types.Hash,
+	header *types.Header,
 	txIndex *int,
 ) *transaction {
 	v, r, s := t.RawSignatureValues()
 	res := &transaction{
-		Nonce:       argUint64(t.Nonce()),
-		Gas:         argUint64(t.Gas()),
-		To:          t.To(),
-		Value:       argBig(*t.Value()),
-		Input:       t.Input(),
-		V:           argBig(*v),
-		R:           argBig(*r),
-		S:           argBig(*s),
-		Hash:        t.Hash(),
-		From:        t.From(),
-		Type:        argUint64(t.Type()),
-		BlockNumber: blockNumber,
-		BlockHash:   blockHash,
+		Nonce: argUint64(t.Nonce()),
+		Gas:   argUint64(t.Gas()),
+		To:    t.To(),
+		Value: argBig(*t.Value()),
+		Input: t.Input(),
+		V:     argBig(*v),
+		R:     argBig(*r),
+		S:     argBig(*s),
+		Hash:  t.Hash(),
+		From:  t.From(),
+		Type:  argUint64(t.Type()),
+	}
+
+	if header != nil {
+		res.BlockNumber = argUintPtr(header.Number)
+		res.BlockHash = &header.Hash
+		t.SetGasPrice(t.GetGasPrice(header.BaseFee))
 	}
 
 	if t.GasPrice() != nil {
@@ -194,13 +197,11 @@ func toBlock(b *types.Block, fullTx bool) *block {
 
 	for idx, txn := range b.Transactions {
 		if fullTx {
-			txn.SetGasPrice(txn.GetGasPrice(b.Header.BaseFee))
 			res.Transactions = append(
 				res.Transactions,
 				toTransaction(
 					txn,
-					argUintPtr(b.Number()),
-					argHashPtr(b.Hash()),
+					b.Header,
 					&idx,
 				),
 			)

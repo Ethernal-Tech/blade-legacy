@@ -51,7 +51,7 @@ func (t *TxPool) ContentFrom(addr types.Address) (interface{}, error) {
 	convertTxMap := func(txs []*types.Transaction) map[uint64]*transaction {
 		result := make(map[uint64]*transaction, len(txs))
 		for _, tx := range txs {
-			result[tx.Nonce()] = toTransaction(tx, nil, &types.ZeroHash, nil)
+			result[tx.Nonce()] = toTransaction(tx, nil, nil)
 		}
 
 		return result
@@ -76,7 +76,7 @@ func (t *TxPool) Content() (interface{}, error) {
 			result[addr] = make(map[uint64]*transaction, len(txs))
 
 			for _, tx := range txs {
-				result[addr][tx.Nonce()] = toTransaction(tx, nil, &types.ZeroHash, nil)
+				result[addr][tx.Nonce()] = toTransaction(tx, nil, nil)
 			}
 		}
 
