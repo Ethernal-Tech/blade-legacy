@@ -1,8 +1,8 @@
-# IBFT Implementation
+# Implementation
 
 We won't delve into the detailed implementation of IBFT 2.0 in this paper, as it is beyond the scope of our focus. However, in the diagram below, we can observe the key components of IBFT.
 
-![](<../../../.gitbook/assets/13 (1).png>)
+![](<../../../../.gitbook/assets/13 (1).png>)
 
 5.3.1 Components of IBFT consensus mechanism
 

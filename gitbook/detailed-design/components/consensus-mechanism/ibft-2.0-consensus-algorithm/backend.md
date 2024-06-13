@@ -1,4 +1,4 @@
-# IBFT Backend
+# Backend
 
 In this chapter, we will provide a detailed description of how IBFT utilizes the IBFT backend component to successfully reach consensus for a new block to be added to the blockchain. It is widely known that every blockchain starts with a genesis block that is identical for all participants, as is the case in our solution. Each subsequent block is added to the blockchain using a consensus algorithm, where a set of validators determines the fate of the block, and the data used by selected validators to add the block varies. To ensure that IBFT has access to the necessary data at all times for creating a new block, it leverages the IBFT backend component.
 
@@ -12,6 +12,6 @@ Similarly to how IBFT in the Prepare state collected all Prepare messages from t
 
 In the ‘Final’ state, IBFT adds a new block to its local blockchain and removes all messages from its Message storage that were used for previous decisions on the correctness of the block. The block is added to the blockchain by invoking the InsertProposal() method from the IBFT Backend. After successfully adding the new block to the blockchain, IBFT sends a signal on the roundDone channel, thus halting the execution of the initiated sequence.
 
-![](<../../../.gitbook/assets/14 (1).png>)
+![](<../../../../.gitbook/assets/14 (1).png>)
 
 5.3.3 Sequence diagram of where IBFT calls the IBFT backend

@@ -5,7 +5,7 @@ Istanbul Byzantine Fault Tolerant (IBFT) 2.0 denotes an immediate finality conse
 \
 
 
-<figure><img src="../../../.gitbook/assets/4 (1).png" alt=""><figcaption><p>Figure 1 - Quorum Function (n - number of validators)</p></figcaption></figure>
+<figure><img src="../../../../.gitbook/assets/4 (1).png" alt=""><figcaption><p>Figure 1 - Quorum Function (n - number of validators)</p></figcaption></figure>
 
 The decision-making process (IBFT 2.0 consensus algorithm) is divided into rounds. If a necessary quorum isn't reached in a round, meaning no decision is made about the next block, the process moves to the next round. The duration of each round increases exponentially. In each round, one validator from the validator set takes on the role of the proposer for the next block, rotating through a round-robin principle. Upon initiating the algorithm, all validators start the corresponding timer for the initial (0) round and set state variables to their default values. The proposer additionally constructs a block, accepts it (by setting the acceptedPB state variable to the created block), and then proposes it to other validators in the validator set by broadcasting a <\<PROPOSAL>> message. Below are listed all state variables and their initial values (we will delve into their roles as they become relevant):
 
@@ -15,25 +15,25 @@ The decision-making process (IBFT 2.0 consensus algorithm) is divided into round
 4. commitSent = false
 5. finalisedBlockSend = false
 
-![](<../../../.gitbook/assets/5 (1).png>)
+![](<../../../../.gitbook/assets/5 (1).png>)
 
 5.1.2. The behavior of validators in the pre-prepare phase
 
 If a validator is in the initial, zeroth round and has not yet received a proposal (acceptedPB = ⊥), upon receiving a <\<PROPOSAL>> message, it conducts certain checks. The most critical ones include verifying whether the proposal is for the initial round, confirming that the block adheres to consensus rules, and ensuring it was sent by a validator for the initial round. If all these conditions are met, the validator proceeds into the prepare phase, accepts the provided block (acceptedPB = proposed block), and broadcasts a <\<PREPARE>> message. By setting acceptedPB, the node indicates that it was in the prepare phase for the given round (in this instance, the initial one). This phase is the sole divergence from the process applied in subsequent, higher rounds; all other phases remain consistent irrespective of the round in which they are executed.
 
-![](<../../../.gitbook/assets/6 (1).png>)
+![](<../../../../.gitbook/assets/6 (1).png>)
 
 5.1.3. The behavior of validators in the prepare phase
 
 To proceed to the next (commit) phase, a validator must receive at least quorum-1 valid <\<PREPARE>> messages. In our case, this corresponds to 2 PREPARE messages (refer to the formula in Figure 5.3). One is subtracted from the quorum-defined number because it is assumed that the proposer automatically agrees with their proposal, thereby accepting it. Beyond receiving a sufficient number of <\<PREPARE>> messages, additional conditions include the validator not being in the commit phase (commitSent = false) for the current round and having completed the prepare phase (acceptedPB != ⊥) for the given round. If the previously defined conditions are met, the validator enters the commit phase, signified by setting the commitSent state variable to true. Upon entering this phase, the validator generates a signature (commit seal) over the received proposal (the one in acceptedPB) and broadcasts it to all other validators in the set through a <\<COMMIT>> message. Additionally, values for the variables latestPC and latestPreparedProposedBlock are set. These variables hold a significant role when the decision-making process transits into subsequent rounds. The first variable, latestPC, precisely contains one <\<PROPOSAL>> message (sent by the validator for that round; contains his block proposal) and all received valid <\<PREPARE>> messages (at least quorum-1) corresponding to the given <\<PROPOSAL>> message and the proposal within it. Therefore, latestPC serves as evidence that a sufficient number of nodes were prepared to adopt a specific proposal in a particular round, but it did not materialize for some reason. The second variable, latestPreparedProposedBlock, contains the proposal itself (from acceptedPB state variable).
 
-![](<../../../.gitbook/assets/7 (1).png>)
+![](<../../../../.gitbook/assets/7 (1).png>)
 
 5.1.4. The behavior of validators in the commit phase
 
 The conclusive, finalization phase commences once a validator receives at least a quorum valid <\<COMMIT>> messages. It is necessary that the node has previously been in the prepare phase (acceptedBlock != ⊥) for the given round and has not been in the finalization phase (finalisedBlockSent = false). If previously satisfied, the validator will first extract a commit seal from each <\<COMMIT>> message. Subsequently, it constructs a finalization block composed of the set of commit seals and the proposed block (from the acceptedPB state variable). The finalization block is then broadcasted to ALL nodes in the network, not just validators. Upon receiving this finalization block, all nodes can utilize commit seals to verify the occurrence of agreement among validators. If the verification holds, nodes can then apply additional consensus rules to the block and include it into the chain.
 
-![](<../../../.gitbook/assets/8 (1).png>)
+![](<../../../../.gitbook/assets/8 (1).png>)
 
 5.1.5. The behavior of validators in the finalization phase
 
@@ -41,13 +41,13 @@ In this way, the core functionality of the IBFT 2.0 consensus algorithm is broug
 
 When the timer for the current round, whether it's the zeroth or any subsequent, expires, the transition to the next round occurs. Upon starting the timer and, by that, initiating the round, the acceptedPB, commitSent and finalisedBlockSend variables are reset to their initial values. However, latestPC and latestPreparedProposedBlock retain their values because their role is to indicate the last round when the given validator was in the prepare phase, and thus when the network, from his perspective, was last ready to accept the proposal, but it did not happen. After the preceding is carried out, the validator broadcasts a <\<ROUND-CHANGE>> message, which, among other things, includes its current round (like any other), latestPC, and latestPreparedProposedBlock.
 
-![](<../../../.gitbook/assets/9 (1).png>)
+![](<../../../../.gitbook/assets/9 (1).png>)
 
 5.1.6. The validators move on to the next round
 
 For the validator to continue its execution, it is necessary to receive at least a quorum of valid <\<ROUND-CHANGE>> messages for any given round. This signifies that a sufficient number (at least a quorum) of validators are willing to transition to that round. The collection of valid ROUND-CHANGE messages received by a validator, all intended for transitioning to the same round, denotes a Round-change Certificate (RCC). Various validations are performed on <\<ROUND-CHANGE>> messages within such a certificate. First, for the RCC to be accepted, it, or rather the <\<ROUND-CHANGE>> messages within it, must either have a round greater than the current validator's round or the same one but without the currently accepted proposal (acceptedPB = ⊥). Additionally, a crucial check involves assessing the validity of the Prepared Certificate in each message within RCC. The Prepared Certificates in each of these messages can be entirely distinct. An empty prepared certificate is also considered valid, indicating that a validator, the sender of that <\<ROUND-CHANGE>> message, has never reached the prepare phase in any round. If a validator receives a quorum of valid <\<ROUND-CHANGE>> messages, that is, an RCC, for a round greater than its current one, it immediately transitions to that round and initiates a new timer with an appropriate duration. If, following the transition, a validator becomes the proposer for that round, it initiates the process of creating a new proposal. This involves meticulously selecting, from all <\<ROUND-CHANGE>> messages within the RCC, the one which Prepared Certificate is linked to the highest round. Subsequently, the validator opts for the block from that certificate to serve as the proposal. In case that all certificates are empty, the validator generates an entirely new block, akin to the process in the zeroth round. Ultimately, the proposed block is broadcasted using a <\<PROPOSAL>> message, employing the same method as in the zeroth round, with the additional inclusion of the provided RCC.
 
-![](<../../../.gitbook/assets/10 (1).png>)
+![](<../../../../.gitbook/assets/10 (1).png>)
 
 5.1.7. The behavior of validators in the pre-prepare phase for higher rounds
 
