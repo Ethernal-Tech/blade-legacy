@@ -62,6 +62,7 @@ func toPendingTransaction(t *types.Transaction) *transaction {
 	return toTransaction(t, nil, nil)
 }
 
+// toTransaction converts types.Transaction struct to JSON RPC transaction format
 func toTransaction(
 	t *types.Transaction,
 	header *types.Header,
@@ -99,6 +100,10 @@ func toTransaction(
 
 		if t.GasFeeCap() != nil {
 			res.GasFeeCap = argBigPtr(t.GasFeeCap())
+		}
+
+		if res.GasPrice == nil {
+			res.GasPrice = res.GasFeeCap
 		}
 	}
 
