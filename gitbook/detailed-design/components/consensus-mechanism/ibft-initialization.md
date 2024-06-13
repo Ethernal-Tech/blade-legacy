@@ -17,3 +17,5 @@ When a new IBFT sequence is initiated, ConsensusRuntime is tasked with creating 
 
 5.2.2 Sequence diagram for IBFT backend creation
 
+In the next section we define the used IBFT model.
+
