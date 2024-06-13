@@ -42,11 +42,9 @@ type KeyStore struct {
 	changes  chan struct{}               // Channel receiving change notifications from the cache
 	unlocked map[types.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
-	wallets     []accounts.Wallet       // Wallet wrappers around the individual key files
-	updateFeed  event.Feed              // Event feed to notify wallet additions/removals
-	updateScope event.SubscriptionScope // Subscription scope tracking current live listeners
-	updating    bool                    // Whether the event notification loop is running
-	config      *chain.ForksInTime
+	wallets      []accounts.Wallet // Wallet wrappers around the individual key files
+	config       *chain.ForksInTime
+	eventHandler *event.EventHandler
 
 	mu       sync.RWMutex
 	importMu sync.Mutex // Import Mutex locks the import to prevent two insertions from racing
@@ -84,6 +82,8 @@ func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
 	for i := 0; i < len(accs); i++ {
 		ks.wallets[i] = &keyStoreWallet{account: accs[i], keyStore: ks}
 	}
+
+	go ks.updater()
 }
 
 func (ks *KeyStore) Wallets() []accounts.Wallet {
@@ -157,23 +157,18 @@ func (ks *KeyStore) refreshWallets() {
 
 	ks.mu.Unlock()
 
-	for _, event := range events {
-		ks.updateFeed.Send(event)
+	if ks.eventHandler != nil {
+		for _, event := range events {
+			ks.eventHandler.Publish(accounts.WalletEventKey, event)
+		}
 	}
 }
 
-func (ks *KeyStore) Subscribe(sink chan<- accounts.WalletEvent) event.Subscription {
+func (ks *KeyStore) Subscribe(eventHandler *event.EventHandler) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 
-	sub := ks.updateScope.Track(ks.updateFeed.Subscribe(sink))
-
-	if !ks.updating {
-		ks.updating = true
-		go ks.updater()
-	}
-
-	return sub
+	ks.eventHandler = eventHandler
 }
 
 func (ks *KeyStore) updater() {
@@ -184,16 +179,6 @@ func (ks *KeyStore) updater() {
 		}
 
 		ks.refreshWallets()
-
-		ks.mu.Lock()
-		if ks.updateScope.Count() == 0 {
-			ks.updating = false
-
-			ks.mu.Unlock()
-
-			return
-		}
-		ks.mu.Unlock()
 	}
 }
 
@@ -437,11 +422,4 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	ks.refreshWallets()
 
 	return a, nil
-}
-
-func (ks *KeyStore) isUpdating() bool {
-	ks.mu.RLock()
-	defer ks.mu.RUnlock()
-
-	return ks.updating
 }

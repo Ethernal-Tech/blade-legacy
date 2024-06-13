@@ -57,7 +57,8 @@ func runPreRun(cmd *cobra.Command, _ []string) error {
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	ks := keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger(), chain.AllForksEnabled.At(0))
+	ks := keystore.NewKeyStore(keystore.DefaultStorage,
+		keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger(), chain.AllForksEnabled.At(0))
 
 	if params.privateKey == "" {
 		outputter.SetError(errors.New("private key empty"))

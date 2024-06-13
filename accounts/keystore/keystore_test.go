@@ -8,6 +8,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
+
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -202,68 +203,6 @@ func TestSignRace(t *testing.T) {
 	t.Errorf("Account did not lock within the timeout")
 }
 
-// waitForKsUpdating waits until the updating-status of the ks reaches the
-// desired wantStatus.
-// It waits for a maximum time of maxTime, and returns false if it does not
-// finish in time
-func waitForKsUpdating(t *testing.T, ks *KeyStore, wantStatus bool, maxTime time.Duration) bool {
-	t.Helper()
-	// Wait max 250 ms, then return false
-	for t0 := time.Now().UTC(); time.Since(t0) < maxTime; {
-		if ks.isUpdating() == wantStatus {
-			return true
-		}
-
-		time.Sleep(25 * time.Millisecond)
-	}
-
-	return false
-}
-
-// Tests that the wallet notifier loop starts and stops correctly based on the
-// addition and removal of wallet event subscriptions.
-func TestWalletNotifierLifecycle(t *testing.T) {
-	t.Parallel()
-	// Create a temporary keystore to test with
-	_, ks := tmpKeyStore(t)
-
-	// Ensure that the notification updater is not running yet
-	time.Sleep(250 * time.Millisecond)
-
-	if ks.isUpdating() {
-		t.Errorf("wallet notifier running without subscribers")
-	}
-	// Subscribe to the wallet feed and ensure the updater boots up
-	updates := make(chan accounts.WalletEvent)
-
-	subs := make([]event.Subscription, 2)
-	for i := 0; i < len(subs); i++ {
-		// Create a new subscription
-		subs[i] = ks.Subscribe(updates)
-
-		if !waitForKsUpdating(t, ks, true, 250*time.Millisecond) {
-			t.Errorf("sub %d: wallet notifier not running after subscription", i)
-		}
-	}
-	// Close all but one sub
-	for i := 0; i < len(subs)-1; i++ {
-		// Close an existing subscription
-		subs[i].Unsubscribe()
-	}
-	// Check that it is still running
-	time.Sleep(250 * time.Millisecond)
-
-	if !ks.isUpdating() {
-		t.Fatal("event notifier stopped prematurely")
-	}
-	// Unsubscribe the last one and ensure the updater terminates eventually.
-	subs[len(subs)-1].Unsubscribe()
-
-	if !waitForKsUpdating(t, ks, false, 4*time.Second) {
-		t.Errorf("wallet notifier didn't terminate after unsubscribe")
-	}
-}
-
 type walletEvent struct {
 	accounts.WalletEvent
 	a accounts.Account
@@ -274,24 +213,27 @@ type walletEvent struct {
 func TestWalletNotifications(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStore(t)
+	eventHandler := event.NewEventHandler()
+	ks.Subscribe(eventHandler)
 
 	// Subscribe to the wallet feed and collect events.
 	var ( //nolint:prealloc
 		events  []walletEvent
-		updates = make(chan accounts.WalletEvent)
-		sub     = ks.Subscribe(updates)
+		updates = make(chan event.Event)
+		end     = make(chan interface{})
 	)
 
-	defer sub.Unsubscribe()
+	ks.eventHandler.Subscribe(accounts.WalletEventKey, updates)
+
+	defer eventHandler.Unsubscribe(accounts.WalletEventKey, updates)
 
 	go func() {
 		for {
 			select {
 			case ev := <-updates:
-				events = append(events, walletEvent{ev, ev.Wallet.Accounts()[0]})
-			case <-sub.Err():
-				close(updates)
-
+				events = append(events, walletEvent{ev.(accounts.WalletEvent), ev.(accounts.WalletEvent).Wallet.Accounts()[0]})
+			case <-end:
+				eventHandler.Unsubscribe(accounts.WalletEventKey, updates)
 				return
 			}
 		}
@@ -332,15 +274,17 @@ func TestWalletNotifications(t *testing.T) {
 		}
 	}
 
-	// Shut down the event collector and check events.
-	sub.Unsubscribe()
+	end <- new(interface{})
 
 	for ev := range updates {
-		events = append(events, walletEvent{ev, ev.Wallet.Accounts()[0]})
+		events = append(events, walletEvent{ev.(accounts.WalletEvent), ev.(accounts.WalletEvent).Wallet.Accounts()[0]})
 	}
 
 	checkAccounts(t, live, ks.Wallets())
 	checkEvents(t, wantEvents, events)
+
+	// Shut down the event collector and check events.
+	eventHandler.Unsubscribe(accounts.WalletEventKey, updates)
 }
 
 // TestImportECDSA tests the import functionality of a keystore.

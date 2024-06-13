@@ -9,7 +9,11 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-const managerSubBufferSize = 50
+const (
+	managerSubBufferSize = 50
+
+	WalletEventKey = "walletEvent"
+)
 
 type newBackendEvent struct {
 	backend Backend
@@ -17,18 +21,21 @@ type newBackendEvent struct {
 	processed chan struct{}
 }
 
+func (newBackendEvent) Type() event.EventType {
+	return event.NewBackendType
+}
+
 type Manager struct {
 	backends    map[reflect.Type][]Backend
-	updaters    []event.Subscription
-	updates     chan WalletEvent
-	newBackends chan newBackendEvent
+	updates     chan event.Event
+	newBackends chan event.Event
 	wallets     []Wallet
-
-	feed event.Feed
 
 	quit chan chan error
 
 	logger hclog.Logger
+
+	eventHandler *event.EventHandler
 
 	term chan struct{}
 	lock sync.RWMutex
@@ -41,26 +48,31 @@ func NewManager(logger hclog.Logger, backends ...Backend) *Manager {
 		wallets = merge(wallets, backend.Wallets()...)
 	}
 
-	updates := make(chan WalletEvent, managerSubBufferSize)
+	updates := make(chan event.Event, managerSubBufferSize)
 
-	subs := make([]event.Subscription, len(backends))
+	newBackends := make(chan event.Event)
 
-	for i, backend := range backends {
-		subs[i] = backend.Subscribe(updates)
+	eventHandler := event.NewEventHandler()
+
+	for _, backend := range backends {
+		backend.Subscribe(eventHandler)
 	}
 
 	am := &Manager{
-		backends:    make(map[reflect.Type][]Backend),
-		updaters:    subs,
-		updates:     updates,
-		newBackends: make(chan newBackendEvent),
-		wallets:     wallets,
-		quit:        make(chan chan error),
-		term:        make(chan struct{}),
+		backends:     make(map[reflect.Type][]Backend),
+		updates:      updates,
+		newBackends:  newBackends,
+		wallets:      wallets,
+		quit:         make(chan chan error),
+		term:         make(chan struct{}),
+		eventHandler: eventHandler,
 	}
+
+	eventHandler.Subscribe(WalletEventKey, am.updates)
 
 	for _, backend := range backends {
 		kind := reflect.TypeOf(backend)
+		backend.Subscribe(am.eventHandler)
 		am.backends[kind] = append(am.backends[kind], backend)
 	}
 
@@ -92,37 +104,42 @@ func (am *Manager) update() {
 	defer func() {
 		am.lock.Lock()
 
-		for _, sub := range am.updaters {
-			sub.Unsubscribe()
-		}
+		am.eventHandler.Unsubscribe(WalletEventKey, am.updates)
 
-		am.updaters = nil
 		am.lock.Unlock()
 	}()
 
 	for {
 		select {
-		case event := <-am.updates:
+		case eventChan := <-am.updates:
 			am.lock.Lock()
-			switch event.Kind {
-			case WalletArrived:
-				am.wallets = merge(am.wallets, event.Wallet)
-			case WalletDropped:
-				am.wallets = drop(am.wallets, event.Wallet)
+
+			if eventChan.Type() == event.WalletEventType {
+				walletEvent := eventChan.(WalletEvent) //nolint:forcetypeassert
+				switch walletEvent.Kind {
+				case WalletArrived:
+					am.wallets = merge(am.wallets, walletEvent.Wallet)
+				case WalletDropped:
+					am.wallets = drop(am.wallets, walletEvent.Wallet)
+				}
 			}
-			am.lock.Unlock()
 
-			am.feed.Send(event)
-		case event := <-am.newBackends:
+			am.lock.Unlock()
+		case backendEventChan := <-am.newBackends:
 			am.lock.Lock()
 
-			backend := event.backend
-			am.wallets = merge(am.wallets, backend.Wallets()...)
-			am.updaters = append(am.updaters, backend.Subscribe(am.updates))
-			kind := reflect.TypeOf(backend)
-			am.backends[kind] = append(am.backends[kind], backend)
+			if backendEventChan.Type() == event.NewBackendType {
+				bckEvent := backendEventChan.(newBackendEvent) //nolint:forcetypeassert
+				backend := bckEvent.backend
+				am.wallets = merge(am.wallets, backend.Wallets()...)
+				backend.Subscribe(am.eventHandler)
+				kind := reflect.TypeOf(backend)
+				am.backends[kind] = append(am.backends[kind], backend)
+				am.lock.Unlock()
+				close(bckEvent.processed)
+			}
+
 			am.lock.Unlock()
-			close(event.processed)
 		case errc := <-am.quit:
 			errc <- nil
 
@@ -182,8 +199,8 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 	return nil, ErrUnknownAccount
 }
 
-func (am *Manager) Subscribe(sink chan<- WalletEvent) event.Subscription {
-	return am.feed.Subscribe(sink)
+func (am *Manager) Subscribe(eventHandler *event.EventHandler) {
+	am.eventHandler = eventHandler
 }
 
 func merge(slice []Wallet, wallets ...Wallet) []Wallet {

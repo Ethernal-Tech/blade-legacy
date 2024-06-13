@@ -135,6 +135,10 @@ type WalletEvent struct {
 	Kind   WalletEventType // Event type that happened in the system
 }
 
+func (WalletEvent) Type() event.EventType {
+	return event.WalletEventType
+}
+
 type Backend interface {
 	// Wallets retrieves the list of wallets the backend is currently aware of.
 	//
@@ -150,5 +154,5 @@ type Backend interface {
 
 	// Subscribe creates an async subscription to receive notifications when the
 	// backend detects the arrival or departure of a wallet.
-	Subscribe(sink chan<- WalletEvent) event.Subscription
+	Subscribe(eventHandler *event.EventHandler)
 }

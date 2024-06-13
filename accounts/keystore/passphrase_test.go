@@ -203,6 +203,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 
 func LoadJSON(t *testing.T, file string, val interface{}) error {
 	t.Helper()
+
 	content, err := os.ReadFile(file)
 	if err != nil {
 		return err
