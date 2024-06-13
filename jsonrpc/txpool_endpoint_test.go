@@ -8,6 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestContentEndpoint(t *testing.T) {
@@ -38,7 +39,8 @@ func TestContentEndpoint(t *testing.T) {
 		mockStore.pending[address1] = []*types.Transaction{testTx1, testTx2}
 		txPoolEndpoint := &TxPool{mockStore}
 
-		result, _ := txPoolEndpoint.Content()
+		result, err := txPoolEndpoint.Content()
+		require.NoError(t, err)
 		response := result.(ContentResponse)
 
 		assert.Equal(t, 1, len(response.Pending))

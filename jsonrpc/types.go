@@ -82,10 +82,16 @@ func toTransaction(
 		Type:  argUint64(t.Type()),
 	}
 
+	if t.GasPrice() != nil {
+		res.GasPrice = argBigPtr(t.GasPrice())
+	}
+
 	if header != nil {
 		res.BlockNumber = argUintPtr(header.Number)
 		res.BlockHash = &header.Hash
-		res.GasPrice = argBigPtr(t.GetGasPrice(header.BaseFee))
+		if res.GasPrice == nil {
+			res.GasPrice = argBigPtr(t.GetGasPrice(header.BaseFee))
+		}
 	}
 
 	if t.Type() == types.DynamicFeeTxType {
