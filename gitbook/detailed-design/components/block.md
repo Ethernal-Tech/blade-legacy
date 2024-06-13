@@ -82,5 +82,5 @@ Upon completion of step 8, the transaction is marked as valid, simultaneously co
 
 ### Build
 
-The last method of `BlockBuilder` to be called is `Build`. Its role is to create a concrete full block based on the content of previously configured fields in `BlockBuilder`. Within this method, the previously selected transactions are inserted into the block, the Merkle Tree Root is calculated for transactions, receipts,and transition states, they are added to the block header, etc.
+The last method of `BlockBuilder` to be called is `Build`. Its role is to create a concrete full block based on the content of previously configured fields in `BlockBuilder`. Within this method, the previously selected transactions are inserted into the block, the Merkle Tree Root is calculated for transactions, receipts, and transition states, they are all added to the block header, etc.
 
