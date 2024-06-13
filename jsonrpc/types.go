@@ -82,17 +82,14 @@ func toTransaction(
 		Type:  argUint64(t.Type()),
 	}
 
-	if t.GasPrice() != nil {
-		res.GasPrice = argBigPtr(t.GasPrice())
-	}
-
 	if header != nil {
+		// transaction is already mined
 		res.BlockNumber = argUintPtr(header.Number)
 		res.BlockHash = &header.Hash
-
-		if res.GasPrice == nil {
-			res.GasPrice = argBigPtr(t.GetGasPrice(header.BaseFee))
-		}
+		res.GasPrice = argBigPtr(t.GetGasPrice(header.BaseFee))
+	} else if t.GasPrice() != nil {
+		// transaction is pending (within the tx pool)
+		res.GasPrice = argBigPtr(t.GasPrice())
 	}
 
 	if t.Type() == types.DynamicFeeTxType {
