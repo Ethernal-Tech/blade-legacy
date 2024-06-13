@@ -29,7 +29,7 @@ func NewDynamicFeeTx(options ...TxOption) *DynamicFeeTx {
 
 func (tx *DynamicFeeTx) transactionType() TxType { return DynamicFeeTxType }
 func (tx *DynamicFeeTx) chainID() *big.Int       { return tx.ChainID }
-func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
+func (tx *DynamicFeeTx) gasPrice() *big.Int      { return tx.GasFeeCap }
 func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
 
