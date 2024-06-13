@@ -4,7 +4,7 @@
 
 * [Overview](README.md)
 * [High-level Architecture](architecture/high-level-architecture/README.md)
-  * [Page](architecture/high-level-architecture/page.md)
+  * [Diagrams](architecture/high-level-architecture/diagrams.md)
 * [Detailed Design](architecture/detailed-design/README.md)
   * [Block](architecture/detailed-design/block.md)
   * [Consensus Mechanism](architecture/detailed-design/consensus-mechanism/README.md)
