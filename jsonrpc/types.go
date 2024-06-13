@@ -89,6 +89,7 @@ func toTransaction(
 	if header != nil {
 		res.BlockNumber = argUintPtr(header.Number)
 		res.BlockHash = &header.Hash
+
 		if res.GasPrice == nil {
 			res.GasPrice = argBigPtr(t.GetGasPrice(header.BaseFee))
 		}
