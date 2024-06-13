@@ -5,11 +5,14 @@
 * [Overview](README.md)
 * [High-level Architecture](architecture/high-level-architecture/README.md)
   * [Diagrams](architecture/high-level-architecture/diagrams.md)
-* [Detailed Design](architecture/detailed-design/README.md)
-  * [Block](architecture/detailed-design/block.md)
-  * [Consensus Mechanism](architecture/detailed-design/consensus-mechanism/README.md)
-    * [IBFT 2.0 Consensus Algorithm](architecture/detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm.md)
-    * [IBFT Initialization](architecture/detailed-design/consensus-mechanism/ibft-initialization.md)
-    * [IBFT Implementation](architecture/detailed-design/consensus-mechanism/ibft-implementation.md)
-    * [IBFT Backend](architecture/detailed-design/consensus-mechanism/ibft-backend.md)
-  * [Synchronization](architecture/detailed-design/synchronization.md)
+
+## DETAILED DESIGN
+
+* [Components](detailed-design/components/README.md)
+  * [Block](detailed-design/components/block.md)
+  * [Consensus Mechanism](detailed-design/components/consensus-mechanism/README.md)
+    * [IBFT 2.0 Consensus Algorithm](detailed-design/components/consensus-mechanism/ibft-2.0-consensus-algorithm.md)
+    * [IBFT Initialization](detailed-design/components/consensus-mechanism/ibft-initialization.md)
+    * [IBFT Implementation](detailed-design/components/consensus-mechanism/ibft-implementation.md)
+    * [IBFT Backend](detailed-design/components/consensus-mechanism/ibft-backend.md)
+  * [Synchronization](detailed-design/components/synchronization.md)
