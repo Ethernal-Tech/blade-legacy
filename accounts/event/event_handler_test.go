@@ -9,6 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	topic = "testTopic"
+)
+
 type TestEvent struct {
 	Data string
 }
@@ -21,8 +25,6 @@ func TestSubscribeAndPublish(t *testing.T) {
 	ps := NewEventHandler()
 
 	var err error
-
-	topic := "testTopic"
 
 	eventChan := make(chan Event, 1)
 
@@ -47,8 +49,6 @@ func TestUnsubscribe(t *testing.T) {
 
 	var err error
 
-	topic := "testTopic"
-
 	eventChan := make(chan Event, 1)
 
 	ps.Subscribe(topic, eventChan)
@@ -60,7 +60,7 @@ func TestUnsubscribe(t *testing.T) {
 	select {
 	case _, ok := <-eventChan:
 		if ok {
-			errors.New("expected channel to be closed")
+			err = errors.New("expected channel to be closed")
 		}
 	default:
 	}
@@ -70,11 +70,13 @@ func TestUnsubscribe(t *testing.T) {
 
 func TestConcurrentAccess(t *testing.T) {
 	ps := NewEventHandler()
-	topic := "testTopic"
+
 	eventChan := make(chan Event, 1)
+
 	ps.Subscribe(topic, eventChan)
 
 	var wg sync.WaitGroup
+
 	wg.Add(2)
 
 	go func() {
@@ -100,8 +102,6 @@ func TestMultipleSubscribers(t *testing.T) {
 	ps := NewEventHandler()
 
 	var err error
-
-	topic := "testTopic"
 
 	eventChan1 := make(chan Event, 1)
 

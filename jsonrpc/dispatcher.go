@@ -77,7 +77,7 @@ func (dp dispatcherParams) isExceedingBatchLengthLimit(value uint64) bool {
 func newDispatcher(
 	logger hclog.Logger,
 	store JSONRPCStore,
-	params *dispatcherParams, manager *accounts.Manager,
+	params *dispatcherParams, manager accounts.BackendManager,
 ) (*Dispatcher, error) {
 	d := &Dispatcher{
 		logger: logger.Named("dispatcher"),
@@ -96,7 +96,7 @@ func newDispatcher(
 	return d, nil
 }
 
-func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager *accounts.Manager) error {
+func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager accounts.BackendManager) error {
 	d.endpoints.Eth = &Eth{
 		d.logger,
 		store,

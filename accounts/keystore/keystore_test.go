@@ -9,7 +9,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
 
-	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -214,7 +213,7 @@ func TestWalletNotifications(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStore(t)
 	eventHandler := event.NewEventHandler()
-	ks.Subscribe(eventHandler)
+	ks.SetEventHandler(eventHandler)
 
 	// Subscribe to the wallet feed and collect events.
 	var ( //nolint:prealloc
@@ -234,6 +233,7 @@ func TestWalletNotifications(t *testing.T) {
 				events = append(events, walletEvent{ev.(accounts.WalletEvent), ev.(accounts.WalletEvent).Wallet.Accounts()[0]})
 			case <-end:
 				eventHandler.Unsubscribe(accounts.WalletEventKey, updates)
+
 				return
 			}
 		}
@@ -374,5 +374,5 @@ func tmpKeyStore(t *testing.T) (string, *KeyStore) {
 
 	d := t.TempDir()
 
-	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger(), chain.AllForksEnabled.At(0))
+	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
 }

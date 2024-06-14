@@ -18,6 +18,7 @@ import (
 	"google.golang.org/grpc"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
+	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/archive"
 	"github.com/0xPolygon/polygon-edge/blockchain"
 	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
@@ -77,7 +78,7 @@ type Server struct {
 	// libp2p network
 	network *network.Server
 
-	accManager *accounts.Manager
+	accManager accounts.BackendManager
 
 	// transaction pool
 	txpool *txpool.TxPool
@@ -312,11 +313,6 @@ func NewServer(config *Config) (*Server, error) {
 
 	signer := crypto.NewSigner(config.Chain.Params.Forks.At(0), uint64(m.config.Chain.Params.ChainID))
 
-	// setup account manager
-	{
-		m.accManager = accounts.NewManager(m.logger)
-	}
-
 	// create storage instance for blockchain
 	var db *storagev2.Storage
 	{
@@ -347,6 +343,11 @@ func NewServer(config *Config) (*Server, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// setup account manager
+	{
+		m.accManager = accounts.NewManager(m.blockchain, keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, m.logger))
 	}
 
 	// here we can provide some other configuration

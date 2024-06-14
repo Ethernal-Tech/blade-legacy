@@ -13,7 +13,7 @@ import (
 )
 
 type Personal struct {
-	accManager *accounts.Manager
+	accManager accounts.BackendManager
 }
 
 func (p *Personal) ListAccounts() ([]types.Address, Error) {
@@ -77,8 +77,8 @@ func (p *Personal) UnlockAccount(addr types.Address, password string, duration u
 	return true, nil
 }
 
-func (s *Personal) LockAccount(addr types.Address) (bool, error) {
-	ks, err := getKeystore(s.accManager)
+func (p *Personal) LockAccount(addr types.Address) (bool, error) {
+	ks, err := getKeystore(p.accManager)
 	if err != nil {
 		return false, err
 	}
@@ -99,7 +99,7 @@ func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) {
 	return types.BytesToAddress(addressRaw), nil
 }
 
-func getKeystore(am *accounts.Manager) (*keystore.KeyStore, error) {
+func getKeystore(am accounts.BackendManager) (*keystore.KeyStore, error) {
 	if ks := am.Backends(keystore.KeyStoreType); len(ks) > 0 {
 		return ks[0].(*keystore.KeyStore), nil //nolint:forcetypeassert
 	}

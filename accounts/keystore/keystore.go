@@ -3,7 +3,6 @@ package keystore
 import (
 	"crypto/ecdsa"
 	"errors"
-	"math/big"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -42,9 +41,11 @@ type KeyStore struct {
 	changes  chan struct{}               // Channel receiving change notifications from the cache
 	unlocked map[types.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
-	wallets      []accounts.Wallet // Wallet wrappers around the individual key files
+	wallets      []accounts.Wallet // Wrapper around keys
 	config       *chain.ForksInTime
 	eventHandler *event.EventHandler
+
+	manager accounts.BackendManager
 
 	mu       sync.RWMutex
 	importMu sync.Mutex // Import Mutex locks the import to prevent two insertions from racing
@@ -55,7 +56,7 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger, config chain.ForksInTime) *KeyStore {
+func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
 	var ks *KeyStore
 
 	ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
@@ -164,7 +165,7 @@ func (ks *KeyStore) refreshWallets() {
 	}
 }
 
-func (ks *KeyStore) Subscribe(eventHandler *event.EventHandler) {
+func (ks *KeyStore) SetEventHandler(eventHandler *event.EventHandler) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 
@@ -222,7 +223,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 	return crypto.Sign(unlockedKey.PrivateKey, hash)
 }
 
-func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction) (*types.Transaction, error) {
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -231,7 +232,7 @@ func (ks *KeyStore) SignTx(a accounts.Account, tx *types.Transaction, chainID *b
 		return nil, ErrLocked
 	}
 
-	signer := crypto.NewSigner(*ks.config, chainID.Uint64())
+	signer := ks.manager.GetSigner()
 
 	return signer.SignTx(tx, unlockedKey.PrivateKey)
 }
@@ -249,7 +250,7 @@ func (ks *KeyStore) SignHashWithPassphrase(a accounts.Account,
 }
 
 func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string,
-	tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	tx *types.Transaction) (*types.Transaction, error) {
 	_, key, err := ks.getDecryptedKey(a, passphrase)
 	if err != nil {
 		return nil, err
@@ -257,7 +258,7 @@ func (ks *KeyStore) SignTxWithPassphrase(a accounts.Account, passphrase string,
 
 	defer zeroKey(key.PrivateKey)
 
-	signer := crypto.NewSigner(*ks.config, chainID.Uint64())
+	signer := ks.manager.GetSigner()
 
 	return signer.SignTx(tx, key.PrivateKey)
 }
@@ -422,4 +423,8 @@ func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (account
 	ks.refreshWallets()
 
 	return a, nil
+}
+
+func (ks *KeyStore) SetManager(manager accounts.BackendManager) {
+	ks.manager = manager
 }

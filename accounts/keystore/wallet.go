@@ -2,7 +2,6 @@ package keystore
 
 import (
 	"errors"
-	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -72,19 +71,19 @@ func (ksw *keyStoreWallet) SignTextWithPassphrase(account accounts.Account,
 }
 
 func (ksw *keyStoreWallet) SignTx(account accounts.Account,
-	tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	tx *types.Transaction) (*types.Transaction, error) {
 	if !ksw.Contains(account) {
 		return nil, errors.New("unknown account")
 	}
 
-	return ksw.keyStore.SignTx(account, tx, chainID)
+	return ksw.keyStore.SignTx(account, tx)
 }
 
 func (ksw *keyStoreWallet) SignTxWithPassphrase(account accounts.Account,
-	passphrase string, tx *types.Transaction, chainID *big.Int) (*types.Transaction, error) {
+	passphrase string, tx *types.Transaction) (*types.Transaction, error) {
 	if !ksw.Contains(account) {
 		return nil, errors.New("unknown account")
 	}
 
-	return ksw.keyStore.SignTxWithPassphrase(account, passphrase, tx, chainID)
+	return ksw.keyStore.SignTxWithPassphrase(account, passphrase, tx)
 }

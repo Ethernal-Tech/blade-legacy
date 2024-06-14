@@ -102,7 +102,7 @@ type Eth struct {
 	chainID       uint64
 	filterManager *FilterManager
 	priceLimit    uint64
-	accManager    *accounts.Manager
+	accManager    accounts.BackendManager
 }
 
 // ChainId returns the chain id of the client

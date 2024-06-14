@@ -39,6 +39,7 @@ func (ps *EventHandler) Unsubscribe(topic string, sub <-chan Event) {
 		for i, ch := range chans {
 			if ch == sub {
 				ps.subscribers[topic] = append(chans[:i], chans[i+1:]...)
+
 				close(ch)
 
 				break
