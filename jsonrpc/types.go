@@ -264,6 +264,7 @@ type receipt struct {
 	ContractAddress   *types.Address `json:"contractAddress"`
 	FromAddr          types.Address  `json:"from"`
 	ToAddr            *types.Address `json:"to"`
+	Type              argUint64      `json:"type"`
 }
 
 func toReceipt(src *types.Receipt, tx *types.Transaction,
@@ -282,6 +283,7 @@ func toReceipt(src *types.Receipt, tx *types.Transaction,
 		FromAddr:          tx.From(),
 		ToAddr:            tx.To(),
 		Logs:              logs,
+		Type:              argUint64(tx.Type()),
 	}
 }
 
