@@ -200,7 +200,9 @@ func (am *Manager) Accounts() []types.Address {
 
 // Checks for active forks at current block number and return signer
 func (am *Manager) GetSigner() crypto.TxSigner {
-	return crypto.NewSigner(am.blockchain.Config().Forks.At(am.blockchain.Header().Number), uint64(am.blockchain.Config().ChainID))
+	return crypto.NewSigner(
+		am.blockchain.Config().Forks.At(am.blockchain.Header().Number),
+		uint64(am.blockchain.Config().ChainID))
 }
 
 // Search through wallets and

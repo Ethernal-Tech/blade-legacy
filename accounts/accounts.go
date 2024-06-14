@@ -111,7 +111,7 @@ type BackendManager interface {
 	// Checks for active forks at current block number and return signer
 	GetSigner() crypto.TxSigner
 
-	//Close stop updater in manager
+	// Close stop updater in manager
 	Close() error
 
 	// Adds backend to list of backends

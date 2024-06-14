@@ -347,7 +347,9 @@ func NewServer(config *Config) (*Server, error) {
 
 	// setup account manager
 	{
-		m.accManager = accounts.NewManager(m.blockchain, keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, m.logger))
+		m.accManager = accounts.NewManager(
+			m.blockchain,
+			keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, m.logger))
 	}
 
 	// here we can provide some other configuration
