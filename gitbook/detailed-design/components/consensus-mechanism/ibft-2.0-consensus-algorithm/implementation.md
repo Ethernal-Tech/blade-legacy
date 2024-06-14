@@ -2,7 +2,7 @@
 
 In the diagram below shows the key components of IBFT.
 
-![Components of IBFT consensus mechanism](<../../../../.gitbook/assets/13 (1).png>)
+![Components of IBFT Consensus Mechanism](<../../../../.gitbook/assets/13 (1).png>)
 
 The `Message` component is responsible for storing messages received from other participants in the network. With the help of these messages, `IBFT` reaches consensus for a new block.&#x20;
 
