@@ -191,8 +191,7 @@ func TestEth_Block_GetTransactionByBlockNumberAndIndex(t *testing.T) {
 
 	transaction := toTransaction(
 		block.Transactions[testIndex],
-		ArgUintPtr(block.Number()),
-		argHashPtr(block.Hash()),
+		block.Header,
 		&testIndex,
 	)
 
