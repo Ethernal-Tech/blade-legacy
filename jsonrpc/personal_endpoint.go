@@ -16,6 +16,10 @@ type Personal struct {
 	accManager accounts.BackendManager
 }
 
+func NewPersonal(manager accounts.BackendManager) *Personal {
+	return &Personal{accManager: manager}
+}
+
 func (p *Personal) ListAccounts() ([]types.Address, Error) {
 	return p.accManager.Accounts(), nil
 }

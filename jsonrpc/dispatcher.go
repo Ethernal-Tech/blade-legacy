@@ -119,7 +119,7 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager accounts.Back
 		store,
 	}
 	d.endpoints.Debug = NewDebug(store, d.params.concurrentRequestsDebug)
-	d.endpoints.Personal = &Personal{accManager: manager}
+	d.endpoints.Personal = NewPersonal(manager)
 
 	var err error
 
