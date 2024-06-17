@@ -3,11 +3,11 @@ package network
 import (
 	"context"
 	"errors"
-	"fmt"
 	"reflect"
 	"sync"
 	"sync/atomic"
 
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -108,7 +108,7 @@ func (t *Topic) readLoop(sub *pubsub.Subscription, handler func(obj interface{},
 		}
 
 		go func() {
-			t.logger.Debug("gossip message", "size", ToMB(msg.Data))
+			t.logger.Debug("gossip message", "size", common.ToMB(msg.Data))
 
 			obj := t.createObj()
 			if err := proto.Unmarshal(msg.Data, obj); err != nil {
@@ -140,11 +140,4 @@ func (s *Server) NewTopic(protoID string, obj proto.Message) (*Topic, error) {
 	tt.closed.Store(false)
 
 	return tt, nil
-}
-
-func ToMB(data []byte) string {
-	sizeInBytes := len(data)
-	sizeInMB := float64(sizeInBytes) / (1024 * 1024)
-
-	return fmt.Sprintf("%.2f MB", sizeInMB)
 }
