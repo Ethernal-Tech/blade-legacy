@@ -1,15 +1,12 @@
 package insert
 
 import (
-	"encoding/hex"
-	"errors"
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/0xPolygon/polygon-edge/crypto"
-	"github.com/hashicorp/go-hclog"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
+	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
 )
 
@@ -19,13 +16,14 @@ var (
 
 func GetCommand() *cobra.Command {
 	importCmd := &cobra.Command{
-		Use:     "insert",
-		Short:   "Insert existing account with private key and auth passphrase",
-		PreRunE: runPreRun,
-		Run:     runCommand,
+		Use:   "insert",
+		Short: "Insert existing account with private key and auth passphrase",
+		PreRun: func(cmd *cobra.Command, args []string) {
+			params.jsonRPC = helper.GetJSONRPCAddress(cmd)
+		},
+		Run: runCommand,
 	}
 
-	helper.RegisterJSONRPCFlag(importCmd)
 	setFlags(importCmd)
 
 	return importCmd
@@ -47,36 +45,27 @@ func setFlags(cmd *cobra.Command) {
 	)
 
 	_ = cmd.MarkFlagRequired(passphraseFlag)
-}
-
-func runPreRun(cmd *cobra.Command, _ []string) error {
-	return nil
+	helper.RegisterJSONRPCFlag(cmd)
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	ks := keystore.NewKeyStore(keystore.DefaultStorage,
-		keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger())
-
-	if params.privateKey == "" {
-		outputter.SetError(errors.New("private key empty"))
-	}
-
-	dec, err := hex.DecodeString(params.privateKey)
+	client, err := jsonrpc.NewEthClient(params.jsonRPC)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to decode private ke: %w", err))
+		outputter.SetError(fmt.Errorf("can't create jsonRPC client: %w", err))
+
+		return
 	}
 
-	privKey, err := crypto.BytesToECDSAPrivateKey(dec)
-	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to initialize private key: %w", err))
+	var address types.Address
+
+	if err := client.EndpointCall("personal_importRawKey", &address,
+		params.privateKey, params.passphrase); err != nil {
+		outputter.SetError(fmt.Errorf("can't import new key: %w", err))
+
+		return
 	}
 
-	acct, err := ks.ImportECDSA(privKey, params.passphrase)
-	if err != nil {
-		outputter.SetError(fmt.Errorf("cannot import private key: %w", err))
-	}
-
-	outputter.SetCommandResult(command.Results{&insertResult{Address: acct.Address}})
+	outputter.SetCommandResult(command.Results{&insertResult{Address: address}})
 }

@@ -3,11 +3,10 @@ package update
 import (
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/accounts"
-	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/command"
+	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/hashicorp/go-hclog"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +22,6 @@ func GetCommand() *cobra.Command {
 		Run:     runCommand,
 	}
 
-	helper.RegisterJSONRPCFlag(updateCmd)
 	setFlags(updateCmd)
 
 	return updateCmd
@@ -50,23 +48,38 @@ func setFlags(cmd *cobra.Command) {
 		"",
 		"old passphrase to unlock account",
 	)
+
+	helper.RegisterJSONRPCFlag(cmd)
 }
 
 func runPreRun(cmd *cobra.Command, _ []string) error {
+	params.jsonRPC = helper.GetJSONRPCAddress(cmd)
+
 	return params.validateFlags()
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	ks := keystore.NewKeyStore(keystore.DefaultStorage,
-		keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger())
+	client, err := jsonrpc.NewEthClient(params.jsonRPC)
+	if err != nil {
+		outputter.SetError(fmt.Errorf("can't create jsonRPC client: %w", err))
 
-	if !ks.HasAddress(params.address) {
-		outputter.SetError(fmt.Errorf("this address doesn't exist"))
+		return
+	}
+
+	var isUpdated bool
+
+	if err := client.EndpointCall("personal_updatePassphrase", &isUpdated, params.address,
+		params.oldPassphrase, params.passphrase); err != nil {
+		outputter.SetError(fmt.Errorf("can't update passphrase: %w", err))
+
+		return
+	}
+
+	if isUpdated {
+		outputter.WriteCommandResult(&bridgeHelper.MessageResult{Message: "Passphrase updated successfully"})
 	} else {
-		if err := ks.Update(accounts.Account{Address: params.address}, params.passphrase, params.oldPassphrase); err != nil {
-			outputter.SetError(fmt.Errorf("can't update account: %w", err))
-		}
+		outputter.SetError(fmt.Errorf("can't update passphrase"))
 	}
 }

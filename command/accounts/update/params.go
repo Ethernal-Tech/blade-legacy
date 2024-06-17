@@ -16,6 +16,7 @@ type updateParams struct {
 	rawAddress    string
 	passphrase    string
 	oldPassphrase string
+	jsonRPC       string
 	address       types.Address
 }
 

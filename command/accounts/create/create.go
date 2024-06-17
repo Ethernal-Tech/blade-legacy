@@ -3,10 +3,10 @@ package create
 import (
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/hashicorp/go-hclog"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
+	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
 )
 
@@ -19,9 +19,12 @@ func GetCommand() *cobra.Command {
 		Use:   "create",
 		Short: "Create new account",
 		Run:   runCommand,
+		PreRun: func(cmd *cobra.Command, _ []string) {
+			params.jsonRPC = helper.GetJSONRPCAddress(cmd)
+		},
 	}
 
-	helper.RegisterJSONRPCFlag(createCmd)
+	setFlags(createCmd)
 
 	return createCmd
 }
@@ -35,18 +38,26 @@ func setFlags(cmd *cobra.Command) {
 	)
 
 	_ = cmd.MarkFlagRequired(passphraseFlag)
+	helper.RegisterJSONRPCFlag(cmd)
 }
 
 func runCommand(cmd *cobra.Command, _ []string) {
 	outputter := command.InitializeOutputter(cmd)
 
-	ks := keystore.NewKeyStore(keystore.DefaultStorage,
-		keystore.LightScryptN, keystore.LightScryptP, hclog.NewNullLogger())
-
-	account, err := ks.NewAccount(params.passphrase)
+	client, err := jsonrpc.NewEthClient(params.jsonRPC)
 	if err != nil {
-		outputter.SetError(fmt.Errorf("can't create account: %w", err))
+		outputter.SetError(fmt.Errorf("can't create jsonRPC client: %w", err))
+
+		return
 	}
 
-	outputter.SetCommandResult(command.Results{&createResult{Address: account.Address}})
+	var address types.Address
+
+	if err := client.EndpointCall("personal_newAccount", &address, params.passphrase); err != nil {
+		outputter.SetError(fmt.Errorf("can't create new account: %w", err))
+
+		return
+	}
+
+	outputter.SetCommandResult(command.Results{&createResult{Address: address}})
 }

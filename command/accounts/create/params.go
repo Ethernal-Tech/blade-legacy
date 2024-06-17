@@ -8,14 +8,11 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-const (
-	passphraseFlag = "passphrase"
-	configDirFlag  = "config-dir"
-)
+const passphraseFlag = "passphrase"
 
 type createParams struct {
 	passphrase string
-	configDir  string
+	jsonRPC    string
 }
 
 type createResult struct {

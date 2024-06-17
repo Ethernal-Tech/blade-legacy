@@ -38,6 +38,20 @@ func (p *Personal) NewAccount(password string) (types.Address, error) {
 	return acc.Address, nil
 }
 
+func (p *Personal) UpdatePassphrase(addr types.Address, oldPassphrase, newPassphrase string) (bool, error) {
+	ks, err := getKeystore(p.accManager)
+	if err != nil {
+		return false, err
+	}
+
+	err = ks.Update(accounts.Account{Address: addr}, oldPassphrase, newPassphrase)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
 func (p *Personal) ImportRawKey(privKey string, password string) (types.Address, error) {
 	key, err := crypto.HexToECDSA(privKey)
 	if err != nil {

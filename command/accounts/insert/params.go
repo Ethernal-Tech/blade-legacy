@@ -16,6 +16,7 @@ const (
 type insertParams struct {
 	privateKey string
 	passphrase string
+	jsonRPC    string
 }
 
 type insertResult struct {
