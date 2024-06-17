@@ -96,10 +96,10 @@ func TestCacheAddDelete(t *testing.T) {
 
 	// Delete a few keys from the cache.
 	for i := 0; i < len(accs); i += 2 {
-		cache.delete(wantAccounts[i])
+		require.NoError(t, cache.delete(wantAccounts[i]))
 	}
 
-	cache.delete(accounts.Account{Address: types.StringToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e")})
+	require.NoError(t, cache.delete(accounts.Account{Address: types.StringToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e")}))
 
 	// Check content again after deletion.
 	wantAccountsAfterDelete := []accounts.Account{
