@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygon/go-ibft/messages/proto"
 	hcf "github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
+	protobuf "google.golang.org/protobuf/proto"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
@@ -23,6 +24,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -985,6 +987,8 @@ func (c *consensusRuntime) BuildPrepareMessage(proposalHash []byte, view *proto.
 		return nil
 	}
 
+	c.logger.Debug("Prepare message built", "blockNumber", view.Height, "round", view.Round)
+
 	return message
 }
 
@@ -1063,6 +1067,8 @@ func (c *consensusRuntime) BuildRoundChangeMessage(
 		return nil
 	}
 
+	c.logRoundChangeMessage(view, proposal, certificate, &msg, signedMsg)
+
 	return signedMsg
 }
 
@@ -1108,4 +1114,68 @@ func (c *consensusRuntime) getCurrentBlockTimeDrift() uint64 {
 	defer c.lock.RUnlock()
 
 	return c.epoch.CurrentClientConfig.BlockTimeDrift
+}
+
+// logRoundChangeMessage logs the size of the round change message
+func (c *consensusRuntime) logRoundChangeMessage(
+	view *proto.View,
+	proposal *proto.Proposal,
+	certificate *proto.PreparedCertificate,
+	msg *proto.Message,
+	signedMsg *proto.Message) {
+	if !c.logger.IsDebug() {
+		return
+	}
+
+	var (
+		preparedMsgsLen   = 0
+		isPreparedCertNil = certificate == nil
+
+		rawCertificate            = make([]byte, 0)
+		rawCertificateProposalMsg = make([]byte, 0)
+		err                       error
+	)
+
+	if certificate != nil {
+		preparedMsgsLen = len(certificate.PrepareMessages)
+
+		rawCertificate, err = protobuf.Marshal(certificate)
+		if err != nil {
+			c.logger.Error("Cannot marshal prepared certificate", "error", err)
+		}
+
+		if certificate.ProposalMessage != nil {
+			rawCertificateProposalMsg, err = protobuf.Marshal(certificate.ProposalMessage)
+			if err != nil {
+				c.logger.Error("Cannot marshal prepared certificate proposal message", "error", err)
+			}
+		}
+	}
+
+	rawProposal := make([]byte, 0)
+
+	isProposalNil := proposal == nil
+	if !isProposalNil {
+		rawProposal = proposal.RawProposal
+	}
+
+	msgRaw, err := protobuf.Marshal(msg)
+	if err != nil {
+		c.logger.Error("Cannot marshal round change message", "error", err)
+	}
+
+	signedMsgRaw, err := protobuf.Marshal(signedMsg)
+	if err != nil {
+		c.logger.Error("Cannot marshal signed round change message", "error", err)
+	}
+
+	c.logger.Debug("RoundChange message built", "blockNumber", view.Height, "round", view.Round,
+		"totalRoundMsgSize", common.ToMB(msgRaw),
+		"signedRoundMsgSize", common.ToMB(signedMsgRaw),
+		"isProposalNil", isProposalNil,
+		"proposalSize", common.ToMB(rawProposal),
+		"isPreparedCertNil", isPreparedCertNil,
+		"numOfPrepareMsgs", preparedMsgsLen,
+		"certificateSize", common.ToMB(rawCertificate),
+		"certificateProposalSize", common.ToMB(rawCertificateProposalMsg))
 }

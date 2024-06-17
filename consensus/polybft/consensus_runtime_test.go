@@ -901,6 +901,7 @@ func TestConsensusRuntime_BuildRoundChangeMessage(t *testing.T) {
 		config: &runtimeConfig{
 			Key: key,
 		},
+		logger: hclog.NewNullLogger(),
 	}
 
 	proposal := &proto.Proposal{
@@ -983,6 +984,7 @@ func TestConsensusRuntime_BuildPrepareMessage(t *testing.T) {
 		config: &runtimeConfig{
 			Key: key,
 		},
+		logger: hclog.NewNullLogger(),
 	}
 
 	expected := proto.Message{
