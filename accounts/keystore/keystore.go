@@ -45,8 +45,7 @@ type KeyStore struct {
 
 	manager accounts.BackendManager
 
-	mu       sync.RWMutex
-	importMu sync.Mutex // Import Mutex locks the import to prevent two insertions from racing
+	mu sync.RWMutex
 }
 
 type unlocked struct {
@@ -101,9 +100,6 @@ func zeroKey(k *ecdsa.PrivateKey) {
 }
 
 func (ks *KeyStore) refreshWallets() {
-	ks.mu.Lock()
-	defer ks.mu.Unlock()
-
 	accs := ks.cache.accounts()
 
 	var (
@@ -111,6 +107,9 @@ func (ks *KeyStore) refreshWallets() {
 		events  []accounts.WalletEvent
 		find    bool
 	)
+
+	ks.mu.Lock()
+	defer ks.mu.Unlock()
 
 	for _, account := range accs {
 		find = false
@@ -196,7 +195,10 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 		zeroKey(key.PrivateKey)
 	}
 
-	ks.cache.delete(a)
+	if err := ks.cache.delete(a); err != nil {
+		return err
+	}
+
 	ks.refreshWallets()
 
 	return nil
@@ -355,9 +357,6 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 }
 
 func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (accounts.Account, error) {
-	ks.importMu.Lock()
-	defer ks.importMu.Unlock()
-
 	key := newKeyFromECDSA(priv)
 	if ks.cache.hasAddress(key.Address) {
 		return accounts.Account{

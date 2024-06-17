@@ -60,13 +60,6 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 }
 
 func (ac *accountCache) accounts() []accounts.Account {
-	err := ac.scanAccounts()
-	if err != nil {
-		ac.logger.Debug("can't scan account's", "err", err)
-
-		return []accounts.Account{}
-	}
-
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -82,11 +75,6 @@ func (ac *accountCache) accounts() []accounts.Account {
 }
 
 func (ac *accountCache) hasAddress(addr types.Address) bool {
-	err := ac.scanAccounts()
-	if err != nil {
-		ac.logger.Debug("can't scan account's", "err", err)
-	}
-
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -96,11 +84,6 @@ func (ac *accountCache) hasAddress(addr types.Address) bool {
 }
 
 func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3) error {
-	err := ac.scanAccounts()
-	if err != nil {
-		return err
-	}
-
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -110,42 +93,45 @@ func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3)
 
 	ac.allMap[newAccount.Address] = key
 
-	return ac.saveData(ac.allMap)
-}
+	if err := ac.saveData(ac.allMap); err != nil {
+		// if we can't save the data, we should remove the account from the map
+		delete(ac.allMap, newAccount.Address)
 
-func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3) error {
-	if err := ac.scanAccounts(); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (ac *accountCache) update(account accounts.Account, newKey encryptedKeyJSONV3) error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
-	newMap := make(map[types.Address]encryptedKeyJSONV3)
+	var (
+		oldKey encryptedKeyJSONV3
+		ok     bool
+	)
 
-	for mapKey, mapValue := range ac.allMap {
-		newMap[mapKey] = mapValue
-	}
-
-	if _, ok := newMap[account.Address]; !ok {
+	if oldKey, ok = ac.allMap[account.Address]; !ok {
 		return fmt.Errorf("account: %s doesn't exists", account.Address.String())
 	} else {
-		newMap[account.Address] = key
+		ac.allMap[account.Address] = newKey
 	}
 
-	if err := ac.saveData(newMap); err != nil {
+	if err := ac.saveData(ac.allMap); err != nil {
+		// if we can't save the data, we should return the old key to the map
+		ac.allMap[account.Address] = oldKey
+
 		return err
 	}
-
-	ac.allMap = newMap
 
 	return nil
 }
 
 // note: removed needs to be unique here (i.e. both File and Address must be set).
-func (ac *accountCache) delete(removed accounts.Account) {
-	if err := ac.scanAccounts(); err != nil {
-		ac.logger.Debug("can't scan account's", "err", err)
+func (ac *accountCache) delete(removed accounts.Account) error {
+	if err := ac.saveData(ac.allMap); err != nil {
+		return fmt.Errorf("could not delete account: %w", err)
 	}
 
 	ac.mu.Lock()
@@ -153,19 +139,13 @@ func (ac *accountCache) delete(removed accounts.Account) {
 
 	delete(ac.allMap, removed.Address)
 
-	if err := ac.saveData(ac.allMap); err != nil {
-		ac.logger.Debug("cant't save data in file,", "err", err)
-	}
+	return nil
 }
 
 // find returns the cached account for address if there is a unique match.
 // The exact matching rules are explained by the documentation of accounts.Account.
 // Callers must hold ac.mu.
 func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKeyJSONV3, error) {
-	if err := ac.scanAccounts(); err != nil {
-		return accounts.Account{}, encryptedKeyJSONV3{}, err
-	}
-
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -178,6 +158,7 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKey
 
 func (ac *accountCache) close() {
 	ac.mu.Lock()
+	defer ac.mu.Unlock()
 
 	if ac.throttle != nil {
 		ac.throttle.Stop()
@@ -187,8 +168,6 @@ func (ac *accountCache) close() {
 		close(ac.notify)
 		ac.notify = nil
 	}
-
-	ac.mu.Unlock()
 }
 
 // scanAccounts refresh data of  account map
@@ -219,23 +198,12 @@ func (ac *accountCache) scanAccounts() error {
 }
 
 func (ac *accountCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) error {
-	fi, err := os.Create(ac.keyDir)
-	if err != nil {
-		return err
-	}
-
-	defer fi.Close()
-
 	byteAccount, err := json.Marshal(accounts)
 	if err != nil {
 		return err
 	}
 
-	if _, err := fi.Write(byteAccount); err != nil {
-		return err
-	}
-
-	return nil
+	return common.SaveFileSafe(ac.keyDir, byteAccount, 0666)
 }
 
 func (ac *accountCache) scanFile() (map[types.Address]encryptedKeyJSONV3, error) {
