@@ -3,11 +3,9 @@ package keystore
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -21,10 +19,8 @@ const (
 )
 
 type Key struct {
-	ID uuid.UUID
-
-	Address types.Address
-
+	ID         uuid.UUID
+	Address    types.Address
 	PrivateKey *ecdsa.PrivateKey
 }
 
@@ -69,29 +65,6 @@ func newKeyFromECDSA(privateKeyECDSA *ecdsa.PrivateKey) *Key {
 	}
 
 	return key
-}
-
-// keyFileName implements the naming convention for keyfiles:
-// UTC--<created_at UTC ISO8601>-<address hex>
-func keyFileName(keyAddr types.Address) string {
-	ts := time.Now().UTC()
-
-	return fmt.Sprintf("UTC--%s--%s", toISO8601(ts), hex.EncodeToString(keyAddr[:]))
-}
-
-func toISO8601(t time.Time) string {
-	var tz string
-
-	name, offset := t.Zone()
-
-	if name == "UTC" {
-		tz = "Z"
-	} else {
-		tz = fmt.Sprintf("%03d00", offset/3600)
-	}
-
-	return fmt.Sprintf("%04d-%02d-%02dT%02d-%02d-%02d.%09d%s",
-		t.Year(), t.Month(), t.Day(), t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), tz)
 }
 
 func newKey() (*Key, error) {

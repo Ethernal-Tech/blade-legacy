@@ -53,9 +53,7 @@ func NewManager(blockchain *blockchain.Blockchain, backends ...Backend) *Manager
 	}
 
 	updates := make(chan event.Event, managerSubBufferSize)
-
 	newBackends := make(chan event.Event)
-
 	eventHandler := event.NewEventHandler()
 
 	for _, backend := range backends {
@@ -90,6 +88,9 @@ func NewManager(blockchain *blockchain.Blockchain, backends ...Backend) *Manager
 
 // Close stop updater in manager
 func (am *Manager) Close() error {
+	am.lock.RLock()
+	defer am.lock.RUnlock()
+
 	for _, w := range am.wallets {
 		w.Close()
 	}
@@ -111,11 +112,7 @@ func (am *Manager) AddBackend(backend Backend) {
 
 func (am *Manager) update() {
 	defer func() {
-		am.lock.Lock()
-
 		am.eventHandler.Unsubscribe(WalletEventKey, am.updates)
-
-		am.lock.Unlock()
 	}()
 
 	for {
@@ -220,11 +217,7 @@ func (am *Manager) Find(account Account) (Wallet, error) {
 }
 
 func merge(slice []Wallet, wallets ...Wallet) []Wallet {
-	for _, wallet := range wallets {
-		slice = append(slice, wallet)
-	}
-
-	return slice
+	return append(slice, wallets...)
 }
 
 func drop(slice []Wallet, wallet Wallet) []Wallet {

@@ -27,19 +27,3 @@ func NewAuthNeededError(needed string) error {
 func (err *AuthNeededError) Error() string {
 	return fmt.Sprintf("authentication needed: %s", err.Needed)
 }
-
-func FindLine(data []byte, offset int64) (line int) {
-	line = 1
-
-	for i, r := range string(data) {
-		if int64(i) >= offset {
-			return
-		}
-
-		if r == '\n' {
-			line++
-		}
-	}
-
-	return
-}

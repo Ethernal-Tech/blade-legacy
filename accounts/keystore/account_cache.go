@@ -3,19 +3,20 @@ package keystore
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path"
 	"sync"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
+	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
 )
 
 // KeyStoreScheme is the protocol scheme prefixing account and wallet URLs.
 const KeyStoreScheme = "keystore"
-const minReloadInterval = 2 * time.Second
 
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
@@ -35,7 +36,7 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 		allMap: make(map[types.Address]encryptedKeyJSONV3),
 	}
 
-	if err := os.MkdirAll(keyDir, 700); err != nil {
+	if err := common.CreateDirSafe(keyDir, 0700); err != nil {
 		ac.logger.Info("can't create dir", "err", err)
 
 		return nil, nil
@@ -109,12 +110,7 @@ func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3)
 
 	ac.allMap[newAccount.Address] = key
 
-	err = ac.saveData(ac.allMap)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return ac.saveData(ac.allMap)
 }
 
 func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3) error {
@@ -132,7 +128,7 @@ func (ac *accountCache) update(account accounts.Account, key encryptedKeyJSONV3)
 	}
 
 	if _, ok := newMap[account.Address]; !ok {
-		return errors.New("this account doesn't exists")
+		return fmt.Errorf("account: %s doesn't exists", account.Address.String())
 	} else {
 		newMap[account.Address] = key
 	}

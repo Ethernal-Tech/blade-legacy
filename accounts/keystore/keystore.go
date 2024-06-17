@@ -11,7 +11,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
-	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -42,7 +41,6 @@ type KeyStore struct {
 	unlocked map[types.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
 	wallets      []accounts.Wallet // Wrapper around keys
-	config       *chain.ForksInTime
 	eventHandler *event.EventHandler
 
 	manager accounts.BackendManager
@@ -57,9 +55,7 @@ type unlocked struct {
 }
 
 func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
-	var ks *KeyStore
-
-	ks = &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
+	ks := &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
 
 	ks.init(keyDir, logger)
 
@@ -67,9 +63,6 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyS
 }
 
 func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
-	ks.mu.Lock()
-	defer ks.mu.Unlock()
-
 	ks.unlocked = make(map[types.Address]*unlocked)
 	ks.cache, ks.changes = newAccountCache(keyDir, logger)
 
@@ -109,6 +102,7 @@ func zeroKey(k *ecdsa.PrivateKey) {
 
 func (ks *KeyStore) refreshWallets() {
 	ks.mu.Lock()
+	defer ks.mu.Unlock()
 
 	accs := ks.cache.accounts()
 
@@ -156,8 +150,6 @@ func (ks *KeyStore) refreshWallets() {
 
 	ks.wallets = wallets
 
-	ks.mu.Unlock()
-
 	if ks.eventHandler != nil {
 		for _, event := range events {
 			ks.eventHandler.Publish(accounts.WalletEventKey, event)
@@ -196,18 +188,18 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 	// it anyway to check the password and zero out the key
 	// immediately afterwards.
 	a, key, err := ks.getDecryptedKey(a, passphrase)
-	if key != nil {
-		zeroKey(key.PrivateKey)
-	}
-
 	if err != nil {
 		return err
+	}
+
+	if key != nil {
+		zeroKey(key.PrivateKey)
 	}
 
 	ks.cache.delete(a)
 	ks.refreshWallets()
 
-	return err
+	return nil
 }
 
 func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
@@ -219,6 +211,7 @@ func (ks *KeyStore) SignHash(a accounts.Account, hash []byte) ([]byte, error) {
 	if !found {
 		return nil, ErrLocked
 	}
+
 	// Sign the hash using plain ECDSA operations
 	return crypto.Sign(unlockedKey.PrivateKey, hash)
 }
@@ -271,12 +264,10 @@ func (ks *KeyStore) Unlock(a accounts.Account, passphrase string) error {
 // Lock removes the private key with the given address from memory.
 func (ks *KeyStore) Lock(addr types.Address) error {
 	ks.mu.Lock()
+	defer ks.mu.Unlock()
 
 	if unl, found := ks.unlocked[addr]; found {
-		ks.mu.Unlock()
 		ks.expire(addr, unl, time.Duration(0)*time.Nanosecond)
-	} else {
-		ks.mu.Unlock()
 	}
 
 	return nil
@@ -350,7 +341,6 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 	encryptedKey, account, err := storeNewKey(ks.storage, passphrase)
-
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -411,7 +401,6 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 
 func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (accounts.Account, error) {
 	a, encryptedKey, err := importPreSaleKey(ks.storage, keyJSON, passphrase)
-
 	if err != nil {
 		return a, err
 	}

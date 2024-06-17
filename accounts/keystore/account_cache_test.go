@@ -1,12 +1,9 @@
 package keystore
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
-	"reflect"
 	"testing"
-	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -29,25 +26,6 @@ var (
 		},
 	}
 )
-
-func waitForAccounts(wantAccounts []accounts.Account, ks *KeyStore) error {
-	var list []accounts.Account
-	for t0 := time.Now().UTC(); time.Since(t0) < 20*time.Second; time.Sleep(100 * time.Millisecond) {
-		list = ks.Accounts()
-		if reflect.DeepEqual(list, wantAccounts) {
-			// ks should have also received change notifications
-			select {
-			case <-ks.changes:
-			default:
-				return errors.New("wasn't notified of new accounts")
-			}
-
-			return nil
-		}
-	}
-
-	return fmt.Errorf("\ngot  %v\nwant %v", list, wantAccounts)
-}
 
 func TestCacheInitialReload(t *testing.T) {
 	t.Parallel()

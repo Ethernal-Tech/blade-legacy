@@ -10,7 +10,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
@@ -143,7 +142,7 @@ func loadKeyStoreTestV3(t *testing.T, file string) map[string]KeyStoreTestV3 {
 
 	tests := make(map[string]KeyStoreTestV3)
 
-	err := LoadJSON(t, file, &tests)
+	err := loadJSON(t, file, &tests)
 	require.NoError(t, err)
 
 	return tests
@@ -201,7 +200,7 @@ func TestKeyEncryptDecrypt(t *testing.T) {
 	}
 }
 
-func LoadJSON(t *testing.T, file string, val interface{}) error {
+func loadJSON(t *testing.T, file string, val interface{}) error {
 	t.Helper()
 
 	content, err := os.ReadFile(file)
@@ -211,7 +210,7 @@ func LoadJSON(t *testing.T, file string, val interface{}) error {
 
 	if err := json.Unmarshal(content, val); err != nil {
 		if syntaxerr, ok := err.(*json.SyntaxError); ok { //nolint:errorlint
-			line := accounts.FindLine(content, syntaxerr.Offset)
+			line := findLine(t, content, syntaxerr.Offset)
 
 			return fmt.Errorf("JSON syntax error at %v:%v: %w", file, line, err)
 		}
@@ -220,4 +219,22 @@ func LoadJSON(t *testing.T, file string, val interface{}) error {
 	}
 
 	return nil
+}
+
+func findLine(t *testing.T, data []byte, offset int64) (line int) {
+	t.Helper()
+
+	line = 1
+
+	for i, r := range string(data) {
+		if int64(i) >= offset {
+			return
+		}
+
+		if r == '\n' {
+			line++
+		}
+	}
+
+	return
 }
