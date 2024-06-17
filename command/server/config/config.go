@@ -141,8 +141,8 @@ func DefaultConfig() *Config {
 		ShouldSeal: true,
 		TxPool: &TxPool{
 			PriceLimit:         0,
-			MaxSlots:           200_000,
-			MaxAccountEnqueued: 100_000,
+			MaxSlots:           4096,
+			MaxAccountEnqueued: 128,
 		},
 		LogLevel:    "INFO",
 		RestoreFile: "",
