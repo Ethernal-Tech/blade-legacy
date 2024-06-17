@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygon/go-ibft/messages/proto"
 	hcf "github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
+	protobuf "google.golang.org/protobuf/proto"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
@@ -985,6 +986,8 @@ func (c *consensusRuntime) BuildPrepareMessage(proposalHash []byte, view *proto.
 		return nil
 	}
 
+	c.logger.Debug("Prepare message built", "blockNumber", view.Height, "round", view.Round)
+
 	return message
 }
 
@@ -1063,6 +1066,30 @@ func (c *consensusRuntime) BuildRoundChangeMessage(
 		return nil
 	}
 
+	if c.logger.IsDebug() {
+		preparedMsgsLen := 0
+		isPreparedCertNil := certificate == nil
+		if certificate != nil {
+			preparedMsgsLen = len(certificate.PrepareMessages)
+		}
+
+		isProposalNil := proposal == nil
+		rawProposal := make([]byte, 0)
+		if !isProposalNil {
+			rawProposal = proposal.RawProposal
+		}
+
+		msgRaw, err := protobuf.Marshal(&msg)
+		if err != nil {
+			c.logger.Error("Cannot marshal round change message", "error", err)
+		}
+
+		c.logger.Debug("RoundChange message built", "blockNumber", view.Height, "round", view.Round,
+			"roundMsgSize", ToMB(msgRaw),
+			"isProposalNil", isProposalNil, "proposal", ToMB(rawProposal),
+			"isPreparedCertNil", isPreparedCertNil, "numOfPrepareMsgs", preparedMsgsLen)
+	}
+
 	return signedMsg
 }
 
@@ -1108,4 +1135,11 @@ func (c *consensusRuntime) getCurrentBlockTimeDrift() uint64 {
 	defer c.lock.RUnlock()
 
 	return c.epoch.CurrentClientConfig.BlockTimeDrift
+}
+
+func ToMB(data []byte) string {
+	sizeInBytes := len(data)
+	sizeInMB := float64(sizeInBytes) / (1024 * 1024)
+
+	return fmt.Sprintf("%.2f MB", sizeInMB)
 }
