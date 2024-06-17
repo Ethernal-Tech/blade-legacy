@@ -35,6 +35,12 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 		allMap: make(map[types.Address]encryptedKeyJSONV3),
 	}
 
+	if err := os.MkdirAll(keyDir, 700); err != nil {
+		ac.logger.Info("can't create dir", "err", err)
+
+		return nil, nil
+	}
+
 	keysPath := path.Join(keyDir, "keys.txt")
 
 	ac.keyDir = keysPath
