@@ -1,0 +1,47 @@
+@startuml
+hide footbox
+
+BuildProposal -> BlockBuilder: Fill
+BlockBuilder -> TxPool: Prepare
+    loop finished = false
+        BlockBuilder -> TxPool: Peek
+        BlockBuilder <<-- TxPool: transaction
+
+        BlockBuilder -> BlockBuilder: writeTx
+        activate BlockBuilder
+        BlockBuilder -> Transaction: gas
+        activate BlockBuilder
+        BlockBuilder <<-- Transaction: validation result
+        deactivate BlockBuilder
+        BlockBuilder -> Transition: write
+        activate BlockBuilder
+        BlockBuilder <<-- Transition: validation result
+        deactivate BlockBuilder
+        deactivate BlockBuilder
+
+        alt successful case
+
+            BlockBuilder -> TxPool: Pop
+
+        else gas limit reached error
+
+            break
+                BlockBuilder -> BlockBuilder : finished = true
+            end
+        
+
+        else transition error
+
+            BlockBuilder -> TxPool: Demote
+        else error
+
+            BlockBuilder -> TxPool: Drop
+        end
+
+       
+
+    end
+
+
+
+@enduml

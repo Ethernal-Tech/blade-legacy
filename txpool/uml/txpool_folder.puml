@@ -1,0 +1,259 @@
+@startuml
+namespace txpool {
+    class Config << (S,Aquamarine) >> {
+        + PriceLimit uint64
+        + MaxSlots uint64
+        + MaxAccountEnqueued uint64
+        + ChainID *big.Int
+        + PeerID peer.ID
+
+    }
+    class TxPool << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - signer signer
+        - forks *chain.Forks
+        - store store
+        - accounts accountsMap
+        - executables *pricedQueue
+        - index lookupMap
+        - topic *network.Topic
+        - gauge slotGauge
+        - priceLimit uint64
+        - promoteReqCh <font color=blue>chan</font> promoteRequest
+        - pruneCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - shutdownCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - sealing atomic.Bool
+        - baseFee uint64
+        - eventManager *eventManager
+        - pending int64
+        - chainID *big.Int
+        - localPeerID peer.ID
+
+        - updatePending(i int64) 
+        - dropAccount(account *account, nextNonce uint64, tx *types.Transaction) 
+        - validateTx(tx *types.Transaction) error
+        - signalPruning() 
+        - pruneAccountsWithNonceHoles() 
+        - addTx(origin txOrigin, tx *types.Transaction) error
+        - invokePromotion(tx *types.Transaction, callPromote bool) 
+        - handlePromoteRequest(req promoteRequest) 
+        - addGossipTx(obj <font color=blue>interface</font>{}, peerID peer.ID) 
+        - resetAccounts(stateNonces <font color=blue>map</font>[types.Address]uint64) 
+        - updateAccountSkipsCounts(latestActiveAccounts <font color=blue>map</font>[types.Address]uint64, stateRoot types.Hash) 
+        - getOrCreateAccount(newAddr types.Address) *account
+
+        + Status(ctx context.Context, req *emptypb.Empty) (*proto.TxnPoolStatusResp, error)
+        + AddTxn(ctx context.Context, raw *proto.AddTxnReq) (*proto.AddTxnResp, error)
+        + Subscribe(request *proto.SubscribeRequest, stream proto.TxnPoolOperator_SubscribeServer) error
+        + TxPoolSubscribe(request *proto.SubscribeRequest) (<font color=blue>chan</font> *proto.TxPoolEvent, <font color=blue>func</font>() , error)
+        + GetNonce(addr types.Address) uint64
+        + GetCapacity() (uint64, uint64)
+        + GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
+        + GetTxs(inclQueued bool) (<font color=blue>map</font>[types.Address][]*types.Transaction, <font color=blue>map</font>[types.Address][]*types.Transaction)
+        + GetBaseFee() uint64
+        + SetBaseFee(header *types.Header) 
+        + Start() 
+        + Close() 
+        + SetSigner(s signer) 
+        + SetSealing(sealing bool) 
+        + AddTx(tx *types.Transaction) error
+        + Prepare() 
+        + Peek() *types.Transaction
+        + Pop(tx *types.Transaction) 
+        + Drop(tx *types.Transaction) 
+        + Demote(tx *types.Transaction) 
+        + ResetWithBlock(block *types.Block) 
+        + ReinsertProposed() 
+        + ClearProposed() 
+        + Length() uint64
+
+    }
+    class account << (S,Aquamarine) >> {
+        - enqueued *accountQueue
+        - nonceToTx *nonceToTxLookup
+        - nextNonce uint64
+        - demotions uint64
+        - skips uint64
+        - maxEnqueued uint64
+
+        - getNonce() uint64
+        - setNonce(nonce uint64) 
+        - resetDemotions() 
+        - incrementDemotions() 
+        - reset(nonce uint64, promoteCh <font color=blue>chan</font> promoteRequest) ([]*types.Transaction, []*types.Transaction)
+        - enqueue(tx *types.Transaction, replace bool) 
+        - promote() ([]*types.Transaction, []*types.Transaction)
+        - resetSkips() 
+        - incrementSkips() uint64
+        - getLowestTx() *types.Transaction
+
+        + Demotions() uint64
+
+    }
+    class accountQueue << (S,Aquamarine) >> {
+        - wLock atomic.Bool
+        - queue minNonceQueue
+
+        - lock(write bool) 
+        - unlock() 
+        - prune(nonce uint64) []*types.Transaction
+        - clear() []*types.Transaction
+        - push(tx *types.Transaction) 
+        - peek() *types.Transaction
+        - pop() *types.Transaction
+        - length() uint64
+
+    }
+    class accountsMap << (S,Aquamarine) >> {
+        - count uint64
+        - maxEnqueuedLimit uint64
+
+        - initOnce(addr types.Address, nonce uint64) *account
+        - getPrimaries() []*types.Transaction
+        - get(addr types.Address) *account
+        - promoted() uint64
+        - allTxs(includeEnqueued bool) (<font color=blue>map</font>[types.Address][]*types.Transaction, <font color=blue>map</font>[types.Address][]*types.Transaction)
+        - reinsertProposed() uint64
+        - clearProposed() 
+
+    }
+    class eventManager << (S,Aquamarine) >> {
+        - subscriptions <font color=blue>map</font>[subscriptionID]*eventSubscription
+        - subscriptionsLock sync.RWMutex
+        - numSubscriptions int64
+        - logger hclog.Logger
+
+        - subscribe(eventTypes []proto.EventType) *subscribeResult
+        - cancelSubscription(id subscriptionID) 
+        - signalEvent(eventType proto.EventType, txHashes ...types.Hash) 
+
+        + Close() 
+
+    }
+    class eventQueue << (S,Aquamarine) >> {
+        - events []*proto.TxPoolEvent
+
+        - push(event *proto.TxPoolEvent) 
+        - pop() *proto.TxPoolEvent
+
+    }
+    class eventSubscription << (S,Aquamarine) >> {
+        - eventTypes []proto.EventType
+        - outputCh <font color=blue>chan</font> *proto.TxPoolEvent
+        - doneCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - notifyCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - eventStore *eventQueue
+
+        - eventSupported(eventType proto.EventType) bool
+        - close() 
+        - runLoop() 
+        - pushEvent(event *proto.TxPoolEvent) 
+
+    }
+    class lookupMap << (S,Aquamarine) >> {
+        - all <font color=blue>map</font>[types.Hash]*types.Transaction
+
+        - add(tx *types.Transaction) bool
+        - remove(txs ...*types.Transaction) 
+        - get(hash types.Hash) (*types.Transaction, bool)
+
+    }
+    class maxPriceQueue << (S,Aquamarine) >> {
+        - baseFee *big.Int
+        - txs []*types.Transaction
+
+        + Peek() *types.Transaction
+        + Len() int
+        + Swap(i int, j int) 
+        + Push(x <font color=blue>interface</font>{}) 
+        + Pop() <font color=blue>interface</font>{}
+        + Less(i int, j int) bool
+
+    }
+    class minNonceQueue << (S,Aquamarine) >> {
+        + Peek() *types.Transaction
+        + Len() int
+        + Swap(i int, j int) 
+        + Less(i int, j int) bool
+        + Push(x <font color=blue>interface</font>{}) 
+        + Pop() <font color=blue>interface</font>{}
+
+    }
+    class nonceToTxLookup << (S,Aquamarine) >> {
+        - mapping <font color=blue>map</font>[uint64]*types.Transaction
+        - mutex sync.Mutex
+
+        - lock() 
+        - unlock() 
+        - get(nonce uint64) *types.Transaction
+        - set(tx *types.Transaction) 
+        - reset() 
+        - remove(txs ...*types.Transaction) 
+
+    }
+    class pricedQueue << (S,Aquamarine) >> {
+        - queue *maxPriceQueue
+
+        - push(tx *types.Transaction) 
+        - pop() *types.Transaction
+        - length() int
+
+    }
+    class promoteRequest << (S,Aquamarine) >> {
+        - account types.Address
+
+    }
+    interface signer  {
+        + Sender(tx *types.Transaction) (types.Address, error)
+
+    }
+    class slotGauge << (S,Aquamarine) >> {
+        - height uint64
+        - max uint64
+
+        - read() uint64
+        - increase(slots uint64) 
+        - increaseWithinLimit(slots uint64) bool
+        - decrease(slots uint64) 
+        - highPressure() bool
+        - freeSlots() uint64
+
+    }
+    interface store  {
+        + Header() *types.Header
+        + GetNonce(root types.Hash, addr types.Address) uint64
+        + GetBalance(root types.Hash, addr types.Address) (*big.Int, error)
+        + GetBlockByHash( types.Hash,  bool) (*types.Block, bool)
+        + CalculateBaseFee(parent *types.Header) uint64
+
+    }
+    class subscribeResult << (S,Aquamarine) >> {
+        - subscriptionID subscriptionID
+        - subscriptionChannel <font color=blue>chan</font> *proto.TxPoolEvent
+
+    }
+    class txOrigin << (S,Aquamarine) >> {
+        + String() string
+
+    }
+    class txpool.minNonceQueue << (T, #FF7700) >>  {
+    }
+    class txpool.subscriptionID << (T, #FF7700) >>  {
+    }
+    class txpool.txOrigin << (T, #FF7700) >>  {
+    }
+    class "[]*types.Transaction" as typesTransaction {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+"proto.UnimplementedTxnPoolOperatorServer" *-- "txpool.TxPool"
+"sync.RWMutex" *-- "txpool.accountQueue"
+"sync.Map" *-- "txpool.accountsMap"
+"sync.Mutex" *-- "txpool.eventQueue"
+"sync.RWMutex" *-- "txpool.lookupMap"
+
+
+"__builtin__.int" #.. "txpool.txOrigin"
+"__builtin__.int32" #.. "txpool.subscriptionID"
+"txpool.typesTransaction" #.. "txpool.minNonceQueue"
+@enduml

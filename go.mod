@@ -59,6 +59,8 @@ require (
 require (
 	cloud.google.com/go/auth v0.4.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.2 // indirect
+	github.com/jfeliu007/goplantuml v1.6.2 // indirect
+	github.com/spf13/afero v1.10.0 // indirect
 )
 
 require (

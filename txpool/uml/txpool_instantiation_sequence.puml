@@ -1,0 +1,11 @@
+@startuml
+hide footbox
+
+Server -> TxPool: NewTxPool
+TxPool -->> Network: NewTopic
+TxPool -->> Network: Subscribe
+Server <<-- TxPool: txPool
+Server -> TxPool: SetSigner
+Server -> TxPool: SetBaseFee
+Server -> TxPool: Start
+@enduml

@@ -1,0 +1,68 @@
+@startuml
+
+skinparam packageStyle frame
+namespace txpool {
+
+    class TxPool << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - signer signer
+        - forks *chain.Forks
+        - store store
+        - accounts accountsMap
+        - executables *pricedQueue
+        - index lookupMap
+        - topic *network.Topic
+        - gauge slotGauge
+        - priceLimit uint64
+        - promoteReqCh <font color=blue>chan</font> promoteRequest
+        - pruneCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - shutdownCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - sealing atomic.Bool
+        - baseFee uint64
+        - eventManager *eventManager
+        - pending int64
+        - chainID *big.Int
+        - localPeerID peer.ID
+
+        - updatePending(i int64) 
+        - dropAccount(account *account, nextNonce uint64, tx *types.Transaction) 
+        - validateTx(tx *types.Transaction) error
+        - signalPruning() 
+        - pruneAccountsWithNonceHoles() 
+        - addTx(origin txOrigin, tx *types.Transaction) error
+        - invokePromotion(tx *types.Transaction, callPromote bool) 
+        - handlePromoteRequest(req promoteRequest) 
+        - addGossipTx(obj <font color=blue>interface</font>{}, peerID peer.ID) 
+        - resetAccounts(stateNonces <font color=blue>map</font>[types.Address]uint64) 
+        - updateAccountSkipsCounts(latestActiveAccounts <font color=blue>map</font>[types.Address]uint64, stateRoot types.Hash) 
+        - getOrCreateAccount(newAddr types.Address) *account
+
+        + Status(ctx context.Context, req *emptypb.Empty) (*proto.TxnPoolStatusResp, error)
+        + AddTxn(ctx context.Context, raw *proto.AddTxnReq) (*proto.AddTxnResp, error)
+        + Subscribe(request *proto.SubscribeRequest, stream proto.TxnPoolOperator_SubscribeServer) error
+        + TxPoolSubscribe(request *proto.SubscribeRequest) (<font color=blue>chan</font> *proto.TxPoolEvent, <font color=blue>func</font>() , error)
+        + GetNonce(addr types.Address) uint64
+        + GetCapacity() (uint64, uint64)
+        + GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
+        + GetTxs(inclQueued bool) (<font color=blue>map</font>[types.Address][]*types.Transaction, <font color=blue>map</font>[types.Address][]*types.Transaction)
+        + GetBaseFee() uint64
+        + SetBaseFee(header *types.Header) 
+        + Start() 
+        + Close() 
+        + SetSigner(s signer) 
+        + SetSealing(sealing bool) 
+        + AddTx(tx *types.Transaction) error
+        + Prepare() 
+        + Peek() *types.Transaction
+        + Pop(tx *types.Transaction) 
+        + Drop(tx *types.Transaction) 
+        + Demote(tx *types.Transaction) 
+        + ResetWithBlock(block *types.Block) 
+        + ReinsertProposed() 
+        + ClearProposed() 
+        + Length() uint64
+
+    }
+}
+
+@enduml
