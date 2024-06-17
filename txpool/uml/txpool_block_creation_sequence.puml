@@ -18,30 +18,17 @@ BlockBuilder -> TxPool: Prepare
         BlockBuilder <<-- Transition: validation result
         deactivate BlockBuilder
         deactivate BlockBuilder
-
+        
         alt successful case
-
             BlockBuilder -> TxPool: Pop
-
         else gas limit reached error
-
             break
                 BlockBuilder -> BlockBuilder : finished = true
             end
-        
-
         else transition error
-
             BlockBuilder -> TxPool: Demote
         else error
-
             BlockBuilder -> TxPool: Drop
-        end
-
-       
-
+        end   
     end
-
-
-
 @enduml
