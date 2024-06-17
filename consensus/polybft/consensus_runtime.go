@@ -1069,8 +1069,23 @@ func (c *consensusRuntime) BuildRoundChangeMessage(
 	if c.logger.IsDebug() {
 		preparedMsgsLen := 0
 		isPreparedCertNil := certificate == nil
+
+		rawCertificate := make([]byte, 0)
+		rawCertificateProposalMsg := make([]byte, 0)
 		if certificate != nil {
 			preparedMsgsLen = len(certificate.PrepareMessages)
+
+			rawCertificate, err = protobuf.Marshal(certificate)
+			if err != nil {
+				c.logger.Error("Cannot marshal prepared certificate", "error", err)
+			}
+
+			if certificate.ProposalMessage != nil {
+				rawCertificateProposalMsg, err = protobuf.Marshal(certificate.ProposalMessage)
+				if err != nil {
+					c.logger.Error("Cannot marshal prepared certificate proposal message", "error", err)
+				}
+			}
 		}
 
 		isProposalNil := proposal == nil
@@ -1084,10 +1099,17 @@ func (c *consensusRuntime) BuildRoundChangeMessage(
 			c.logger.Error("Cannot marshal round change message", "error", err)
 		}
 
+		signedMsgRaw, err := protobuf.Marshal(signedMsg)
+		if err != nil {
+			c.logger.Error("Cannot marshal signed round change message", "error", err)
+		}
+
 		c.logger.Debug("RoundChange message built", "blockNumber", view.Height, "round", view.Round,
 			"roundMsgSize", ToMB(msgRaw),
+			"signedRoundMsgSize", ToMB(signedMsgRaw),
 			"isProposalNil", isProposalNil, "proposal", ToMB(rawProposal),
-			"isPreparedCertNil", isPreparedCertNil, "numOfPrepareMsgs", preparedMsgsLen)
+			"isPreparedCertNil", isPreparedCertNil, "numOfPrepareMsgs", preparedMsgsLen,
+			"certificateSize", ToMB(rawCertificate), "certificateProposalSize", ToMB(rawCertificateProposalMsg))
 	}
 
 	return signedMsg
