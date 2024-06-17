@@ -4,9 +4,7 @@ description: >-
   components.
 ---
 
-# Block
-
-## Block Creation
+# Block Creation Process
 
 Block creation is the essence of the blockchain system. The following figure shows all the components involved in the process:
 

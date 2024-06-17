@@ -9,7 +9,9 @@
 ## DETAILED DESIGN
 
 * [Components](detailed-design/components/README.md)
-  * [Block](detailed-design/components/block.md)
+  * [World State](detailed-design/components/world-state.md)
+  * [Transaction Pool](detailed-design/components/transaction-pool.md)
+  * [Block Creation Process](detailed-design/components/block-creation-process.md)
   * [Consensus Mechanism](detailed-design/components/consensus-mechanism/README.md)
     * [IBFT 2.0 Consensus Algorithm](detailed-design/components/consensus-mechanism/ibft-2.0-consensus-algorithm/README.md)
       * [Initialization](detailed-design/components/consensus-mechanism/ibft-2.0-consensus-algorithm/initialization.md)
