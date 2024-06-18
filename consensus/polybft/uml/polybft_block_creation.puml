@@ -1,0 +1,129 @@
+@startuml
+skinparam packageStyle frame
+left to right direction
+namespace polybft {
+    class BlockBuilder << (S,Aquamarine) >> {
+        - params *BlockBuilderParams
+        - header *types.Header
+        - txns []*types.Transaction
+        - block *types.Block
+        - state *state.Transition
+
+        - writeTxPoolTransaction(tx *types.Transaction) (bool, error)
+
+        + Reset() error
+        + Block() *types.Block
+        + Build(handler <font color=blue>func</font>(*types.Header) ) (*types.FullBlock, error)
+        + WriteTx(tx *types.Transaction) error
+        + Fill() 
+        + Receipts() []*types.Receipt
+        + GetState() *state.Transition
+
+    }
+    class BlockBuilderParams << (S,Aquamarine) >> {
+        + Parent *types.Header
+        + Executor *state.Executor
+        + Coinbase types.Address
+        + GasLimit uint64
+        + BlockTime time.Duration
+        + Logger go-hclog.Logger
+        + TxPool txPoolInterface
+        + BaseFee uint64
+
+    }
+    
+    interface blockBuilder  {
+        + Reset() error
+        + WriteTx( *types.Transaction) error
+        + Fill() 
+        + Build( <font color=blue>func</font>(*types.Header) ) (*types.FullBlock, error)
+        + GetState() *state.Transition
+        + Receipts() []*types.Receipt
+
+    }
+    
+   
+    
+    interface txPoolInterface  {
+        + Prepare() 
+        + Length() uint64
+        + Peek() *types.Transaction
+        + Pop( *types.Transaction) 
+        + Drop( *types.Transaction) 
+        + Demote( *types.Transaction) 
+        + SetSealing( bool) 
+        + ResetWithBlock( *types.Block) 
+        + ReinsertProposed() 
+        + ClearProposed() 
+
+    }
+}
+
+namespace txpool {
+
+    class TxPool << (S,Aquamarine) >> {
+        - accounts accountsMap
+        - executables *pricedQueue
+        - index lookupMap
+        - priceLimit uint64
+        - baseFee uint64
+        - eventManager *eventManager
+        
+        - validateTx(tx *types.Transaction) error
+        - addTx(origin txOrigin, tx *types.Transaction) error
+        - invokePromotion(tx *types.Transaction, callPromote bool) 
+        - addGossipTx(obj <font color=blue>interface</font>{}, peerID peer.ID) 
+        
+        + AddTx(tx *types.Transaction) error
+    }
+}
+namespace state{
+    
+    class Transition << (S,Aquamarine) >> {
+        - snap Snapshot
+        - config chain.ForksInTime
+        - state *Txn
+        - ctx runtime.TxContext
+        - gasPool uint64
+        - receipts []*types.Receipt
+        - totalGas uint64
+
+        - subGasPool(amount uint64) error
+        - subGasLimitPrice(msg *types.Transaction) error
+        - nonceCheck(msg *types.Transaction) error
+        - checkDynamicFees(msg *types.Transaction) error
+        - apply(msg *types.Transaction) (*runtime.ExecutionResult, error)
+        
+        + Create2(caller types.Address, code []byte, value *big.Int, gas uint64) *runtime.ExecutionResult
+        + Call2(caller types.Address, to types.Address, input []byte, value *big.Int, gas uint64) *runtime.ExecutionResult
+       
+    }
+    class Executor << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - config *chain.Params
+        - state State
+
+        + GetHash GetHashByNumberHelper
+        + PostHook <font color=blue>func</font>(*Transition) 
+        + GenesisPostHook <font color=blue>func</font>(*Transition) error
+        + IsL1OriginatedToken bool
+
+        + WriteGenesis(alloc <font color=blue>map</font>[types.Address]*chain.GenesisAccount, initialStateRoot types.Hash) (types.Hash, error)
+        + ProcessBlock(parentRoot types.Hash, block *types.Block, blockCreator types.Address) (*Transition, error)
+        + State() State
+        + StateAt(root types.Hash) (Snapshot, error)
+        + GetForksInTime(blockNumber uint64) chain.ForksInTime
+        + BeginTxn(parentRoot types.Hash, header *types.Header, coinbaseReceiver types.Address) (*Transition, error)
+
+    }
+}
+
+"polybft.blockBuilder" <|.. "polybft.BlockBuilder"
+"polybft.txPoolInterface" <|.u. "txpool.TxPool"
+"polybft.BlockBuilderParams" --> "polybft.txPoolInterface"
+"polybft.BlockBuilder" -->  "polybft.BlockBuilderParams"
+"polybft.BlockBuilder" -u->  "state.Transition"
+"polybft.BlockBuilderParams" -r-> "state.Executor"
+
+   
+@enduml

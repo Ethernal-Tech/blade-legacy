@@ -2,33 +2,54 @@
 hide footbox
 
 BuildProposal -> BlockBuilder: Fill
-BlockBuilder -> TxPool: Prepare
-    loop finished = false
-        BlockBuilder -> TxPool: Peek
-        BlockBuilder <<-- TxPool: transaction
 
-        BlockBuilder -> BlockBuilder: writeTx
-        activate BlockBuilder
-        BlockBuilder -> Transaction: gas
-        activate BlockBuilder
-        BlockBuilder <<-- Transaction: validation result
-        deactivate BlockBuilder
-        BlockBuilder -> Transition: write
-        activate BlockBuilder
-        BlockBuilder <<-- Transition: validation result
-        deactivate BlockBuilder
-        deactivate BlockBuilder
+BlockBuilder -> BlockBuilder: setBlockTimer 
+BlockBuilder -> TxPool: Prepare
+
+    loop finished = false or timer not expired
         
-        alt successful case
-            BlockBuilder -> TxPool: Pop
-        else gas limit reached error
-            break
-                BlockBuilder -> BlockBuilder : finished = true
-            end
-        else transition error
-            BlockBuilder -> TxPool: Demote
-        else error
-            BlockBuilder -> TxPool: Drop
-        end   
+        alt timer elapsed
+            BuildProposal <<-- BlockBuilder: return
+        else execute transaction
+
+            BlockBuilder -> TxPool: Peek
+            BlockBuilder <<-- TxPool: transaction
+
+            BlockBuilder -> BlockBuilder: writeTx
+            activate BlockBuilder
+            BlockBuilder -> Transaction: gas
+            activate BlockBuilder
+            BlockBuilder <<-- Transaction: validation result
+            deactivate BlockBuilder
+            BlockBuilder -> Transition: write
+            activate BlockBuilder
+            BlockBuilder <<-- Transition: validation result
+            deactivate BlockBuilder
+            note right of BlockBuilder
+                If validation result is ok.
+            end note
+            BlockBuilder -> BlockBuilder: add Tx to block transactions
+            
+            activate BlockBuilder
+            
+            deactivate BlockBuilder
+            deactivate BlockBuilder
+            note right of BlockBuilder
+                Depending on the validation result handle Tx in the TxPool.
+            end note
+            alt successful case
+                BlockBuilder -> TxPool: Pop
+            else gas limit reached error
+                break
+                    BlockBuilder -> BlockBuilder : finished = true
+                end
+            else transition error
+                BlockBuilder -> TxPool: Demote
+            else any other error
+                BlockBuilder -> TxPool: Drop
+            end 
+        end 
     end
+BlockBuilder -> BlockBuilder: waitBlockTimer 
+BuildProposal <<-- BlockBuilder: return
 @enduml

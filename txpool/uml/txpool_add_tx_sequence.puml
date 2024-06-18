@@ -6,7 +6,7 @@ TxPool -> TxPool: ValidateTx
 TxPool -> Transaction: ComputeHash
 TxPool -> Account: getOrCreateAccount
 TxPool <<-- Account: account
-TxPool -> TxPool: add in lookupMap
+TxPool -> TxPool: add to lookupMap
 TxPool -> Account: enqueue
 TxPool -> Network: Publish
 @enduml

@@ -1,0 +1,37 @@
+@startuml
+hide footbox
+
+BuildProposal -> BlockBuilder: Reset
+BlockBuilder -> Executor: BeginTxn
+BlockBuilder <<-- Executor: transition
+BuildProposal <<-- BlockBuilder: error if exists
+BuildProposal -> BlockBuilder: Fill
+BlockBuilder -> TxPool: Prepare
+
+
+
+    loop timer not expired and block is not full yet
+        BlockBuilder -> TxPool: Peek
+        BlockBuilder <<-- TxPool: transaction
+
+        BlockBuilder -> BlockBuilder: writeTx
+        activate BlockBuilder
+        BlockBuilder -> Transaction: gas
+        activate BlockBuilder
+        BlockBuilder <<-- Transaction: validation result
+        deactivate BlockBuilder
+        BlockBuilder -> Transition: write
+        activate BlockBuilder
+        BlockBuilder <<-- Transition: validation result
+        deactivate BlockBuilder
+        deactivate BlockBuilder
+        
+        BlockBuilder -> TxPool: Pop
+
+ 
+    end
+BuildProposal -> BlockBuilder: Build
+BuildProposal <<-- BlockBuilder: fullBlock
+destroy BuildProposal
+
+@enduml

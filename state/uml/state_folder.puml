@@ -1,0 +1,258 @@
+@startuml
+namespace state {
+    class Account << (S,Aquamarine) >> {
+        + Nonce uint64
+        + Balance *big.Int
+        + Root types.Hash
+        + CodeHash []byte
+
+        + MarshalWith(ar *fastrlp.Arena) *fastrlp.Value
+        + UnmarshalRlp(b []byte) error
+        + String() string
+        + Copy() *Account
+
+    }
+    class BlockResult << (S,Aquamarine) >> {
+        + Root types.Hash
+        + Receipts []*types.Receipt
+        + TotalGas uint64
+
+    }
+    class Executor << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - config *chain.Params
+        - state State
+
+        + GetHash GetHashByNumberHelper
+        + PostHook <font color=blue>func</font>(*Transition) 
+        + GenesisPostHook <font color=blue>func</font>(*Transition) error
+        + IsL1OriginatedToken bool
+
+        + WriteGenesis(alloc <font color=blue>map</font>[types.Address]*chain.GenesisAccount, initialStateRoot types.Hash) (types.Hash, error)
+        + ProcessBlock(parentRoot types.Hash, block *types.Block, blockCreator types.Address) (*Transition, error)
+        + State() State
+        + StateAt(root types.Hash) (Snapshot, error)
+        + GetForksInTime(blockNumber uint64) chain.ForksInTime
+        + BeginTxn(parentRoot types.Hash, header *types.Header, coinbaseReceiver types.Address) (*Transition, error)
+
+    }
+    class GasLimitReachedTransitionApplicationError << (S,Aquamarine) >> {
+    }
+    class Object << (S,Aquamarine) >> {
+        + Address types.Address
+        + CodeHash types.Hash
+        + Balance *big.Int
+        + Root types.Hash
+        + Nonce uint64
+        + Deleted bool
+        + DirtyCode bool
+        + Code []byte
+        + Storage []*StorageObject
+
+    }
+    class PreState << (S,Aquamarine) >> {
+        + Nonce uint64
+        + Balance uint64
+        + State <font color=blue>map</font>[types.Hash]types.Hash
+
+    }
+    interface Snapshot  {
+        + Commit(objs []*Object) (Snapshot, []byte, error)
+
+    }
+    interface State  {
+        + NewSnapshotAt( types.Hash) (Snapshot, error)
+        + NewSnapshot() Snapshot
+        + GetCode(hash types.Hash) ([]byte, bool)
+
+    }
+    class StateObject << (S,Aquamarine) >> {
+        - withFakeStorage bool
+
+        + Account *Account
+        + Code []byte
+        + Suicide bool
+        + Deleted bool
+        + DirtyCode bool
+        + Txn *go-immutable-radix.Txn
+
+        + Empty() bool
+        + Copy() *StateObject
+
+    }
+    class StorageObject << (S,Aquamarine) >> {
+        + Deleted bool
+        + Key []byte
+        + Val []byte
+
+    }
+    class Transition << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - snap Snapshot
+        - config chain.ForksInTime
+        - state *Txn
+        - getHash GetHashByNumber
+        - ctx runtime.TxContext
+        - gasPool uint64
+        - receipts []*types.Receipt
+        - totalGas uint64
+        - evm *evm.EVM
+        - precompiles *precompiled.Precompiled
+        - deploymentAllowList *addresslist.AddressList
+        - deploymentBlockList *addresslist.AddressList
+        - txnAllowList *addresslist.AddressList
+        - txnBlockList *addresslist.AddressList
+        - bridgeAllowList *addresslist.AddressList
+        - bridgeBlockList *addresslist.AddressList
+        - journal *runtime.Journal
+        - journalRevisions []runtime.JournalRevision
+        - accessList *runtime.AccessList
+        - isL1OriginatedToken bool
+
+        + PostHook <font color=blue>func</font>(*Transition) 
+
+        - subGasPool(amount uint64) error
+        - addGasPool(amount uint64) 
+        - checkSenderAccount(msg *types.Transaction) bool
+        - subGasLimitPrice(msg *types.Transaction) error
+        - nonceCheck(msg *types.Transaction) error
+        - checkDynamicFees(msg *types.Transaction) error
+        - apply(msg *types.Transaction) (*runtime.ExecutionResult, error)
+        - run(contract *runtime.Contract, host runtime.Host) *runtime.ExecutionResult
+        - applyCall(c *runtime.Contract, callType runtime.CallType, host runtime.Host) *runtime.ExecutionResult
+        - hasCodeOrNonce(addr types.Address) bool
+        - applyCreate(c *runtime.Contract, host runtime.Host) *runtime.ExecutionResult
+        - handleAllowBlockListsUpdate(contract *runtime.Contract, host runtime.Host) *runtime.ExecutionResult
+        - captureCallStart(c *runtime.Contract, callType runtime.CallType) 
+        - captureCallEnd(c *runtime.Contract, result *runtime.ExecutionResult) 
+
+        + WithStateOverride(override types.StateOverride) error
+        + TotalGas() uint64
+        + Receipts() []*types.Receipt
+        + Write(txn *types.Transaction) error
+        + Commit() (Snapshot, types.Hash, error)
+        + Txn() *Txn
+        + Apply(msg *types.Transaction) (*runtime.ExecutionResult, error)
+        + ContextPtr() *runtime.TxContext
+        + Create2(caller types.Address, code []byte, value *big.Int, gas uint64) *runtime.ExecutionResult
+        + Call2(caller types.Address, to types.Address, input []byte, value *big.Int, gas uint64) *runtime.ExecutionResult
+        + Transfer(from types.Address, to types.Address, amount *big.Int) error
+        + SetState(addr types.Address, key types.Hash, value types.Hash) 
+        + SetStorage(addr types.Address, key types.Hash, value types.Hash, config *chain.ForksInTime) runtime.StorageStatus
+        + GetTxContext() runtime.TxContext
+        + GetBlockHash(number int64) types.Hash
+        + EmitLog(addr types.Address, topics []types.Hash, data []byte) 
+        + GetCodeSize(addr types.Address) int
+        + GetCodeHash(addr types.Address) types.Hash
+        + GetCode(addr types.Address) []byte
+        + GetBalance(addr types.Address) *big.Int
+        + GetStorage(addr types.Address, key types.Hash) types.Hash
+        + AccountExists(addr types.Address) bool
+        + Empty(addr types.Address) bool
+        + GetNonce(addr types.Address) uint64
+        + Selfdestruct(addr types.Address, beneficiary types.Address) 
+        + Callx(c *runtime.Contract, h runtime.Host) *runtime.ExecutionResult
+        + SetAccountDirectly(addr types.Address, account *chain.GenesisAccount) error
+        + SetCodeDirectly(addr types.Address, code []byte) error
+        + SetNonPayable(nonPayable bool) 
+        + SetTracer(tracer tracer.Tracer) 
+        + GetTracer() runtime.VMTracer
+        + GetRefund() uint64
+        + AddToJournal(j runtime.JournalEntry) 
+        + Snapshot() int
+        + RevertToSnapshot(snapshot int) error
+        + PopulateAccessList(from types.Address, to *types.Address, acl types.TxAccessList) 
+        + AddSlotToAccessList(addr types.Address, slot types.Hash) 
+        + AddAddressToAccessList(addr types.Address) 
+        + ContainsAccessListAddress(addr types.Address) bool
+        + ContainsAccessListSlot(addr types.Address, slot types.Hash) (bool, bool)
+        + DeleteAccessListAddress(addr types.Address) 
+        + DeleteAccessListSlot(addr types.Address, slot types.Hash) 
+
+    }
+    class TransitionApplicationError << (S,Aquamarine) >> {
+        + Err error
+        + IsRecoverable bool
+
+        + Error() string
+
+    }
+    class Txn << (S,Aquamarine) >> {
+        - snapshot readSnapshot
+        - snapshots []*go-immutable-radix.Tree
+        - txn *go-immutable-radix.Txn
+        - codeCache *golang-lru.Cache
+
+        - getStateObject(addr types.Address) (*StateObject, bool)
+        - upsertAccount(addr types.Address, create bool, f <font color=blue>func</font>(*StateObject) ) 
+
+        + GetRadix() *go-immutable-radix.Txn
+        + Snapshot() int
+        + RevertToSnapshot(id int) error
+        + GetAccount(addr types.Address) (*Account, bool)
+        + AddSealingReward(addr types.Address, balance *big.Int) 
+        + AddBalance(addr types.Address, balance *big.Int) 
+        + SubBalance(addr types.Address, amount *big.Int) error
+        + SetBalance(addr types.Address, balance *big.Int) 
+        + GetBalance(addr types.Address) *big.Int
+        + EmitLog(addr types.Address, topics []types.Hash, data []byte) 
+        + SetStorage(addr types.Address, key types.Hash, value types.Hash, config *chain.ForksInTime) runtime.StorageStatus
+        + SetState(addr types.Address, key types.Hash, value types.Hash) 
+        + GetState(addr types.Address, key types.Hash) types.Hash
+        + IncrNonce(addr types.Address) error
+        + SetNonce(addr types.Address, nonce uint64) 
+        + GetNonce(addr types.Address) uint64
+        + SetCode(addr types.Address, code []byte) 
+        + GetCode(addr types.Address) []byte
+        + GetCodeSize(addr types.Address) int
+        + GetCodeHash(addr types.Address) types.Hash
+        + Suicide(addr types.Address) bool
+        + HasSuicided(addr types.Address) bool
+        + AddRefund(gas uint64) 
+        + SubRefund(gas uint64) 
+        + Logs() []*types.Log
+        + GetRefund() uint64
+        + GetCommittedState(addr types.Address, key types.Hash) types.Hash
+        + GetStorageRoot(addr types.Address) types.Hash
+        + SetFullStorage(addr types.Address, state <font color=blue>map</font>[types.Hash]types.Hash) 
+        + TouchAccount(addr types.Address) 
+        + Exist(addr types.Address) bool
+        + Empty(addr types.Address) bool
+        + CreateAccount(addr types.Address) 
+        + CleanDeleteObjects(deleteEmptyObjects bool) error
+        + Commit(deleteEmptyObjects bool) ([]*Object, error)
+
+    }
+    interface readSnapshot  {
+        + GetStorage(addr types.Address, root types.Hash, key types.Hash) types.Hash
+        + GetAccount(addr types.Address) (*Account, error)
+        + GetCode(hash types.Hash) ([]byte, bool)
+
+    }
+    class state.GetHashByNumber << (T, #FF7700) >>  {
+    }
+    class state.GetHashByNumberHelper << (T, #FF7700) >>  {
+    }
+    class state.PreStates << (T, #FF7700) >>  {
+    }
+    class state.buildPreState << (T, #FF7700) >>  {
+    }
+    class "<font color=blue>func</font>(*types.Header) GetHashByNumber" as fontcolorbluefuncfonttypesHeaderGetHashByNumber {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+    class "<font color=blue>func</font>(uint64) types.Hash" as fontcolorbluefuncfontuint64typesHash {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+    class "<font color=blue>map</font>[types.Address]*PreState" as fontcolorbluemapfonttypesAddressPreState {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+"state.TransitionApplicationError" *-- "state.GasLimitReachedTransitionApplicationError"
+"state.readSnapshot" *-- "state.Snapshot"
+
+
+"state.fontcolorbluefuncfonttypesHeaderGetHashByNumber" #.. "state.GetHashByNumberHelper"
+"state.<font color=blue>func</font>(PreStates) Snapshot" #.. "state.buildPreState"
+"state.fontcolorbluefuncfontuint64typesHash" #.. "state.GetHashByNumber"
+"state.fontcolorbluemapfonttypesAddressPreState" #.. "state.PreStates"
+@enduml

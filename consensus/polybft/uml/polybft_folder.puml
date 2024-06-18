@@ -1,0 +1,1100 @@
+@startuml
+namespace polybft {
+    class BlockBuilder << (S,Aquamarine) >> {
+        - params *BlockBuilderParams
+        - header *types.Header
+        - txns []*types.Transaction
+        - block *types.Block
+        - state *state.Transition
+
+        - writeTxPoolTransaction(tx *types.Transaction) (bool, error)
+
+        + Reset() error
+        + Block() *types.Block
+        + Build(handler <font color=blue>func</font>(*types.Header) ) (*types.FullBlock, error)
+        + WriteTx(tx *types.Transaction) error
+        + Fill() 
+        + Receipts() []*types.Receipt
+        + GetState() *state.Transition
+
+    }
+    class BlockBuilderParams << (S,Aquamarine) >> {
+        + Parent *types.Header
+        + Executor *state.Executor
+        + Coinbase types.Address
+        + GasLimit uint64
+        + BlockTime time.Duration
+        + Logger go-hclog.Logger
+        + TxPool txPoolInterface
+        + BaseFee uint64
+
+    }
+    interface BridgeBackend  {
+    }
+    class BridgeConfig << (S,Aquamarine) >> {
+        + StateSenderAddr types.Address
+        + CheckpointManagerAddr types.Address
+        + ExitHelperAddr types.Address
+        + RootERC20PredicateAddr types.Address
+        + ChildMintableERC20PredicateAddr types.Address
+        + RootNativeERC20Addr types.Address
+        + RootERC721PredicateAddr types.Address
+        + ChildMintableERC721PredicateAddr types.Address
+        + RootERC1155PredicateAddr types.Address
+        + ChildMintableERC1155PredicateAddr types.Address
+        + ChildERC20Addr types.Address
+        + ChildERC721Addr types.Address
+        + ChildERC1155Addr types.Address
+        + BladeManagerAddr types.Address
+        + BLSAddress types.Address
+        + BN256G2Address types.Address
+        + JSONRPCEndpoint string
+        + EventTrackerStartBlocks <font color=blue>map</font>[types.Address]uint64
+
+    }
+    interface BridgeManager  {
+        + Close() 
+        + PostBlockAsync(req *PostBlockRequest) 
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+        + BuildExitEventRoot(epoch uint64) (types.Hash, error)
+        + GenerateProof(eventID uint64, pType proofType) (types.Proof, error)
+        + Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
+
+    }
+    interface BridgeTransport  {
+        + Multicast(msg <font color=blue>interface</font>{}) 
+
+    }
+    class BurnContractInfo << (S,Aquamarine) >> {
+        + BlockNumber uint64
+        + Address types.Address
+        + DestinationAddress types.Address
+
+    }
+    class CheckpointData << (S,Aquamarine) >> {
+        + BlockRound uint64
+        + EpochNumber uint64
+        + CurrentValidatorsHash types.Hash
+        + NextValidatorsHash types.Hash
+        + EventRoot types.Hash
+
+        + MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value
+        + UnmarshalRLPWith(v *fastrlp.Value) error
+        + Copy() *CheckpointData
+        + Hash(chainID uint64, blockNumber uint64, blockHash types.Hash) (types.Hash, error)
+        + ValidateBasic(parentCheckpoint *CheckpointData) error
+        + Validate(parentCheckpoint *CheckpointData, currentValidators validator.AccountSet, nextValidators validator.AccountSet, exitRootHash types.Hash) error
+
+    }
+    interface CheckpointManager  {
+        + PostBlock(req *PostBlockRequest) 
+        + BuildEventRoot(epoch uint64) (types.Hash, error)
+        + GenerateExitProof(exitID uint64) (types.Proof, error)
+
+    }
+    class CommitmentMessageSigned << (S,Aquamarine) >> {
+        + Message *contractsapi.StateSyncCommitment
+        + AggSignature Signature
+        + PublicKeys [][]byte
+
+        + Hash() (types.Hash, error)
+        + VerifyStateSyncProof(proof []types.Hash, stateSync *contractsapi.StateSyncedEvent) error
+        + ContainsStateSync(stateSyncID uint64) bool
+        + EncodeAbi() ([]byte, error)
+        + DecodeAbi(txData []byte) error
+
+    }
+    class EpochStore << (S,Aquamarine) >> {
+        - db *bbolt.DB
+
+        - initialize(tx *bbolt.Tx) error
+        - insertValidatorSnapshot(validatorSnapshot *validatorSnapshot, dbTx *bbolt.Tx) error
+        - getValidatorSnapshot(epoch uint64) (*validatorSnapshot, error)
+        - getNearestOrEpochSnapshot(epoch uint64, dbTx *bbolt.Tx) (*validatorSnapshot, error)
+        - insertEpoch(epoch uint64, dbTx *bbolt.Tx) error
+        - isEpochInserted(epoch uint64) bool
+        - cleanEpochsFromDB(dbTx *bbolt.Tx) error
+        - cleanValidatorSnapshotsFromDB(epoch uint64, dbTx *bbolt.Tx) error
+        - removeAllValidatorSnapshots() error
+        - epochsDBStats() (*bbolt.BucketStats, error)
+        - validatorSnapshotsDBStats() (*bbolt.BucketStats, error)
+
+    }
+    class EventProvider << (S,Aquamarine) >> {
+        - subscriberIDCounter uint64
+        - subscribers <font color=blue>map</font>[uint64]EventSubscriber
+        - allFilters <font color=blue>map</font>[types.Address]<font color=blue>map</font>[types.Hash][]uint64
+
+        - getEventsFromBlocksRange(from uint64, to uint64, dbTx *bbolt.Tx) error
+        - getEventsFromReceipts(blockHeader *types.Header, receipts []*types.Receipt, dbTx *bbolt.Tx) error
+
+        + Subscribe(subscriber EventSubscriber) 
+        + GetEventsFromBlocks(lastProcessedBlock uint64, latestBlock *types.FullBlock, dbTx *bbolt.Tx) error
+
+    }
+    interface EventSubscriber  {
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class ExitEvent << (S,Aquamarine) >> {
+        + EpochNumber uint64
+        + BlockNumber uint64
+
+    }
+    interface ExitEventProofRetriever  {
+        + GenerateExitProof(exitID uint64) (types.Proof, error)
+
+    }
+    interface ExitRelayer  {
+        + Close() 
+        + Init() error
+        + AddLog(eventLog *ethgo.Log) error
+        + PostBlock(req *PostBlockRequest) error
+
+    }
+    class ExitStore << (S,Aquamarine) >> {
+        - db *bbolt.DB
+
+        - initialize(tx *bbolt.Tx) error
+        - insertExitEvent(exitEvent *ExitEvent, dbTx *bbolt.Tx) error
+        - getExitEvent(exitEventID uint64) (*ExitEvent, error)
+        - getExitEventsByEpoch(epoch uint64) ([]*ExitEvent, error)
+        - getExitEventsForProof(epoch uint64, checkpointBlock uint64) ([]*ExitEvent, error)
+        - getExitEvents(epoch uint64, filter <font color=blue>func</font>(*ExitEvent) bool) ([]*ExitEvent, error)
+
+        + GetAllAvailableRelayerEvents(limit int) ([]*RelayerEventMetaData, error)
+        + UpdateRelayerEvents(events []*RelayerEventMetaData, removeIDs []uint64, dbTx *bbolt.Tx) error
+
+    }
+    class Extra << (S,Aquamarine) >> {
+        + Validators *validator.ValidatorSetDelta
+        + Parent *Signature
+        + Committed *Signature
+        + Checkpoint *CheckpointData
+
+        + MarshalRLPTo(dst []byte) []byte
+        + MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value
+        + UnmarshalRLP(input []byte) error
+        + UnmarshalRLPWith(v *fastrlp.Value) error
+        + ValidateFinalizedData(header *types.Header, parent *types.Header, parents []*types.Header, chainID uint64, consensusBackend polybftBackend, domain []byte, logger go-hclog.Logger) error
+        + ValidateParentSignatures(blockNumber uint64, consensusBackend polybftBackend, parents []*types.Header, parent *types.Header, parentExtra *Extra, chainID uint64, domain []byte, logger go-hclog.Logger) error
+
+    }
+    class GovernanceConfig << (S,Aquamarine) >> {
+        + VotingDelay *big.Int
+        + VotingPeriod *big.Int
+        + ProposalThreshold *big.Int
+        + ProposalQuorumPercentage uint64
+        + ChildGovernorAddr types.Address
+        + ChildTimelockAddr types.Address
+        + NetworkParamsAddr types.Address
+        + ForkParamsAddr types.Address
+
+        + MarshalJSON() ([]byte, error)
+        + UnmarshalJSON(data []byte) error
+
+    }
+    interface GovernanceManager  {
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+        + GetClientConfig(dbTx *bbolt.Tx) (*chain.Params, error)
+
+    }
+    class GovernanceStore << (S,Aquamarine) >> {
+        - db *bbolt.DB
+
+        - initialize(tx *bbolt.Tx) error
+        - insertGovernanceEvent(epoch uint64, event contractsapi.EventAbi, dbTx *bbolt.Tx) error
+        - getNetworkParamsEvents(epoch uint64, dbTx *bbolt.Tx) (eventsRaw, error)
+        - getAllForkEvents(dbTx *bbolt.Tx) (<font color=blue>map</font>[types.Hash]*big.Int, error)
+        - insertClientConfig(config *chain.Params, dbTx *bbolt.Tx) error
+        - getClientConfig(dbTx *bbolt.Tx) (*chain.Params, error)
+
+    }
+    class IBFTConsensusWrapper << (S,Aquamarine) >> {
+        - runSequence(height uint64) (<font color=blue>chan</font> <font color=blue>struct</font>{}, <font color=blue>func</font>() )
+
+    }
+    class MessageSignature << (S,Aquamarine) >> {
+        + From string
+        + Signature []byte
+
+    }
+    class PendingCommitment << (S,Aquamarine) >> {
+        + MerkleTree *merkle-tree.MerkleTree
+        + Epoch uint64
+
+        + Hash() (types.Hash, error)
+
+    }
+    class PolyBFTConfig << (S,Aquamarine) >> {
+        + InitialValidatorSet []*validator.GenesisValidator
+        + Bridge *BridgeConfig
+        + EpochSize uint64
+        + EpochReward uint64
+        + SprintSize uint64
+        + BlockTime common.Duration
+        + Governance types.Address
+        + NativeTokenConfig *TokenConfig
+        + InitialTrieRoot types.Hash
+        + MinValidatorSetSize uint64
+        + MaxValidatorSetSize uint64
+        + CheckpointInterval uint64
+        + WithdrawalWaitPeriod uint64
+        + RewardConfig *RewardsConfig
+        + BlockTimeDrift uint64
+        + BlockTrackerPollInterval common.Duration
+        + ProxyContractsAdmin types.Address
+        + BladeAdmin types.Address
+        + GovernanceConfig *GovernanceConfig
+        + StakeTokenAddr types.Address
+
+        + IsBridgeEnabled() bool
+
+    }
+    class Polybft << (S,Aquamarine) >> {
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - ibft *IBFTConsensusWrapper
+        - state *State
+        - config *consensus.Params
+        - genesisClientConfig *PolyBFTConfig
+        - blockchain blockchainBackend
+        - runtime *consensusRuntime
+        - dataDir string
+        - syncer syncer.Syncer
+        - consensusTopic *network.Topic
+        - bridgeTopic *network.Topic
+        - key *wallet.Key
+        - validatorsCache *validatorsSnapshotCache
+        - logger go-hclog.Logger
+        - txPool txPoolInterface
+
+        - initRuntime() error
+        - startRuntime() error
+        - startConsensusProtocol() 
+        - waitForNPeers() bool
+        - verifyHeaderImpl(parent *types.Header, header *types.Header, blockTimeDrift uint64, parents []*types.Header) error
+        - subscribeToIbftTopic() error
+        - createTopics() error
+
+        + Initialize() error
+        + Start() error
+        + Close() error
+        + GetSyncProgression() *progress.Progression
+        + VerifyHeader(header *types.Header) error
+        + GetValidators(blockNumber uint64, parents []*types.Header) (validator.AccountSet, error)
+        + GetValidatorsWithTx(blockNumber uint64, parents []*types.Header, dbTx *bbolt.Tx) (validator.AccountSet, error)
+        + SetBlockTime(blockTime time.Duration) 
+        + ProcessHeaders(_ []*types.Header) error
+        + GetBlockCreator(h *types.Header) (types.Address, error)
+        + PreCommitState(block *types.Block, _ *state.Transition) error
+        + GetLatestChainConfig() (*chain.Params, error)
+        + GetBridgeProvider() consensus.BridgeDataProvider
+        + FilterExtra(extra []byte) ([]byte, error)
+        + Multicast(msg *proto.Message) 
+
+    }
+    class PostBlockRequest << (S,Aquamarine) >> {
+        + FullBlock *types.FullBlock
+        + Epoch uint64
+        + IsEpochEndingBlock bool
+        + DBTx *bbolt.Tx
+        + CurrentClientConfig *PolyBFTConfig
+        + Forks *chain.Forks
+
+    }
+    class PostEpochRequest << (S,Aquamarine) >> {
+        + NewEpochID uint64
+        + FirstBlockOfEpoch uint64
+        + SystemState SystemState
+        + ValidatorSet validator.ValidatorSet
+        + DBTx *bbolt.Tx
+        + Forks *chain.Forks
+
+    }
+    class PrioritizedValidator << (S,Aquamarine) >> {
+        + Metadata *validator.ValidatorMetadata
+        + ProposerPriority *big.Int
+
+        + String() string
+
+    }
+    class ProposerCalculator << (S,Aquamarine) >> {
+        - snapshot *ProposerSnapshot
+        - config *runtimeConfig
+        - state *State
+        - logger go-hclog.Logger
+
+        - update(blockNumber uint64, dbTx *bbolt.Tx) error
+        - updatePerBlock(blockNumber uint64, dbTx *bbolt.Tx) error
+
+        + GetSnapshot() (*ProposerSnapshot, bool)
+        + PostBlock(req *PostBlockRequest) error
+
+    }
+    class ProposerSnapshot << (S,Aquamarine) >> {
+        + Height uint64
+        + Round uint64
+        + Proposer *PrioritizedValidator
+        + Validators []*PrioritizedValidator
+
+        - toMap() <font color=blue>map</font>[types.Address]*PrioritizedValidator
+
+        + CalcProposer(round uint64, height uint64) (types.Address, error)
+        + GetLatestProposer(round uint64, height uint64) (types.Address, error)
+        + GetTotalVotingPower() *big.Int
+        + Copy() *ProposerSnapshot
+
+    }
+    class ProposerSnapshotStore << (S,Aquamarine) >> {
+        - db *bbolt.DB
+
+        - initialize(tx *bbolt.Tx) error
+        - getProposerSnapshot(dbTx *bbolt.Tx) (*ProposerSnapshot, error)
+        - writeProposerSnapshot(snapshot *ProposerSnapshot, dbTx *bbolt.Tx) error
+
+    }
+    class RelayerEventMetaData << (S,Aquamarine) >> {
+        + EventID uint64
+        + CountTries uint64
+        + BlockNumber uint64
+        + SentStatus bool
+
+        + String() string
+
+    }
+    interface RelayerState  {
+        + GetAllAvailableRelayerEvents(limit int) ([]*RelayerEventMetaData, error)
+        + UpdateRelayerEvents(events []*RelayerEventMetaData, removeIDs []uint64, dbTx *bbolt.Tx) error
+
+    }
+    class RewardsConfig << (S,Aquamarine) >> {
+        + TokenAddress types.Address
+        + WalletAddress types.Address
+        + WalletAmount *big.Int
+
+        + MarshalJSON() ([]byte, error)
+        + UnmarshalJSON(data []byte) error
+
+    }
+    class RootchainConfig << (S,Aquamarine) >> {
+        + JSONRPCAddr string
+        + StateSenderAddress types.Address
+        + CheckpointManagerAddress types.Address
+        + BLSAddress types.Address
+        + BN256G2Address types.Address
+        + ExitHelperAddress types.Address
+        + RootERC20PredicateAddress types.Address
+        + ChildMintableERC20PredicateAddress types.Address
+        + RootNativeERC20Address types.Address
+        + ChildERC20Address types.Address
+        + RootERC721PredicateAddress types.Address
+        + ChildMintableERC721PredicateAddress types.Address
+        + ChildERC721Address types.Address
+        + RootERC1155PredicateAddress types.Address
+        + ChildMintableERC1155PredicateAddress types.Address
+        + ChildERC1155Address types.Address
+        + BladeManagerAddress types.Address
+
+        + ToBridgeConfig() *BridgeConfig
+
+    }
+    interface Runtime  {
+        + IsActiveValidator() bool
+
+    }
+    class Signature << (S,Aquamarine) >> {
+        + AggregatedSignature []byte
+        + Bitmap []byte
+
+        + MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value
+        + UnmarshalRLPWith(v *fastrlp.Value) error
+        + Verify(blockNumber uint64, validators validator.AccountSet, hash types.Hash, domain []byte, logger go-hclog.Logger) error
+
+    }
+    interface StakeManager  {
+        + PostBlock(req *PostBlockRequest) error
+        + UpdateValidatorSet(epoch uint64, maxValidatorSetSize uint64, currentValidatorSet validator.AccountSet) (*validator.ValidatorSetDelta, error)
+
+    }
+    class StakeStore << (S,Aquamarine) >> {
+        - db *bbolt.DB
+
+        - initialize(tx *bbolt.Tx) error
+        - insertFullValidatorSet(fullValidatorSet validatorSetState, dbTx *bbolt.Tx) error
+        - getFullValidatorSet(dbTx *bbolt.Tx) (validatorSetState, error)
+
+    }
+    class State << (S,Aquamarine) >> {
+        - db *bbolt.DB
+        - close <font color=blue>chan</font> <font color=blue>struct</font>{}
+
+        + StateSyncStore *StateSyncStore
+        + ExitStore *ExitStore
+        + EpochStore *EpochStore
+        + ProposerSnapshotStore *ProposerSnapshotStore
+        + StakeStore *StakeStore
+        + GovernanceStore *GovernanceStore
+
+        - initStorages() error
+        - insertLastProcessedEventsBlock(block uint64, dbTx *bbolt.Tx) error
+        - getLastProcessedEventsBlock(dbTx *bbolt.Tx) (uint64, error)
+        - beginDBTransaction(isWriteTx bool) (*bbolt.Tx, error)
+        - startStatsReleasing() 
+
+    }
+    interface StateSyncManager  {
+        + Init() error
+        + AddLog(eventLog *ethgo.Log) error
+        + Commitment(blockNumber uint64) (*CommitmentMessageSigned, error)
+        + GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+
+    }
+    class StateSyncProof << (S,Aquamarine) >> {
+        + Proof []types.Hash
+        + StateSync *contractsapi.StateSyncedEvent
+
+    }
+    interface StateSyncProofRetriever  {
+        + GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+
+    }
+    interface StateSyncRelayer  {
+        + PostBlock(req *PostBlockRequest) error
+        + Init() error
+        + Close() 
+
+    }
+    class StateSyncStore << (S,Aquamarine) >> {
+        - db *bbolt.DB
+
+        - initialize(tx *bbolt.Tx) error
+        - insertStateSyncEvent(event *contractsapi.StateSyncedEvent) error
+        - removeStateSyncEventsAndProofs(stateSyncEventIDs []uint64) error
+        - list() ([]*contractsapi.StateSyncedEvent, error)
+        - getStateSyncEventsForCommitment(fromIndex uint64, toIndex uint64, dbTx *bbolt.Tx) ([]*contractsapi.StateSyncedEvent, error)
+        - getCommitmentForStateSync(stateSyncID uint64) (*CommitmentMessageSigned, error)
+        - insertCommitmentMessage(commitment *CommitmentMessageSigned, dbTx *bbolt.Tx) error
+        - getCommitmentMessage(toIndex uint64) (*CommitmentMessageSigned, error)
+        - insertMessageVote(epoch uint64, key []byte, vote *MessageSignature, dbTx *bbolt.Tx) (int, error)
+        - getMessageVotes(epoch uint64, hash []byte) ([]*MessageSignature, error)
+        - getMessageVotesLocked(tx *bbolt.Tx, epoch uint64, hash []byte) ([]*MessageSignature, error)
+        - insertStateSyncProofs(stateSyncProof []*StateSyncProof, dbTx *bbolt.Tx) error
+        - getStateSyncProof(stateSyncID uint64) (*StateSyncProof, error)
+
+        + UpdateRelayerEvents(events []*RelayerEventMetaData, removeIDs []uint64, dbTx *bbolt.Tx) error
+        + GetAllAvailableRelayerEvents(limit int) ([]*RelayerEventMetaData, error)
+
+    }
+    interface SystemState  {
+        + GetEpoch() (uint64, error)
+        + GetNextCommittedIndex() (uint64, error)
+
+    }
+    class SystemStateImpl << (S,Aquamarine) >> {
+        - validatorContract *contract.Contract
+        - sidechainBridgeContract *contract.Contract
+
+        + GetEpoch() (uint64, error)
+        + GetNextCommittedIndex() (uint64, error)
+
+    }
+    class TokenConfig << (S,Aquamarine) >> {
+        + Name string
+        + Symbol string
+        + Decimals uint8
+        + IsMintable bool
+
+    }
+    class TransportMessage << (S,Aquamarine) >> {
+        + Hash []byte
+        + Signature []byte
+        + From string
+        + EpochNumber uint64
+
+    }
+    class ValidatorInfo << (S,Aquamarine) >> {
+        + Stake *big.Int
+        + WithdrawableRewards *big.Int
+        + Address types.Address
+        + IsActive bool
+        + IsWhitelisted bool
+
+    }
+    interface blockBuilder  {
+        + Reset() error
+        + WriteTx( *types.Transaction) error
+        + Fill() 
+        + Build( <font color=blue>func</font>(*types.Header) ) (*types.FullBlock, error)
+        + GetState() *state.Transition
+        + Receipts() []*types.Receipt
+
+    }
+    interface blockchainBackend  {
+        + CurrentHeader() *types.Header
+        + CommitBlock(block *types.FullBlock) error
+        + NewBlockBuilder(parent *types.Header, coinbase types.Address, txPool txPoolInterface, blockTime time.Duration, logger hclog.Logger) (blockBuilder, error)
+        + ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error)
+        + GetStateProviderForBlock(block *types.Header) (contract.Provider, error)
+        + GetStateProvider(transition *state.Transition) contract.Provider
+        + GetHeaderByNumber(number uint64) (*types.Header, bool)
+        + GetHeaderByHash(hash types.Hash) (*types.Header, bool)
+        + GetSystemState(provider contract.Provider) SystemState
+        + SubscribeEvents() blockchain.Subscription
+        + UnubscribeEvents(subscription blockchain.Subscription) 
+        + GetChainID() uint64
+        + GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error)
+
+    }
+    class blockchainWrapper << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - executor *state.Executor
+        - blockchain *blockchain.Blockchain
+
+        + CurrentHeader() *types.Header
+        + CommitBlock(block *types.FullBlock) error
+        + ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error)
+        + GetStateProviderForBlock(header *types.Header) (contract.Provider, error)
+        + GetStateProvider(transition *state.Transition) contract.Provider
+        + GetHeaderByNumber(number uint64) (*types.Header, bool)
+        + GetHeaderByHash(hash types.Hash) (*types.Header, bool)
+        + NewBlockBuilder(parent *types.Header, coinbase types.Address, txPool txPoolInterface, blockTime time.Duration, logger hclog.Logger) (blockBuilder, error)
+        + GetSystemState(provider contract.Provider) SystemState
+        + SubscribeEvents() blockchain.Subscription
+        + UnubscribeEvents(subscription blockchain.Subscription) 
+        + GetChainID() uint64
+        + GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error)
+
+    }
+    class bridgeManager << (S,Aquamarine) >> {
+        - checkpointManager CheckpointManager
+        - stateSyncManager StateSyncManager
+        - stateSyncRelayer StateSyncRelayer
+        - exitEventRelayer ExitRelayer
+        - eventTrackerConfig *eventTrackerConfig
+        - logger hclog.Logger
+
+        - initStateSyncManager(bridgeBackend BridgeBackend, runtimeConfig *runtimeConfig, logger hclog.Logger) error
+        - initCheckpointManager(eventProvider *EventProvider, runtimeConfig *runtimeConfig, logger hclog.Logger) error
+        - initStateSyncRelayer(bridgeBackend BridgeBackend, eventProvider *EventProvider, runtimeConfig *runtimeConfig, logger hclog.Logger) error
+        - initExitRelayer(bridgeBackend BridgeBackend, runtimeConfig *runtimeConfig, logger hclog.Logger) error
+        - initTracker(runtimeConfig *runtimeConfig) error
+
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+        + BuildExitEventRoot(epoch uint64) (types.Hash, error)
+        + Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
+        + GenerateProof(eventID uint64, pType proofType) (types.Proof, error)
+        + PostBlockAsync(req *PostBlockRequest) 
+        + Close() 
+        + AddLog(eventLog *ethgo.Log) error
+
+    }
+    class checkpointManager << (S,Aquamarine) >> {
+        - key crypto.Key
+        - blockchain blockchainBackend
+        - consensusBackend polybftBackend
+        - rootChainRelayer txrelayer.TxRelayer
+        - checkpointManagerAddr types.Address
+        - lastSentBlock uint64
+        - logger go-hclog.Logger
+        - state *State
+
+        - submitCheckpoint(latestHeader *types.Header, isEndOfEpoch bool) error
+        - encodeAndSendCheckpoint(header *types.Header, extra *Extra, isEndOfEpoch bool) error
+        - abiEncodeCheckpointBlock(blockNumber uint64, blockHash types.Hash, extra *Extra, nextValidators validator.AccountSet) ([]byte, error)
+        - isCheckpointBlock(blockNumber uint64, checkpointsOffset uint64, isEpochEndingBlock bool) bool
+
+        + PostBlock(req *PostBlockRequest) 
+        + BuildEventRoot(epoch uint64) (types.Hash, error)
+        + GenerateExitProof(exitID uint64) (types.Proof, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class consensusRuntime << (S,Aquamarine) >> {
+        - config *runtimeConfig
+        - state *State
+        - fsm *fsm
+        - lock sync.RWMutex
+        - epoch *epochMetadata
+        - lastBuiltBlock *types.Header
+        - activeValidatorFlag atomic.Bool
+        - proposerCalculator *ProposerCalculator
+        - stakeManager StakeManager
+        - eventProvider *EventProvider
+        - bridgeManager BridgeManager
+        - governanceManager GovernanceManager
+        - logger go-hclog.Logger
+
+        - close() 
+        - initStakeManager(logger go-hclog.Logger, dbTx *bbolt.Tx) error
+        - initGovernanceManager(logger go-hclog.Logger, dbTx *bbolt.Tx) error
+        - getGuardedData() (guardedDataDTO, error)
+        - restartEpoch(header *types.Header, dbTx *bbolt.Tx) (*epochMetadata, error)
+        - calculateDistributeRewardsInput(isFirstBlockOfEpoch bool, isEndOfEpoch bool, pendingBlockNumber uint64, lastFinalizedBlock *types.Header, epochID uint64) (*contractsapi.DistributeRewardForEpochManagerFn, error)
+        - setIsActiveValidator(isActiveValidator bool) 
+        - isFixedSizeOfEpochMet(blockNumber uint64, epoch *epochMetadata) bool
+        - isFixedSizeOfSprintMet(blockNumber uint64, epoch *epochMetadata) bool
+        - getSystemState(header *types.Header) (SystemState, error)
+        - getFirstBlockOfEpoch(epochNumber uint64, latestHeader *types.Header) (uint64, error)
+        - getCurrentBlockTimeDrift() uint64
+
+        + IsBridgeEnabled() bool
+        + OnBlockInserted(fullBlock *types.FullBlock) 
+        + FSM() error
+        + GenerateExitProof(exitID uint64) (types.Proof, error)
+        + GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+        + IsActiveValidator() bool
+        + IsValidProposal(rawProposal []byte) bool
+        + IsValidValidator(msg *proto.Message) bool
+        + IsProposer(id []byte, height uint64, round uint64) bool
+        + IsValidProposalHash(proposal *proto.Proposal, hash []byte) bool
+        + IsValidCommittedSeal(proposalHash []byte, committedSeal *messages.CommittedSeal) bool
+        + BuildProposal(view *proto.View) []byte
+        + InsertProposal(proposal *proto.Proposal, committedSeals []*messages.CommittedSeal) 
+        + ID() []byte
+        + GetVotingPowers(height uint64) (<font color=blue>map</font>[string]*big.Int, error)
+        + BuildPrePrepareMessage(rawProposal []byte, certificate *proto.RoundChangeCertificate, view *proto.View) *proto.Message
+        + BuildPrepareMessage(proposalHash []byte, view *proto.View) *proto.Message
+        + BuildCommitMessage(proposalHash []byte, view *proto.View) *proto.Message
+        + RoundStarts(view *proto.View) error
+        + SequenceCancelled(view *proto.View) error
+        + BuildRoundChangeMessage(proposal *proto.Proposal, certificate *proto.PreparedCertificate, view *proto.View) *proto.Message
+
+    }
+    class dummyBridgeManager << (S,Aquamarine) >> {
+        + Close() 
+        + PostBlockAsync(req *PostBlockRequest) 
+        + AddLog(log *ethgo.Log) error
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+        + BuildExitEventRoot(epoch uint64) (types.Hash, error)
+        + Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
+        + GenerateProof(eventID uint64, pType proofType) (types.Proof, error)
+
+    }
+    class dummyCheckpointManager << (S,Aquamarine) >> {
+        + PostBlock(req *PostBlockRequest) 
+        + BuildEventRoot(epoch uint64) (types.Hash, error)
+        + GenerateExitProof(exitID uint64) (types.Proof, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class dummyExitRelayer << (S,Aquamarine) >> {
+        + Close() 
+        + Init() error
+        + AddLog(eventLog *ethgo.Log) error
+        + PostBlock(req *PostBlockRequest) error
+
+    }
+    class dummyGovernanceManager << (S,Aquamarine) >> {
+        - getClientConfigFn <font color=blue>func</font>() (*chain.Params, error)
+
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+        + GetClientConfig(dbTx *bbolt.Tx) (*chain.Params, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class dummyStakeManager << (S,Aquamarine) >> {
+        + PostBlock(req *PostBlockRequest) error
+        + UpdateValidatorSet(epoch uint64, maxValidatorSetSize uint64, currentValidatorSet validator.AccountSet) (*validator.ValidatorSetDelta, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class dummyStateSyncManager << (S,Aquamarine) >> {
+        + Init() error
+        + AddLog(eventLog *ethgo.Log) error
+        + Commitment(blockNumber uint64) (*CommitmentMessageSigned, error)
+        + PostBlock(req *PostBlockRequest) error
+        + PostEpoch(req *PostEpochRequest) error
+        + GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class dummyStateSyncRelayer << (S,Aquamarine) >> {
+        + PostBlock(req *PostBlockRequest) error
+        + Init() error
+        + Close() 
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class epochMetadata << (S,Aquamarine) >> {
+        + Number uint64
+        + FirstBlockInEpoch uint64
+        + Validators validator.AccountSet
+        + CurrentClientConfig *PolyBFTConfig
+
+    }
+    class eventTrackerConfig << (S,Aquamarine) >> {
+        - jsonrpcAddr string
+        - startBlock uint64
+        - stateSenderAddr types.Address
+        - checkpointManagerAddr types.Address
+        - exitHelperAddr types.Address
+        - trackerPollInterval time.Duration
+
+    }
+    class exitEventNotFoundError << (S,Aquamarine) >> {
+        - exitID uint64
+        - epoch uint64
+
+        + Error() string
+
+    }
+    class exitRelayer << (S,Aquamarine) >> {
+        - key crypto.Key
+        - proofRetriever ExitEventProofRetriever
+        - txRelayer txrelayer.TxRelayer
+        - logger go-hclog.Logger
+        - exitStore *ExitStore
+        - notifyCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+
+        - sendTx(events []*RelayerEventMetaData) error
+
+        + Init() error
+        + Close() 
+        + PostBlock(req *PostBlockRequest) error
+        + AddLog(eventLog *ethgo.Log) error
+
+    }
+    class fsm << (S,Aquamarine) >> {
+        - config *PolyBFTConfig
+        - forks *chain.Forks
+        - parent *types.Header
+        - backend blockchainBackend
+        - polybftBackend polybftBackend
+        - validators validator.ValidatorSet
+        - proposerSnapshot *ProposerSnapshot
+        - blockBuilder blockBuilder
+        - epochNumber uint64
+        - commitEpochInput *contractsapi.CommitEpochEpochManagerFn
+        - distributeRewardsInput *contractsapi.DistributeRewardForEpochManagerFn
+        - isEndOfEpoch bool
+        - isEndOfSprint bool
+        - isFirstBlockOfEpoch bool
+        - proposerCommitmentToRegister *CommitmentMessageSigned
+        - logger go-hclog.Logger
+        - target *types.FullBlock
+        - exitEventRootHash types.Hash
+        - newValidatorsDelta *validator.ValidatorSetDelta
+
+        - applyBridgeCommitmentTx() error
+        - createBridgeCommitmentTx() (*types.Transaction, error)
+        - getValidatorsTransition(delta *validator.ValidatorSetDelta) (validator.AccountSet, error)
+        - createCommitEpochTx() (*types.Transaction, error)
+        - createDistributeRewardsTx() (*types.Transaction, error)
+        - verifyCommitEpochTx(commitEpochTx *types.Transaction) error
+        - verifyDistributeRewardsTx(distributeRewardsTx *types.Transaction) error
+
+        + BuildProposal(currentRound uint64) ([]byte, error)
+        + ValidateCommit(signerAddr []byte, seal []byte, proposalHash []byte) error
+        + Validate(proposal []byte) error
+        + ValidateSender(msg *proto.Message) error
+        + VerifyStateTransactions(transactions []*types.Transaction) error
+        + Insert(proposal []byte, committedSeals []*messages.CommittedSeal) (*types.FullBlock, error)
+        + Height() uint64
+        + ValidatorSet() validator.ValidatorSet
+
+    }
+    class governanceConfigRaw << (S,Aquamarine) >> {
+        + VotingDelay *string
+        + VotingPeriod *string
+        + ProposalThreshold *string
+        + ProposalQuorumPercentage uint64
+        + ChildGovernorAddr types.Address
+        + ChildTimelockAddr types.Address
+        + NetworkParamsAddr types.Address
+        + ForkParamsAddr types.Address
+
+    }
+    class governanceManager << (S,Aquamarine) >> {
+        - logger go-hclog.Logger
+        - state *State
+        - allForksHashes <font color=blue>map</font>[types.Hash]string
+
+        - activateNewForks(currentBlock uint64, forkEvents <font color=blue>map</font>[types.Hash]*big.Int) error
+        - activateSingleFork(currentBlock uint64, forkHash types.Hash, forkBlock *big.Int) error
+
+        + GetClientConfig(dbTx *bbolt.Tx) (*chain.Params, error)
+        + PostEpoch(req *PostEpochRequest) error
+        + PostBlock(req *PostBlockRequest) error
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class guardedDataDTO << (S,Aquamarine) >> {
+        - lastBuiltBlock *types.Header
+        - epoch *epochMetadata
+        - proposerSnapshot *ProposerSnapshot
+
+    }
+    class polybft.eventsRaw << (T, #FF7700) >>  {
+    }
+    class polybft.proofType << (T, #FF7700) >>  {
+    }
+    class polybft.validatorStakeMap << (T, #FF7700) >>  {
+    }
+    interface polybftBackend  {
+        + GetValidators(blockNumber uint64, parents []*types.Header) (validator.AccountSet, error)
+        + GetValidatorsWithTx(blockNumber uint64, parents []*types.Header, dbTx *bbolt.Tx) (validator.AccountSet, error)
+        + SetBlockTime(blockTime time.Duration) 
+
+    }
+    class receiptsGetter << (S,Aquamarine) >> {
+        - blockchain blockchainBackend
+
+        - getReceiptsFromBlocksRange(from uint64, to uint64, receiptsHandler <font color=blue>func</font>(*types.Header, []*types.Receipt) error) error
+
+    }
+    class relayerConfig << (S,Aquamarine) >> {
+        - maxBlocksToWaitForResend uint64
+        - maxAttemptsToSend uint64
+        - maxEventsPerBatch uint64
+        - eventExecutionAddr types.Address
+
+    }
+    class relayerEventsProcessor << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - state RelayerState
+        - blockchain blockchainBackend
+        - config *relayerConfig
+        - sendTx <font color=blue>func</font>([]*RelayerEventMetaData) error
+
+        - processEvents() 
+
+    }
+    class rewardsConfigRaw << (S,Aquamarine) >> {
+        + TokenAddress types.Address
+        + WalletAddress types.Address
+        + WalletAmount *string
+
+    }
+    class runtimeConfig << (S,Aquamarine) >> {
+        - genesisParams *chain.Params
+        - blockchain blockchainBackend
+        - polybftBackend polybftBackend
+        - txPool txPoolInterface
+        - bridgeTopic topic
+        - consensusConfig *consensus.Config
+        - eventTracker *consensus.EventTracker
+
+        + GenesisConfig *PolyBFTConfig
+        + Forks *chain.Forks
+        + DataDir string
+        + Key *wallet.Key
+        + State *State
+
+    }
+    class stakeManager << (S,Aquamarine) >> {
+        - logger go-hclog.Logger
+        - state *State
+        - stakeManagerContractAddr types.Address
+        - polybftBackend polybftBackend
+        - blockchain blockchainBackend
+
+        - getOrInitValidatorSet(dbTx *bbolt.Tx) (validatorSetState, error)
+        - updateWithReceipts(fullValidatorSet *validatorSetState, events []contractsapi.EventAbi, blockNumber uint64) error
+        - getBlsKey(address types.Address) (*bls.PublicKey, error)
+
+        + PostBlock(req *PostBlockRequest) error
+        + UpdateValidatorSet(epoch uint64, maxValidatorSetSize uint64, oldValidatorSet validator.AccountSet) (*validator.ValidatorSetDelta, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class stateProvider << (S,Aquamarine) >> {
+        - transition *state.Transition
+
+        + Call(addr ethgo.Address, input []byte, opts *contract.CallOpts) ([]byte, error)
+        + Txn(_ ethgo.Address, _ ethgo.Key, _ []byte) (contract.Txn, error)
+
+    }
+    class stateSyncConfig << (S,Aquamarine) >> {
+        - dataDir string
+        - topic topic
+        - key *wallet.Key
+        - maxCommitmentSize uint64
+
+    }
+    class stateSyncManager << (S,Aquamarine) >> {
+        - logger go-hclog.Logger
+        - state *State
+        - config *stateSyncConfig
+        - lock sync.RWMutex
+        - pendingCommitments []*PendingCommitment
+        - validatorSet validator.ValidatorSet
+        - epoch uint64
+        - nextCommittedIndex uint64
+        - runtime Runtime
+
+        - initTransport() error
+        - saveVote(msg *TransportMessage) error
+        - verifyVoteSignature(valSet validator.ValidatorSet, signerAddr types.Address, signature []byte, hash []byte) error
+        - getAggSignatureForCommitmentMessage(blockNumber uint64, commitment *PendingCommitment) (Signature, [][]byte, error)
+        - buildProofs(commitmentMsg *contractsapi.StateSyncCommitment, dbTx *bbolt.Tx) error
+        - buildCommitment(dbTx *bbolt.Tx) error
+        - multicast(msg <font color=blue>interface</font>{}) 
+
+        + Init() error
+        + AddLog(eventLog *ethgo.Log) error
+        + Commitment(blockNumber uint64) (*CommitmentMessageSigned, error)
+        + PostEpoch(req *PostEpochRequest) error
+        + PostBlock(req *PostBlockRequest) error
+        + GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    class stateSyncRelayerImpl << (S,Aquamarine) >> {
+        - txRelayer txrelayer.TxRelayer
+        - key crypto.Key
+        - proofRetriever StateSyncProofRetriever
+        - logger go-hclog.Logger
+        - notifyCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+
+        - sendTx(events []*RelayerEventMetaData) error
+
+        + Init() error
+        + Close() 
+        + PostBlock(req *PostBlockRequest) error
+        + GetLogFilters() <font color=blue>map</font>[types.Address][]types.Hash
+        + ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bbolt.Tx) error
+
+    }
+    interface topic  {
+        + Publish(obj proto.Message) error
+        + Subscribe(handler <font color=blue>func</font>(<font color=blue>interface</font>{}, peer.ID) ) error
+
+    }
+    interface txPoolInterface  {
+        + Prepare() 
+        + Length() uint64
+        + Peek() *types.Transaction
+        + Pop( *types.Transaction) 
+        + Drop( *types.Transaction) 
+        + Demote( *types.Transaction) 
+        + SetSealing( bool) 
+        + ResetWithBlock( *types.Block) 
+        + ReinsertProposed() 
+        + ClearProposed() 
+
+    }
+    class validatorSetState << (S,Aquamarine) >> {
+        + BlockNumber uint64
+        + EpochID uint64
+        + UpdatedAtBlockNumber uint64
+        + Validators validatorStakeMap
+
+        + Marshal() ([]byte, error)
+        + Unmarshal(b []byte) error
+
+    }
+    class validatorSnapshot << (S,Aquamarine) >> {
+        + Epoch uint64
+        + EpochEndingBlock uint64
+        + Snapshot validator.AccountSet
+
+        - copy() *validatorSnapshot
+
+    }
+    class validatorStakeMap << (S,Aquamarine) >> {
+        - addStake(address types.Address, amount *big.Int) 
+        - removeStake(address types.Address, amount *big.Int) 
+        - getSorted(maxValidatorSetSize int) validator.AccountSet
+
+        + String() string
+
+    }
+    class validatorsSnapshotCache << (S,Aquamarine) >> {
+        - snapshots <font color=blue>map</font>[uint64]*validatorSnapshot
+        - state *State
+        - blockchain blockchainBackend
+        - lock sync.Mutex
+        - logger go-hclog.Logger
+
+        - computeSnapshot(existingSnapshot *validatorSnapshot, nextEpochEndBlockNumber uint64, parents []*types.Header) (*validatorSnapshot, error)
+        - storeSnapshot(snapshot *validatorSnapshot, dbTx *bbolt.Tx) error
+        - cleanup(dbTx *bbolt.Tx) error
+        - getLastCachedSnapshot(currentEpoch uint64, dbTx *bbolt.Tx) (*validatorSnapshot, error)
+        - getNextEpochEndingBlock(latestEpochEndingBlock uint64) (uint64, error)
+
+        + GetSnapshot(blockNumber uint64, parents []*types.Header, dbTx *bbolt.Tx) (validator.AccountSet, error)
+
+    }
+    class "<font color=blue>map</font>[types.Address]*validator.ValidatorMetadata" as fontcolorbluemapfonttypesAddressvalidatorValidatorMetadata {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+"polybft.ExitEventProofRetriever" *-- "polybft.BridgeBackend"
+"polybft.Runtime" *-- "polybft.BridgeBackend"
+"polybft.StateSyncProofRetriever" *-- "polybft.BridgeBackend"
+"polybft.EventSubscriber" *-- "polybft.CheckpointManager"
+"polybft.receiptsGetter" *-- "polybft.EventProvider"
+"contractsapi.L2StateSyncedEvent" *-- "polybft.ExitEvent"
+"polybft.EventSubscriber" *-- "polybft.GovernanceManager"
+"core.IBFT" *-- "polybft.IBFTConsensusWrapper"
+"contractsapi.StateSyncCommitment" *-- "polybft.PendingCommitment"
+"polybft.EventSubscriber" *-- "polybft.StakeManager"
+"polybft.EventSubscriber" *-- "polybft.StateSyncManager"
+"polybft.EventSubscriber" *-- "polybft.StateSyncRelayer"
+"consensus.EventTracker" *-- "polybft.eventTrackerConfig"
+"polybft.relayerEventsProcessor" *-- "polybft.exitRelayer"
+"polybft.relayerEventsProcessor" *-- "polybft.stateSyncRelayerImpl"
+
+"polybft.blockBuilder" <|-- "polybft.BlockBuilder"
+"polybft.RelayerState" <|-- "polybft.ExitStore"
+"polybft.polybftBackend" <|-- "polybft.Polybft"
+"polybft.RelayerState" <|-- "polybft.StateSyncStore"
+"polybft.SystemState" <|-- "polybft.SystemStateImpl"
+"polybft.blockchainBackend" <|-- "polybft.blockchainWrapper"
+"polybft.BridgeManager" <|-- "polybft.bridgeManager"
+"polybft.CheckpointManager" <|-- "polybft.checkpointManager"
+"polybft.EventSubscriber" <|-- "polybft.checkpointManager"
+"polybft.ExitEventProofRetriever" <|-- "polybft.checkpointManager"
+"polybft.ExitEventProofRetriever" <|-- "polybft.consensusRuntime"
+"polybft.Runtime" <|-- "polybft.consensusRuntime"
+"polybft.StateSyncProofRetriever" <|-- "polybft.consensusRuntime"
+"polybft.BridgeManager" <|-- "polybft.dummyBridgeManager"
+"polybft.CheckpointManager" <|-- "polybft.dummyCheckpointManager"
+"polybft.EventSubscriber" <|-- "polybft.dummyCheckpointManager"
+"polybft.ExitEventProofRetriever" <|-- "polybft.dummyCheckpointManager"
+"polybft.ExitRelayer" <|-- "polybft.dummyExitRelayer"
+"polybft.StateSyncRelayer" <|-- "polybft.dummyExitRelayer"
+"polybft.EventSubscriber" <|-- "polybft.dummyGovernanceManager"
+"polybft.GovernanceManager" <|-- "polybft.dummyGovernanceManager"
+"polybft.EventSubscriber" <|-- "polybft.dummyStakeManager"
+"polybft.StakeManager" <|-- "polybft.dummyStakeManager"
+"polybft.EventSubscriber" <|-- "polybft.dummyStateSyncManager"
+"polybft.StateSyncManager" <|-- "polybft.dummyStateSyncManager"
+"polybft.StateSyncProofRetriever" <|-- "polybft.dummyStateSyncManager"
+"polybft.EventSubscriber" <|-- "polybft.dummyStateSyncRelayer"
+"polybft.StateSyncRelayer" <|-- "polybft.dummyStateSyncRelayer"
+"polybft.ExitRelayer" <|-- "polybft.exitRelayer"
+"polybft.StateSyncRelayer" <|-- "polybft.exitRelayer"
+"polybft.EventSubscriber" <|-- "polybft.governanceManager"
+"polybft.GovernanceManager" <|-- "polybft.governanceManager"
+"polybft.EventSubscriber" <|-- "polybft.stakeManager"
+"polybft.StakeManager" <|-- "polybft.stakeManager"
+"polybft.EventSubscriber" <|-- "polybft.stateSyncManager"
+"polybft.StateSyncManager" <|-- "polybft.stateSyncManager"
+"polybft.StateSyncProofRetriever" <|-- "polybft.stateSyncManager"
+"polybft.EventSubscriber" <|-- "polybft.stateSyncRelayerImpl"
+"polybft.StateSyncRelayer" <|-- "polybft.stateSyncRelayerImpl"
+
+"__builtin__.[][]byte" #.. "polybft.eventsRaw"
+"__builtin__.int" #.. "polybft.proofType"
+"polybft.fontcolorbluemapfonttypesAddressvalidatorValidatorMetadata" #.. "polybft.validatorStakeMap"
+@enduml
