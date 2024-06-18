@@ -51,18 +51,18 @@ Every node has a single instance of `TxPool` in-memory structure, which is creat
 
 ### Block Creation <a href="#id-5qvuftlg7knu" id="id-5qvuftlg7knu"></a>
 
-`BlockBuilder`'s `Fill` method uses `TxPool` to fill the block with transactions taken from the`TxPool`. Each transaction is validated one by one and valid transactions are added to the`BlockBuilder`'s list of transactions. Transactions are validated until a predefined timer (for block creation) expires or a predefined gas (for prepared transactions) is spent.
+`BlockBuilder`'s `Fill` method uses `TxPool` to fill the block with transactions taken from`TxPool`. Each transaction is validated one by one, and valid transactions are added to the`BlockBuilder`'s list of transactions. Transactions are validated until a predefined timer (for block creation) expires or a predefined gas (for prepared transactions) is spent.
 
-_Block Creation Sequence Diagram_ gives detail overview of block creation actions. `BlockBuilder`'s is in charge of&#x20;
+_Block Creation Sequence Diagram_ gives a detailed overview of block creation actions. `BlockBuilder`'s is in charge of&#x20;
 
-* creating a block timer which limits the time interval allowed for the block creation, and
-* preparing transactions in TxPool,  where all transactions ready for execution are sorted descending by best-price (i.e. transaction fee) giving an advantage to more expensive ones.
+* creating a block timer that limits the time interval allowed for block creation, and
+* preparing transactions in TxPool,  where all transactions ready for execution are sorted descending by best price (i.e., transaction fee), giving an advantage to more expensive ones.
 
-After the block timer is set and transactions are prepared, transactions are taken from the TxPool and checked for their validity during transaction write process. The process adds a valid transaction to the block and removes it from the TXPool.&#x20;
+After the block timer is set and transactions are prepared, transactions are taken from the TxPool and checked for their validity during the transaction write process. The process adds a valid transaction to the block and removes it from the TXPool.&#x20;
 
-If the transaction is invalid then, depending on the error, the transaction is dropped or demoted from the TxPool. A dropped transaction assumes that its entire account is cleared its nonce is reverted, while a demoted transaction assumes that its account is excluded from further processing during block building due to an recoverable error . Still, if an account is demoted too many times it becomes dropped instead.&#x20;
+If the transaction is invalid, then, depending on the error, the transaction is dropped or demoted from the TxPool. A dropped transaction assumes that its entire account is cleared and its nonce is reverted, while a demoted transaction assumes that its account is excluded from further processing during block building due to a recoverable error. Still, if an account is demoted too many times, it will be dropped instead.&#x20;
 
-If the gas limit is reached we finish the block creation. Otherwise, the process is repeated with the next transaction from the TxPool until the predefined time expires.
+If the gas limit is reached, the block creation is finished. Otherwise, the process is repeated with the next transaction from the TxPool until the predefined time expires.
 
 <figure><img src="../../.gitbook/assets/txpool_block_creation_sequence (1).png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
 
