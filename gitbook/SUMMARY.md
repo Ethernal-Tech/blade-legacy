@@ -10,7 +10,7 @@
 
 * [Components](detailed-design/components/README.md)
   * [World State](detailed-design/components/world-state.md)
-  * [Transaction Pool](detailed-design/components/transaction-pool.md)
+  * [Transaction Pool (TxPool)](detailed-design/components/transaction-pool-txpool.md)
   * [Block Creation Process](detailed-design/components/block-creation-process.md)
   * [Consensus Mechanism](detailed-design/components/consensus-mechanism/README.md)
     * [IBFT 2.0 Consensus Algorithm](detailed-design/components/consensus-mechanism/ibft-2.0-consensus-algorithm/README.md)
