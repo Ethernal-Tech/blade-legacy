@@ -40,9 +40,7 @@ The `BlockBuilder` has several methods. Below, each method is explained in seque
 
 The first method to call after creating a `BlockBuilder` is `Reset`. This method is responsible for setting all fields of the `BlockBuilder` related to the currently created block to their initial values. The set of transactions chosen for the block is set to an empty list, the header is filled with values that can be calculated at the given moment, the block reference does not exist (set to nil), while the `transition` object, using the `Executor` parameter, is created with all elements necessary for proper transaction validation and potential transition to the next state. Some of these elements include the total gas amount in the block, allow lists, currently used gas (set to 0), reference to EVM, fork-related information, initial state (the last state from the previous block), etc.
 
-<figure><img src="../../.gitbook/assets/polybft_block_creation_sequence.png" alt=""><figcaption></figcaption></figure>
-
-![Figure 2 - Sequence Diagram of Block Creation](../../.gitbook/assets/1.png)
+<figure><img src="../../.gitbook/assets/polybft_block_creation_sequence.png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
 
 ### Fill
 
