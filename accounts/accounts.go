@@ -57,12 +57,12 @@ type Wallet interface {
 }
 
 func TextHash(data []byte) []byte {
-	hash, _ := TextAndHash(data)
+	hash, _ := textAndHash(data)
 
 	return hash
 }
 
-func TextAndHash(data []byte) ([]byte, string) {
+func textAndHash(data []byte) ([]byte, string) {
 	msg := fmt.Sprintf("\x19Ethereum Signed Message:\n%d%s", len(data), data)
 	hasher := sha3.NewLegacyKeccak256()
 	hasher.Write([]byte(msg))

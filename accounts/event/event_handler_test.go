@@ -11,6 +11,8 @@ import (
 
 const (
 	topic = "testTopic"
+
+	TestEventType EventType = 0xff
 )
 
 type TestEvent struct {
@@ -47,7 +49,7 @@ func TestSubscribeAndPublish(t *testing.T) {
 func TestUnsubscribe(t *testing.T) {
 	ps := NewEventHandler()
 
-	var err error
+	var ok bool
 
 	eventChan := make(chan Event, 1)
 
@@ -58,14 +60,11 @@ func TestUnsubscribe(t *testing.T) {
 	ps.Publish(topic, TestEvent{Data: "testEvent"})
 
 	select {
-	case _, ok := <-eventChan:
-		if ok {
-			err = errors.New("expected channel to be closed")
-		}
+	case _, ok = <-eventChan:
 	default:
 	}
 
-	require.NoError(t, err)
+	require.False(t, ok, "expected channel tobe closed")
 }
 
 func TestConcurrentAccess(t *testing.T) {

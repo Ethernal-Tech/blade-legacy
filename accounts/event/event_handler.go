@@ -51,11 +51,9 @@ func (ps *EventHandler) Unsubscribe(topic string, sub <-chan Event) {
 type EventType byte
 
 const (
-	WalletEventType = 0x01
+	WalletEventType EventType = 0x01
 
-	NewBackendType = 0x02
-
-	TestEventType = 0x03
+	NewBackendType EventType = 0x02
 )
 
 type Event interface {
