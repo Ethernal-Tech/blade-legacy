@@ -33,7 +33,16 @@ The way nodes are synchronized in a network, from a communication perspective, i
 
 While the synchronous model represents the most optimal and dependable approach, its realization proves challenging in practical scenarios, particularly within distributed decentralized systems like blockchain networks. Conversely, the asynchronous model stands as unacceptable, a fact substantiated by Fischer's seminal work, "[_Impossibility of Distributed Consensus with One Faulty Process_](https://groups.csail.mit.edu/tds/papers/Lynch/jacm85.pdf)". In such contexts, achieving consensus becomes an insurmountable challenge, even with the presence of just one fail-stop node. Hence, the prevailing and pragmatic assumption is that of eventual synchronization, wherein the network becomes synchronous only after a designated point in time, known as the Global Stabilization Time (GST). IBFT 2.0, like most consensus algorithms, is based on such an assumption. For more detail on this type of synchronization please refer to the work "[_Consensus in the Presence of Partial Synchrony_](https://groups.csail.mit.edu/tds/papers/Lynch/jacm88.pdf)" by Cynthia Dwork, Nancy Lynch and Larry Stockmeyer. The following table shows the security prerequisites for different types of synchronization.
 
-![Smallest number of nodes for which t(n) - resilient consensus protocol exists                                                                                                                           ("Consensus in the Presence of Partial Synchrony", page 4 (291), table 1)](<../../../.gitbook/assets/3 (1).png>)
+
+
+Table - Smallest number of nodes for which t(n) - resilient consensus protocol exists                                                                                                                           ("_Consensus in the Presence of Partial Synchrony_", page 4 (291), table 1)
+
+| Failure Type           | Sync | Async | Partially Sync Communication and Sync Processors | Partially Sync Communication and Processors | Partially Sync Processors and Sync Communication |
+| ---------------------- | ---- | ----- | ------------------------------------------------ | ------------------------------------------- | ------------------------------------------------ |
+| Fail-stop              | t    | ∞     | 2t+1                                             | 2t+1                                        | t                                                |
+| Omission               | t    | ∞     | 2t+1                                             | 2t+1                                        | \[2t, 2t+1]                                      |
+| Authenticate Byzantine | t    | ∞     | 3t+1                                             | 3t+1                                        | 2t+1                                             |
+| Byzantine              | 3t+1 | ∞     | 3t+1                                             | 3t+1                                        | 3t+1                                             |
 
 ## Immediate Finality
 
