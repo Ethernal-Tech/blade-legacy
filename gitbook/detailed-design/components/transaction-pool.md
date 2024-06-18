@@ -27,7 +27,7 @@ TxPool fields:
 * **`chainID`** - chain id,
 * **`localPeerID`** - localPeerID is the peer ID of the local node that is running the TxPool.
 
-Exported TxPool functions:
+Some of the main TxPool functions include:
 
 * **`NewTxPool` **_**-**_ NewTxPool creates and returns a new pool for processing incoming transactions,
 * **`Start`** _-_ runs the pool's main loop in the background.  On each request received, the appropriate handler is invoked in a separate goroutine,
@@ -49,13 +49,22 @@ Every node has a single instance of `TxPool` in-memory structure, which is creat
 
 <figure><img src="../../.gitbook/assets/txpool_instantiation_sequence.png" alt=""><figcaption></figcaption></figure>
 
-### 1.3 Kreiranje bloka i upotreba TXpool-a <a href="#id-5qvuftlg7knu" id="id-5qvuftlg7knu"></a>
+### Block Creation <a href="#id-5qvuftlg7knu" id="id-5qvuftlg7knu"></a>
 
-Tokom kreiranja bloka txpool dobija na značaju sa pozivom metode _**Fill**_. Odnosno pri ovom pozivu, _**Fill**_ metode, txpool komponenta, koja je zadužena za transakcije, validira jednu po jednu transakciju i validne stavlja u listu izabranih transakcija. Ove transakcije u ovom trenutku nisu u bloku nego su u listi izabranih za dati blok. Pomenuti algoritam se završava kada istekne predefinisani tajmer za kreiranje bloka, ili ako se potrosi sav predefinisani gas za odobrene transakcije.
+`BlockBuilder`'s `Fill` method uses `TxPool` to fill the block with transactions taken from the`TxPool`. Each transaction is validated one by one and valid transactions are added to the`BlockBuilder`'s list of transactions. Transactions are validated until a predefined timer (for block creation) expires or a predefined gas (for prepared transactions) is spent.
 
-Samim pozivom _**Fill**_ metode instancira se tajmer za trajanje kreitanja bloka i poziva se metoda _**Prepare**_. U okviru _**Prepare**_ metode se vrši priprema transakcija tako što se sortiraju po naknadi (transakcije koje su skuplje idu pre). Nakon ovog pokreće se beskonačna for petlja gde se na početku pozove Peek metoda kojom se uzima jedna transakcija koja se potom validira i ako je sve uredno transakcija se beleži u listu odabranih i menja se stanje bloka. Na samom kraju ove iteracije u okviru petlje, ako je sve prošlo uredno, sledi poziv _**Pop**_ metode kojom se uklanja transakcija iz skupa transakcija i sve strukture accounta se srede, i petlja ide u sledeću iteraciju… U slučaju da je neka transakcija loša, proces kreiranja bloka se ne prekida, transakcija se označava kao loša, i account se brise ili degradira (degradirani account se brise ako je dostigao maksimalan broj degradacija) zavisno da li je greska opravljiva ili ne…
+_Block Creation Sequence Diagram_ gives detail overview of block creation actions. `BlockBuilder`'s is in charge of&#x20;
 
-<figure><img src="../../.gitbook/assets/txpool_block_creation_sequence.png" alt=""><figcaption></figcaption></figure>
+* creating a block timer which limits the time interval allowed for the block creation, and
+* preparing transactions in TxPool,  where all transactions ready for execution are sorted descending by best-price (i.e. transaction fee) giving an advantage to more expensive ones.
+
+After the block timer is set and transactions are prepared, transactions are taken from the TxPool and checked for their validity during transaction write process. The process adds a valid transaction to the block and removes it from the TXPool.&#x20;
+
+If the transaction is invalid then, depending on the error, the transaction is dropped or demoted from the TxPool. A dropped transaction assumes that its entire account is cleared its nonce is reverted, while a demoted transaction assumes that its account is excluded from further processing during block building due to an recoverable error . Still, if an account is demoted too many times it becomes dropped instead.&#x20;
+
+If the gas limit is reached we finish the block creation. Otherwise, the process is repeated with the next transaction from the TxPool until the predefined time expires.
+
+<figure><img src="../../.gitbook/assets/txpool_block_creation_sequence (1).png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
 
 ### 1.4 Dodavanje transakcija u txPool <a href="#n6hacokagz2u" id="n6hacokagz2u"></a>
 
@@ -92,4 +101,4 @@ Ako prethodne validacije nisu ispunjene vraća se odgovarajuća error poruka, a 
 * Bacanje eventa da je dodata transakcija u txpool
 * Nakon ovog sledi publish transakcija kroz mreu na druge nodove (ako node ima mogućnost da salje transakcije kroz mrežu), Drugi nodovi su pretplaceni na ove transakcije kroz metodu addGossipTx kroz koju dodaju kod sebe transakciju za u txpoool.
 
-<figure><img src="../../.gitbook/assets/txpool_add_tx_sequence.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/txpool_add_tx_sequence (1).png" alt=""><figcaption></figcaption></figure>

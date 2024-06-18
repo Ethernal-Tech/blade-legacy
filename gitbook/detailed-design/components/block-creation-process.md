@@ -6,9 +6,9 @@ description: >-
 
 # Block Creation Process
 
-Block creation is the essence of the blockchain system. The following figure shows all the components involved in the process:
+Block creation is the essence of the blockchain system. The following figure shows all the components involved in the process (for clarity reasons, some fields and functions in structures are omitted):
 
-![Figure 2 - Elements of the Block Creation Process](../../.gitbook/assets/0.png)
+<figure><img src="../../.gitbook/assets/polybft_block_creation (1).png" alt=""><figcaption><p>Elements of the Block Creation Process</p></figcaption></figure>
 
 The `BlockBuilder` represents one of the most important components of the system, which, as the name suggests, enables the creation of a block. This component possesses specific configuration parameters (`BlockBuilderParams`), whose values are set during its instantiation by calling the `NewBlockBuilder` method. The key parameters and their meanings are outlined below:
 
@@ -39,6 +39,8 @@ The `BlockBuilder` has several methods. Below, each method is explained in seque
 ### `Reset`&#x20;
 
 The first method to call after creating a `BlockBuilder` is `Reset`. This method is responsible for setting all fields of the `BlockBuilder` related to the currently created block to their initial values. The set of transactions chosen for the block is set to an empty list, the header is filled with values that can be calculated at the given moment, the block reference does not exist (set to nil), while the `transition` object, using the `Executor` parameter, is created with all elements necessary for proper transaction validation and potential transition to the next state. Some of these elements include the total gas amount in the block, allow lists, currently used gas (set to 0), reference to EVM, fork-related information, initial state (the last state from the previous block), etc.
+
+<figure><img src="../../.gitbook/assets/polybft_block_creation_sequence.png" alt=""><figcaption></figcaption></figure>
 
 ![Figure 2 - Sequence Diagram of Block Creation](../../.gitbook/assets/1.png)
 
