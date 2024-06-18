@@ -98,37 +98,48 @@ func TestConcurrentAccess(t *testing.T) {
 }
 
 func TestMultipleSubscribers(t *testing.T) {
+	const subscribers = 2
+
+	var (
+		channels [subscribers]chan Event
+		received byte
+		err      error
+	)
+
 	ps := NewEventHandler()
 
-	var err error
-
-	eventChan1 := make(chan Event, 1)
-
-	eventChan2 := make(chan Event, 1)
-
-	ps.Subscribe(topic, eventChan1)
-
-	ps.Subscribe(topic, eventChan2)
+	for i := 0; i < subscribers; i++ {
+		channels[i] = make(chan Event, 1)
+		ps.Subscribe(topic, channels[i])
+	}
 
 	event := TestEvent{Data: "testEvent"}
 
 	ps.Publish(topic, event)
 
-	select {
-	case receivedEvent := <-eventChan1:
-		require.Equal(t, event, receivedEvent)
-	case <-time.After(1 * time.Second):
-		err = errors.New("did not receive event on eventChan1")
-	}
+	for {
+		var receivedEvent Event
 
-	require.NoError(t, err)
+		select {
+		case receivedEvent = <-channels[0]:
+			received |= 0x01
+		case receivedEvent = <-channels[1]:
+			received |= 0x02
+		case <-time.After(1 * time.Second):
+			err = errors.New("did not receive event on eventChan1")
+		}
 
-	select {
-	case receivedEvent := <-eventChan2:
+		if err != nil {
+			break
+		}
+
 		require.Equal(t, event, receivedEvent)
-	case <-time.After(1 * time.Second):
-		err = errors.New("did not receive event on eventChan2")
+
+		if received == 0x03 {
+			break
+		}
 	}
 
 	require.NoError(t, err)
 }
+
