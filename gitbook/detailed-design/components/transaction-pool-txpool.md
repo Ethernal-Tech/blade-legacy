@@ -109,4 +109,4 @@ When a validation fails, an appropriate error is raised, and the transaction is 
 * <mark style="color:red;">a promotion event is raised when the transaction nonce is less than or equal to the account nonce.</mark>
 * later, transactions are published to other nodes through the network (assuming that a node has the ability to send transactions and subscriptions are present). Network nodes handle received transactions through `TxPool`'s `addGossipTx` handler method, where they add transactions to their pool.&#x20;
 
-<figure><img src="../../.gitbook/assets/txpool_add_tx_sequence (2).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/txpool_add_tx_sequence (2).png" alt=""><figcaption><p>Adding Transaction to TxPool Sequence Diagram</p></figcaption></figure>
