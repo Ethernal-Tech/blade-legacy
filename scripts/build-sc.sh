@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BRANCH=main # optimization-chain-registration
+BRANCH=feat/apex-226-batcher-proposer # optimization-chain-registration
 
 cd ./apex-bridge-smartcontracts
 git checkout main

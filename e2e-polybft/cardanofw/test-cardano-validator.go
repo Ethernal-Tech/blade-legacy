@@ -100,7 +100,6 @@ func (cv *TestCardanoValidator) RegisterChain(
 	multisigAddr string,
 	multisigFeeAddr string,
 	tokenSupply *big.Int,
-	ogmiosURL string,
 ) error {
 	return RunCommand(ResolveApexBridgeBinary(), []string{
 		"register-chain",
@@ -110,7 +109,6 @@ func (cv *TestCardanoValidator) RegisterChain(
 		"--addr", multisigAddr,
 		"--addr-fee", multisigFeeAddr,
 		"--token-supply", fmt.Sprint(tokenSupply),
-		"--ogmios", ogmiosURL,
 		"--bridge-url", cv.server.JSONRPCAddr(),
 		"--bridge-addr", BridgeSCAddr,
 	}, os.Stdout)

@@ -11,7 +11,6 @@ var (
 	Claims        *contracts.Artifact
 	SignedBatches *contracts.Artifact
 	Slots         *contracts.Artifact
-	UTXOsc        *contracts.Artifact
 	Validators    *contracts.Artifact
 )
 
@@ -21,7 +20,6 @@ func initApexContracts() (
 	claims *contracts.Artifact,
 	signedBatches *contracts.Artifact,
 	slots *contracts.Artifact,
-	utxosc *contracts.Artifact,
 	validators *contracts.Artifact,
 	err error) {
 	bridge, err = contracts.DecodeArtifact([]byte(BridgeArtifact))
@@ -45,11 +43,6 @@ func initApexContracts() (
 	}
 
 	slots, err = contracts.DecodeArtifact([]byte(SlotsArtifact))
-	if err != nil {
-		return
-	}
-
-	utxosc, err = contracts.DecodeArtifact([]byte(UTXOscArtifact))
 	if err != nil {
 		return
 	}

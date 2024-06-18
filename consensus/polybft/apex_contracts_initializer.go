@@ -48,10 +48,6 @@ func initApex(transition *state.Transition, admin types.Address,
 		return err
 	}
 
-	if err = initUTXOsc(transition); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -120,11 +116,9 @@ func getDataForApexContract(contract types.Address, polyBFTConfig PolyBFTConfig)
 			MaxNumberOfTransactions: maxNumberOfTransactions,
 			TimeoutBlocksNumber:     timeoutBlocksNumber,
 		}).EncodeAbi()
-	case contracts.UTXOsc:
-		return (&contractsapi.InitializeUTXOscFn{}).EncodeAbi()
+	default:
+		return nil, fmt.Errorf("no contract defined at address %v", contract)
 	}
-
-	return nil, fmt.Errorf("no contract defined at address %v", contract)
 }
 
 // Apex smart contracts initialization
@@ -135,7 +129,6 @@ func initBridge(transition *state.Transition) error {
 		ClaimsAddress:        contracts.Claims,
 		SignedBatchesAddress: contracts.SignedBatches,
 		SlotsAddress:         contracts.Slots,
-		UtxoscAddress:        contracts.UTXOsc,
 		ValidatorsAddress:    contracts.Validators,
 	}
 
@@ -217,7 +210,6 @@ func initClaims(transition *state.Transition) error {
 	setDependenciesFn := &contractsapi.SetDependenciesClaimsFn{
 		BridgeAddress:       contracts.Bridge,
 		ClaimsHelperAddress: contracts.ClaimsHelper,
-		Utxosc:              contracts.UTXOsc,
 		ValidatorsAddress:   contracts.Validators,
 	}
 
@@ -228,20 +220,4 @@ func initClaims(transition *state.Transition) error {
 
 	return callContract(contracts.SystemCaller,
 		contracts.Claims, input, "Claims.setDependencies", transition)
-}
-
-// initUTXOsc initializes UTXOsc SC
-func initUTXOsc(transition *state.Transition) error {
-	setDependenciesFn := &contractsapi.SetDependenciesUTXOscFn{
-		BridgeAddress: contracts.Bridge,
-		ClaimsAddress: contracts.Claims,
-	}
-
-	input, err := setDependenciesFn.EncodeAbi()
-	if err != nil {
-		return fmt.Errorf("UTXOsc.setDependencies params encoding failed: %w", err)
-	}
-
-	return callContract(contracts.SystemCaller,
-		contracts.UTXOsc, input, "UTXOsc.setDependencies", transition)
 }

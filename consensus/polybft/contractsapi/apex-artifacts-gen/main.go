@@ -54,10 +54,6 @@ package contractsapi
 			"Slots",
 		},
 		{
-			"UTXOsc.sol",
-			"UTXOsc",
-		},
-		{
 			"Validators.sol",
 			"Validators",
 		},

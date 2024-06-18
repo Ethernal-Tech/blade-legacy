@@ -349,7 +349,7 @@ func init() {
 	}
 
 	// Apex contracts
-	Bridge, ClaimsHelper, Claims, SignedBatches, Slots, UTXOsc, Validators, err = initApexContracts()
+	Bridge, ClaimsHelper, Claims, SignedBatches, Slots, Validators, err = initApexContracts()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -412,7 +412,6 @@ func init() {
 		"Claims":                          Claims,
 		"SignedBatches":                   SignedBatches,
 		"Slots":                           Slots,
-		"UTXOsc":                          UTXOsc,
 		"Validators":                      Validators,
 		"TestCardanoVerifySignature":      TestCardanoVerifySign,
 	}

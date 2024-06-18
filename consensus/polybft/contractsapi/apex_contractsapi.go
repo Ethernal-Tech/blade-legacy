@@ -24,7 +24,6 @@ type SetDependenciesBridgeFn struct {
 	ClaimsAddress        types.Address `abi:"_claimsAddress"`
 	SignedBatchesAddress types.Address `abi:"_signedBatchesAddress"`
 	SlotsAddress         types.Address `abi:"_slotsAddress"`
-	UtxoscAddress        types.Address `abi:"_utxoscAddress"`
 	ValidatorsAddress    types.Address `abi:"_validatorsAddress"`
 }
 
@@ -92,7 +91,6 @@ func (i *InitializeClaimsFn) DecodeAbi(buf []byte) error {
 type SetDependenciesClaimsFn struct {
 	BridgeAddress       types.Address `abi:"_bridgeAddress"`
 	ClaimsHelperAddress types.Address `abi:"_claimsHelperAddress"`
-	Utxosc              types.Address `abi:"_utxosc"`
 	ValidatorsAddress   types.Address `abi:"_validatorsAddress"`
 }
 
@@ -171,38 +169,6 @@ func (s *SetDependenciesSlotsFn) EncodeAbi() ([]byte, error) {
 
 func (s *SetDependenciesSlotsFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(Slots.Abi.Methods["setDependencies"], buf, s)
-}
-
-type InitializeUTXOscFn struct {
-}
-
-func (i *InitializeUTXOscFn) Sig() []byte {
-	return UTXOsc.Abi.Methods["initialize"].ID()
-}
-
-func (i *InitializeUTXOscFn) EncodeAbi() ([]byte, error) {
-	return UTXOsc.Abi.Methods["initialize"].Encode(i)
-}
-
-func (i *InitializeUTXOscFn) DecodeAbi(buf []byte) error {
-	return decodeMethod(UTXOsc.Abi.Methods["initialize"], buf, i)
-}
-
-type SetDependenciesUTXOscFn struct {
-	BridgeAddress types.Address `abi:"_bridgeAddress"`
-	ClaimsAddress types.Address `abi:"_claimsAddress"`
-}
-
-func (s *SetDependenciesUTXOscFn) Sig() []byte {
-	return UTXOsc.Abi.Methods["setDependencies"].ID()
-}
-
-func (s *SetDependenciesUTXOscFn) EncodeAbi() ([]byte, error) {
-	return UTXOsc.Abi.Methods["setDependencies"].Encode(s)
-}
-
-func (s *SetDependenciesUTXOscFn) DecodeAbi(buf []byte) error {
-	return decodeMethod(UTXOsc.Abi.Methods["setDependencies"], buf, s)
 }
 
 type InitializeValidatorsFn struct {

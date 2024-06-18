@@ -37,10 +37,6 @@ func getApexContracts() []*contractInfo {
 			address:  contracts.SlotsAddr,
 		},
 		{
-			artifact: contractsapi.UTXOsc,
-			address:  contracts.UTXOscAddr,
-		},
-		{
 			artifact: contractsapi.Validators,
 			address:  contracts.ValidatorsAddr,
 		},

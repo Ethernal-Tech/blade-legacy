@@ -25,13 +25,9 @@ var (
 	Slots     = types.StringToAddress("0xABEF000000000000000000000000000000000004")
 	SlotsAddr = types.StringToAddress("0xABEF000000000000000000000000000000000014")
 
-	// Address of UTXOsc proxy
-	UTXOsc     = types.StringToAddress("0xABEF000000000000000000000000000000000005")
-	UTXOscAddr = types.StringToAddress("0xABEF000000000000000000000000000000000015")
-
 	// Address of Validators proxy
-	Validators     = types.StringToAddress("0xABEF000000000000000000000000000000000006")
-	ValidatorsAddr = types.StringToAddress("0xABEF000000000000000000000000000000000016")
+	Validators     = types.StringToAddress("0xABEF000000000000000000000000000000000005")
+	ValidatorsAddr = types.StringToAddress("0xABEF000000000000000000000000000000000015")
 )
 
 func GetApexProxyImplementationMapping() map[types.Address]types.Address {
@@ -41,7 +37,6 @@ func GetApexProxyImplementationMapping() map[types.Address]types.Address {
 		Claims:        ClaimsAddr,
 		SignedBatches: SignedBatchesAddr,
 		Slots:         SlotsAddr,
-		UTXOsc:        UTXOscAddr,
 		Validators:    ValidatorsAddr,
 	}
 }

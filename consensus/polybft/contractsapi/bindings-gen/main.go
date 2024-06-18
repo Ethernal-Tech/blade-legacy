@@ -618,16 +618,6 @@ import (
 			[]string{},
 		},
 		{
-			"UTXOsc",
-			gensc.UTXOsc,
-			false,
-			[]string{
-				"initialize",
-				"setDependencies",
-			},
-			[]string{},
-		},
-		{
 			"Validators",
 			gensc.Validators,
 			false,
