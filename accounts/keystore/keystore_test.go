@@ -220,7 +220,7 @@ func TestWalletNotifications(t *testing.T) {
 
 	// Subscribe to the wallet feed and collect events.
 	var (
-		events  []walletEvent
+		events  = make([]walletEvent, 0)
 		updates = make(chan event.Event)
 		end     = make(chan interface{})
 	)
@@ -245,7 +245,7 @@ func TestWalletNotifications(t *testing.T) {
 	// Randomly add and remove accounts.
 	var (
 		live       = make(map[types.Address]accounts.Account)
-		wantEvents []walletEvent
+		wantEvents = make([]walletEvent, 0)
 	)
 
 	for i := 0; i < 1024; i++ {
