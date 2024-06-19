@@ -134,6 +134,7 @@ func TestMultipleSubscribers(t *testing.T) {
 		}
 
 		require.Equal(t, event, receivedEvent)
+
 		if received == 0x03 {
 			break
 		}
