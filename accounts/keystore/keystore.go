@@ -5,7 +5,6 @@ import (
 	"errors"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"sync"
 	"time"
 
@@ -30,15 +29,11 @@ var (
 
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
 
-// Maximum time between wallet refreshes (if filesystem notifications don't work).
-const walletRefreshCycle = 3 * time.Second
-
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
-	storage  keyStore                    // Storage backend, might be cleartext or encrypted
-	cache    *accountCache               // In-memory account cache over the filesystem storage
-	changes  chan struct{}               // Channel receiving change notifications from the cache
-	unlocked map[types.Address]*unlocked // Currently unlocked account (decrypted private keys)
+	keyEncryption keyStore                    // Storage backend, might be cleartext or encrypted
+	cache         *accountCache               // In-memory account cache over the filesystem storage
+	unlocked      map[types.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
 	wallets      []accounts.Wallet // Wrapper around keys
 	eventHandler *event.EventHandler
@@ -54,7 +49,7 @@ type unlocked struct {
 }
 
 func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
-	ks := &KeyStore{storage: &keyStorePassphrase{scryptN, scryptP}}
+	ks := &KeyStore{keyEncryption: &keyStorePassphrase{scryptN, scryptP}}
 
 	ks.init(keyDir, logger)
 
@@ -63,11 +58,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyS
 
 func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
 	ks.unlocked = make(map[types.Address]*unlocked)
-	ks.cache, ks.changes = newAccountCache(keyDir, logger)
-
-	runtime.SetFinalizer(ks, func(m *KeyStore) {
-		m.cache.close()
-	})
+	ks.cache = newAccountCache(keyDir, logger)
 
 	accs := ks.cache.accounts()
 	ks.wallets = make([]accounts.Wallet, len(accs))
@@ -75,14 +66,9 @@ func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
 	for i := 0; i < len(accs); i++ {
 		ks.wallets[i] = &keyStoreWallet{account: accs[i], keyStore: ks}
 	}
-
-	go ks.updater()
 }
 
 func (ks *KeyStore) Wallets() []accounts.Wallet {
-	// Make sure the list of wallets is in sync with the account cache
-	ks.refreshWallets()
-
 	ks.mu.RLock()
 	defer ks.mu.RUnlock()
 
@@ -99,79 +85,11 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	clear(b)
 }
 
-func (ks *KeyStore) refreshWallets() {
-	accs := ks.cache.accounts()
-
-	var (
-		wallets = make([]accounts.Wallet, 0, len(accs))
-		events  []accounts.WalletEvent
-		find    bool
-	)
-
-	ks.mu.Lock()
-	defer ks.mu.Unlock()
-
-	for _, account := range accs {
-		find = false
-
-		for _, wallet := range ks.wallets {
-			if wallet.Accounts()[0] == account {
-				wallets = append(wallets, wallet)
-				find = true
-
-				break
-			}
-		}
-
-		if !find {
-			wallet := &keyStoreWallet{account: account, keyStore: ks}
-			wallets = append(wallets, wallet)
-
-			events = append(events, accounts.WalletEvent{Wallet: wallet, Kind: accounts.WalletArrived})
-		}
-	}
-
-	for _, oldWallet := range ks.wallets {
-		find = false
-
-		for _, newWallet := range wallets {
-			if newWallet == oldWallet {
-				find = true
-
-				break
-			}
-		}
-
-		if !find {
-			events = append(events, accounts.WalletEvent{Wallet: oldWallet, Kind: accounts.WalletDropped})
-		}
-	}
-
-	ks.wallets = wallets
-
-	if ks.eventHandler != nil {
-		for _, event := range events {
-			ks.eventHandler.Publish(accounts.WalletEventKey, event)
-		}
-	}
-}
-
 func (ks *KeyStore) SetEventHandler(eventHandler *event.EventHandler) {
 	ks.mu.Lock()
 	defer ks.mu.Unlock()
 
 	ks.eventHandler = eventHandler
-}
-
-func (ks *KeyStore) updater() {
-	for {
-		select {
-		case <-ks.changes:
-		case <-time.After(walletRefreshCycle):
-		}
-
-		ks.refreshWallets()
-	}
 }
 
 func (ks *KeyStore) HasAddress(addr types.Address) bool {
@@ -199,7 +117,17 @@ func (ks *KeyStore) Delete(a accounts.Account, passphrase string) error {
 		return err
 	}
 
-	ks.refreshWallets()
+	for i, wallet := range ks.wallets {
+		if wallet.Accounts()[0].Address == a.Address {
+			ks.wallets = append(ks.wallets[:i], ks.wallets[i+1:]...)
+
+			break
+		}
+	}
+
+	event := accounts.WalletEvent{Wallet: &keyStoreWallet{account: a, keyStore: ks}, Kind: accounts.WalletDropped}
+
+	ks.eventHandler.Publish(accounts.WalletEventKey, event)
 
 	return nil
 }
@@ -336,13 +264,13 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 		return a, nil, err
 	}
 
-	key, err := ks.storage.KeyDecryption(encryptedKeyJSONV3, auth)
+	key, err := ks.keyEncryption.KeyDecryption(encryptedKeyJSONV3, auth)
 
 	return a, key, err
 }
 
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	encryptedKey, account, err := storeNewKey(ks.storage, passphrase)
+	encryptedKey, account, err := storeNewKey(ks.keyEncryption, passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -351,7 +279,11 @@ func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
 		return accounts.Account{}, err
 	}
 
-	ks.refreshWallets()
+	ks.wallets = append(ks.wallets, &keyStoreWallet{account: account, keyStore: ks})
+
+	event := accounts.WalletEvent{Wallet: &keyStoreWallet{account: account, keyStore: ks}, Kind: accounts.WalletArrived}
+
+	ks.eventHandler.Publish(accounts.WalletEventKey, event)
 
 	return account, nil
 }
@@ -370,7 +302,7 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
 	a := accounts.Account{Address: key.Address}
 
-	encryptedKeyJSONV3, err := ks.storage.KeyEncryption(key, passphrase)
+	encryptedKeyJSONV3, err := ks.keyEncryption.KeyEncryption(key, passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -379,7 +311,11 @@ func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, er
 		return accounts.Account{}, err
 	}
 
-	ks.refreshWallets()
+	ks.wallets = append(ks.wallets, &keyStoreWallet{account: a, keyStore: ks})
+
+	event := accounts.WalletEvent{Wallet: &keyStoreWallet{account: a, keyStore: ks}, Kind: accounts.WalletArrived}
+
+	ks.eventHandler.Publish(accounts.WalletEventKey, event)
 
 	return a, nil
 }
@@ -390,7 +326,7 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 		return err
 	}
 
-	encryptedKey, err := ks.storage.KeyEncryption(key, newPassphrase)
+	encryptedKey, err := ks.keyEncryption.KeyEncryption(key, newPassphrase)
 	if err != nil {
 		return err
 	}

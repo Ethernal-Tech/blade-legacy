@@ -175,13 +175,15 @@ func TestSignRace(t *testing.T) {
 	t.Parallel()
 	_, ks := tmpKeyStore(t)
 
+	pass := ""
+
 	// Create a test account.
 	a1, err := ks.NewAccount(pass)
 	if err != nil {
 		t.Fatal("could not create the test account", err)
 	}
 
-	if err := ks.TimedUnlock(a1, "", 15*time.Millisecond); err != nil {
+	if err := ks.TimedUnlock(a1, pass, 15*time.Millisecond); err != nil {
 		t.Fatal("could not unlock the test account", err)
 	}
 

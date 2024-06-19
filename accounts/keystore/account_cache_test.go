@@ -32,7 +32,7 @@ var (
 func TestCacheInitialReload(t *testing.T) {
 	t.Parallel()
 
-	cache, _ := newAccountCache(cachetestDir, hclog.NewNullLogger())
+	cache := newAccountCache(cachetestDir, hclog.NewNullLogger())
 	accs := cache.accounts()
 
 	require.Equal(t, 3, len(accs))
@@ -51,7 +51,7 @@ func TestCacheAddDelete(t *testing.T) {
 
 	tDir := t.TempDir()
 
-	cache, _ := newAccountCache(tDir, hclog.NewNullLogger())
+	cache := newAccountCache(tDir, hclog.NewNullLogger())
 
 	accs := []accounts.Account{
 		{
@@ -126,7 +126,7 @@ func TestCacheFind(t *testing.T) {
 
 	dir := t.TempDir()
 
-	cache, _ := newAccountCache(dir, hclog.NewNullLogger())
+	cache := newAccountCache(dir, hclog.NewNullLogger())
 
 	accs := []accounts.Account{
 		{
@@ -185,7 +185,7 @@ func TestCacheUpdate(t *testing.T) {
 
 	keyDir := t.TempDir()
 
-	accountCache, _ := newAccountCache(keyDir, hclog.NewNullLogger())
+	accountCache := newAccountCache(keyDir, hclog.NewNullLogger())
 
 	list := accountCache.accounts()
 	if len(list) > 0 {

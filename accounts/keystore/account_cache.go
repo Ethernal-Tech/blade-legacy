@@ -7,7 +7,6 @@ import (
 	"os"
 	"path"
 	"sync"
-	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -17,26 +16,23 @@ import (
 
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
-	logger   hclog.Logger
-	keyDir   string
-	mu       sync.Mutex
-	allMap   map[types.Address]encryptedKeyJSONV3
-	throttle *time.Timer
-	notify   chan struct{}
+	logger hclog.Logger
+	keyDir string
+	mu     sync.Mutex
+	allMap map[types.Address]encryptedKeyJSONV3
 }
 
-func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan struct{}) {
+func newAccountCache(keyDir string, logger hclog.Logger) *accountCache {
 	ac := &accountCache{
 		logger: logger,
 		keyDir: keyDir,
-		notify: make(chan struct{}, 1),
 		allMap: make(map[types.Address]encryptedKeyJSONV3),
 	}
 
 	if err := common.CreateDirSafe(keyDir, 0700); err != nil {
 		ac.logger.Error("can't create dir", "err", err)
 
-		return nil, nil
+		return nil
 	}
 
 	keysPath := path.Join(keyDir, "keys.txt")
@@ -47,13 +43,13 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 		if _, err := os.Create(keysPath); err != nil {
 			ac.logger.Error("can't create new file", "err", err)
 
-			return nil, nil
+			return nil
 		}
 	}
 
 	ac.scanAccounts() //nolint:errcheck
 
-	return ac, ac.notify
+	return ac
 }
 
 func (ac *accountCache) accounts() []accounts.Account {
@@ -153,20 +149,6 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKey
 	return accounts.Account{}, encryptedKeyJSONV3{}, accounts.ErrNoMatch
 }
 
-func (ac *accountCache) close() {
-	ac.mu.Lock()
-	defer ac.mu.Unlock()
-
-	if ac.throttle != nil {
-		ac.throttle.Stop()
-	}
-
-	if ac.notify != nil {
-		close(ac.notify)
-		ac.notify = nil
-	}
-}
-
 // scanAccounts refresh data of  account map
 func (ac *accountCache) scanAccounts() error {
 	ac.mu.Lock()
@@ -185,10 +167,6 @@ func (ac *accountCache) scanAccounts() error {
 		ac.allMap[addr] = key
 	}
 
-	select {
-	case ac.notify <- struct{}{}:
-	default:
-	}
 	ac.logger.Trace("Handled keystore changes")
 
 	return nil
