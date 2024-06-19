@@ -75,7 +75,7 @@ The following discussion outlines the process that unfolds in the case when an a
 
 When the timer for the current round expires (regardless of the round number), the transition to the next round occurs. Upon starting the timer and, by that, initiating the round, the `acceptedPB`, `commitSent` and `finalisedBlockSend` variables are reset to their initial values. However, `latestPC` and `latestPreparedProposedBlock` retain their values because their role is to indicate the last round when the given validator was in the prepare phase, and thus when the network, from his perspective, was last ready to accept the proposal, but it did not happen. After the preceding is carried out, the validator broadcasts a `<<ROUND-CHANGE>>` message, which, among other things, includes its current round (like any other), `latestPC`, and `latestPreparedProposedBlock`.
 
-![ Move to the Next Round - Validators' Behavior](<../../../../.gitbook/assets/9 (1).png>)
+<figure><img src="../../../../.gitbook/assets/system_architecture-next round.drawio (1).svg" alt=""><figcaption><p> Move to the Next Round - Validators' Behavior</p></figcaption></figure>
 
 For the validator to continue its execution, it is necessary to receive at least a quorum of valid `<<ROUND-CHANGE>>` messages for any given round. This signifies that a sufficient number (at least a quorum) of validators are willing to transition to that round.&#x20;
 
@@ -87,7 +87,7 @@ If, following the transition, a validator becomes the proposer for that round, i
 
 Subsequently, the validator opts for the block from that certificate to serve as the proposal. In case that all certificates are empty, the validator generates an entirely new block, akin to the process in the zeroth round. Ultimately, the proposed block is broadcasted using a `<<PROPOSAL>>` message, employing the same method as in the zeroth round, with the additional inclusion of the provided RCC.
 
-![Pre-prepare Phase in Higher Rounds - Validators' Behavior](<../../../../.gitbook/assets/10 (1).png>)
+<figure><img src="../../../../.gitbook/assets/system_architecture-pre-prepare higher.drawio.svg" alt=""><figcaption><p>Pre-prepare Phase in Higher Rounds - Validators' Behavior</p></figcaption></figure>
 
 If a validator receives a `<<PROPOSAL>>` message for a round greater than its current round or the same one (greater than 0), and no proposal has been accepted yet (`acceptedPB` = ⊥), the validator initiates various checks. The most crucial ones involve:
 
