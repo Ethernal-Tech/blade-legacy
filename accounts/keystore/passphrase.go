@@ -3,6 +3,7 @@ package keystore
 import (
 	"bytes"
 	"crypto/aes"
+	"crypto/cipher"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
@@ -43,12 +44,9 @@ const (
 type keyStorePassphrase struct {
 	scryptN int
 	scryptP int
-	// skipKeyFileVerification disables the security-feature which does
-	// reads and decrypts any newly created keyfiles. This should be 'false' in all
-	// cases except tests -- setting this to 'true' is not recommended.
 }
 
-func (ks keyStorePassphrase) GetKey(encryptedKey encryptedKeyJSONV3, auth string) (*Key, error) {
+func (ks keyStorePassphrase) KeyDecryption(encryptedKey encryptedKeyJSONV3, auth string) (*Key, error) {
 	key, err := DecryptKey(encryptedKey, auth)
 	if err != nil {
 		return nil, err
@@ -61,7 +59,7 @@ func (ks keyStorePassphrase) GetKey(encryptedKey encryptedKeyJSONV3, auth string
 	return key, nil
 }
 
-func (ks keyStorePassphrase) StoreKey(key *Key, auth string) (encryptedKeyJSONV3, error) {
+func (ks keyStorePassphrase) KeyEncryption(key *Key, auth string) (encryptedKeyJSONV3, error) {
 	encryptedKey, err := EncryptKey(key, auth, ks.scryptN, ks.scryptP)
 	if err != nil {
 		return encryptedKeyJSONV3{}, err
@@ -264,4 +262,18 @@ func ensureInt(x interface{}) int {
 	}
 
 	return res
+}
+
+func aesCTRXOR(key, inText, iv []byte) ([]byte, error) {
+	// AES-128 is selected due to size of encryptKey.
+	aesBlock, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+
+	stream := cipher.NewCTR(aesBlock, iv)
+	outText := make([]byte, len(inText))
+	stream.XORKeyStream(outText, inText)
+
+	return outText, err
 }

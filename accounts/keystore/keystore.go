@@ -336,7 +336,7 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 		return a, nil, err
 	}
 
-	key, err := ks.storage.GetKey(encryptedKeyJSONV3, auth)
+	key, err := ks.storage.KeyDecryption(encryptedKeyJSONV3, auth)
 
 	return a, key, err
 }
@@ -370,7 +370,7 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
 	a := accounts.Account{Address: key.Address}
 
-	encryptedKeyJSONV3, err := ks.storage.StoreKey(key, passphrase)
+	encryptedKeyJSONV3, err := ks.storage.KeyEncryption(key, passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -390,27 +390,12 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 		return err
 	}
 
-	encryptedKey, err := ks.storage.StoreKey(key, newPassphrase)
+	encryptedKey, err := ks.storage.KeyEncryption(key, newPassphrase)
 	if err != nil {
 		return err
 	}
 
 	return ks.cache.update(a, encryptedKey)
-}
-
-func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (accounts.Account, error) {
-	a, encryptedKey, err := importPreSaleKey(ks.storage, keyJSON, passphrase)
-	if err != nil {
-		return a, err
-	}
-
-	if err := ks.cache.add(a, encryptedKey); err != nil {
-		return accounts.Account{}, err
-	}
-
-	ks.refreshWallets()
-
-	return a, nil
 }
 
 func (ks *KeyStore) SetManager(manager accounts.BackendManager) {

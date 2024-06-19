@@ -25,10 +25,10 @@ type Key struct {
 }
 
 type keyStore interface {
-	// Loads and decrypts the key from disk.
-	GetKey(encryptedKey encryptedKeyJSONV3, auth string) (*Key, error)
-	// Writes and encrypts the key.
-	StoreKey(k *Key, auth string) (encryptedKeyJSONV3, error)
+	// decrypts key and return non crypted key
+	KeyDecryption(encryptedKey encryptedKeyJSONV3, auth string) (*Key, error)
+	// get non crypted key and do encryption
+	KeyEncryption(k *Key, auth string) (encryptedKeyJSONV3, error)
 }
 
 type encryptedKeyJSONV3 struct {
@@ -118,7 +118,7 @@ func storeNewKey(ks keyStore, auth string) (encryptedKeyJSONV3, accounts.Account
 		Address: key.Address,
 	}
 
-	encryptedKey, err := ks.StoreKey(key, auth)
+	encryptedKey, err := ks.KeyEncryption(key, auth)
 	if err != nil {
 		zeroKey(key.PrivateKey)
 

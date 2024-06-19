@@ -57,7 +57,7 @@ func TestSign(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := ks.Unlock(a1, ""); err != nil {
+	if err := ks.Unlock(a1, pass); err != nil {
 		t.Fatal(err)
 	}
 
@@ -176,7 +176,7 @@ func TestSignRace(t *testing.T) {
 	_, ks := tmpKeyStore(t)
 
 	// Create a test account.
-	a1, err := ks.NewAccount("")
+	a1, err := ks.NewAccount(pass)
 	if err != nil {
 		t.Fatal("could not create the test account", err)
 	}

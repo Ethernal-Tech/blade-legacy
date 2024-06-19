@@ -15,9 +15,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// KeyStoreScheme is the protocol scheme prefixing account and wallet URLs.
-const KeyStoreScheme = "keystore"
-
 // accountCache is a live index of all accounts in the keystore.
 type accountCache struct {
 	logger   hclog.Logger
@@ -37,7 +34,7 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 	}
 
 	if err := common.CreateDirSafe(keyDir, 0700); err != nil {
-		ac.logger.Info("can't create dir", "err", err)
+		ac.logger.Error("can't create dir", "err", err)
 
 		return nil, nil
 	}
@@ -48,7 +45,7 @@ func newAccountCache(keyDir string, logger hclog.Logger) (*accountCache, chan st
 
 	if _, err := os.Stat(keysPath); errors.Is(err, os.ErrNotExist) {
 		if _, err := os.Create(keysPath); err != nil {
-			ac.logger.Info("can't create new file", "err", err)
+			ac.logger.Error("can't create new file", "err", err)
 
 			return nil, nil
 		}
@@ -177,7 +174,7 @@ func (ac *accountCache) scanAccounts() error {
 
 	accs, err := ac.scanFile()
 	if err != nil {
-		ac.logger.Debug("Failed to reload keystore contents", "err", err)
+		ac.logger.Error("Failed to reload keystore contents", "err", err)
 
 		return err
 	}
@@ -203,7 +200,7 @@ func (ac *accountCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) 
 		return err
 	}
 
-	return common.SaveFileSafe(ac.keyDir, byteAccount, 0666)
+	return common.SaveFileSafe(ac.keyDir, byteAccount, 0600)
 }
 
 func (ac *accountCache) scanFile() (map[types.Address]encryptedKeyJSONV3, error) {

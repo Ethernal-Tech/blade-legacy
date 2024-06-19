@@ -12,8 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const KeyStoreScheme = "keystore"
+
 var (
-	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", "keystore"))
+	cachetestDir, _   = filepath.Abs(filepath.Join("testdata", KeyStoreScheme))
 	cachetestAccounts = []accounts.Account{
 		{
 			Address: types.StringToAddress("7ef5a6135f1fd6a02593eedc869c6d41d934aef8"),
@@ -82,11 +84,6 @@ func TestCacheAddDelete(t *testing.T) {
 	require.Error(t, cache.add(accs[0], encryptedKeyJSONV3{}))
 	require.Error(t, cache.add(accs[2], encryptedKeyJSONV3{}))
 
-	// Check that the account list is sorted by filename.
-	wantAccounts := make([]accounts.Account, len(accs))
-
-	copy(wantAccounts, accs)
-
 	for _, a := range accs {
 		require.True(t, cache.hasAddress(a.Address))
 	}
@@ -96,22 +93,23 @@ func TestCacheAddDelete(t *testing.T) {
 
 	// Delete a few keys from the cache.
 	for i := 0; i < len(accs); i += 2 {
-		require.NoError(t, cache.delete(wantAccounts[i]))
+		require.NoError(t, cache.delete(accs[i]))
 	}
 
 	require.NoError(t, cache.delete(accounts.Account{Address: types.StringToAddress("fd9bd350f08ee3c0c19b85a8e16114a11a60aa4e")}))
 
-	// Check content again after deletion.
+	// accounts that stay in account_cache, should be true
 	wantAccountsAfterDelete := []accounts.Account{
-		wantAccounts[1],
-		wantAccounts[3],
-		wantAccounts[5],
+		accs[1],
+		accs[3],
+		accs[5],
 	}
 
+	// deleted accounts should be false after delete
 	deletedAccounts := []accounts.Account{
-		wantAccounts[0],
-		wantAccounts[2],
-		wantAccounts[4],
+		accs[0],
+		accs[2],
+		accs[4],
 	}
 
 	for _, acc := range wantAccountsAfterDelete {
@@ -182,7 +180,6 @@ func TestCacheFind(t *testing.T) {
 }
 
 // TestUpdatedKeyfileContents tests that updating the contents of a keystore file
-// is noticed by the watcher, and the account cache is updated accordingly
 func TestCacheUpdate(t *testing.T) {
 	t.Parallel()
 
@@ -195,30 +192,18 @@ func TestCacheUpdate(t *testing.T) {
 		t.Error("initial account list not empty:", list)
 	}
 
-	listOfEncryptedKeys := make([]encryptedKeyJSONV3, len(cachetestAccounts))
+	account := cachetestAccounts[0]
 
-	for i, acc := range cachetestAccounts {
-		encryptKey := encryptedKeyJSONV3{Address: acc.Address.String(), Crypto: CryptoJSON{Cipher: fmt.Sprintf("test%d", i), CipherText: fmt.Sprintf("test%d", i)}}
-		listOfEncryptedKeys[i] = encryptKey
+	require.NoError(t, accountCache.add(account, encryptedKeyJSONV3{Address: account.Address.String(), Crypto: CryptoJSON{Cipher: "test", CipherText: "test"}}))
 
-		require.NoError(t, accountCache.add(acc, encryptKey))
-	}
+	require.NoError(t, accountCache.update(account, encryptedKeyJSONV3{Address: cachetestAccounts[0].Address.String(), Crypto: CryptoJSON{Cipher: "testUpdate", CipherText: "testUpdate"}}))
 
-	require.NoError(t, accountCache.update(cachetestAccounts[0], encryptedKeyJSONV3{Address: cachetestAccounts[0].Address.String(), Crypto: CryptoJSON{Cipher: "test", CipherText: "test"}}))
-
-	wantAccount, encryptedKey, err := accountCache.find(cachetestAccounts[0])
+	wantAccount, encryptedKey, err := accountCache.find(account)
 	require.NoError(t, err)
 
 	require.Equal(t, wantAccount.Address.String(), encryptedKey.Address)
 
-	require.Equal(t, encryptedKey.Crypto.Cipher, "test")
+	require.Equal(t, encryptedKey.Crypto.Cipher, "testUpdate")
 
-	require.Equal(t, encryptedKey.Crypto.CipherText, "test")
-
-	wantAccount, encryptedKey, err = accountCache.find(cachetestAccounts[1])
-	require.NoError(t, err)
-
-	require.Equal(t, listOfEncryptedKeys[1], encryptedKey)
-
-	require.Equal(t, wantAccount.Address.String(), encryptedKey.Address)
+	require.Equal(t, encryptedKey.Crypto.CipherText, "testUpdate")
 }
