@@ -64,7 +64,7 @@ If the transaction is invalid, then, depending on the error, the transaction is 
 
 If the gas limit is reached, the block creation is finished. Otherwise, the process is repeated with the next transaction from the `TxPool` until the predefined time expires.
 
-<figure><img src="../../.gitbook/assets/txpool_block_creation_sequence (1).png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/txpool_block_creation_sequence (3).png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
 
 ## Adding Transactions to TxPool <a href="#n6hacokagz2u" id="n6hacokagz2u"></a>
 
