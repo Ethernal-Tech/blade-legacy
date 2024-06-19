@@ -17,7 +17,7 @@ const (
 )
 
 type newBackendEvent struct {
-	backend Backend
+	backend WalletManager
 
 	processed chan struct{}
 }
@@ -27,14 +27,13 @@ func (newBackendEvent) Type() event.EventType {
 }
 
 // Manager is an overarching account manager that can communicate with various
-// backends for signing transactions.
-
+// walletManagers for signing transactions.
 type Manager struct {
-	backends    map[reflect.Type][]Backend
-	updates     chan event.Event
-	newBackends chan event.Event
-	wallets     []Wallet
-	blockchain  *blockchain.Blockchain
+	walletManagers    map[reflect.Type][]WalletManager
+	updates           chan event.Event
+	newWalletManagers chan event.Event
+	wallets           []Wallet
+	blockchain        *blockchain.Blockchain
 
 	quit chan chan error
 
@@ -45,40 +44,40 @@ type Manager struct {
 }
 
 // Creates new instance of manager
-func NewManager(blockchain *blockchain.Blockchain, backends ...Backend) *Manager {
+func NewManager(blockchain *blockchain.Blockchain, walletManagers ...WalletManager) *Manager {
 	var wallets []Wallet
 
-	for _, backend := range backends {
-		wallets = merge(wallets, backend.Wallets()...)
+	for _, walletManager := range walletManagers {
+		wallets = merge(wallets, walletManager.Wallets()...)
 	}
 
 	updates := make(chan event.Event, managerSubBufferSize)
 	newBackends := make(chan event.Event)
 	eventHandler := event.NewEventHandler()
 
-	for _, backend := range backends {
+	for _, backend := range walletManagers {
 		backend.SetEventHandler(eventHandler)
 	}
 
 	am := &Manager{
-		backends:     make(map[reflect.Type][]Backend),
-		updates:      updates,
-		newBackends:  newBackends,
-		wallets:      wallets,
-		quit:         make(chan chan error),
-		term:         make(chan struct{}),
-		eventHandler: eventHandler,
-		blockchain:   blockchain,
+		walletManagers:    make(map[reflect.Type][]WalletManager),
+		updates:           updates,
+		newWalletManagers: newBackends,
+		wallets:           wallets,
+		quit:              make(chan chan error),
+		term:              make(chan struct{}),
+		eventHandler:      eventHandler,
+		blockchain:        blockchain,
 	}
 
 	eventHandler.Subscribe(WalletEventKey, am.updates)
 
-	for _, backend := range backends {
+	for _, backend := range walletManagers {
 		kind := reflect.TypeOf(backend)
 
 		backend.SetEventHandler(am.eventHandler)
 		backend.SetManager(am)
-		am.backends[kind] = append(am.backends[kind], backend)
+		am.walletManagers[kind] = append(am.walletManagers[kind], backend)
 	}
 
 	go am.update()
@@ -102,10 +101,10 @@ func (am *Manager) Close() error {
 }
 
 // Adds backend to list of backends
-func (am *Manager) AddBackend(backend Backend) {
+func (am *Manager) AddWalletManager(backend WalletManager) {
 	done := make(chan struct{})
 
-	am.newBackends <- newBackendEvent{backend, done}
+	am.newWalletManagers <- newBackendEvent{backend, done}
 
 	<-done
 }
@@ -131,7 +130,7 @@ func (am *Manager) update() {
 			}
 
 			am.lock.Unlock()
-		case backendEventChan := <-am.newBackends:
+		case backendEventChan := <-am.newWalletManagers:
 			am.lock.Lock()
 
 			if backendEventChan.Type() == event.NewBackendType {
@@ -140,7 +139,7 @@ func (am *Manager) update() {
 				am.wallets = merge(am.wallets, backend.Wallets()...)
 				backend.SetEventHandler(am.eventHandler)
 				kind := reflect.TypeOf(backend)
-				am.backends[kind] = append(am.backends[kind], backend)
+				am.walletManagers[kind] = append(am.walletManagers[kind], backend)
 				am.lock.Unlock()
 				close(bckEvent.processed)
 			}
@@ -157,11 +156,11 @@ func (am *Manager) update() {
 }
 
 // Return specific type of backend
-func (am *Manager) Backends(kind reflect.Type) []Backend {
+func (am *Manager) WalletManagers(kind reflect.Type) []WalletManager {
 	am.lock.RLock()
 	defer am.lock.RUnlock()
 
-	return am.backends[kind]
+	return am.walletManagers[kind]
 }
 
 // Return list of all wallets

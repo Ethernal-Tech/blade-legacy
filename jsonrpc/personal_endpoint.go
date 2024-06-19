@@ -3,7 +3,6 @@ package jsonrpc
 import (
 	"errors"
 	"fmt"
-	"math"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
@@ -13,10 +12,10 @@ import (
 )
 
 type Personal struct {
-	accManager accounts.BackendManager
+	accManager accounts.AccountManager
 }
 
-func NewPersonal(manager accounts.BackendManager) *Personal {
+func NewPersonal(manager accounts.AccountManager) *Personal {
 	return &Personal{accManager: manager}
 }
 
@@ -69,15 +68,15 @@ func (p *Personal) ImportRawKey(privKey string, password string) (types.Address,
 }
 
 func (p *Personal) UnlockAccount(addr types.Address, password string, duration uint64) (bool, error) {
-	const max = uint64(time.Duration(math.MaxInt64) / time.Second)
+	const max = time.Duration(5 * time.Minute)
 
 	var d time.Duration
 
 	switch {
 	case duration == 0:
-		d = 300 * time.Second
-	case duration > max:
-		return false, errors.New("unlock duration is too large")
+		d = max
+	case time.Duration(duration)*time.Second > max:
+		d = max
 	default:
 		d = time.Duration(duration) * time.Second
 	}
@@ -117,8 +116,8 @@ func (p *Personal) Ecrecover(data, sig []byte) (types.Address, error) {
 	return types.BytesToAddress(addressRaw), nil
 }
 
-func getKeystore(am accounts.BackendManager) (*keystore.KeyStore, error) {
-	if ks := am.Backends(keystore.KeyStoreType); len(ks) > 0 {
+func getKeystore(am accounts.AccountManager) (*keystore.KeyStore, error) {
+	if ks := am.WalletManagers(keystore.KeyStoreType); len(ks) > 0 {
 		return ks[0].(*keystore.KeyStore), nil //nolint:forcetypeassert
 	}
 

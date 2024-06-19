@@ -78,7 +78,7 @@ type Server struct {
 	// libp2p network
 	network *network.Server
 
-	accManager accounts.BackendManager
+	accManager accounts.AccountManager
 
 	// transaction pool
 	txpool *txpool.TxPool
@@ -984,6 +984,9 @@ func (s *Server) Close() {
 
 	// Close DataDog profiler
 	s.closeDataDogProfiler()
+
+	// Close account manager
+	s.accManager.Close()
 }
 
 // Entry is a consensus configuration entry

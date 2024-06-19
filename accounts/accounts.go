@@ -96,7 +96,7 @@ func (WalletEvent) Type() event.EventType {
 	return event.WalletEventType
 }
 
-type Backend interface {
+type WalletManager interface {
 	// Wallets retrieves the list of wallets the backend is currently aware of
 	Wallets() []Wallet
 
@@ -104,21 +104,21 @@ type Backend interface {
 	SetEventHandler(eventHandler *event.EventHandler)
 
 	// SetManager sets backend manager
-	SetManager(manager BackendManager)
+	SetManager(manager AccountManager)
 }
 
-type BackendManager interface {
+type AccountManager interface {
 	// Checks for active forks at current block number and return signer
 	GetSigner() crypto.TxSigner
 
 	// Close stop updater in manager
 	Close() error
 
-	// Adds backend to list of backends
-	AddBackend(backend Backend)
+	// Adds wallet manager to list of wallet managers
+	AddWalletManager(walletManager WalletManager)
 
-	// Return specific type of backend
-	Backends(kind reflect.Type) []Backend
+	// Return specific type of wallet manager
+	WalletManagers(kind reflect.Type) []WalletManager
 
 	// Return list of all wallets
 	Wallets() []Wallet

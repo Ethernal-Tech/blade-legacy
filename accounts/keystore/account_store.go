@@ -14,19 +14,19 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// accountCache is a live index of all accounts in the keystore.
-type accountCache struct {
+// accountStore is a live index of all accounts in the keystore.
+type accountStore struct {
 	logger hclog.Logger
 	keyDir string
 	mu     sync.Mutex
-	allMap map[types.Address]encryptedKeyJSONV3
+	allMap map[types.Address]encryptedKey
 }
 
-func newAccountCache(keyDir string, logger hclog.Logger) *accountCache {
-	ac := &accountCache{
+func newAccountStore(keyDir string, logger hclog.Logger) *accountStore {
+	ac := &accountStore{
 		logger: logger,
 		keyDir: keyDir,
-		allMap: make(map[types.Address]encryptedKeyJSONV3),
+		allMap: make(map[types.Address]encryptedKey),
 	}
 
 	if err := common.CreateDirSafe(keyDir, 0700); err != nil {
@@ -47,12 +47,12 @@ func newAccountCache(keyDir string, logger hclog.Logger) *accountCache {
 		}
 	}
 
-	ac.scanAccounts() //nolint:errcheck
+	ac.readAccountsFromFile() //nolint:errcheck
 
 	return ac
 }
 
-func (ac *accountCache) accounts() []accounts.Account {
+func (ac *accountStore) accounts() []accounts.Account {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -67,7 +67,7 @@ func (ac *accountCache) accounts() []accounts.Account {
 	return cpy
 }
 
-func (ac *accountCache) hasAddress(addr types.Address) bool {
+func (ac *accountStore) hasAddress(addr types.Address) bool {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -76,7 +76,7 @@ func (ac *accountCache) hasAddress(addr types.Address) bool {
 	return ok
 }
 
-func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3) error {
+func (ac *accountStore) add(newAccount accounts.Account, key encryptedKey) error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -96,12 +96,12 @@ func (ac *accountCache) add(newAccount accounts.Account, key encryptedKeyJSONV3)
 	return nil
 }
 
-func (ac *accountCache) update(account accounts.Account, newKey encryptedKeyJSONV3) error {
+func (ac *accountStore) update(account accounts.Account, newKey encryptedKey) error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
 	var (
-		oldKey encryptedKeyJSONV3
+		oldKey encryptedKey
 		ok     bool
 	)
 
@@ -122,7 +122,7 @@ func (ac *accountCache) update(account accounts.Account, newKey encryptedKeyJSON
 }
 
 // note: removed needs to be unique here (i.e. both File and Address must be set).
-func (ac *accountCache) delete(removed accounts.Account) error {
+func (ac *accountStore) delete(removed accounts.Account) error {
 	if err := ac.saveData(ac.allMap); err != nil {
 		return fmt.Errorf("could not delete account: %w", err)
 	}
@@ -136,9 +136,7 @@ func (ac *accountCache) delete(removed accounts.Account) error {
 }
 
 // find returns the cached account for address if there is a unique match.
-// The exact matching rules are explained by the documentation of accounts.Account.
-// Callers must hold ac.mu.
-func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKeyJSONV3, error) {
+func (ac *accountStore) find(a accounts.Account) (accounts.Account, encryptedKey, error) {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -146,11 +144,11 @@ func (ac *accountCache) find(a accounts.Account) (accounts.Account, encryptedKey
 		return a, encryptedKey, nil
 	}
 
-	return accounts.Account{}, encryptedKeyJSONV3{}, accounts.ErrNoMatch
+	return accounts.Account{}, encryptedKey{}, accounts.ErrNoMatch
 }
 
-// scanAccounts refresh data of  account map
-func (ac *accountCache) scanAccounts() error {
+// readAccountsFromFile refresh data of  account map
+func (ac *accountStore) readAccountsFromFile() error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()
 
@@ -161,7 +159,7 @@ func (ac *accountCache) scanAccounts() error {
 		return err
 	}
 
-	ac.allMap = make(map[types.Address]encryptedKeyJSONV3)
+	ac.allMap = make(map[types.Address]encryptedKey)
 
 	for addr, key := range accs {
 		ac.allMap[addr] = key
@@ -172,7 +170,7 @@ func (ac *accountCache) scanAccounts() error {
 	return nil
 }
 
-func (ac *accountCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) error {
+func (ac *accountStore) saveData(accounts map[types.Address]encryptedKey) error {
 	byteAccount, err := json.Marshal(accounts)
 	if err != nil {
 		return err
@@ -181,7 +179,7 @@ func (ac *accountCache) saveData(accounts map[types.Address]encryptedKeyJSONV3) 
 	return common.SaveFileSafe(ac.keyDir, byteAccount, 0600)
 }
 
-func (ac *accountCache) scanFile() (map[types.Address]encryptedKeyJSONV3, error) {
+func (ac *accountStore) scanFile() (map[types.Address]encryptedKey, error) {
 	fi, err := os.ReadFile(ac.keyDir)
 	if err != nil {
 		return nil, err
@@ -191,7 +189,7 @@ func (ac *accountCache) scanFile() (map[types.Address]encryptedKeyJSONV3, error)
 		return nil, nil
 	}
 
-	var accounts = make(map[types.Address]encryptedKeyJSONV3)
+	var accounts = make(map[types.Address]encryptedKey)
 
 	err = json.Unmarshal(fi, &accounts)
 	if err != nil {

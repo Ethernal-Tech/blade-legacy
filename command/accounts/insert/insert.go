@@ -17,7 +17,7 @@ var (
 func GetCommand() *cobra.Command {
 	importCmd := &cobra.Command{
 		Use:   "insert",
-		Short: "Insert existing account with private key and auth passphrase",
+		Short: "Insert existing key to new account with private key and auth passphrase",
 		PreRun: func(cmd *cobra.Command, args []string) {
 			params.jsonRPC = helper.GetJSONRPCAddress(cmd)
 		},

@@ -31,14 +31,14 @@ var KeyStoreType = reflect.TypeOf(&KeyStore{})
 
 // KeyStore manages a key storage directory on disk.
 type KeyStore struct {
-	keyEncryption keyStore                    // Storage backend, might be cleartext or encrypted
-	cache         *accountCache               // In-memory account cache over the filesystem storage
+	keyEncryption keyEncryption               // Storage backend, might be cleartext or encrypted
+	cache         *accountStore               // In-memory account cache over the filesystem storage
 	unlocked      map[types.Address]*unlocked // Currently unlocked account (decrypted private keys)
 
 	wallets      []accounts.Wallet // Wrapper around keys
 	eventHandler *event.EventHandler
 
-	manager accounts.BackendManager
+	manager accounts.AccountManager
 
 	mu sync.RWMutex
 }
@@ -49,7 +49,7 @@ type unlocked struct {
 }
 
 func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
-	ks := &KeyStore{keyEncryption: &keyStorePassphrase{scryptN, scryptP}}
+	ks := &KeyStore{keyEncryption: &passphraseEncryption{scryptN, scryptP}}
 
 	ks.init(keyDir, logger)
 
@@ -58,7 +58,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyS
 
 func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
 	ks.unlocked = make(map[types.Address]*unlocked)
-	ks.cache = newAccountCache(keyDir, logger)
+	ks.cache = newAccountStore(keyDir, logger)
 
 	accs := ks.cache.accounts()
 	ks.wallets = make([]accounts.Wallet, len(accs))
@@ -259,18 +259,18 @@ func (ks *KeyStore) expire(addr types.Address, u *unlocked, timeout time.Duratio
 }
 
 func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.Account, *Key, error) {
-	a, encryptedKeyJSONV3, err := ks.cache.find(a)
+	a, encryptedKey, err := ks.cache.find(a)
 	if err != nil {
 		return a, nil, err
 	}
 
-	key, err := ks.keyEncryption.KeyDecryption(encryptedKeyJSONV3, auth)
+	key, err := ks.keyEncryption.KeyDecrypt(encryptedKey, auth)
 
 	return a, key, err
 }
 
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	encryptedKey, account, err := storeNewKey(ks.keyEncryption, passphrase)
+	encryptedKey, account, err := ks.keyEncryption.StoreNewKey(passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}
@@ -302,12 +302,12 @@ func (ks *KeyStore) ImportECDSA(priv *ecdsa.PrivateKey, passphrase string) (acco
 func (ks *KeyStore) importKey(key *Key, passphrase string) (accounts.Account, error) {
 	a := accounts.Account{Address: key.Address}
 
-	encryptedKeyJSONV3, err := ks.keyEncryption.KeyEncryption(key, passphrase)
+	encryptedKey, err := ks.keyEncryption.KeyEncrypt(key, passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}
 
-	if err := ks.cache.add(a, encryptedKeyJSONV3); err != nil {
+	if err := ks.cache.add(a, encryptedKey); err != nil {
 		return accounts.Account{}, err
 	}
 
@@ -326,7 +326,7 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 		return err
 	}
 
-	encryptedKey, err := ks.keyEncryption.KeyEncryption(key, newPassphrase)
+	encryptedKey, err := ks.keyEncryption.KeyEncrypt(key, newPassphrase)
 	if err != nil {
 		return err
 	}
@@ -334,6 +334,6 @@ func (ks *KeyStore) Update(a accounts.Account, passphrase, newPassphrase string)
 	return ks.cache.update(a, encryptedKey)
 }
 
-func (ks *KeyStore) SetManager(manager accounts.BackendManager) {
+func (ks *KeyStore) SetManager(manager accounts.AccountManager) {
 	ks.manager = manager
 }

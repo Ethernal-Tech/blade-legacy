@@ -24,30 +24,32 @@ type Key struct {
 	PrivateKey *ecdsa.PrivateKey
 }
 
-type keyStore interface {
+type keyEncryption interface {
 	// decrypts key and return non crypted key
-	KeyDecryption(encryptedKey encryptedKeyJSONV3, auth string) (*Key, error)
+	KeyDecrypt(encrypted encryptedKey, auth string) (*Key, error)
 	// get non crypted key and do encryption
-	KeyEncryption(k *Key, auth string) (encryptedKeyJSONV3, error)
+	KeyEncrypt(k *Key, auth string) (encryptedKey, error)
+
+	StoreNewKey(auth string) (encryptedKey, accounts.Account, error)
 }
 
-type encryptedKeyJSONV3 struct {
-	Address string     `json:"address"`
-	Crypto  CryptoJSON `json:"crypto"`
-	ID      string     `json:"id"`
-	Version int        `json:"version"`
+type encryptedKey struct {
+	Address string `json:"address"`
+	Crypto  Crypto `json:"crypto"`
+	ID      string `json:"id"`
+	Version int    `json:"version"`
 }
 
-type CryptoJSON struct {
+type Crypto struct {
 	Cipher       string                 `json:"cipher"`
 	CipherText   string                 `json:"ciphertext"`
-	CipherParams cipherparamsJSON       `json:"cipherparams"`
+	CipherParams cipherParams           `json:"cipherparams"`
 	KDF          string                 `json:"kdf"`
 	KDFParams    map[string]interface{} `json:"kdfparams"`
 	MAC          string                 `json:"mac"`
 }
 
-type cipherparamsJSON struct {
+type cipherParams struct {
 	IV string `json:"iv"`
 }
 
@@ -106,24 +108,4 @@ func NewKeyForDirectICAP(rand io.Reader) *Key {
 	}
 
 	return key
-}
-
-func storeNewKey(ks keyStore, auth string) (encryptedKeyJSONV3, accounts.Account, error) {
-	key, err := newKey()
-	if err != nil {
-		return encryptedKeyJSONV3{}, accounts.Account{}, err
-	}
-
-	a := accounts.Account{
-		Address: key.Address,
-	}
-
-	encryptedKey, err := ks.KeyEncryption(key, auth)
-	if err != nil {
-		zeroKey(key.PrivateKey)
-
-		return encryptedKeyJSONV3{}, a, err
-	}
-
-	return encryptedKey, a, err
 }

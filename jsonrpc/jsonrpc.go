@@ -60,7 +60,7 @@ type Config struct {
 }
 
 // NewJSONRPC returns the JSONRPC http server
-func NewJSONRPC(logger hclog.Logger, config *Config, manager accounts.BackendManager) (*JSONRPC, error) {
+func NewJSONRPC(logger hclog.Logger, config *Config, manager accounts.AccountManager) (*JSONRPC, error) {
 	d, err := newDispatcher(
 		logger,
 		config.Store,

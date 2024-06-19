@@ -32,7 +32,7 @@ var (
 func TestCacheInitialReload(t *testing.T) {
 	t.Parallel()
 
-	cache := newAccountCache(cachetestDir, hclog.NewNullLogger())
+	cache := newAccountStore(cachetestDir, hclog.NewNullLogger())
 	accs := cache.accounts()
 
 	require.Equal(t, 3, len(accs))
@@ -51,7 +51,7 @@ func TestCacheAddDelete(t *testing.T) {
 
 	tDir := t.TempDir()
 
-	cache := newAccountCache(tDir, hclog.NewNullLogger())
+	cache := newAccountStore(tDir, hclog.NewNullLogger())
 
 	accs := []accounts.Account{
 		{
@@ -78,11 +78,11 @@ func TestCacheAddDelete(t *testing.T) {
 	}
 
 	for _, a := range accs {
-		require.NoError(t, cache.add(a, encryptedKeyJSONV3{}))
+		require.NoError(t, cache.add(a, encryptedKey{}))
 	}
 	// Add some of them twice to check that they don't get reinserted.
-	require.Error(t, cache.add(accs[0], encryptedKeyJSONV3{}))
-	require.Error(t, cache.add(accs[2], encryptedKeyJSONV3{}))
+	require.Error(t, cache.add(accs[0], encryptedKey{}))
+	require.Error(t, cache.add(accs[2], encryptedKey{}))
 
 	for _, a := range accs {
 		require.True(t, cache.hasAddress(a.Address))
@@ -126,7 +126,7 @@ func TestCacheFind(t *testing.T) {
 
 	dir := t.TempDir()
 
-	cache := newAccountCache(dir, hclog.NewNullLogger())
+	cache := newAccountStore(dir, hclog.NewNullLogger())
 
 	accs := []accounts.Account{
 		{
@@ -145,10 +145,10 @@ func TestCacheFind(t *testing.T) {
 	}
 
 	for _, acc := range accs {
-		require.NoError(t, cache.add(acc, encryptedKeyJSONV3{}))
+		require.NoError(t, cache.add(acc, encryptedKey{}))
 	}
 
-	require.Error(t, cache.add(matchAccount, encryptedKeyJSONV3{}))
+	require.Error(t, cache.add(matchAccount, encryptedKey{}))
 
 	nomatchAccount := accounts.Account{
 		Address: types.StringToAddress("f466859ead1932d743d622cb74fc058882e8648a"),
@@ -185,7 +185,7 @@ func TestCacheUpdate(t *testing.T) {
 
 	keyDir := t.TempDir()
 
-	accountCache := newAccountCache(keyDir, hclog.NewNullLogger())
+	accountCache := newAccountStore(keyDir, hclog.NewNullLogger())
 
 	list := accountCache.accounts()
 	if len(list) > 0 {
@@ -194,9 +194,9 @@ func TestCacheUpdate(t *testing.T) {
 
 	account := cachetestAccounts[0]
 
-	require.NoError(t, accountCache.add(account, encryptedKeyJSONV3{Address: account.Address.String(), Crypto: CryptoJSON{Cipher: "test", CipherText: "test"}}))
+	require.NoError(t, accountCache.add(account, encryptedKey{Address: account.Address.String(), Crypto: Crypto{Cipher: "test", CipherText: "test"}}))
 
-	require.NoError(t, accountCache.update(account, encryptedKeyJSONV3{Address: cachetestAccounts[0].Address.String(), Crypto: CryptoJSON{Cipher: "testUpdate", CipherText: "testUpdate"}}))
+	require.NoError(t, accountCache.update(account, encryptedKey{Address: cachetestAccounts[0].Address.String(), Crypto: Crypto{Cipher: "testUpdate", CipherText: "testUpdate"}}))
 
 	wantAccount, encryptedKey, err := accountCache.find(account)
 	require.NoError(t, err)

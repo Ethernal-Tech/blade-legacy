@@ -376,5 +376,8 @@ func tmpKeyStore(t *testing.T) (string, *KeyStore) {
 
 	d := t.TempDir()
 
-	return d, NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
+	ks := NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
+	ks.eventHandler = event.NewEventHandler()
+
+	return d, ks
 }
