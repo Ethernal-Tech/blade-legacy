@@ -68,7 +68,7 @@ func (pe passphraseEncryption) KeyEncrypt(key *Key, auth string) (encryptedKey, 
 	return encrypted, nil
 }
 
-func (pe passphraseEncryption) StoreNewKey(auth string) (encryptedKey, accounts.Account, error) {
+func (pe passphraseEncryption) CreateNewKey(auth string) (encryptedKey, accounts.Account, error) {
 	key, err := newKey()
 	if err != nil {
 		return encryptedKey{}, accounts.Account{}, err

@@ -22,7 +22,7 @@ type accountStore struct {
 	allMap map[types.Address]encryptedKey
 }
 
-func newAccountStore(keyDir string, logger hclog.Logger) *accountStore {
+func newAccountStore(keyDir string, logger hclog.Logger) (*accountStore, error) {
 	ac := &accountStore{
 		logger: logger,
 		keyDir: keyDir,
@@ -32,7 +32,7 @@ func newAccountStore(keyDir string, logger hclog.Logger) *accountStore {
 	if err := common.CreateDirSafe(keyDir, 0700); err != nil {
 		ac.logger.Error("can't create dir", "err", err)
 
-		return nil
+		return nil, fmt.Errorf("could not create keystore directory: %v", err)
 	}
 
 	keysPath := path.Join(keyDir, "keys.txt")
@@ -43,13 +43,15 @@ func newAccountStore(keyDir string, logger hclog.Logger) *accountStore {
 		if _, err := os.Create(keysPath); err != nil {
 			ac.logger.Error("can't create new file", "err", err)
 
-			return nil
+			return nil, fmt.Errorf("could not create keystore file: %v", err)
 		}
 	}
 
-	ac.readAccountsFromFile() //nolint:errcheck
+	if err := ac.readAccountsFromFile(); err != nil {
+		return nil, fmt.Errorf("could not read keystore file: %v", err)
+	}
 
-	return ac
+	return ac, nil
 }
 
 func (ac *accountStore) accounts() []accounts.Account {
@@ -147,7 +149,7 @@ func (ac *accountStore) find(a accounts.Account) (accounts.Account, encryptedKey
 	return accounts.Account{}, encryptedKey{}, accounts.ErrNoMatch
 }
 
-// readAccountsFromFile refresh data of  account map
+// readAccountsFromFile reads the keystore file and updates the account store.
 func (ac *accountStore) readAccountsFromFile() error {
 	ac.mu.Lock()
 	defer ac.mu.Unlock()

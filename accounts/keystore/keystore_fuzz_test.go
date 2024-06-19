@@ -8,7 +8,10 @@ import (
 
 func FuzzPassword(f *testing.F) {
 	f.Fuzz(func(t *testing.T, password string) {
-		ks := NewKeyStore(t.TempDir(), LightScryptN, LightScryptP, hclog.NewNullLogger())
+		ks, err := NewKeyStore(t.TempDir(), LightScryptN, LightScryptP, hclog.NewNullLogger())
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		a, err := ks.NewAccount(password)
 		if err != nil {

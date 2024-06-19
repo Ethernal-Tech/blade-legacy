@@ -25,12 +25,12 @@ type Key struct {
 }
 
 type keyEncryption interface {
-	// decrypts key and return non crypted key
+	// KeyDecrypt decrypts the key using the auth string
 	KeyDecrypt(encrypted encryptedKey, auth string) (*Key, error)
-	// get non crypted key and do encryption
+	// KeyEncrypt encrypts the key using the auth string
 	KeyEncrypt(k *Key, auth string) (encryptedKey, error)
-
-	StoreNewKey(auth string) (encryptedKey, accounts.Account, error)
+	// CreateNewKey creates a new key
+	CreateNewKey(auth string) (encryptedKey, accounts.Account, error)
 }
 
 type encryptedKey struct {

@@ -25,7 +25,7 @@ func TestPassphraseEncryption(t *testing.T) {
 
 	passEncryption := &passphraseEncryption{veryLightScryptN, veryLightScryptP}
 
-	k1, account, err := passEncryption.StoreNewKey(pass)
+	k1, account, err := passEncryption.CreateNewKey(pass)
 	require.NoError(t, err)
 
 	k2, err := passEncryption.KeyDecrypt(k1, pass)
@@ -41,7 +41,7 @@ func TestPassphraseEncryptionDecryptionFail(t *testing.T) {
 
 	passEncryption := &passphraseEncryption{veryLightScryptN, veryLightScryptP}
 
-	k1, _, err := passEncryption.StoreNewKey(pass)
+	k1, _, err := passEncryption.CreateNewKey(pass)
 	require.NoError(t, err)
 
 	_, err = passEncryption.KeyDecrypt(k1, "bar")

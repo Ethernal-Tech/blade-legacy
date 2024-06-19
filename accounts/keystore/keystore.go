@@ -3,6 +3,7 @@ package keystore
 import (
 	"crypto/ecdsa"
 	"errors"
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"sync"
@@ -48,17 +49,24 @@ type unlocked struct {
 	abort chan struct{}
 }
 
-func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) *KeyStore {
+func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) (*KeyStore, error) {
 	ks := &KeyStore{keyEncryption: &passphraseEncryption{scryptN, scryptP}}
 
-	ks.init(keyDir, logger)
+	if err := ks.init(keyDir, logger); err != nil {
+		return nil, fmt.Errorf("could not initialize keystore: %v", err)
+	}
 
-	return ks
+	return ks, nil
 }
 
-func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
+func (ks *KeyStore) init(keyDir string, logger hclog.Logger) error {
 	ks.unlocked = make(map[types.Address]*unlocked)
-	ks.cache = newAccountStore(keyDir, logger)
+	cache, err := newAccountStore(keyDir, logger)
+	if err != nil {
+		return err
+	}
+
+	ks.cache = cache
 
 	accs := ks.cache.accounts()
 	ks.wallets = make([]accounts.Wallet, len(accs))
@@ -66,6 +74,8 @@ func (ks *KeyStore) init(keyDir string, logger hclog.Logger) {
 	for i := 0; i < len(accs); i++ {
 		ks.wallets[i] = &keyStoreWallet{account: accs[i], keyStore: ks}
 	}
+
+	return nil
 }
 
 func (ks *KeyStore) Wallets() []accounts.Wallet {
@@ -270,7 +280,7 @@ func (ks *KeyStore) getDecryptedKey(a accounts.Account, auth string) (accounts.A
 }
 
 func (ks *KeyStore) NewAccount(passphrase string) (accounts.Account, error) {
-	encryptedKey, account, err := ks.keyEncryption.StoreNewKey(passphrase)
+	encryptedKey, account, err := ks.keyEncryption.CreateNewKey(passphrase)
 	if err != nil {
 		return accounts.Account{}, err
 	}

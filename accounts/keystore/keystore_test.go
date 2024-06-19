@@ -8,6 +8,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/accounts/event"
+	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -376,7 +377,9 @@ func tmpKeyStore(t *testing.T) (string, *KeyStore) {
 
 	d := t.TempDir()
 
-	ks := NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
+	ks, err := NewKeyStore(d, veryLightScryptN, veryLightScryptP, hclog.NewNullLogger())
+	require.NoError(t, err)
+
 	ks.eventHandler = event.NewEventHandler()
 
 	return d, ks
