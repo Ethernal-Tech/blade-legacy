@@ -61,6 +61,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) (*Key
 
 func (ks *KeyStore) init(keyDir string, logger hclog.Logger) error {
 	ks.unlocked = make(map[types.Address]*unlocked)
+
 	cache, err := newAccountStore(keyDir, logger)
 	if err != nil {
 		return err

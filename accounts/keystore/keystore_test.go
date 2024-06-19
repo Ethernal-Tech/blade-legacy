@@ -219,7 +219,7 @@ func TestWalletNotifications(t *testing.T) {
 	ks.SetEventHandler(eventHandler)
 
 	// Subscribe to the wallet feed and collect events.
-	var ( //nolint:prealloc
+	var (
 		events  []walletEvent
 		updates = make(chan event.Event)
 		end     = make(chan interface{})

@@ -32,7 +32,7 @@ func newAccountStore(keyDir string, logger hclog.Logger) (*accountStore, error) 
 	if err := common.CreateDirSafe(keyDir, 0700); err != nil {
 		ac.logger.Error("can't create dir", "err", err)
 
-		return nil, fmt.Errorf("could not create keystore directory: %v", err)
+		return nil, fmt.Errorf("could not create keystore directory: %w", err)
 	}
 
 	keysPath := path.Join(keyDir, "keys.txt")
@@ -43,12 +43,12 @@ func newAccountStore(keyDir string, logger hclog.Logger) (*accountStore, error) 
 		if _, err := os.Create(keysPath); err != nil {
 			ac.logger.Error("can't create new file", "err", err)
 
-			return nil, fmt.Errorf("could not create keystore file: %v", err)
+			return nil, fmt.Errorf("could not create keystore file: %w", err)
 		}
 	}
 
 	if err := ac.readAccountsFromFile(); err != nil {
-		return nil, fmt.Errorf("could not read keystore file: %v", err)
+		return nil, fmt.Errorf("could not read keystore file: %w", err)
 	}
 
 	return ac, nil
