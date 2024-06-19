@@ -43,13 +43,13 @@ type encryptedKey struct {
 type Crypto struct {
 	Cipher       string                 `json:"cipher"`
 	CipherText   string                 `json:"ciphertext"`
-	CipherParams cipherParams           `json:"cipherparams"`
+	CipherParams CipherParams           `json:"cipherparams"`
 	KDF          string                 `json:"kdf"`
 	KDFParams    map[string]interface{} `json:"kdfparams"`
 	MAC          string                 `json:"mac"`
 }
 
-type cipherParams struct {
+type CipherParams struct {
 	IV string `json:"iv"`
 }
 

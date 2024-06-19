@@ -51,9 +51,9 @@ func TestPassphraseEncryptionDecryptionFail(t *testing.T) {
 // Test and utils for the key store tests in the Ethereum JSON tests;
 // testdataKeyStoreTests/basic_tests.json
 type KeyStoreTest struct {
-	ecryptedKey encryptedKey
-	Password    string
-	Priv        string
+	EncryptedKey encryptedKey `json:"json"`
+	Password     string       `json:"password"`
+	Priv         string       `json:"priv"`
 }
 
 func Test_PBKDF2_1(t *testing.T) {
@@ -114,7 +114,7 @@ func Test_Scrypt_2(t *testing.T) {
 func testDecrypt(t *testing.T, test KeyStoreTest) {
 	t.Helper()
 
-	privBytes, _, err := decryptKey(&test.ecryptedKey, test.Password)
+	privBytes, _, err := decryptKey(&test.EncryptedKey, test.Password)
 	require.NoError(t, err)
 
 	privHex := hex.EncodeToString(privBytes)

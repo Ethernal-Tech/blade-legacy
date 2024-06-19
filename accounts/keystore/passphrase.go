@@ -121,7 +121,7 @@ func EncryptData(data, auth []byte, scryptN, scryptP int) (Crypto, error) {
 	scryptParamsJSON["p"] = scryptP
 	scryptParamsJSON["dklen"] = scryptDKLen
 	scryptParamsJSON["salt"] = hex.EncodeToString(salt)
-	cipherParamsJSON := cipherParams{
+	cipherParamsJSON := CipherParams{
 		IV: hex.EncodeToString(iv),
 	}
 
