@@ -36,10 +36,21 @@ jobs:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
       VAULT_PASSWORD: ${{ secrets.VAULT_PASSWORD }}
+  sanity_check_tests:
+    name: Sanity Check Tests
+    uses: ./.github/workflows/sanity-check-test.yml
+    needs: deploy_network
+    with:
+      environment: nightly
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
+      AWS_LOADTESTRUNNER_MNEMONIC: ${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}
+      KEY_NAME: ${{ secrets.KEY_NAME }}
   load_test_eoa:
     name: Load Test EOA
     uses: ./.github/workflows/load-test.yml
-    needs: deploy_network
+    needs: [deploy_network, sanity_check_tests]
     with:
       environment: nightly
       type: EOA
@@ -63,7 +74,7 @@ jobs:
   load_test_erc20:
     name: Load Test ERC20
     uses: ./.github/workflows/load-test.yml
-    needs: [deploy_network, load_test_eoa]
+    needs: [deploy_network, sanity_check_tests, load_test_eoa]
     with:
       environment: nightly
       type: ERC20
@@ -87,7 +98,7 @@ jobs:
   load_test_erc721:
     name: Load Test ERC721
     uses: ./.github/workflows/load-test.yml
-    needs: [deploy_network, load_test_eoa, load_test_erc20]
+    needs: [deploy_network, sanity_check_tests, load_test_eoa, load_test_erc20]
     with:
       environment: nightly
       type: ERC721
@@ -111,7 +122,7 @@ jobs:
   load_test_mixed:
     name: Load Test MIXED
     uses: ./.github/workflows/load-test.yml
-    needs: [deploy_network, load_test_eoa, load_test_erc20, load_test_erc721]
+    needs: [deploy_network, sanity_check_tests, load_test_eoa, load_test_erc20, load_test_erc721]
     with:
       environment: nightly
       type: MIXED
@@ -148,7 +159,7 @@ jobs:
   notification_nightly:
     name: Nightly Notification
     uses: ./.github/workflows/notification-nightly.yml
-    needs: [ci, deploy_network, load_test_eoa, load_test_erc20, load_test_erc721, load_test_mixed, destroy_network]
+    needs: [ci, deploy_network, sanity_check_tests, load_test_eoa, load_test_erc20, load_test_erc721, load_test_mixed, destroy_network]
     if: success() || failure()
     with:
       environment: nightly
@@ -168,6 +179,12 @@ jobs:
       property_polybft_test_output: ${{ needs.ci.outputs.property_polybft_test }}
       fuzz_test_output: ${{ needs.ci.outputs.fuzz_test }}
       benchmark_test_output: ${{ needs.ci.outputs.benchmark_test }}
+      sanity_check_tests_output: ${{ needs.sanity_check_tests.outputs.sanity_check_tests_output }}
+      stake_test_output: ${{ needs.sanity_check_tests.outputs.stake_test_output }}
+      unstake_test_output: ${{ needs.sanity_check_tests.outputs.unstake_test_output }}
+      register_validator_test_output: ${{ needs.sanity_check_tests.outputs.register_validator_test_output }}
+      withdraw_rewards_test_output: ${{ needs.sanity_check_tests.outputs.withdraw_rewards_test_output }}
+      unstake_all_test_output: ${{ needs.sanity_check_tests.outputs.unstake_all_test_output }}
       deploy_network_terraform_output: ${{ needs.deploy_network.outputs.terraform_output }}
       deploy_network_ansible_output: ${{ needs.deploy_network.outputs.ansible_output }}
       load_test_eoa_output: ${{ needs.load_test_eoa.outputs.load_test_output }}
