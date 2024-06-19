@@ -25,11 +25,11 @@ $$
 
 The decision-making process in IBFT 2.0 consensus algorithm is divided into rounds. If a necessary quorum is not reached in a round, meaning no decision is made about the next block, the process moves to the next round. The duration of each round increases exponentially. In each round, one validator from the validator set takes on the role of the proposer for the next block, rotating through a round-robin principle.&#x20;
 
-Upon initiating the algorithm, all validators start the corresponding timer for the initial (0) round and set state variables to their default values. The proposer additionally constructs a block, accepts it (by setting the `acceptedPB` state variable to the created block), and then proposes it to other validators in the validator set by broadcasting a `<<PROPOSAL>>` message.&#x20;
+Upon initiating the algorithm, all validators start the corresponding timer for the initial (0) round and set state variables to their default values. The proposer additionally constructs a block, accepts it (by setting the <mark style="color:red;">`acceptedPB`</mark> state variable to the created block), and then proposes it to other validators in the validator set by broadcasting a `<<PROPOSAL>>` message.&#x20;
 
 Here is the list of all state variables and their initial values (we will delve into their roles as they become relevant):
 
-1. `acceptedBlock` = ⊥
+1. <mark style="color:red;">`acceptedBlock`</mark> <mark style="color:red;"></mark><mark style="color:red;">= ⊥</mark>
 2. `latestPC` (PC - Prepared Certificate) = ⊥
 3. `latestPreparedProposedBlock` = ⊥
 4. `commitSent` = false
@@ -37,7 +37,7 @@ Here is the list of all state variables and their initial values (we will delve 
 
 ### Pre-prepare Phase
 
-![Pre-prepare Phase - Validators' Behavior](<../../../../.gitbook/assets/5 (1).png>)
+<figure><img src="../../../../.gitbook/assets/system_architecture-pre-prepare.drawio(4).svg" alt=""><figcaption><p>Pre-prepare Phase - Validators' Behavior</p></figcaption></figure>
 
 If a validator is in the initial, zeroth round and has not yet received a proposal (`acceptedPB` = ⊥), upon receiving a `<<PROPOSAL>>` message, it conducts certain checks. The most critical ones include:
 
@@ -49,7 +49,7 @@ If a validator is in the initial, zeroth round and has not yet received a propos
 
 If all these conditions are met, the validator proceeds into the prepare phase, accepts the provided block (`acceptedPB` = proposed block), and broadcasts a `<<PREPARE>>` message. By setting `acceptedPB`, the node indicates that it was in the prepare phase for the given round (in this instance, the initial one). This phase is the sole divergence from the process applied in subsequent, higher rounds; all other phases remain consistent irrespective of the round in which they are executed.
 
-![Prepare Phase - Validators' Behavior](<../../../../.gitbook/assets/6 (1).png>)
+<figure><img src="../../../../.gitbook/assets/system_architecture-prepare.drawio(1).svg" alt=""><figcaption><p>Prepare Phase - Validators' Behavior</p></figcaption></figure>
 
 ### Commit Phase
 
@@ -59,13 +59,13 @@ Beyond receiving a sufficient number of `<<PREPARE>>` messages, additional condi
 
 Upon entering this phase, the validator generates a signature (commit seal) over the received proposal (the one in `acceptedPB`) and broadcasts it to all other validators in the set through a `<<COMMIT>>` message. Additionally, values for the variables `latestPC` and `latestPreparedProposedBlock` are set. These variables hold a significant role when the decision-making process transits into subsequent rounds. The first variable, `latestPC`, precisely contains one `<<PROPOSAL>>` message (sent by the validator for that round; contains his block proposal) and all received valid `<<PREPARE>>` messages (at least quorum-1) corresponding to the given `<<PROPOSAL>>` message and the proposal within it. Therefore, `latestPC` serves as evidence that a sufficient number of nodes were prepared to adopt a specific proposal in a particular round, but it did not materialize for some reason. The second variable, `latestPreparedProposedBlock`, contains the proposal itself (from `acceptedPB` state variable).
 
-![Commit Phase - Validators' Behavior](<../../../../.gitbook/assets/7 (1).png>)
+<figure><img src="../../../../.gitbook/assets/system_architecture-commit.drawio(1).svg" alt=""><figcaption><p>Commit Phase - Validators' Behavior</p></figcaption></figure>
 
 ### Finalization Phase
 
 The conclusive, finalization phase commences once a validator receives at least a quorum valid `<<COMMIT>>` messages. It is necessary that the node has previously been in the prepare phase (`acceptedBlock` != ⊥) for the given round and has not been in the finalization phase (`finalisedBlockSent` = false). If previously satisfied, the validator will first extract a commit seal from each `<<COMMIT>>` message. Subsequently, it constructs a finalization block composed of the set of commit seals and the proposed block (from the `acceptedPB` state variable). The finalization block is then broadcasted to **ALL** nodes in the network, not just validators. Upon receiving this finalization block, all nodes can utilize commit seals to verify the occurrence of agreement among validators. If the verification holds, nodes can then apply additional consensus rules to the block and include it into the chain.
 
-![Finalization Phase - Validators' Behavior](<../../../../.gitbook/assets/8 (1).png>)
+<figure><img src="../../../../.gitbook/assets/system_architecture-finalization.drawio.svg" alt=""><figcaption><p>Finalization Phase - Validators' Behavior</p></figcaption></figure>
 
 In this way, the core functionality of the IBFT 2.0 consensus algorithm is brought to an end.&#x20;
 

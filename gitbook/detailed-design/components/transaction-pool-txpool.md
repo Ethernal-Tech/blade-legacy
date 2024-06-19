@@ -27,9 +27,9 @@ TxPool fields:
 * **`chainID`** - chain id,
 * **`localPeerID`** - `localPeerID` is the peer ID of the local node that is running the `TxPool`.
 
-Some of the main TxPool functions include:
+Some of the main `TxPool` methods include:
 
-* **`NewTxPool` **_**-**_ NewTxPool creates and returns a new pool for processing incoming transactions,
+* **`NewTxPool` **_**-**_ `NewTxPool` creates and returns a new pool for processing incoming transactions,
 * **`Start`** _-_ runs the pool's main loop in the background.  On each request received, the appropriate handler is invoked in a separate goroutine,
 * **`Close` **_**-**_ shuts down the pool's main loop,
 * **`SetSigner`** - sets the signer the pool will use // to validate a transaction's signature,
