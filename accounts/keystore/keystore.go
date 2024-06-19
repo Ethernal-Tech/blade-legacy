@@ -53,7 +53,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) (*Key
 	ks := &KeyStore{keyEncryption: &passphraseEncryption{scryptN, scryptP}}
 
 	if err := ks.init(keyDir, logger); err != nil {
-		return nil, fmt.Errorf("could not initialize keystore: %v", err)
+		return nil, fmt.Errorf("could not initialize keystore: %w", err)
 	}
 
 	return ks, nil
