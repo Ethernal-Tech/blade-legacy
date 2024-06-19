@@ -12,20 +12,20 @@ TxPool fields:
 
 * **`logger`** - logger interface that defines applicable logger methods,
 * **`signer`** _-_ signer interface that defines a transaction sender,&#x20;
-* **`forks`** - map which contains all forks and their starting blocks from genesis,
+* **`forks`** - represents a map which contains all forks and their starting blocks from genesis,
 * **`store`** _-_ interface defines State helper methods the `TxPool` should have access to,
 * **`accounts`** - map of all accounts registered by the pool,
-* **`executables` **_**-**_ all the primaries (transactions ready for execution) sorted by max gas price,
+* **`executables` **_**-**_ represents all the primaries (i.e. transactions ready for execution) sorted by max gas price,
 * **`index`** - lookup map keeping track of all  transactions present in the pool,
 * **`topic`** - networking stack,
 * **`gauge`** - gauge for measuring pool capacity,
-* **`priceLimit`** - `priceLimit` is a lower threshold for gas price,
+* **`priceLimit`** - represents a lower threshold for gas price,
 * **`sealing`** - flag indicating if the current node is a sealer (validator), and should therefore gossip transactions,
-* **`baseFee`** - `baseFee` is the base fee of the current head.  This is needed to sort transactions by price,
+* **`baseFee`** - represents the base fee of the current head.  This is needed to sort transactions by price,
 * **`eventManager`** - event manager for `TxPool` events,
-* **`pending`** - pending is the list of pending and ready transactions. This variable is accessed with atomics,
-* **`chainID`** - chain id,
-* **`localPeerID`** - `localPeerID` is the peer ID of the local node that is running the `TxPool`.
+* **`pending`** - represents the list of pending and ready transactions. This variable is accessed with atomics,
+* **`chainID`** - chain ID,
+* **`localPeerID`** - represents the peer ID of the local node that is running the `TxPool`.
 
 Some of the main `TxPool` methods include:
 
@@ -36,7 +36,7 @@ Some of the main `TxPool` methods include:
 * **`AddTx` **_**-**_ adds a new transaction to the pool (sent from json-RPC/gRPC endpoints) and broadcasts it to the network (if enabled),
 * **`Prepare`** - generates all the transactions ready for execution. (primaries),
 * **`Peek` **_**-**_ returns the best-price selected transaction ready for execution,
-* **`Pop` **_**-**_ removes the given transaction from the associated promoted queue (account). It  will update executables with the next primary from that account (if any),
+* **`Pop` **_**-**_ removes the given transaction from the associated promoted queue (account). It  will update `executables` with the next primary from that account (if any),
 * **`Drop` **_**-**_ clears the entire account associated with the given transaction and reverts its next (expected) nonce,
 * **`Demote` **_**-**_ excludes an account from being further processed during block building due to a recoverable error. If an account has been demoted too many times, it is Dropped instead,
 * **`ResetWithBlock`** _-_ processes the transactions from the newly finalized block to sync the pool with the new state,
@@ -53,7 +53,7 @@ Every node has a single instance of `TxPool` in-memory structure, which is creat
 
 `BlockBuilder`'s `Fill` method uses `TxPool` to fill the block with transactions taken from`TxPool`. Each transaction is validated one by one, and valid transactions are added to the`BlockBuilder`'s list of transactions. Transactions are validated until a predefined timer (for block creation) expires or a predefined gas (for prepared transactions) is spent.
 
-_Block Creation Sequence Diagram_ gives a detailed overview of block creation actions. `BlockBuilder`'s is in charge of&#x20;
+_Block Creation Sequence Diagram_ gives a detailed overview of block creation actions. `BlockBuilder`'s is in charge of:&#x20;
 
 * creating a block timer that limits the time interval allowed for block creation, and
 * preparing transactions in `TxPool`,  where all transactions ready for execution are sorted descending by best price (i.e., transaction fee), giving an advantage to more expensive ones.
@@ -76,7 +76,7 @@ The main source of new transactions is the `JSONRPC` component. This component, 
 
 Transaction validations include:
 
-* **state transaction check** - as transactions with`StateTxPType` are not expected to be added to the `TxPool`,
+* **state transaction check** - as transactions with `StateTxPType` transaction type are not expected to be added to the `TxPool`,
 * **transaction size check** - as a transaction size cannot exceed 128 kB, which helps to overcome DOS attacks,
 * **transaction value check** - as transactions strictly have positive values,&#x20;
 * **smart contract deployment check** - checks if a transaction can deploy a smart contract,
