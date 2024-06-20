@@ -1,0 +1,19 @@
+@startuml
+hide footbox
+
+Polybft -> ConsensusRuntime: newConsensusRuntime
+Polybft <-- ConsensusRuntime: ConsensusRuntime
+Polybft -> IBFT: newIBFT
+Polybft <-- IBFT: IBFT
+
+    alt isValidator
+        Polybft -> ConsensusRuntime: createIBFTBackend
+        Polybft <-- ConsensusRuntime: IBFTBackend
+        Polybft -> IBFT: setIBFTBackend
+        Polybft -> IBFT: runSequence
+        Polybft <-- IBFT: chain & wait
+    else wait for block
+    end
+destroy Polybft
+
+@enduml

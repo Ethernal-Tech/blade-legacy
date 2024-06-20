@@ -1,0 +1,260 @@
+@startuml
+skinparam packageStyle frame
+' left to right direction
+namespace polybft {
+
+       class fsm << (S,Aquamarine) >> {
+        - config *PolyBFTConfig
+        - forks *chain.Forks
+        - parent *types.Header
+        - backend blockchainBackend
+        - polybftBackend polybftBackend
+        - validators validator.ValidatorSet
+        - proposerSnapshot *ProposerSnapshot
+        - blockBuilder blockBuilder
+        - epochNumber uint64
+        - commitEpochInput *contractsapi.CommitEpochEpochManagerFn
+        - distributeRewardsInput *contractsapi.DistributeRewardForEpochManagerFn
+        - isEndOfEpoch bool
+        - isEndOfSprint bool
+        - isFirstBlockOfEpoch bool
+        - proposerCommitmentToRegister *CommitmentMessageSigned
+        - logger go-hclog.Logger
+        - target *types.FullBlock
+        - exitEventRootHash types.Hash
+        - newValidatorsDelta *validator.ValidatorSetDelta
+
+        - applyBridgeCommitmentTx() error
+        - createBridgeCommitmentTx() (*types.Transaction, error)
+        - getValidatorsTransition(delta *validator.ValidatorSetDelta) (validator.AccountSet, error)
+        - createCommitEpochTx() (*types.Transaction, error)
+        - createDistributeRewardsTx() (*types.Transaction, error)
+        - verifyCommitEpochTx(commitEpochTx *types.Transaction) error
+        - verifyDistributeRewardsTx(distributeRewardsTx *types.Transaction) error
+
+        + BuildProposal(currentRound uint64) ([]byte, error)
+        + ValidateCommit(signerAddr []byte, seal []byte, proposalHash []byte) error
+        + Validate(proposal []byte) error
+        + ValidateSender(msg *proto.Message) error
+        + VerifyStateTransactions(transactions []*types.Transaction) error
+        + Insert(proposal []byte, committedSeals []*messages.CommittedSeal) (*types.FullBlock, error)
+        + Height() uint64
+        + ValidatorSet() validator.ValidatorSet
+
+    }
+
+    class blockchainWrapper << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - executor *state.Executor
+        - blockchain *blockchain.Blockchain
+
+        + CurrentHeader() *types.Header
+        + CommitBlock(block *types.FullBlock) error
+        + ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error)
+        + GetStateProviderForBlock(header *types.Header) (contract.Provider, error)
+        + GetStateProvider(transition *state.Transition) contract.Provider
+        + GetHeaderByNumber(number uint64) (*types.Header, bool)
+        + GetHeaderByHash(hash types.Hash) (*types.Header, bool)
+        + NewBlockBuilder(parent *types.Header, coinbase types.Address, txPool txPoolInterface, blockTime time.Duration, logger hclog.Logger) (blockBuilder, error)
+        + GetSystemState(provider contract.Provider) SystemState
+        + SubscribeEvents() blockchain.Subscription
+        + UnubscribeEvents(subscription blockchain.Subscription) 
+        + GetChainID() uint64
+        + GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error)
+
+    }
+
+    class IBFTConsensusWrapper << (S,Aquamarine) >> {
+        - runSequence(height uint64) (<font color=blue>chan</font> <font color=blue>struct</font>{}, <font color=blue>func</font>() )
+
+    }
+    class Polybft << (S,Aquamarine) >> {
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - ibft *IBFTConsensusWrapper
+        - state *State
+        - config *consensus.Params
+        - genesisClientConfig *PolyBFTConfig
+        - blockchain blockchainBackend
+        - runtime *consensusRuntime
+        - dataDir string
+        - syncer syncer.Syncer
+        - consensusTopic *network.Topic
+        - bridgeTopic *network.Topic
+        - key *wallet.Key
+        - validatorsCache *validatorsSnapshotCache
+        - logger go-hclog.Logger
+        - txPool txPoolInterface
+
+        - initRuntime() error
+        - startRuntime() error
+        - startConsensusProtocol() 
+        - waitForNPeers() bool
+        - verifyHeaderImpl(parent *types.Header, header *types.Header, blockTimeDrift uint64, parents []*types.Header) error
+        - subscribeToIbftTopic() error
+        - createTopics() error
+
+        + Initialize() error
+        + Start() error
+        + Close() error
+        + GetSyncProgression() *progress.Progression
+        + VerifyHeader(header *types.Header) error
+        + GetValidators(blockNumber uint64, parents []*types.Header) (validator.AccountSet, error)
+        + GetValidatorsWithTx(blockNumber uint64, parents []*types.Header, dbTx *bbolt.Tx) (validator.AccountSet, error)
+        + SetBlockTime(blockTime time.Duration) 
+        + ProcessHeaders(_ []*types.Header) error
+        + GetBlockCreator(h *types.Header) (types.Address, error)
+        + PreCommitState(block *types.Block, _ *state.Transition) error
+        + GetLatestChainConfig() (*chain.Params, error)
+        + GetBridgeProvider() consensus.BridgeDataProvider
+        + FilterExtra(extra []byte) ([]byte, error)
+        + Multicast(msg *proto.Message) 
+
+    }
+
+    class consensusRuntime << (S,Aquamarine) >> {
+        - config *runtimeConfig
+        - state *State
+        - fsm *fsm
+        - lock sync.RWMutex
+        - epoch *epochMetadata
+        - lastBuiltBlock *types.Header
+        - activeValidatorFlag atomic.Bool
+        - proposerCalculator *ProposerCalculator
+        - stakeManager StakeManager
+        - eventProvider *EventProvider
+        - bridgeManager BridgeManager
+        - governanceManager GovernanceManager
+        - logger go-hclog.Logger
+
+        - close() 
+        - initStakeManager(logger go-hclog.Logger, dbTx *bbolt.Tx) error
+        - initGovernanceManager(logger go-hclog.Logger, dbTx *bbolt.Tx) error
+        - getGuardedData() (guardedDataDTO, error)
+        - restartEpoch(header *types.Header, dbTx *bbolt.Tx) (*epochMetadata, error)
+        - calculateDistributeRewardsInput(isFirstBlockOfEpoch bool, isEndOfEpoch bool, pendingBlockNumber uint64, lastFinalizedBlock *types.Header, epochID uint64) (*contractsapi.DistributeRewardForEpochManagerFn, error)
+        - setIsActiveValidator(isActiveValidator bool) 
+        - isFixedSizeOfEpochMet(blockNumber uint64, epoch *epochMetadata) bool
+        - isFixedSizeOfSprintMet(blockNumber uint64, epoch *epochMetadata) bool
+        - getSystemState(header *types.Header) (SystemState, error)
+        - getFirstBlockOfEpoch(epochNumber uint64, latestHeader *types.Header) (uint64, error)
+        - getCurrentBlockTimeDrift() uint64
+
+        + IsBridgeEnabled() bool
+        + OnBlockInserted(fullBlock *types.FullBlock) 
+        + FSM() error
+        + GenerateExitProof(exitID uint64) (types.Proof, error)
+        + GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
+        + IsActiveValidator() bool
+        + IsValidProposal(rawProposal []byte) bool
+        + IsValidValidator(msg *proto.Message) bool
+        + IsProposer(id []byte, height uint64, round uint64) bool
+        + IsValidProposalHash(proposal *proto.Proposal, hash []byte) bool
+        + IsValidCommittedSeal(proposalHash []byte, committedSeal *messages.CommittedSeal) bool
+        + BuildProposal(view *proto.View) []byte
+        + InsertProposal(proposal *proto.Proposal, committedSeals []*messages.CommittedSeal) 
+        + ID() []byte
+        + GetVotingPowers(height uint64) (<font color=blue>map</font>[string]*big.Int, error)
+        + BuildPrePrepareMessage(rawProposal []byte, certificate *proto.RoundChangeCertificate, view *proto.View) *proto.Message
+        + BuildPrepareMessage(proposalHash []byte, view *proto.View) *proto.Message
+        + BuildCommitMessage(proposalHash []byte, view *proto.View) *proto.Message
+        + RoundStarts(view *proto.View) error
+        + SequenceCancelled(view *proto.View) error
+        + BuildRoundChangeMessage(proposal *proto.Proposal, certificate *proto.PreparedCertificate, view *proto.View) *proto.Message
+
+    }
+    interface blockchainBackend  {
+        + CurrentHeader() *types.Header
+        + CommitBlock(block *types.FullBlock) error
+        + NewBlockBuilder(parent *types.Header, coinbase types.Address, txPool txPoolInterface, blockTime time.Duration, logger hclog.Logger) (blockBuilder, error)
+        + ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error)
+        + GetStateProviderForBlock(block *types.Header) (contract.Provider, error)
+        + GetStateProvider(transition *state.Transition) contract.Provider
+        + GetHeaderByNumber(number uint64) (*types.Header, bool)
+        + GetHeaderByHash(hash types.Hash) (*types.Header, bool)
+        + GetSystemState(provider contract.Provider) SystemState
+        + SubscribeEvents() blockchain.Subscription
+        + UnubscribeEvents(subscription blockchain.Subscription) 
+        + GetChainID() uint64
+        + GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error)
+
+    }
+
+}
+namespace core {
+    class IBFT << (S,Aquamarine) >> {
+        - log Logger
+        - state *state
+        - messages Messages
+        - backend Backend
+        - transport Transport
+        - roundDone <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - roundExpired <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - newProposal <font color=blue>chan</font> newProposalEvent
+        - roundCertificate <font color=blue>chan</font> uint64
+        - additionalTimeout time.Duration
+        - baseRoundTimeout time.Duration
+        - wg sync.WaitGroup
+        - validatorManager *ValidatorManager
+
+        - startRoundTimer(ctx context.Context, round uint64) 
+        - signalRoundExpired(ctx context.Context) 
+        - signalRoundDone(ctx context.Context) 
+        - signalNewRCC(ctx context.Context, round uint64) 
+        - signalNewProposal(ctx context.Context, event newProposalEvent) 
+        - watchForFutureProposal(ctx context.Context) 
+        - watchForRoundChangeCertificates(ctx context.Context) 
+        - startRound(ctx context.Context) 
+        - waitForRCC(ctx context.Context, height uint64, round uint64) *proto.RoundChangeCertificate
+        - handleRoundChangeMessage(view *proto.View) *proto.RoundChangeCertificate
+        - proposalMatchesCertificate(proposal *proto.Proposal, certificate *proto.PreparedCertificate) bool
+        - runStates(ctx context.Context) 
+        - runNewRound(ctx context.Context) error
+        - validateProposalCommon(msg *proto.Message, view *proto.View) bool
+        - validateProposal0(msg *proto.Message, view *proto.View) bool
+        - validateProposal(msg *proto.Message, view *proto.View) bool
+        - handlePrePrepare(view *proto.View) *proto.Message
+        - runPrepare(ctx context.Context) error
+        - handlePrepare(view *proto.View) bool
+        - runCommit(ctx context.Context) error
+        - handleCommit(view *proto.View) bool
+        - runFin(ctx context.Context) 
+        - insertBlock() 
+        - moveToNewRound(round uint64) 
+        - buildProposal(ctx context.Context, view *proto.View) *proto.Message
+        - acceptProposal(proposalMessage *proto.Message) 
+        - isAcceptableMessage(message *proto.Message) bool
+        - validPC(certificate *proto.PreparedCertificate, roundLimit uint64, height uint64) bool
+        - sendPreprepareMessage(message *proto.Message) 
+        - sendRoundChangeMessage(height uint64, newRound uint64) 
+        - sendPrepareMessage(view *proto.View) 
+        - sendCommitMessage(view *proto.View) 
+        - hasQuorumByMsgType(msgs []*proto.Message, msgType proto.MessageType) bool
+        - subscribe(details messages.SubscriptionDetails) *messages.Subscription
+
+        + RunSequence(ctx context.Context, h uint64) 
+        + AddMessage(message *proto.Message) 
+        + ExtendRoundTimeout(amount time.Duration) 
+        + SetBaseRoundTimeout(baseRoundTimeout time.Duration) 
+
+    }
+    interface Backend  {
+        + BuildProposal(view *proto.View) []byte
+        + InsertProposal(proposal *proto.Proposal, committedSeals []*messages.CommittedSeal) 
+        + ID() []byte
+
+    }
+}
+
+
+"core.IBFT" *-- "polybft.IBFTConsensusWrapper"
+"polybft.polybftBackend" <|-- "polybft.Polybft"
+"polybft.Polybft" ..> "polybft.IBFTConsensusWrapper"
+"polybft.blockchainBackend" <|-- "polybft.blockchainWrapper"
+"polybft.consensusRuntime" ..> "polybft.fsm"
+"polybft.fsm" ..> "polybft.blockchainBackend"
+"polybft.fsm" ..> "polybft.polybftBackend"
+"polybft.Runtime" <|-- "polybft.consensusRuntime"
+
+
+
+@enduml

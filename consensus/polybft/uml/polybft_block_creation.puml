@@ -1,6 +1,14 @@
 @startuml
 skinparam packageStyle frame
 left to right direction
+<style>
+class {
+  MinimumWidth 250
+  MaximumWidth 370
+ 
+}
+</style>
+
 namespace polybft {
     class BlockBuilder << (S,Aquamarine) >> {
         - params *BlockBuilderParams
@@ -120,10 +128,10 @@ namespace state{
 
 "polybft.blockBuilder" <|.. "polybft.BlockBuilder"
 "polybft.txPoolInterface" <|.u. "txpool.TxPool"
-"polybft.BlockBuilderParams" --> "polybft.txPoolInterface"
-"polybft.BlockBuilder" -->  "polybft.BlockBuilderParams"
-"polybft.BlockBuilder" -u->  "state.Transition"
-"polybft.BlockBuilderParams" -r-> "state.Executor"
+"polybft.BlockBuilderParams" ..> "polybft.txPoolInterface"
+"polybft.BlockBuilder" ..> "polybft.BlockBuilderParams"
+"polybft.BlockBuilder" .u.>  "state.Transition"
+"polybft.BlockBuilderParams" .r.> "state.Executor"
 
    
 @enduml

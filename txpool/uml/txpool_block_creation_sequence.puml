@@ -25,19 +25,19 @@ BlockBuilder -> TxPool: Prepare
             activate BlockBuilder
             BlockBuilder <<-- Transition: validation result
             deactivate BlockBuilder
-            note right of BlockBuilder
-                If validation result is ok.
-            end note
-            BlockBuilder -> BlockBuilder: add Tx to block transactions
-            
-            activate BlockBuilder
-            
-            deactivate BlockBuilder
+
+            alt validation successful
+                BlockBuilder -> BlockBuilder: add Tx to block transactions
+                
+                activate BlockBuilder
+                deactivate BlockBuilder
+            end
+
             deactivate BlockBuilder
             note right of BlockBuilder
                 Depending on the validation result handle Tx in the TxPool.
             end note
-            alt successful case
+            alt validation successful
                 BlockBuilder -> TxPool: Pop
             else gas limit reached error
                 break

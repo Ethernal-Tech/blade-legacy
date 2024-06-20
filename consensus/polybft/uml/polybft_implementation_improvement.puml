@@ -1,0 +1,80 @@
+@startuml
+skinparam packageStyle frame
+left to right direction
+
+<style>
+class {
+  MinimumWidth 150
+  MaximumWidth 400
+ 
+}
+</style>
+
+namespace core {
+    interface Backend  {
+        + BuildProposal(view *proto.View) []byte
+        + InsertProposal(proposal *proto.Proposal, committedSeals []*messages.CommittedSeal) 
+        + ID() []byte
+
+    }
+
+    class IBFT << (S,Aquamarine) >> {
+        - log Logger
+        - messages Messages
+        - backend Backend
+        - transport Transport
+        - validatorManager *ValidatorManager
+        
+        + NewIBFT(Logger, Backend, Transport)
+        + SetBackend(IBFTBackend)
+        + RunSequence() 
+    }
+
+    interface Messages  {
+        + AddMessage(message *proto.Message) 
+        + PruneByHeight(height uint64) 
+        + SignalEvent(messageType proto.MessageType, view *proto.View) 
+        + GetValidMessages(view *proto.View, messageType proto.MessageType, isValid <font color=blue>func</font>(*proto.Message) bool) []*proto.Message
+        + GetExtendedRCC(height uint64, isValidMessage <font color=blue>func</font>(*proto.Message) bool, isValidRCC <font color=blue>func</font>(uint64, []*proto.Message) bool) []*proto.Message
+        + GetMostRoundChangeMessages(minRound uint64, height uint64) []*proto.Message
+        + Subscribe(details messages.SubscriptionDetails) *messages.Subscription
+        + Unsubscribe(id messages.SubscriptionID) 
+
+    }
+
+    interface Transport  {
+        + Multicast(message *proto.Message) 
+
+    }
+
+    class ValidatorManager << (S,Aquamarine) >> {
+        - vpLock *sync.RWMutex
+        - quorumSize *big.Int
+        - validatorsVotingPower <font color=blue>map</font>[string]*big.Int
+        - backend ValidatorBackend
+        - log Logger
+
+        - setCurrentVotingPower(validatorsVotingPower <font color=blue>map</font>[string]*big.Int) error
+
+        + Init(height uint64) error
+        + HasQuorum(sendersAddrs <font color=blue>map</font>[string]<font color=blue>struct</font>{}) bool
+        + HasPrepareQuorum(stateName stateType, proposalMessage *proto.Message, msgs []*proto.Message) bool
+
+    }
+}
+
+
+
+
+"core.IBFT" .u.> "core.Backend"
+"core.IBFT" .u.> "core.Messages"
+"core.IBFT" .u.> "core.Transport"
+"core.IBFT" .u.> "core.ValidatorManager"
+' "Polybft" ..> "consensusRuntime"
+' "Polybft" .u.> "IBFT"
+
+' "IBFTBackend" ..> "blockchainBackend"
+' "IBFTBackend" .u.|> "Backend"
+' "IBFTBackend" <.. "consensusRuntime"
+
+@enduml

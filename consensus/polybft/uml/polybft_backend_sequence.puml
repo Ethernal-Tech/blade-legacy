@@ -1,0 +1,48 @@
+@startuml
+hide footbox
+
+Polybft -> IBFT: RunSequence
+activate IBFT
+Polybft <-- IBFT: sequence channel & stopSequence
+
+IBFT -> IBFT: set newRound state
+activate IBFT
+deactivate IBFT
+
+alt isProposer
+    IBFT -> IBFTBackend: buildProposal
+    IBFT -> IBFTBackend: buildPreprepareMessage
+else continue
+end
+
+IBFT -> IBFTBackend: isProposer
+IBFT -> IBFTBackend: isValidProposalHash
+IBFT -> IBFTBackend: isValidProposal
+IBFT -> IBFTBackend: isValidValidator
+IBFT -> IBFTBackend: buildPrepareMessage
+IBFT -> IBFT: set prepare state
+activate IBFT
+deactivate IBFT
+
+loop number of prepare messages
+    IBFT -> IBFTBackend: isValidProposalHash
+end
+IBFT -> IBFTBackend: buildCommitMessage
+IBFT -> IBFT: set commit state
+
+loop number of commit messages
+    IBFT -> IBFTBackend: isValidProposalHash
+    IBFT -> IBFTBackend: isValidCommitedSeal
+end
+
+IBFT -> IBFT: set finalization state
+activate IBFT
+deactivate IBFT
+
+IBFT -> IBFTBackend: insertProposal
+IBFT <-- IBFTBackend
+deactivate IBFT
+
+destroy IBFT
+
+@enduml

@@ -1,0 +1,84 @@
+@startuml
+skinparam packageStyle frame
+' left to right direction
+<style>
+class {
+  MinimumWidth 100
+  MaximumWidth 350
+ 
+}
+</style>
+namespace polybft {
+    class IBFTBackend << (S,Aquamarine) >> {
+        - backend blockchainBackend
+        - validators validator.ValidatorSet
+
+        + BuildProposal(currentRound uint64) ([]byte, error)
+       
+    }
+
+    class Polybft << (S,Aquamarine) >> {
+        
+        - ibft *IBFT        
+        - runtime *consensusRuntime
+           
+        - startConsensusProtocol() 
+        + Initalize() 
+
+    }
+
+    class consensusRuntime << (S,Aquamarine) >> {
+        - ibftBackend *IBFTBackend
+
+        + newConsensusRuntime(*runtimeConfig) ConsensusRuntime
+        + createIBFTBackend() error
+
+    }
+    interface blockchainBackend  {
+        + CurrentHeader() *types.Header
+        + CommitBlock(block *types.FullBlock) error
+        + NewBlockBuilder(parent *types.Header, coinbase types.Address, txPool txPoolInterface, blockTime time.Duration, logger hclog.Logger) (blockBuilder, error)
+        + ProcessBlock(parent *types.Header, block *types.Block) (*types.FullBlock, error)
+        + GetStateProviderForBlock(block *types.Header) (contract.Provider, error)
+        + GetStateProvider(transition *state.Transition) contract.Provider
+        + GetHeaderByNumber(number uint64) (*types.Header, bool)
+        + GetHeaderByHash(hash types.Hash) (*types.Header, bool)
+        + GetSystemState(provider contract.Provider) SystemState
+        + SubscribeEvents() blockchain.Subscription
+        + UnubscribeEvents(subscription blockchain.Subscription) 
+        + GetChainID() uint64
+        + GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error)
+
+    }
+
+    class IBFT << (S,Aquamarine) >> {
+        - log Logger
+        - backend Backend
+        - transport Transport
+        
+        + NewIBFT(Logger, Backend, Transport)
+        + SetBackend(IBFTBackend)
+        + RunSequence() 
+    }
+}
+namespace core {
+    interface Backend  {
+        + BuildProposal(view *proto.View) []byte
+        + InsertProposal(proposal *proto.Proposal, committedSeals []*messages.CommittedSeal) 
+        + ID() []byte
+
+    }
+}
+
+
+
+
+"IBFT" .u.> "Backend"
+"Polybft" ..> "consensusRuntime"
+"Polybft" .u.> "IBFT"
+
+"IBFTBackend" ..> "blockchainBackend"
+"IBFTBackend" .u.|> "Backend"
+"IBFTBackend" <.. "consensusRuntime"
+
+@enduml
