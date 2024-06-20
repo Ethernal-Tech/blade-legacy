@@ -1,6 +1,6 @@
 # Initialization
 
-The starting point of Blade's consensus algorithm is the `Polybft` component, which serves as a wrapper around IBFT. The `Polybft` component is instantiated only once during node startup and remains unchanged throughout the node's operation until it is shut down. Two additional components that also remain unchanged during the node startup are `IBFT` and `ConsensusRuntime` (see _Components of Consensus Mechanism_ sequence diagram).
+The starting point of Blade's consensus algorithm is the `Polybft` component, which serves as a wrapper around `IBFT`. The `Polybft` component is instantiated only once during node startup and remains unchanged throughout the node's operation until it is shut down. Two additional components that also remain unchanged during the node startup are `IBFT` and `ConsensusRuntime` (see _Components of Consensus Mechanism_ sequence diagram).
 
 <figure><img src="../../../../.gitbook/assets/polybft_initialization_improvement (4).png" alt=""><figcaption><p>Components of Consensus Mechanism</p></figcaption></figure>
 
@@ -15,5 +15,5 @@ In the sequence diagram below we can see, if the current node is a validator for
 
 <figure><img src="../../../../.gitbook/assets/polybft_initialization_sequence (1).png" alt=""><figcaption><p>Sequence diagram for IBFT backend creation</p></figcaption></figure>
 
-In the next section we define the used IBFT model.
+In the next section we define the used `IBFT` model.
 
