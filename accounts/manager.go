@@ -140,6 +140,7 @@ func (am *Manager) update() {
 				walletManager.SetEventHandler(am.eventHandler)
 				kind := reflect.TypeOf(walletManager)
 				am.walletManagers[kind] = append(am.walletManagers[kind], walletManager)
+
 				close(walletManagerEvent.processed)
 			}
 

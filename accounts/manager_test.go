@@ -115,8 +115,8 @@ func TestNewManager(t *testing.T) {
 	manager := NewManager(blockchain.NewTestBlockchain(t, nil), ksMock)
 
 	require.NotNil(t, manager)
-	require.Equal(t, 1, len(manager.Wallets()))
-	require.Equal(t, 1, len(manager.WalletManagers(keystoreMockType)))
+	require.Len(t, manager.Wallets(), 1)
+	require.Len(t, manager.WalletManagers(keystoreMockType), 1)
 }
 
 // TestAddWalletManager tests adding a new wallet manager
@@ -127,8 +127,8 @@ func TestAddWalletManager(t *testing.T) {
 	ksMock.On("Wallets").Return([]Wallet{&keystoreWalletMock{}}).Once()
 
 	manager.AddWalletManager(ksMock)
-	require.Equal(t, 1, len(manager.Wallets()))
-	require.Equal(t, 1, len(manager.WalletManagers(keystoreMockType)))
+	require.Len(t, manager.Wallets(), 1)
+	require.Len(t, manager.WalletManagers(keystoreMockType), 1)
 }
 
 func TestClose(t *testing.T) {
@@ -139,8 +139,9 @@ func TestClose(t *testing.T) {
 	keystoreWallet.On("Close").Return(nil)
 
 	manager := NewManager(blockchain.NewTestBlockchain(t, nil), ksMock)
-	err := manager.Close()
-	require.Nil(t, err)
+
+	require.NotNil(t, manager)
+	require.NoError(t, manager.Close())
 }
 
 func TestFind(t *testing.T) {
@@ -176,7 +177,7 @@ func TestAccounts(t *testing.T) {
 
 	manager := NewManager(blockchain.NewTestBlockchain(t, nil), ksMock)
 	accounts := manager.Accounts()
-	require.Equal(t, 1, len(accounts))
+	require.Len(t, accounts, 1)
 	require.Equal(t, types.ZeroAddress, accounts[0])
 }
 
@@ -189,9 +190,7 @@ func TestGetSigner(t *testing.T) {
 
 	manager := NewManager(blockchain.NewTestBlockchain(t, nil), ksMock)
 
-	signer := manager.GetSigner()
-
-	require.NotNil(t, signer)
+	require.NotNil(t, manager.GetSigner())
 }
 
 func TestArrivedDrop(t *testing.T) {
@@ -211,11 +210,11 @@ func TestArrivedDrop(t *testing.T) {
 
 	time.Sleep(2 * time.Second)
 
-	require.Equal(t, 2, len(manager.Wallets()))
+	require.Len(t, manager.Wallets(), 2)
 
 	manager.eventHandler.Publish(WalletEventKey, WalletEvent{Wallet: ksWalletMockArrivedDropped, Kind: WalletDropped})
 
 	time.Sleep(2 * time.Second)
 
-	require.Equal(t, 1, len(manager.Wallets()))
+	require.Len(t, manager.Wallets(), 1)
 }
