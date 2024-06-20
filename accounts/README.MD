@@ -38,30 +38,32 @@ Accounts are required for some features. So our software support two diffent way
 
 ## ImportRawKey JSON-RPC Flow
 
-``` sequence
-    Network->Personal endpoint:personal_improtRawKey
-    Personal endpoint->Manager:WalletsManager()\nKeyStoreType
-    Manager->Personal endpoint:KeyStore\n(WalletManager)
-    Personal endpoint->KeyStore:ImportECDSA()
-    KeyStore->KeyStore:KeyEncrypt()
-    KeyStore->AccountStore:add()
-    KeyStore->Manager:WalletEvent
-    Manager->Manager:Updater
-    AccountStore->AccountStore:add
+``` mermaid
+    sequenceDiagram
+    Network->>Personal endpoint:personal_improtRawKey
+    Personal endpoint->>Manager:WalletsManager()\nKeyStoreType
+    Manager->>Personal endpoint:KeyStore\n(WalletManager)
+    Personal endpoint->>KeyStore:ImportECDSA()
+    KeyStore->>KeyStore:KeyEncrypt()
+    KeyStore->>AccountStore:add()
+    KeyStore->>Manager:WalletEvent
+    Manager->>Manager:Updater
+    AccountStore->>AccountStore:add
     Note right of AccountStore:KeyFile
 ```
 
 ## Insert Command Flow
-``` sequence
-    Command->Personal endpoint:personal_improtRawKey
-    Personal endpoint->Manager:WalletsManager()\nKeyStoreType
-    Manager->Personal endpoint:KeyStore\n(WalletManager)
-    Personal endpoint->KeyStore:ImportECDSA()
-    KeyStore->KeyStore:KeyEncrypt()
-    KeyStore->AccountStore:add()
-    KeyStore->Manager:WalletEvent
-    Manager->Manager:Updater
-    AccountStore->AccountStore:add
+``` mermaid
+    sequenceDiagram
+    Command->>Personal endpoint:personal_improtRawKey
+    Personal endpoint->>Manager:WalletsManager()\nKeyStoreType
+    Manager->>Personal endpoint:KeyStore\n(WalletManager)
+    Personal endpoint->>KeyStore:ImportECDSA()
+    KeyStore->>KeyStore:KeyEncrypt()
+    KeyStore->>AccountStore:add()
+    KeyStore->>Manager:WalletEvent
+    Manager->>Manager:Updater
+    AccountStore->>AccountStore:add
     Note right of AccountStore:KeyFile
 ```
     
