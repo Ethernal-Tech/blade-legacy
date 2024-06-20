@@ -129,7 +129,7 @@ func (c *state) push(val uint256.Int) {
 }
 
 func (c *state) stackAtLeast(n int) bool {
-	return c.stack.sp >= n
+	return c.stack.size() >= n
 }
 
 func (c *state) popHash() types.Hash {
@@ -148,7 +148,7 @@ func (c *state) popAddr() (types.Address, bool) {
 }
 
 func (c *state) stackSize() int {
-	return c.stack.sp
+	return c.stack.size()
 }
 
 func (c *state) top() *uint256.Int {
@@ -163,12 +163,12 @@ func (c *state) pop() uint256.Int {
 	return v
 }
 
-func (c *state) peekAt(n int) uint256.Int {
+func (c *state) peekAt(n int) (uint256.Int, error) {
 	return c.stack.peekAt(n)
 }
 
-func (c *state) swap(n int) {
-	c.stack.swap(n)
+func (c *state) swap(n int) error {
+	return c.stack.swap(n)
 }
 
 func (c *state) consumeGas(gas uint64) bool {
@@ -223,8 +223,8 @@ func (c *state) Run() ([]byte, error) {
 		}
 
 		// check if the depth of the stack is enough for the instruction
-		if c.stack.sp < inst.stack {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: inst.stack})
+		if c.stack.size() < inst.stack {
+			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: inst.stack})
 			c.captureExecution(op.String(), uint64(c.ip), gasCopy, inst.gas)
 
 			break
@@ -243,9 +243,16 @@ func (c *state) Run() ([]byte, error) {
 		if tracer != nil {
 			c.captureExecution(op.String(), ipCopy, gasCopy, gasCopy-c.gas)
 		}
+
+		// In case there was an error set in current instruction, let the execution trace
+		// to allow easier debugging and stop the execution.
+		if c.err != nil {
+			break
+		}
+
 		// check if stack size exceeds the max size
-		if c.stack.sp > stackSize {
-			c.exit(&runtime.StackOverflowError{StackLen: c.stack.sp, Limit: stackSize})
+		if c.stack.size() > stackSize {
+			c.exit(&runtime.StackOverflowError{StackLen: c.stack.size(), Limit: stackSize})
 
 			break
 		}
@@ -360,10 +367,10 @@ func (c *state) captureState(opCode int) {
 
 	tracer.CaptureState(
 		c.memory,
-		c.stack.data,
+		c.stack,
 		opCode,
 		c.msg.Address,
-		c.stack.sp,
+		c.stack.size(),
 		c.host,
 		c,
 	)

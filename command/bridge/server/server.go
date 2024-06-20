@@ -216,7 +216,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	}
 
 	// start the client
-	if err = dockerClient.ContainerStart(ctx, resp.ID, dockertypes.ContainerStartOptions{}); err != nil {
+	if err = dockerClient.ContainerStart(ctx, resp.ID, container.StartOptions{}); err != nil {
 		return err
 	}
 
@@ -238,7 +238,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 }
 
 func gatherLogs(ctx context.Context, outputter command.OutputFormatter) error {
-	opts := dockertypes.ContainerLogsOptions{
+	opts := container.LogsOptions{
 		ShowStderr: true,
 		ShowStdout: true,
 		Follow:     true,

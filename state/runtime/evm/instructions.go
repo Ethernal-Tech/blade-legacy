@@ -356,15 +356,14 @@ func opSar(c *state) {
 func opMLoad(c *state) {
 	v := c.top()
 
-	var ok bool
-	c.tmp, ok = c.get2(c.tmp[:0], *v, *wordSize256)
-
-	// ### Error handling?
-	if !ok {
+	if !c.allocateMemory(*v, *wordSize256) {
 		return
 	}
 
-	v.SetBytes(c.tmp)
+	offset := v.Uint64()
+	size := wordSize256.Uint64()
+
+	v.SetBytes(c.memory[offset : offset+size])
 }
 
 func opMStore(c *state) {
@@ -1023,21 +1022,22 @@ func opPush(n int) instruction {
 
 func opDup(n int) instruction {
 	return func(c *state) {
-		if !c.stackAtLeast(n) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: n})
-		} else {
-			val := c.peekAt(n)
-			c.push(val)
+		val, err := c.peekAt(n)
+		if err != nil {
+			c.exit(err)
+
+			return
 		}
+
+		c.push(val)
 	}
 }
 
 func opSwap(n int) instruction {
 	return func(c *state) {
-		if !c.stackAtLeast(n + 1) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: n + 1})
-		} else {
-			c.swap(n)
+		err := c.swap(n)
+		if err != nil {
+			c.exit(err)
 		}
 	}
 }
@@ -1053,7 +1053,7 @@ func opLog(size int) instruction {
 		}
 
 		if !c.stackAtLeast(2 + size) {
-			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.sp, Required: 2 + size})
+			c.exit(&runtime.StackUnderflowError{StackLen: c.stack.size(), Required: 2 + size})
 
 			return
 		}
@@ -1154,7 +1154,14 @@ func opCall(op OpCode) instruction {
 		c.resetReturnData()
 
 		if op == CALL && c.inStaticCall() {
-			if val := c.peekAt(3); val.BitLen() > 0 {
+			val, err := c.peekAt(3)
+			if err != nil {
+				c.exit(err)
+
+				return
+			}
+
+			if val.BitLen() > 0 {
 				c.exit(errWriteProtection)
 
 				return

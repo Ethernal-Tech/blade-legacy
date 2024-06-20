@@ -1393,8 +1393,8 @@ func TestSwap(t *testing.T) {
 	instr := opSwap(4)
 	instr(s)
 
-	assert.Equal(t, *uint256.NewInt(5), s.stack.data[9])
-	assert.Equal(t, *uint256.NewInt(9), s.stack.data[5])
+	assert.Equal(t, *uint256.NewInt(5), s.stack[9])
+	assert.Equal(t, *uint256.NewInt(9), s.stack[5])
 }
 
 func TestLog(t *testing.T) {
@@ -1403,7 +1403,6 @@ func TestLog(t *testing.T) {
 		defer cancelFn()
 
 		s.msg.Static = true
-		s.stack.sp = 1
 
 		s.push(*uint256.NewInt(3))
 		s.push(*uint256.NewInt(20))
@@ -1421,8 +1420,6 @@ func TestLog(t *testing.T) {
 	t.Run("StackUnderflow", func(t *testing.T) {
 		s, cancelFn := getState(&chain.ForksInTime{})
 		defer cancelFn()
-
-		s.stack.sp = 1
 
 		s.push(*uint256.NewInt(3))
 		s.push(*uint256.NewInt(20))
@@ -1500,8 +1497,8 @@ var (
 	addr1 = types.StringToAddress("1")
 )
 
-func convertBigIntSliceToUint256(bigInts []*big.Int) []uint256.Int {
-	var uint256s = make([]uint256.Int, 0, len(bigInts))
+func convertBigIntSliceToUint256(bigInts []*big.Int) *OptimizedStack {
+	var uint256s = make(OptimizedStack, 0, len(bigInts))
 
 	for _, bi := range bigInts {
 		if bi.Sign() < 0 {
@@ -1516,7 +1513,16 @@ func convertBigIntSliceToUint256(bigInts []*big.Int) []uint256.Int {
 		uint256s = append(uint256s, *ui)
 	}
 
-	return uint256s
+	return &uint256s
+}
+
+func initializeStack(stackElements []uint256.Int) *OptimizedStack {
+	stack := &OptimizedStack{}
+	for _, element := range stackElements {
+		stack.push(element)
+	}
+
+	return stack
 }
 
 func Test_opSload(t *testing.T) {
@@ -1691,15 +1697,16 @@ func Test_opSload(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			// t.Parallel()
+			t.Parallel()
 
 			s, closeFn := getState(tt.config)
 			defer closeFn()
 
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
-			s.stack.sp = tt.initState.sp
-			s.stack.data = convertBigIntSliceToUint256(tt.initState.stack)
+
+			s.stack = *convertBigIntSliceToUint256(tt.initState.stack)
+
 			s.memory = tt.initState.memory
 			s.config = tt.config
 			tt.mockHost.accessList = tt.initState.accessList
@@ -1708,8 +1715,8 @@ func Test_opSload(t *testing.T) {
 			opSload(s)
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
-			assert.Equal(t, tt.resultState.sp, s.stack.sp, "sp in state after execution is not correct")
-			assert.Equal(t, convertBigIntSliceToUint256(tt.resultState.stack), s.stack.data, "stack in state after execution is not correct")
+			assert.Equal(t, tt.resultState.sp, s.stack.size(), "sp in state after execution is not correct")
+			assert.Equal(t, *convertBigIntSliceToUint256(tt.resultState.stack), s.stack, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
 			assert.Equal(t, tt.resultState.accessList, tt.mockHost.accessList, "accesslist in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
@@ -2024,8 +2031,9 @@ func TestCreate(t *testing.T) {
 
 			s.msg = tt.contract
 			s.gas = tt.initState.gas
-			s.stack.sp = tt.initState.sp
-			s.stack.data = convertBigIntSliceToUint256(tt.initState.stack)
+
+			s.stack = *convertBigIntSliceToUint256(tt.initState.stack)
+
 			s.memory = tt.initState.memory
 			s.config = tt.config
 			s.host = tt.mockHost
@@ -2033,8 +2041,8 @@ func TestCreate(t *testing.T) {
 			opCreate(tt.op)(s)
 
 			assert.Equal(t, tt.resultState.gas, s.gas, "gas in state after execution is not correct")
-			assert.Equal(t, tt.resultState.sp, s.stack.sp, "sp in state after execution is not correct")
-			assert.Equal(t, convertBigIntSliceToUint256(tt.resultState.stack), s.stack.data, "stack in state after execution is not correct")
+			assert.Equal(t, tt.resultState.sp, s.stack.size(), "sp in state after execution is not correct")
+			assert.Equal(t, *convertBigIntSliceToUint256(tt.resultState.stack), s.stack, "stack in state after execution is not correct")
 			assert.Equal(t, tt.resultState.memory, s.memory, "memory in state after execution is not correct")
 			assert.Equal(t, tt.resultState.stop, s.stop, "stop in state after execution is not correct")
 			assert.Equal(t, tt.resultState.err, s.err, "err in state after execution is not correct")
@@ -2079,24 +2087,19 @@ func Test_opReturnDataCopy(t *testing.T) {
 			name:   "should copy data from returnData to memory",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: OptimizedStack{
-					data: []uint256.Int{
+				stack: *initializeStack(
+					[]uint256.Int{
 						one256,  // length
 						zero256, // dataOffset
 						zero256, // memOffset
-					},
-					sp: 3,
-				},
+					}),
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 				gas:        10,
 			},
 			resultState: &state{
-				config: &allEnabledForks,
-				stack: OptimizedStack{
-					data: []uint256.Int{},
-					sp:   0,
-				},
+				config:             &allEnabledForks,
+				stack:              OptimizedStack{},
 				returnData:         []byte{0xff},
 				memory:             []byte{0xff},
 				gas:                7,
@@ -2111,23 +2114,18 @@ func Test_opReturnDataCopy(t *testing.T) {
 			name:   "should not copy data if length is zero",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: OptimizedStack{
-					data: []uint256.Int{
+				stack: *initializeStack(
+					[]uint256.Int{
 						zero256,            // length
 						zero256,            // dataOffset
 						*uint256.NewInt(4), // memOffset
-					},
-					sp: 3,
-				},
+					}),
 				returnData: []byte{0x01},
 				memory:     []byte{0x02},
 			},
 			resultState: &state{
-				config: &allEnabledForks,
-				stack: OptimizedStack{
-					data: []uint256.Int{},
-					sp:   0,
-				},
+				config:     &allEnabledForks,
+				stack:      OptimizedStack{},
 				returnData: []byte{0x01},
 				memory:     []byte{0x02},
 				stop:       false,
@@ -2138,23 +2136,18 @@ func Test_opReturnDataCopy(t *testing.T) {
 			name:   "should return error if the length of return data does not have enough space to receive offset + length bytes",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: OptimizedStack{
-					data: []uint256.Int{
+				stack: *initializeStack(
+					[]uint256.Int{
 						*uint256.NewInt(2), // length
 						zero256,            // dataOffset
 						zero256,            // memOffset
-					},
-					sp: 3,
-				},
+					}),
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 			},
 			resultState: &state{
-				config: &allEnabledForks,
-				stack: OptimizedStack{
-					data: []uint256.Int{},
-					sp:   0,
-				},
+				config:     &allEnabledForks,
+				stack:      OptimizedStack{},
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 				stop:       true,
@@ -2165,24 +2158,19 @@ func Test_opReturnDataCopy(t *testing.T) {
 			name:   "should return error if there is no gas",
 			config: &allEnabledForks,
 			initState: &state{
-				stack: OptimizedStack{
-					data: []uint256.Int{
+				stack: *initializeStack(
+					[]uint256.Int{
 						one256,  // length
 						zero256, // dataOffset
 						zero256, // memOffset
-					},
-					sp: 3,
-				},
+					}),
 				returnData: []byte{0xff},
 				memory:     []byte{0x0},
 				gas:        0,
 			},
 			resultState: &state{
-				config: &allEnabledForks,
-				stack: OptimizedStack{
-					data: []uint256.Int{},
-					sp:   0,
-				},
+				config:             &allEnabledForks,
+				stack:              OptimizedStack{},
 				returnData:         []byte{0xff},
 				memory:             []byte{0x0},
 				gas:                0,
@@ -2203,7 +2191,6 @@ func Test_opReturnDataCopy(t *testing.T) {
 			defer closeFn()
 
 			state.gas = test.initState.gas
-			state.stack.sp = test.initState.stack.sp
 			state.stack = test.initState.stack
 			state.memory = test.initState.memory
 			state.returnData = test.initState.returnData
@@ -2247,16 +2234,15 @@ func Test_opCall(t *testing.T) {
 			config: allEnabledForks,
 			initState: &state{
 				gas: 2600,
-				stack: OptimizedStack{
-					data: []uint256.Int{
+				stack: *initializeStack(
+					[]uint256.Int{
 						*uint256.NewInt(0x00), // outSize
 						*uint256.NewInt(0x02), // outOffset
 						*uint256.NewInt(0x00), // inSize
 						*uint256.NewInt(0x00), // inOffset
 						*uint256.NewInt(0x00), // address
 						*uint256.NewInt(0x00), // initialGas
-					},
-					sp: 6},
+					}),
 				memory: []byte{0x01},
 			},
 			resultState: &state{
@@ -2285,7 +2271,6 @@ func Test_opCall(t *testing.T) {
 
 			state.gas = test.initState.gas
 			state.msg = test.contract
-			state.stack.sp = test.initState.stack.sp
 			state.stack = test.initState.stack
 			state.memory = test.initState.memory
 			state.config = &test.config
@@ -2330,7 +2315,7 @@ func TestGenericWriteToSlice(t *testing.T) {
 // to suite future needs.
 func compareStates(a *state, b *state) bool {
 	// Compare simple fields
-	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.stack.sp != b.stack.sp || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
+	if a.ip != b.ip || a.lastGasCost != b.lastGasCost || a.stack.size() != b.stack.size() || !errors.Is(a.err, b.err) || a.stop != b.stop || a.gas != b.gas {
 		return false
 	}
 
@@ -2340,12 +2325,12 @@ func compareStates(a *state, b *state) bool {
 	}
 
 	// Deep comparison of stacks
-	if len(a.stack.data) != len(b.stack.data) {
+	if len(a.stack) != len(b.stack) {
 		return false
 	}
 
-	for i := range a.stack.data {
-		if a.stack.data[i] != b.stack.data[i] {
+	for i := range a.stack {
+		if a.stack[i] != b.stack[i] {
 			return false
 		}
 	}

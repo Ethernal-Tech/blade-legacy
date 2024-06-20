@@ -63,7 +63,7 @@ func BenchmarkOptimizedStack_PeekAt(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		_ = stack.peekAt(50)
+		_, _ = stack.peekAt(50)
 	}
 }
 

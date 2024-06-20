@@ -17,6 +17,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
+	"github.com/0xPolygon/polygon-edge/accounts/keystore"
 	"github.com/0xPolygon/polygon-edge/archive"
 	"github.com/0xPolygon/polygon-edge/blockchain"
 	"github.com/0xPolygon/polygon-edge/blockchain/storagev2"
@@ -75,6 +77,8 @@ type Server struct {
 
 	// libp2p network
 	network *network.Server
+
+	accManager accounts.AccountManager
 
 	// transaction pool
 	txpool *txpool.TxPool
@@ -339,6 +343,16 @@ func NewServer(config *Config) (*Server, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// setup account manager
+	{
+		keystore, err := keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, m.logger)
+		if err != nil {
+			return nil, err
+		}
+
+		m.accManager = accounts.NewManager(m.blockchain, keystore)
 	}
 
 	// here we can provide some other configuration
@@ -899,7 +913,7 @@ func (s *Server) setupJSONRPC() error {
 		SecretsManager:           s.secretsManager,
 	}
 
-	srv, err := jsonrpc.NewJSONRPC(s.logger, conf)
+	srv, err := jsonrpc.NewJSONRPC(s.logger, conf, s.accManager)
 	if err != nil {
 		return err
 	}
@@ -973,6 +987,9 @@ func (s *Server) Close() {
 
 	// Close DataDog profiler
 	s.closeDataDogProfiler()
+
+	// Close account manager
+	s.accManager.Close()
 }
 
 // Entry is a consensus configuration entry

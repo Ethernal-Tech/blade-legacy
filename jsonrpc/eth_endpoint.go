@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/gasprice"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -101,6 +102,7 @@ type Eth struct {
 	chainID       uint64
 	filterManager *FilterManager
 	priceLimit    uint64
+	accManager    accounts.AccountManager
 }
 
 // ChainId returns the chain id of the client
@@ -361,12 +363,9 @@ func (e *Eth) GetTransactionByHash(hash types.Hash) (interface{}, error) {
 
 		// Find the transaction within the block
 		if txn, idx := types.FindTxByHash(block.Transactions, hash); txn != nil {
-			txn.SetGasPrice(txn.GetGasPrice(block.Header.BaseFee))
-
 			return toTransaction(
 				txn,
-				argUintPtr(block.Number()),
-				argHashPtr(block.Hash()),
+				block.Header,
 				&idx,
 			)
 		}

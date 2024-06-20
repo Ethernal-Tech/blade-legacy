@@ -150,6 +150,14 @@ jobs:
       - name: Short SHA
         id: short_sha
         run: echo "value=`echo ${{ github.sha }} | cut -c1-7`" >> $GITHUB_OUTPUT
+      - name: Part of the day
+        id: part_of_the_day
+        run: |
+          if [ "$(date +"%H")" -ge 8 ]; then
+            echo "name=Daily" >> $GITHUB_OUTPUT
+          else
+            echo "name=Nightly" >> $GITHUB_OUTPUT
+          fi
       - name: Notify Slack
         uses: slackapi/slack-github-action@v1.25.0
         env:
@@ -167,7 +175,7 @@ jobs:
                   "type": "header",
                   "text": {
                     "type": "plain_text",
-                    "text": "Nightly build"
+                    "text": "${{ steps.part_of_the_day.outputs.name }} build"
                   }
                 },
                 {

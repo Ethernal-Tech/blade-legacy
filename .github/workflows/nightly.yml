@@ -3,7 +3,7 @@ name: Nightly Build
 on: # yamllint disable-line rule:truthy
   schedule:
     # * is a special character in YAML so you have to quote this string
-    - cron: '0 0 * * *'
+    - cron: '0 0,10 * * *'
   workflow_dispatch:
 
 jobs:
@@ -118,7 +118,7 @@ jobs:
       dynamic: true
       vus: "100"
       txs_per_user: "10000"
-      txpool_timeout: "60m0s"
+      txpool_timeout: "30m0s"
       wait_txpool: false
       receipts_timeout: "2m0s"
       batch_size: "10000"
@@ -282,7 +282,7 @@ jobs:
       dynamic: true
       vus: "100"
       txs_per_user: "10000"
-      txpool_timeout: "60m0s"
+      txpool_timeout: "30m0s"
       wait_txpool: false
       receipts_timeout: "2m0s"
       batch_size: "10000"

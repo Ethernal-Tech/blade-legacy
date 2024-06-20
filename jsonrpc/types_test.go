@@ -115,7 +115,7 @@ func TestToTransaction_Returns_V_R_S_ValuesWithoutLeading0(t *testing.T) {
 		types.WithFrom(types.Address{}),
 	))
 
-	jsonTx := toTransaction(txn, nil, nil, nil)
+	jsonTx := toTransaction(txn, nil, nil)
 
 	jsonV, _ := jsonTx.V.MarshalText()
 	jsonR, _ := jsonTx.R.MarshalText()
@@ -143,7 +143,7 @@ func TestToTransaction_EIP1559(t *testing.T) {
 		types.WithFrom(types.Address{}),
 	))
 
-	jsonTx := toTransaction(txn, nil, nil, nil)
+	jsonTx := toTransaction(txn, nil, nil)
 
 	jsonV, _ := jsonTx.V.MarshalText()
 	jsonR, _ := jsonTx.R.MarshalText()

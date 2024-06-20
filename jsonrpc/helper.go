@@ -56,8 +56,7 @@ func GetTransactionByBlockAndIndex(block *types.Block, index argUint64) (interfa
 
 	return toTransaction(
 		block.Transactions[index],
-		argUintPtr(block.Number()),
-		argHashPtr(block.Hash()),
+		block.Header,
 		&idx,
 	), nil
 }

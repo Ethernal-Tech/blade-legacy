@@ -59,45 +59,52 @@ func (h transactionHash) MarshalText() ([]byte, error) {
 }
 
 func toPendingTransaction(t *types.Transaction) *transaction {
-	return toTransaction(t, nil, nil, nil)
+	return toTransaction(t, nil, nil)
 }
 
+// toTransaction converts types.Transaction struct to JSON RPC transaction format
 func toTransaction(
 	t *types.Transaction,
-	blockNumber *argUint64,
-	blockHash *types.Hash,
+	header *types.Header,
 	txIndex *int,
 ) *transaction {
 	v, r, s := t.RawSignatureValues()
 	res := &transaction{
-		Nonce:       argUint64(t.Nonce()),
-		Gas:         argUint64(t.Gas()),
-		To:          t.To(),
-		Value:       argBig(*t.Value()),
-		Input:       t.Input(),
-		V:           argBig(*v),
-		R:           argBig(*r),
-		S:           argBig(*s),
-		Hash:        t.Hash(),
-		From:        t.From(),
-		Type:        argUint64(t.Type()),
-		BlockNumber: blockNumber,
-		BlockHash:   blockHash,
+		Nonce: argUint64(t.Nonce()),
+		Gas:   argUint64(t.Gas()),
+		To:    t.To(),
+		Value: argBig(*t.Value()),
+		Input: t.Input(),
+		V:     argBig(*v),
+		R:     argBig(*r),
+		S:     argBig(*s),
+		Hash:  t.Hash(),
+		From:  t.From(),
+		Type:  argUint64(t.Type()),
 	}
 
-	if t.GasPrice() != nil && t.Type() != types.DynamicFeeTxType {
-		gasPrice := argBig(*(t.GasPrice()))
-		res.GasPrice = &gasPrice
+	if header != nil {
+		// transaction is already mined
+		res.BlockNumber = argUintPtr(header.Number)
+		res.BlockHash = &header.Hash
+		res.GasPrice = argBigPtr(t.GetGasPrice(header.BaseFee))
+	} else if t.GasPrice() != nil {
+		// transaction is pending (within the tx pool)
+		res.GasPrice = argBigPtr(t.GasPrice())
 	}
 
-	if t.GasTipCap() != nil && t.Type() == types.DynamicFeeTxType {
-		gasTipCap := argBig(*(t.GasTipCap()))
-		res.GasTipCap = &gasTipCap
-	}
+	if t.Type() == types.DynamicFeeTxType {
+		if t.GasTipCap() != nil {
+			res.GasTipCap = argBigPtr(t.GasTipCap())
+		}
 
-	if t.GasFeeCap() != nil && t.Type() == types.DynamicFeeTxType {
-		gasFeeCap := argBig(*(t.GasFeeCap()))
-		res.GasFeeCap = &gasFeeCap
+		if t.GasFeeCap() != nil {
+			res.GasFeeCap = argBigPtr(t.GasFeeCap())
+		}
+
+		if res.GasPrice == nil {
+			res.GasPrice = res.GasFeeCap
+		}
 	}
 
 	if t.ChainID() != nil {
@@ -195,13 +202,11 @@ func toBlock(b *types.Block, fullTx bool) *block {
 
 	for idx, txn := range b.Transactions {
 		if fullTx {
-			txn.SetGasPrice(txn.GetGasPrice(b.Header.BaseFee))
 			res.Transactions = append(
 				res.Transactions,
 				toTransaction(
 					txn,
-					argUintPtr(b.Number()),
-					argHashPtr(b.Hash()),
+					b.Header,
 					&idx,
 				),
 			)
@@ -259,6 +264,7 @@ type receipt struct {
 	ContractAddress   *types.Address `json:"contractAddress"`
 	FromAddr          types.Address  `json:"from"`
 	ToAddr            *types.Address `json:"to"`
+	Type              argUint64      `json:"type"`
 }
 
 func toReceipt(src *types.Receipt, tx *types.Transaction,
@@ -277,6 +283,7 @@ func toReceipt(src *types.Receipt, tx *types.Transaction,
 		FromAddr:          tx.From(),
 		ToAddr:            tx.To(),
 		Logs:              logs,
+		Type:              argUint64(tx.Type()),
 	}
 }
 

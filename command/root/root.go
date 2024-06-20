@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/0xPolygon/polygon-edge/command/accounts"
 	"github.com/0xPolygon/polygon-edge/command/backup"
 	"github.com/0xPolygon/polygon-edge/command/bridge"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
@@ -61,6 +62,7 @@ func (rc *RootCommand) registerSubCommands() {
 		validator.GetCommand(),
 		loadtest.GetCommand(),
 		sanitycheck.GetCommand(),
+		accounts.GetCommand(),
 	)
 }
 

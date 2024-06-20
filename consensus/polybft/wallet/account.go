@@ -119,5 +119,5 @@ func (a *Account) GetEcdsaPrivateKey() (*ecdsa.PrivateKey, error) {
 }
 
 func (a Account) Address() types.Address {
-	return types.Address(a.Ecdsa.Address())
+	return a.Ecdsa.Address()
 }

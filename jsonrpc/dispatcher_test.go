@@ -562,7 +562,7 @@ func TestDispatcher_WebsocketConnection_Unsubscribe(t *testing.T) {
 func newTestDispatcher(tb testing.TB, logger hclog.Logger, store JSONRPCStore, params *dispatcherParams) *Dispatcher {
 	tb.Helper()
 
-	d, err := newDispatcher(logger, store, params)
+	d, err := newDispatcher(logger, store, params, nil)
 	require.NoError(tb, err)
 
 	return d

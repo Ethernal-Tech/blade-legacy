@@ -440,3 +440,11 @@ func GetFreePort() (port int, err error) {
 
 	return
 }
+
+// ToMB converts a byte slice size to a string representation in MB
+func ToMB(data []byte) string {
+	sizeInBytes := len(data)
+	sizeInMB := float64(sizeInBytes) / (1024 * 1024)
+
+	return fmt.Sprintf("%.2f MB", sizeInMB)
+}
