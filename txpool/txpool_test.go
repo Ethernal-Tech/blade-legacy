@@ -4376,6 +4376,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 		for n := uint64(0); n < accountNumber; n++ {
 			key, err := crypto.GenerateECDSAPrivateKey()
 			require.NoError(b, err)
+
 			txs := make([]*types.Transaction, defaultMaxAccountEnqueued)
 			addr := crypto.PubKeyToAddress(&key.PublicKey)
 
@@ -4401,6 +4402,7 @@ func BenchmarkAddTxTime(b *testing.B) {
 				go func(index uint64) {
 					txsCopy := mapAccountTransactions[index]
 					lenTxs := len(txsCopy)
+
 					defer wg.Done()
 
 					for indexTx := 0; indexTx < lenTxs; indexTx++ {
