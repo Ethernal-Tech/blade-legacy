@@ -53,7 +53,7 @@ type EventType byte
 const (
 	WalletEventType EventType = 0x01
 
-	NewBackendType EventType = 0x02
+	NewWalletManagerType EventType = 0x02
 )
 
 type Event interface {

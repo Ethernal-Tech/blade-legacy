@@ -17,13 +17,13 @@ const (
 )
 
 type newBackendEvent struct {
-	backend WalletManager
+	walletManager WalletManager
 
 	processed chan struct{}
 }
 
 func (newBackendEvent) Type() event.EventType {
-	return event.NewBackendType
+	return event.NewWalletManagerType
 }
 
 // Manager is an overarching account manager that can communicate with various
@@ -72,12 +72,12 @@ func NewManager(blockchain *blockchain.Blockchain, walletManagers ...WalletManag
 
 	eventHandler.Subscribe(WalletEventKey, am.updates)
 
-	for _, backend := range walletManagers {
-		kind := reflect.TypeOf(backend)
+	for _, walletManager := range walletManagers {
+		kind := reflect.TypeOf(walletManager)
 
-		backend.SetEventHandler(am.eventHandler)
-		backend.SetManager(am)
-		am.walletManagers[kind] = append(am.walletManagers[kind], backend)
+		walletManager.SetEventHandler(am.eventHandler)
+		walletManager.SetManager(am)
+		am.walletManagers[kind] = append(am.walletManagers[kind], walletManager)
 	}
 
 	go am.update()
@@ -101,10 +101,10 @@ func (am *Manager) Close() error {
 }
 
 // Adds backend to list of backends
-func (am *Manager) AddWalletManager(backend WalletManager) {
+func (am *Manager) AddWalletManager(walletManager WalletManager) {
 	done := make(chan struct{})
 
-	am.newWalletManagers <- newBackendEvent{backend, done}
+	am.newWalletManagers <- newBackendEvent{walletManager, done}
 
 	<-done
 }
@@ -130,18 +130,20 @@ func (am *Manager) update() {
 			}
 
 			am.lock.Unlock()
-		case backendEventChan := <-am.newWalletManagers:
+		case walletManagerEventChan := <-am.newWalletManagers:
 			am.lock.Lock()
 
-			if backendEventChan.Type() == event.NewBackendType {
-				bckEvent := backendEventChan.(newBackendEvent) //nolint:forcetypeassert
-				backend := bckEvent.backend
-				am.wallets = merge(am.wallets, backend.Wallets()...)
-				backend.SetEventHandler(am.eventHandler)
-				kind := reflect.TypeOf(backend)
-				am.walletManagers[kind] = append(am.walletManagers[kind], backend)
+			if walletManagerEventChan.Type() == event.NewWalletManagerType {
+				walletManagerEvent := walletManagerEventChan.(newBackendEvent) //nolint:forcetypeassert
+				walletManager := walletManagerEvent.walletManager
+				am.wallets = merge(am.wallets, walletManager.Wallets()...)
+				walletManager.SetEventHandler(am.eventHandler)
+				kind := reflect.TypeOf(walletManager)
+				am.walletManagers[kind] = append(am.walletManagers[kind], walletManager)
 				am.lock.Unlock()
-				close(bckEvent.processed)
+				close(walletManagerEvent.processed)
+
+				continue
 			}
 
 			am.lock.Unlock()
