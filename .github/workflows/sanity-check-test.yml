@@ -39,8 +39,11 @@ on: # yamllint disable-line rule:truthy
         required: true
       AWS_LOADTESTRUNNER_MNEMONIC:
         required: true
-      KEY_NAME:
-        required: true
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
 
 jobs:
   check_network:
@@ -79,8 +82,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
-      - name: Install make and jq
-        run: sudo apt-get -y install make jq
       - name: Install Go
         uses: actions/setup-go@v5.0.0
         with:
@@ -93,11 +94,11 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
       - name: Get validator keys
-        run: aws ssm get-parameters --names `aws ec2 describe-instances --filters "Name=tag:BaseDN,Values=${{ inputs.environment }}${{ vars.BASEDN_SUFIX }}" "Name=tag:Role,Values=validator" --query "Reservations[*].Instances[*].Tags[?Key=='Name'].Value[]" --output text | sed 's/.*/\/${{ inputs.environment }}\/&\/${{ secrets.KEY_NAME }}/'` --with-decryption --region ${{ vars.AWS_REGION }} > keys.json
+        run: aws ssm get-parameters --names `aws ec2 describe-instances --filters "Name=tag:BaseDN,Values=${{ inputs.environment }}${{ vars.BASEDN_SUFIX }}" "Name=tag:Role,Values=validator" --query "Reservations[*].Instances[*].Tags[?Key=='Name'].Value[]" --output text | sed 's/.*/\/${{ inputs.environment }}\/&\/validator-key/'` --with-decryption --region ${{ vars.AWS_REGION }} > keys.json
       - name: Start Sanity Check Test
         id: sanity_check_tests_results
         run: |
-          ./blade sanity-check --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --receipts-timeout 2m --validator-keys "`cat keys.json | jq -r '.Parameters.[].Value' | tr '\n' ',' | sed 's/,$//'`"
+          ./blade sanity-check --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --receipts-timeout 2m --validator-keys "`cat keys.json | jq -r '.Parameters[].Value' | tr '\n' ',' | sed 's/,$//'`" --to-json
           echo "test_output=`cat sanity_check_results.json | jq 'map(select(.Result != "PASSED")) | length == 0'`" >> $GITHUB_OUTPUT
           echo "stake_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Stake Test") | .Result'`" >> $GITHUB_OUTPUT
           echo "unstake_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Unstake Test") | .Result'`" >> $GITHUB_OUTPUT

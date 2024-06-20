@@ -46,7 +46,6 @@ jobs:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       AWS_S3_BLADE_BUCKET: ${{ secrets.AWS_S3_BLADE_BUCKET }}
       AWS_LOADTESTRUNNER_MNEMONIC: ${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}
-      KEY_NAME: ${{ secrets.KEY_NAME }}
   load_test_eoa:
     name: Load Test EOA
     uses: ./.github/workflows/load-test.yml
@@ -146,7 +145,7 @@ jobs:
   destroy_network:
     name: Destroy Network
     uses: ./.github/workflows/destroy-network.yml
-    needs: [deploy_network, load_test_eoa, load_test_erc20, load_test_erc721, load_test_mixed]
+    needs: [deploy_network, sanity_check_tests, load_test_eoa, load_test_erc20, load_test_erc721, load_test_mixed]
     if: always()
     with:
       environment: nightly
