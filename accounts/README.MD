@@ -1,10 +1,6 @@
 Account management
 ===
 
-## Table of Contents
-
-[TOC]
-
 ## Problem
 Account management is a feature that implements the logic for storing private keys for non-validator users. These private keys are used for signing various types of data. Currently, we have implemented file storage on the local disk. The keys are stored in a text file in JSON format. To ensure security, the private keys are encrypted, so opening the file does not compromise sensitive data.
 
