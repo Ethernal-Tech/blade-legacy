@@ -6,35 +6,35 @@ description: >-
 
 # Block Creation Process
 
-Block creation is the essence of the blockchain system. The following figure shows all the components involved in the process (for clarity reasons, some fields and functions in structures are omitted):
+Block creation is the essence of the blockchain system. The following figure shows all the components involved in the process (for clarity reasons, some fields and methods in the structures are omitted):
 
-<figure><img src="../../.gitbook/assets/polybft_block_creation.png" alt=""><figcaption><p>Elements of the Block Creation Process</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/polybft_block_creation (2).png" alt=""><figcaption><p>Elements of the Block Creation Process</p></figcaption></figure>
 
 The `BlockBuilder` represents one of the most important components of the system, which, as the name suggests, enables the creation of a block. This component possesses specific configuration parameters (`BlockBuilderParams`), whose values are set during its instantiation by calling the `NewBlockBuilder` method. The key parameters and their meanings are outlined below:
 
-1. `parent` - header of the previous (parent) block.
-2. `executor` - auxiliary component invoked by `BlockBuilder` during block creation.
-3. `gasLimit` - maximum amount of gas in the block.
-4. `blockTime` - maximum time for block creation.
-5. `txPool` - reference to the transaction pool from which transactions are selected.
-6. `baseFee`
+1. **`parent`** - header of the previous (parent) block.
+2. **`executor`** - auxiliary component invoked by `BlockBuilder` during block creation.
+3. **`gasLimit`** - maximum amount of gas in the block.
+4. **`blockTime`** - maximum time for block creation.
+5. **`txPool`** - reference to the transaction pool from which transactions are selected.
+6. **`baseFee`**
 
 In addition to these immutable parameters during block creation, there are specific fields in the `BlockBuilder` structure that reflect the current state of the block being created. The content of these fields changes as the block creation process progresses. These include:
 
-1. `header` - the block header,&#x20;
-2. `txns` - a list of selected transactions for the block,&#x20;
-3. `block` - a reference to the block itself (set only after the block is completely created), and&#x20;
-4. `state` - an additional auxiliary component (a.k.a.`Transition`) enabling the transition from one state to the next during block creation.
+1. **`header`** - the block header,&#x20;
+2. **`txns`** - a list of selected transactions for the block,&#x20;
+3. **`block`** - a reference to the block itself (set only after the block is completely created), and&#x20;
+4. **`state`** - an additional auxiliary component (a.k.a.`Transition`) enabling the transition from one state to the next during block creation.
 
 To fully grasp what follows, it is crucial to understand that block creation is based on state changes. The initial state is the last state from the previous block. Transitioning to the next state occurs when selecting a new valid transaction to include in the block. Therefore, the number of transactions in the block determine how many state transitions are necessary. The previously mentioned `Transition` component is responsible for verifying the validity of the transaction and, if everything is correct, transitioning to the next state.
 
 The `BlockBuilder` has several methods. Below, each method is explained in sequence, illustrating how they impact the block creation process. The order in which they are mentioned reflects the sequence in which they must be called during block creation. The methods are as follows:
 
-1. `NewBlockBuilder`
-2. `Reset`
-3. `Fill`
-4. `WriteTx`
-5. `Build`
+1. **`NewBlockBuilder`**
+2. **`Reset`**
+3. **`Fill`**
+4. **`WriteTx`**
+5. **`Build`**
 
 ### `Reset`&#x20;
 
