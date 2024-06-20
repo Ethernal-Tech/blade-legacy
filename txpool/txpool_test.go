@@ -3908,10 +3908,13 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 	go func() {
 		defer wg.Done()
 
+		ctx, cancelFn := context.WithTimeout(context.Background(), time.Second*15)
+		defer cancelFn()
+
 		for {
 			select {
 			case ev = <-subscription.subscriptionChannel:
-			case <-time.After(time.Second * 6):
+			case <-ctx.Done():
 				timeoutElapsed = true
 
 				return
@@ -3936,7 +3939,7 @@ func TestBatchTx_SingleAccount(t *testing.T) {
 				assert.Equal(t, defaultMaxAccountEnqueued, pool.Length())
 
 				// all transactions are promoted
-				break
+				return
 			}
 		}
 	}()
