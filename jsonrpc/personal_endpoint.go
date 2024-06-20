@@ -72,12 +72,9 @@ func (p *Personal) UnlockAccount(addr types.Address, password string, duration u
 
 	var d time.Duration
 
-	switch {
-	case duration == 0:
+	if duration == 0 || time.Duration(duration)*time.Second > max {
 		d = max
-	case time.Duration(duration)*time.Second > max:
-		d = max
-	default:
+	} else {
 		d = time.Duration(duration) * time.Second
 	}
 
