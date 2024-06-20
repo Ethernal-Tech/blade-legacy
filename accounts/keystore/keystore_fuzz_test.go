@@ -3,6 +3,7 @@ package keystore
 import (
 	"testing"
 
+	"github.com/0xPolygon/polygon-edge/accounts/event"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -12,6 +13,8 @@ func FuzzPassword(f *testing.F) {
 		if err != nil {
 			t.Fatal(err)
 		}
+
+		ks.eventHandler = event.NewEventHandler()
 
 		a, err := ks.NewAccount(password)
 		if err != nil {
