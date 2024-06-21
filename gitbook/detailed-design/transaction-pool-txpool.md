@@ -22,7 +22,7 @@ TxPool fields:
 * **`forks`** - represents a map which contains all forks and their starting blocks from genesis,
 * **`store`** _-_ interface defines State helper methods the `TxPool` should have access to,
 * **`accounts`** - map of all accounts registered by the pool,
-* **`executables` \_-**\_ represents all the primaries (i.e. transactions ready for execution) sorted by max gas price,
+* **`executables`** - represents all the primaries (i.e. transactions ready for execution) sorted by max gas price,
 * **`index`** - lookup map keeping track of all transactions present in the pool,
 * **`topic`** - networking stack,
 * **`gauge`** - gauge for measuring pool capacity,
@@ -36,18 +36,18 @@ TxPool fields:
 
 Some of the main `TxPool` methods include:
 
-* **`NewTxPool` \_-**\_ `NewTxPool` creates and returns a new pool for processing incoming transactions,
+* **`NewTxPool`** - `NewTxPool` creates and returns a new pool for processing incoming transactions,
 * **`Start`** _-_ runs the pool's main loop in the background. On each request received, the appropriate handler is invoked in a separate goroutine,
-* **`Close` \_-**\_ shuts down the pool's main loop,
+* **`Close`** - shuts down the pool's main loop,
 * **`SetSigner`** - sets the signer the pool will use // to validate a transaction's signature,
-* **`AddTx` \_-**\_ adds a new transaction to the pool (sent from json-RPC/gRPC endpoints) and broadcasts it to the network (if enabled),
+* **`AddTx`** - adds a new transaction to the pool (sent from json-RPC/gRPC endpoints) and broadcasts it to the network (if enabled),
 * **`Prepare`** - generates all the transactions ready for execution. (primaries),
-* **`Peek` \_-**\_ returns the best-price selected transaction ready for execution,
-* **`Pop` \_-**\_ removes the given transaction from the associated promoted queue (account). It will update `executables` with the next primary from that account (if any),
-* **`Drop` \_-**\_ clears the entire account associated with the given transaction and reverts its next (expected) nonce,
-* **`Demote` \_-**\_ excludes an account from being further processed during block building due to a recoverable error. If an account has been demoted too many times, it is Dropped instead,
+* **`Peek`** - returns the best-price selected transaction ready for execution,
+* **`Pop`** - removes the given transaction from the associated promoted queue (account). It will update `executables` with the next primary from that account (if any),
+* **`Drop`** - clears the entire account associated with the given transaction and reverts its next (expected) nonce,
+* **`Demote`** - excludes an account from being further processed during block building due to a recoverable error. If an account has been demoted too many times, it is Dropped instead,
 * **`ResetWithBlock`** _-_ processes the transactions from the newly finalized block to sync the pool with the new state,
-* **`ReinsertProposed` \_-**\_ returns all transactions from the accounts proposed queue to the promoted queue. It is called from consensus algorithm, when new round > 0 starts or when current sequence is cancelled.
+* **`ReinsertProposed`** - returns all transactions from the accounts proposed queue to the promoted queue. It is called from consensus algorithm, when new round > 0 starts or when current sequence is cancelled.
 * **`ClearProposed`** _-_ clears accounts proposed queue when round 0 starts. It is called from consensus algorithm.
 
 ## TxPool Instantiation <a href="#id-6i4namyk3dh0" id="id-6i4namyk3dh0"></a>
