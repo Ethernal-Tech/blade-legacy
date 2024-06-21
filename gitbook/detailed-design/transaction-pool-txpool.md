@@ -1,13 +1,13 @@
 ---
 description: >-
-  In this section transaction pool is described together with its instantiation,
-  role in the block creation process and the way how new transactions are added
-  to it.
+  In this section transaction pool (TxPool) is described together with its
+  instantiation, role in the block creation process and the way how new
+  transactions are added to it.
 ---
 
-# Transaction Pool (TxPool)
+# Transaction Pool
 
-The `TxPool` module is an in-memory structure that manages the incoming transactions for processing. It maintains a list of unprocessed transactions and ensures they conform to specific constraints before entering the pool.
+The transaction pool, `TxPool`, is an in-memory structure that manages the incoming transactions for processing. It maintains a list of unprocessed transactions and ensures they conform to specific constraints before entering the pool.
 
 ## Model <a href="#z48tsps1kxeg" id="z48tsps1kxeg"></a>
 
