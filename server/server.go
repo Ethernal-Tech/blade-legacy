@@ -347,7 +347,7 @@ func NewServer(config *Config) (*Server, error) {
 
 	// setup account manager
 	{
-		keystore, err := keystore.NewKeyStore(keystore.DefaultStorage, keystore.LightScryptN, keystore.LightScryptP, m.logger)
+		keystore, err := keystore.NewKeyStore(config.DataDir, keystore.LightScryptN, keystore.LightScryptP, m.logger)
 		if err != nil {
 			return nil, err
 		}
