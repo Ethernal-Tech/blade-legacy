@@ -194,6 +194,7 @@ jobs:
           sed 's/gossip_msg_size: .*/gossip_msg_size: ${{ inputs.gossip_msg_size }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/json_rpc_batch_request_limit: .*/json_rpc_batch_request_limit: 0/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
           sed 's/log_level: .*/log_level: ${{ vars.LOG_LEVEL }}/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
+          sed 's/epoch_reward: .*/epoch_reward: 1000000000/g' group_vars/all.yml > group_vars/all.yml.tmp && mv group_vars/all.yml.tmp group_vars/all.yml
       - name: Setup Ansible
         working-directory: ansible
         run: |
