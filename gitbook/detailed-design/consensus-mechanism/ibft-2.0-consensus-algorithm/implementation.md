@@ -2,7 +2,7 @@
 
 In the diagram below, the key components of IBFT consensus mechanism are shown.
 
-<figure><img src="../../../../.gitbook/assets/polybft_implementation_improvement.png" alt=""><figcaption><p>Components of IBFT Consensus Mechanism</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/polybft_implementation_improvement.png" alt=""><figcaption><p>Components of IBFT Consensus Mechanism</p></figcaption></figure>
 
 The `Message` component is responsible for storing messages received from other participants in the network. With the help of these messages, `IBFT` reaches consensus for a new block.&#x20;
 

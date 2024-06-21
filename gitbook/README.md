@@ -6,9 +6,9 @@ description: This document gives an overview of the Ethernal Blade blockchain.
 
 ## Introduction
 
-Blade is a cutting-edge blockchain platform designed with a clear focus on enterprise needs. It is the ultimate choice for businesses aiming to harness the power of blockchain technology due to its exceptional speed and precision. It streamlines complex data management, optimizes supply chain, and secures transactions seamlessly.&#x20;
+Blade is a cutting-edge blockchain platform designed with a clear focus on enterprise needs. It is the ultimate choice for businesses aiming to harness the power of blockchain technology due to its exceptional speed and precision. It streamlines complex data management, optimizes supply chain, and secures transactions seamlessly.
 
-<figure><img src=".gitbook/assets/system_architecture-v4.drawio.png" alt=""><figcaption><p>Figure 1 - Blade Blockchain</p></figcaption></figure>
+<figure><img src=".gitbook/assets/system_architecture-v4.drawio (1).png" alt=""><figcaption><p>Figure 1 - Blade Blockchain</p></figcaption></figure>
 
 ## Main Features
 
@@ -28,7 +28,7 @@ The main features of Blade Blockchain include:
 * Native Bridge integration right out of the box - General Message Passing feature (Figure 2).
 * L1 solution configurable (Figure 2).
 
-<figure><img src=".gitbook/assets/system_architecture-L1&#x26;IntegratedBridge.drawio.png" alt=""><figcaption><p>Figure 2 - Blade as L1 and Integrated (General Message Passing) bridge</p></figcaption></figure>
+<figure><img src=".gitbook/assets/system_architecture-L1&#x26;IntegratedBridge.drawio (1).png" alt=""><figcaption><p>Figure 2 - Blade as L1 and Integrated (General Message Passing) bridge</p></figcaption></figure>
 
 * L2, L3,... solution configurable (Figure 3).
 
@@ -43,10 +43,5 @@ The main features of Blade Blockchain include:
 * User-Friendly user experience.
 * Block Explorer.
 * Free transactions, Account Abstraction, Governance, etc.
-* Robust security measures to safeguard user data and transactions, incorporating advanced encryption techniques. &#x20;
+* Robust security measures to safeguard user data and transactions, incorporating advanced encryption techniques.
 * Full compliance and auditing.
-
-
-
-
-

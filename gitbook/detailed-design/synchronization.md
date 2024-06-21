@@ -10,7 +10,7 @@ The fundamental objective of each participant, i.e. node, in a blockchain networ
 
 Various optimization and protection challenges arise in this context. It is necessary to devise such a mechanism that, alongside an efficient defense against DoS (i.e. denial of service) and Eclipse attacks, will allow a node, regardless of how far behind it is, to align relatively quickly with all other (honest) participants in the network. The implementation is significantly influenced by the way new blocks are generated. Since our system is based on the IBFT 2.0 consensus protocol and immediate finality, there is no need to take into account potential forks and reorganization. Synchronization, alongside correctly implemented consensus rules, is of essential importance for the meaningful operation of a node.&#x20;
 
-![Components of the Synchronization Process](<../../.gitbook/assets/15 (1).png>)
+![Components of the Synchronization Process](<../.gitbook/assets/15 (1).png>)
 
 The entire synchronization process is encapsulated within the `Syncer` object and execution of its methods. As depicted in class diagram, this object is a component of `Polybft`, initialized by invoking the `newSyncer()` method during node startup. Upon calling it, various fields of the `Syncer` object are set, including the most important ones `peerMap`, `syncPeerService`, and `syncPeerClient`. In the context of synchronization, communication between nodes is organized so that each node establishes gRPC service through which other peers can send requests - fulfilled by `syncPeerService`. On the other hand, the core of the synchronization logic is implemented inside the `syncPeerClient`. It establishes the foundation for successful synchronization. Finally, as the name suggests, `peerMap` provides insight into the states of peers currently connected to the node. With the state of node we denote the sequence number of the last block that a (peer) node has.
 
@@ -30,5 +30,5 @@ In this manner, the narrative regarding synchronization in the Polygon Edge syst
 
 Below, the entire process is illustrated through a sequential diagram.
 
-![Sequence diagram of the synchronization process](<../../.gitbook/assets/16 (1).png>)
+![Sequence diagram of the synchronization process](<../.gitbook/assets/16 (1).png>)
 
