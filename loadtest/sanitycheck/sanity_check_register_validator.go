@@ -85,18 +85,14 @@ func (t *RegisterValidatorTest) runTest() (*wallet.Account, error) {
 		return nil, fmt.Errorf("failed to register new validator: %w", err)
 	}
 
-	var epochEndingBlock *types.Header
-
 	if blockNum%t.config.EpochSize != 0 {
-		epochEndingBlock, err = t.waitForEpochEnding(&blockNum)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		epochEndingBlock, err = t.client.GetHeaderByNumber(jsonrpc.BlockNumber(blockNum))
-		if err != nil {
-			return nil, err
-		}
+		// if validator was registered on the epoch ending block, it will become active on the next epoch
+		blockNum++
+	}
+
+	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
+	if err != nil {
+		return nil, err
 	}
 
 	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)

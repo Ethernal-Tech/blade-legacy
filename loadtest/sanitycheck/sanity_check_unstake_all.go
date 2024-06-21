@@ -6,7 +6,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/umbracle/ethgo"
 )
 
@@ -62,18 +61,14 @@ func (t *UnstakeAllTest) Run() error {
 		return err
 	}
 
-	var epochEndingBlock *types.Header
-
 	if blockNum%t.config.EpochSize != 0 {
-		epochEndingBlock, err = t.waitForEpochEnding(&blockNum)
-		if err != nil {
-			return err
-		}
-	} else {
-		epochEndingBlock, err = t.client.GetHeaderByNumber(jsonrpc.BlockNumber(blockNum))
-		if err != nil {
-			return err
-		}
+		// if validator unstaked all on the epoch ending block, it will be removed on the next epoch
+		blockNum++
+	}
+
+	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
+	if err != nil {
+		return err
 	}
 
 	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)

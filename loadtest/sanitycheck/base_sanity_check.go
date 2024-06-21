@@ -161,11 +161,15 @@ func (t *BaseSanityCheckTest) waitForEpochEnding(fromBlock *uint64) (*types.Head
 		case <-timer.C:
 			return nil, fmt.Errorf("timed out waiting for end of epoch")
 		case <-ticker.C:
-			if currentBlock.Number()%t.config.EpochSize == 0 {
-				return currentBlock.Header, nil
+			if currentBlock != nil {
+				if currentBlock.Number()%t.config.EpochSize == 0 {
+					return currentBlock.Header, nil
+				}
+
+				rpcBlock = jsonrpc.BlockNumber(currentBlock.Number() + 1)
 			}
 
-			block, err := t.client.GetBlockByNumber(jsonrpc.BlockNumber(currentBlock.Number()+1), false)
+			block, err := t.client.GetBlockByNumber(rpcBlock, false)
 			if err != nil {
 				return nil, err
 			}

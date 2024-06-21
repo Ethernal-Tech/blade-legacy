@@ -84,6 +84,11 @@ func (t *UnstakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
+	if blockNum%t.config.EpochSize != 0 {
+		// if validator unstaked on the epoch ending block, it will be added on the next epoch
+		blockNum++
+	}
+
 	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
 	if err != nil {
 		return err
