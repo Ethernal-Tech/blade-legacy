@@ -15,10 +15,10 @@ func Test_RecoverAddressFromSignature(t *testing.T) {
 
 	for _, account := range []*Account{generateTestAccount(t), generateTestAccount(t), generateTestAccount(t)} {
 		key := NewKey(account)
-		msgNoSig := &proto.Message{
+		msgNoSig := &proto.IbftMessage{
 			From:    key.Address().Bytes(),
 			Type:    proto.MessageType_COMMIT,
-			Payload: &proto.Message_CommitData{},
+			Payload: &proto.IbftMessage_CommitData{},
 		}
 
 		msg, err := key.SignIBFTMessage(msgNoSig)

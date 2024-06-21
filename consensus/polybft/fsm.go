@@ -429,7 +429,7 @@ func (f *fsm) Validate(proposal []byte) error {
 }
 
 // ValidateSender validates sender address and signature
-func (f *fsm) ValidateSender(msg *proto.Message) error {
+func (f *fsm) ValidateSender(msg *proto.IbftMessage) error {
 	msgNoSig, err := msg.PayloadNoSig()
 	if err != nil {
 		return err

@@ -4276,17 +4276,27 @@ func BenchmarkAddTxTime(b *testing.B) {
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
 
-			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
+				go func(tx *types.Transaction) {
+					defer wg.Done()
+
+					errAdd := pool.addTx(local, tx)
+					require.NoError(b, errAdd)
+				}(txs[i])
 			}
+
+			wg.Wait()
 		}
 	})
 
 	b.Run("benchmark multiple accounts add one tx", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
-
 		txs := make([]*types.Transaction, defaultMaxAccountEnqueued)
+
 		for i := range txs {
 			key, err := crypto.GenerateECDSAPrivateKey()
 			require.NoError(b, err)
@@ -4302,10 +4312,20 @@ func BenchmarkAddTxTime(b *testing.B) {
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
 
-			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
+				go func(tx *types.Transaction) {
+					defer wg.Done()
+
+					errAdd := pool.addTx(local, tx)
+					require.NoError(b, errAdd)
+				}(txs[i])
 			}
+
+			wg.Wait()
 		}
 	})
 
@@ -4330,35 +4350,44 @@ func BenchmarkAddTxTime(b *testing.B) {
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
 
-			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+			lenTxs := len(txs)
+			wg := sync.WaitGroup{}
+			wg.Add(lenTxs)
+
+			for i := 0; i < lenTxs; i++ {
+				go func(tx *types.Transaction) {
+					defer wg.Done()
+
+					errAdd := pool.addTx(local, tx)
+					require.NoError(b, errAdd)
+				}(txs[i])
 			}
+
+			wg.Wait()
 		}
 	})
 
 	b.Run("benchmark multiple accounts add multiple transactions with transaction replacement", func(b *testing.B) {
 		signer := crypto.NewEIP155Signer(100)
-		txs := make([]*types.Transaction, accountNumber*defaultMaxAccountEnqueued)
+		mapAccountTransactions := make(map[uint64][]*types.Transaction, accountNumber)
 
-		n := (uint64)(0)
-		for n < accountNumber {
+		const differentNonce uint64 = 30
+
+		for n := uint64(0); n < accountNumber; n++ {
 			key, err := crypto.GenerateECDSAPrivateKey()
 			require.NoError(b, err)
 
+			txs := make([]*types.Transaction, defaultMaxAccountEnqueued)
 			addr := crypto.PubKeyToAddress(&key.PublicKey)
 
-			i := (uint64)(0)
-			for i < defaultMaxAccountEnqueued {
-				tx := newTx(addr, i%10, uint64(1), types.LegacyTxType)
+			for i := uint64(0); i < defaultMaxAccountEnqueued; i++ {
+				tx := newTx(addr, i%differentNonce, uint64(1), types.LegacyTxType)
 				tx.SetGasPrice(big.NewInt(0).SetUint64(i + 1))
-				txs[n*defaultMaxAccountEnqueued+i], err = signer.SignTx(tx, key)
+				txs[i], err = signer.SignTx(tx, key)
 				require.NoError(b, err)
-
-				i++
 			}
 
-			n++
+			mapAccountTransactions[n] = txs
 		}
 
 		for i := 0; i < b.N; i++ {
@@ -4366,10 +4395,26 @@ func BenchmarkAddTxTime(b *testing.B) {
 			require.NoError(b, err, "fail to create pool")
 			pool.SetSigner(signer)
 
-			for i := 0; i < len(txs); i++ {
-				err = pool.addTx(local, txs[i])
-				require.NoError(b, err)
+			wg := sync.WaitGroup{}
+			wg.Add((int)(accountNumber))
+
+			for n := uint64(0); n < accountNumber; n++ {
+				go func(index uint64) {
+					txsCopy := mapAccountTransactions[index]
+					lenTxs := len(txsCopy)
+
+					defer wg.Done()
+
+					for indexTx := 0; indexTx < lenTxs; indexTx++ {
+						tx := txsCopy[indexTx]
+						errAdd := pool.addTx(local, tx)
+						require.NoError(b, errAdd)
+					}
+				}(n)
 			}
+
+			wg.Wait()
+			assert.Len(b, pool.index.all, (int)(differentNonce*accountNumber))
 		}
 	})
 }

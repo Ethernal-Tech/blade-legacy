@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"sync"
 	"time"
@@ -24,8 +23,6 @@ var (
 	// ErrAccountAlreadyExists is returned if an account attempted to import is
 	// already present in the keystore.
 	ErrAccountAlreadyExists = errors.New("account already exists")
-
-	DefaultStorage, _ = filepath.Abs(filepath.Join("data-storage")) //nolint:gocritic
 )
 
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
