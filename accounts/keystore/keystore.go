@@ -4,7 +4,6 @@ import (
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"sync"
 	"time"
@@ -24,10 +23,6 @@ var (
 	// ErrAccountAlreadyExists is returned if an account attempted to import is
 	// already present in the keystore.
 	ErrAccountAlreadyExists = errors.New("account already exists")
-
-	accountDataPath = "account-data"
-
-	DefaultStorage, _ = filepath.Abs(accountDataPath)
 )
 
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
@@ -64,15 +59,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) (*Key
 func (ks *KeyStore) init(keyDir string, logger hclog.Logger) error {
 	ks.unlocked = make(map[types.Address]*unlocked)
 
-	var dir string
-
-	if keyDir == "" {
-		dir = DefaultStorage
-	} else {
-		dir = filepath.Join(keyDir, accountDataPath)
-	}
-
-	cache, err := newAccountStore(dir, logger)
+	cache, err := newAccountStore(keyDir, logger)
 	if err != nil {
 		return err
 	}
