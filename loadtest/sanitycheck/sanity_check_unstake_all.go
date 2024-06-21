@@ -84,7 +84,8 @@ func (t *UnstakeAllTest) Run() error {
 	fmt.Println("Checking if validator is removed from validator set since it unstaked all")
 
 	if extra.Validators == nil || extra.Validators.IsEmpty() {
-		return fmt.Errorf("validator set delta is empty on an epoch ending block")
+		return fmt.Errorf("validator set delta is empty on an epoch ending block. Block: %d. EpochSize: %d",
+			epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	if len(extra.Validators.Removed) != 1 {

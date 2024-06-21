@@ -85,9 +85,18 @@ func (t *RegisterValidatorTest) runTest() (*wallet.Account, error) {
 		return nil, fmt.Errorf("failed to register new validator: %w", err)
 	}
 
-	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
-	if err != nil {
-		return nil, err
+	var epochEndingBlock *types.Header
+
+	if blockNum%t.config.EpochSize != 0 {
+		epochEndingBlock, err = t.waitForEpochEnding(&blockNum)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		epochEndingBlock, err = t.client.GetHeaderByNumber(jsonrpc.BlockNumber(blockNum))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)
@@ -98,11 +107,13 @@ func (t *RegisterValidatorTest) runTest() (*wallet.Account, error) {
 	fmt.Println("Checking if new validator is added to validator set with its stake")
 
 	if extra.Validators == nil || extra.Validators.IsEmpty() {
-		return nil, fmt.Errorf("validator set delta is empty on an epoch ending block")
+		return nil, fmt.Errorf("validator set delta is empty on an epoch ending block. Block: %d. EpochSize: %d",
+			epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	if !extra.Validators.Added.ContainsAddress(newValidatorAcc.Address()) {
-		return nil, fmt.Errorf("validator %s is not in the added validators", newValidatorAcc.Address())
+		return nil, fmt.Errorf("validator %s is not in the added validators. Block: %d. EpochSize: %d",
+			newValidatorAcc.Address(), epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	validatorMetaData := extra.Validators.Added.GetValidatorMetadata(newValidatorAcc.Address())
