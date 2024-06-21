@@ -230,7 +230,7 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 		return nil, err
 	}
 
-	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	transaction, err := DecodeTxn(arg, e.store, true)
 	if err != nil {
 		return nil, err
 	}
@@ -329,7 +329,7 @@ func (e *Eth) SignTransaction(txn *txnArgs) (interface{}, error) {
 		return nil, err
 	}
 
-	tx, err := DecodeTxn(txn, 0, e.store, true)
+	tx, err := DecodeTxn(txn, e.store, true)
 	if err != nil {
 		return nil, err
 	}
@@ -598,7 +598,7 @@ func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *StateOve
 		return nil, err
 	}
 
-	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	transaction, err := DecodeTxn(arg, e.store, true)
 	if err != nil {
 		return nil, err
 	}
@@ -653,7 +653,7 @@ func (e *Eth) EstimateGas(arg *txnArgs, rawNum *BlockNumber) (interface{}, error
 	}
 
 	// testTransaction should execute tx with nonce always set to the current expected nonce for the account
-	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	transaction, err := DecodeTxn(arg, e.store, true)
 	if err != nil {
 		return nil, err
 	}
