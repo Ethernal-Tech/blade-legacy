@@ -4,7 +4,7 @@ description: This chapter describes how synchronization is achieved in the Blade
 
 # Synchronization
 
-The fundamental objective of each participant, i.e. node, in a blockchain network is to find a sequence of cryptographically linked blocks that, according to a specific parameter (usually the number of blocks), is considered the currently accepted history at a given point in time. This chain is commonly referred to as the **canonical chain**. Various optimization and protection challenges arise in the this context.&#x20;
+The fundamental objective of each participant, i.e. node, in a blockchain network is to find a sequence of cryptographically linked blocks that, according to a specific parameter (usually the number of blocks), is considered the currently accepted history at a given point in time. This chain is commonly referred to as the **canonical chain**. Various optimization and protection challenges arise in this context.&#x20;
 
 It is necessary to devise such a mechanism that, alongside an efficient defense against DoS (i.e., denial of service) and Eclipse attacks, will allow a node, regardless of how far behind it is, to align relatively quickly with all other (honest) participants in the network. The implementation is significantly influenced by the way new blocks are generated. Since the Blade system is based on the IBFT 2.0 consensus protocol and immediate finality, there is no need to take into account potential forks and reorganizations. Synchronization, alongside correctly implemented consensus rules, is of essential importance for the meaningful operation of every node.&#x20;
 
