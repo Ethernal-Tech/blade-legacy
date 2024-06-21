@@ -8,7 +8,7 @@ description: >-
 
 Block creation is the essence of the blockchain system. The following figure shows all the components involved in the process (for clarity reasons, some fields and methods in the structures are omitted):
 
-<figure><img src="../../.gitbook/assets/polybft_block_creation (2).png" alt=""><figcaption><p>Elements of the Block Creation Process</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/polybft_block_creation.png" alt=""><figcaption><p>Elements of the Block Creation Process</p></figcaption></figure>
 
 The `BlockBuilder` represents one of the most important components of the system, which, as the name suggests, enables the creation of a block. This component possesses specific configuration parameters (`BlockBuilderParams`), whose values are set during its instantiation by calling the `NewBlockBuilder` method. The key parameters and their meanings are outlined below:
 
