@@ -1,0 +1,132 @@
+@startuml
+skinparam packageStyle frame
+ left to right direction
+<style>
+class {
+  MinimumWidth 250
+  MaximumWidth 370
+ 
+}
+</style>
+namespace syncer {
+
+    interface SyncPeerClient  {
+        + Start() error
+        + Close() 
+        + GetPeerStatus(id peer.ID) (*NoForkPeer, error)
+        + GetConnectedPeerStatuses() []*NoForkPeer
+        + GetBlocks( peer.ID,  uint64,  time.Duration) (<font color=blue>chan</font> *types.Block, error)
+        + GetPeerStatusUpdateCh() <font color=blue>chan</font> *NoForkPeer
+        + GetPeerConnectionUpdateEventCh() <font color=blue>chan</font> *event.PeerEvent
+        + CloseStream(peerID peer.ID) error
+        + DisablePublishingPeerStatus() 
+        + EnablePublishingPeerStatus() 
+
+    }
+    interface SyncPeerService  {
+        + Start() 
+        + Close() error
+
+    }
+    interface Syncer  {
+        + Start() error
+        + Close() error
+        + GetSyncProgression() *progress.Progression
+        + HasSyncPeer() bool
+        + Sync( <font color=blue>func</font>(*types.FullBlock) bool) error
+        + UpdateBlockTimeout( time.Duration) 
+
+    }
+    class syncPeerClient << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - network Network
+        - blockchain Blockchain
+        - subscription blockchain.Subscription
+        - topic *network.Topic
+        - id string
+        - peerStatusUpdateCh <font color=blue>chan</font> *NoForkPeer
+        - peerConnectionUpdateCh <font color=blue>chan</font> *event.PeerEvent
+        - shouldEmitBlocks bool
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - closed atomic.Bool
+        - peerStatusUpdateChLock sync.Mutex
+        - peerStatusUpdateChClosed bool
+
+        - startGossip() error
+        - handleStatusUpdate(obj <font color=blue>interface</font>{}, from peer.ID) 
+        - startNewBlockProcess() 
+        - startPeerEventProcess() 
+        - newSyncPeerClient(peerID peer.ID) (proto.SyncPeerClient, error)
+
+        + Start() error
+        + Close() 
+        + DisablePublishingPeerStatus() 
+        + EnablePublishingPeerStatus() 
+        + GetPeerStatus(peerID peer.ID) (*NoForkPeer, error)
+        + GetConnectedPeerStatuses() []*NoForkPeer
+        + GetPeerStatusUpdateCh() <font color=blue>chan</font> *NoForkPeer
+        + GetPeerConnectionUpdateEventCh() <font color=blue>chan</font> *event.PeerEvent
+        + CloseStream(peerID peer.ID) error
+        + GetBlocks(peerID peer.ID, from uint64, timeoutPerBlock time.Duration) (<font color=blue>chan</font> *types.Block, error)
+
+    }
+    class syncPeerService << (S,Aquamarine) >> {
+        - blockchain Blockchain
+        - network Network
+        - stream *grpc.GrpcStream
+
+        - setupGRPCServer() 
+
+        + Start() 
+        + Close() error
+        + GetBlocks(req *proto.GetBlocksRequest, stream proto.SyncPeer_GetBlocksServer) error
+        + GetStatus(ctx context.Context, req *empty.Empty) (*proto.SyncPeerStatus, error)
+
+    }
+    class syncer << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - blockchain Blockchain
+        - syncProgression Progression
+        - peerMap *PeerMap
+        - syncPeerService SyncPeerService
+        - syncPeerClient SyncPeerClient
+        - blockTimeout time.Duration
+        - newStatusCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - lock sync.RWMutex
+
+        - initializePeerMap() 
+        - startPeerStatusUpdateProcess() 
+        - startPeerConnectionEventProcess() 
+        - initNewPeerStatus(peerID peer.ID) 
+        - putToPeerMap(status *NoForkPeer) 
+        - removeFromPeerMap(peerID peer.ID) 
+        - notifyNewStatusEvent() 
+        - bulkSyncWithPeer(peerID peer.ID, peerLatestBlock uint64, newBlockCallback <font color=blue>func</font>(*types.FullBlock) bool) (uint64, bool, error)
+
+        + UpdateBlockTimeout(timeout time.Duration) 
+        + Start() error
+        + Close() error
+        + GetSyncProgression() *progress.Progression
+        + HasSyncPeer() bool
+        + Sync(callback <font color=blue>func</font>(*types.FullBlock) bool) error
+
+    }
+}
+namespace polybft {
+
+
+    class Polybft << (S,Aquamarine) >> {
+        
+        - syncer syncer.Syncer     
+
+    }
+}
+
+"syncer.SyncPeerClient" <|-- "syncer.syncPeerClient"
+"syncer.SyncPeerService" <|-- "syncer.syncPeerService"
+"syncer.Syncer" <|-- "syncer.syncer"
+"syncer.Syncer" ..> "syncer.SyncPeerService"
+"syncer.Syncer" ..> "syncer.SyncPeerClient"
+"polybft.Polybft" ..> "syncer.Syncer"
+
+@enduml

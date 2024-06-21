@@ -1,0 +1,68 @@
+@startuml
+hide footbox
+
+Polybft -> Syncer: NewSyncer
+activate Polybft
+Syncer -> SyncPeerClient: NewSyncPeerClient
+activate Syncer
+activate SyncPeerClient
+deactivate SyncPeerClient
+Syncer -> SyncPeerService: NewSyncPeerService
+activate SyncPeerService
+deactivate SyncPeerService
+Polybft <-- Syncer: syncer
+
+Polybft -> Syncer: Start
+Syncer -> SyncPeerClient: Start
+activate SyncPeerClient
+SyncPeerClient -> SyncPeerClient: StartNewBlockProcess
+activate SyncPeerClient
+deactivate SyncPeerClient
+SyncPeerClient -> SyncPeerClient: StartPeerEventProcess
+activate SyncPeerClient
+deactivate SyncPeerClient
+SyncPeerClient -> SyncPeerClient: StartGossip
+activate SyncPeerClient
+deactivate SyncPeerClient
+
+Syncer -> SyncPeerService: Start
+
+deactivate SyncPeerClient
+
+activate SyncPeerService
+SyncPeerService -> SyncPeerService: setupGRPCServer
+activate SyncPeerService
+deactivate SyncPeerService
+deactivate SyncPeerService
+Syncer -> Syncer: Initialize peer map
+activate Syncer
+deactivate Syncer
+Syncer -> Syncer: StartPeerStatusUpdateProcess
+activate Syncer
+deactivate Syncer
+Syncer -> Syncer: StartPeerConnectionEventProcess
+activate Syncer
+deactivate Syncer
+
+alt if error exists
+    Polybft <-- Syncer
+end
+
+Polybft -> Syncer: sync
+deactivate Polybft
+Syncer -> PeerMap: BestPeer
+Syncer <-- PeerMap: bestPeer
+Syncer -> Syncer: BulkySyncWithPeer
+activate Syncer
+deactivate Syncer
+
+alt if error exists
+    Polybft <-- Syncer
+    activate Polybft
+    deactivate Polybft
+end
+deactivate Syncer
+
+destroy Polybft
+
+@enduml
