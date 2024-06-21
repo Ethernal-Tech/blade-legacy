@@ -320,6 +320,23 @@ func (e *Eth) BlockNumber() (interface{}, error) {
 	return argUintPtr(h.Number), nil
 }
 
+// SignTransaction sign transaction with key of account, key need to be unlocked
+func (e *Eth) SignTransaction(txn *txnArgs) (interface{}, error) {
+	account := accounts.Account{Address: *txn.From}
+
+	keyStore, err := getKeystore(e.accManager)
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := DecodeTxn(txn, 0, e.store, true)
+	if err != nil {
+		return nil, err
+	}
+
+	return keyStore.SignTx(account, tx)
+}
+
 // SendRawTransaction sends a raw transaction
 func (e *Eth) SendRawTransaction(buf argBytes) (interface{}, error) {
 	tx := &types.Transaction{}
