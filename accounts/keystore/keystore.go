@@ -27,7 +27,7 @@ var (
 
 	accountDataPath = "account-data"
 
-	DefaultStorage, _ = filepath.Abs(accountDataPath) //nolint:gocritic
+	DefaultStorage, _ = filepath.Abs(accountDataPath)
 )
 
 var KeyStoreType = reflect.TypeOf(&KeyStore{})
@@ -63,6 +63,7 @@ func NewKeyStore(keyDir string, scryptN, scryptP int, logger hclog.Logger) (*Key
 
 func (ks *KeyStore) init(keyDir string, logger hclog.Logger) error {
 	ks.unlocked = make(map[types.Address]*unlocked)
+
 	var dir string
 
 	if keyDir == "" {
