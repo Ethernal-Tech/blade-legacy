@@ -71,7 +71,7 @@ If the transaction is invalid, then, depending on the error, the transaction is 
 
 If the gas limit is reached, the block creation is finished. Otherwise, the process is repeated with the next transaction from the `TxPool` until the predefined time expires.
 
-<figure><img src="../../.gitbook/assets/txpool_block_creation_sequence (3).png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/txpool_block_creation_sequence.png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
 
 ## Adding Transactions to TxPool <a href="#n6hacokagz2u" id="n6hacokagz2u"></a>
 
@@ -116,4 +116,4 @@ When a validation fails, an appropriate error is raised, and the transaction is 
 * <mark style="color:red;">a promotion event is raised when the transaction nonce is less than or equal to the account nonce.</mark>
 * later, transactions are published to other nodes through the network (assuming that a node has the ability to send transactions and subscriptions are present). Network nodes handle received transactions through `TxPool`'s `addGossipTx` handler method, where they add transactions to their pool.&#x20;
 
-<figure><img src="../../.gitbook/assets/txpool_add_tx_sequence (2).png" alt=""><figcaption><p>Adding Transaction to TxPool Sequence Diagram</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/txpool_add_tx_sequence.png" alt=""><figcaption><p>Adding Transaction to TxPool Sequence Diagram</p></figcaption></figure>

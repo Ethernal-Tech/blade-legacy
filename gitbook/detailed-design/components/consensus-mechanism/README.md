@@ -8,7 +8,7 @@ Leveraging the IBFT 2.0 consensus algorithm not only enables the Blade system to
 
 A critical prerequisite for the successful functioning of IBFT 2.0, as all other Byzantine Fault Tolerant (BFT) algorithms operating in a partially synchronized state, is that the total number of validator nodes engaged in the decision-making process must be at least **3F+1.** **F** signifies the quantity of malicious participants. The security profile in these algorithms is characterized by extremes. To elaborate, fulfillment of the mentioned condition maximizes security, whereas failure to meet it results in a complete collapse of security.
 
-<figure><img src="../../../.gitbook/assets/image (1).png" alt=""><figcaption><p>Failure Probability of IBFT 2.0 Consensus Algorithm</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image.png" alt=""><figcaption><p>Failure Probability of IBFT 2.0 Consensus Algorithm</p></figcaption></figure>
 
 The key assumption underpinning our system is its operation within the realm of partial synchrony. Specifically, it means there is a point in time (i.e., a global stabilization time, GST) after which the delay in message delivery (latency) becomes bounded by a finite and constant value. This assumption is fundamental to the previously defined **3F+1** security model of the system. For further details, please refer to the work “[_Consensus in the Presence of Partial Synchrony_”](https://groups.csail.mit.edu/tds/papers/Lynch/jacm88.pdf) by Cynthia Dwork, Nancy Lynch and Larry Stockmeyer.
 
