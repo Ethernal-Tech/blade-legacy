@@ -670,7 +670,7 @@ func TestConsensusRuntime_IsValidValidator_BasicCases(t *testing.T) {
 			runtime, validatorAccounts := setupFn(t)
 			signer := validatorAccounts.GetValidator(c.signerAlias)
 			sender := validatorAccounts.GetValidator(c.senderAlias)
-			msg, err := signer.Key().SignIBFTMessage(&proto.Message{From: sender.Address().Bytes()})
+			msg, err := signer.Key().SignIBFTMessage(&proto.IbftMessage{From: sender.Address().Bytes()})
 
 			require.NoError(t, err)
 			require.Equal(t, c.isValidSender, runtime.IsValidValidator(msg))
@@ -693,7 +693,7 @@ func TestConsensusRuntime_IsValidValidator_TamperSignature(t *testing.T) {
 
 	// provide invalid signature
 	sender := validatorAccounts.GetValidator("A")
-	msg := &proto.Message{
+	msg := &proto.IbftMessage{
 		From:      sender.Address().Bytes(),
 		Signature: []byte{1, 2, 3, 4, 5},
 	}
@@ -717,11 +717,11 @@ func TestConsensusRuntime_TamperMessageContent(t *testing.T) {
 	proposalSignature, err := sender.Key().SignWithDomain(proposalHash, signer.DomainCheckpointManager)
 	require.NoError(t, err)
 
-	msg := &proto.Message{
+	msg := &proto.IbftMessage{
 		View: &proto.View{},
 		From: sender.Address().Bytes(),
 		Type: proto.MessageType_COMMIT,
-		Payload: &proto.Message_CommitData{
+		Payload: &proto.IbftMessage_CommitData{
 			CommitData: &proto.CommitMessage{
 				ProposalHash:  proposalHash,
 				CommittedSeal: proposalSignature,
@@ -735,7 +735,7 @@ func TestConsensusRuntime_TamperMessageContent(t *testing.T) {
 	assert.True(t, runtime.IsValidValidator(msg))
 
 	// modify message without signing it again
-	msg.Payload = &proto.Message_CommitData{
+	msg.Payload = &proto.IbftMessage_CommitData{
 		CommitData: &proto.CommitMessage{
 			ProposalHash:  []byte{1, 3, 5, 7, 9}, // modification
 			CommittedSeal: proposalSignature,
@@ -909,11 +909,11 @@ func TestConsensusRuntime_BuildRoundChangeMessage(t *testing.T) {
 		Round:       view.Round,
 	}
 
-	expected := proto.Message{
+	expected := proto.IbftMessage{
 		View: view,
 		From: key.Address().Bytes(),
 		Type: proto.MessageType_ROUND_CHANGE,
-		Payload: &proto.Message_RoundChangeData{RoundChangeData: &proto.RoundChangeMessage{
+		Payload: &proto.IbftMessage_RoundChangeData{RoundChangeData: &proto.RoundChangeMessage{
 			LatestPreparedCertificate: certificate,
 			LastPreparedProposal:      proposal,
 		}},
@@ -940,11 +940,11 @@ func TestConsensusRuntime_BuildCommitMessage(t *testing.T) {
 	committedSeal, err := key.SignWithDomain(proposalHash, signer.DomainCheckpointManager)
 	require.NoError(t, err)
 
-	expected := proto.Message{
+	expected := proto.IbftMessage{
 		View: view,
 		From: key.Address().Bytes(),
 		Type: proto.MessageType_COMMIT,
-		Payload: &proto.Message_CommitData{
+		Payload: &proto.IbftMessage_CommitData{
 			CommitData: &proto.CommitMessage{
 				ProposalHash:  proposalHash,
 				CommittedSeal: committedSeal,
@@ -987,11 +987,11 @@ func TestConsensusRuntime_BuildPrepareMessage(t *testing.T) {
 		logger: hclog.NewNullLogger(),
 	}
 
-	expected := proto.Message{
+	expected := proto.IbftMessage{
 		View: view,
 		From: key.Address().Bytes(),
 		Type: proto.MessageType_PREPARE,
-		Payload: &proto.Message_PrepareData{
+		Payload: &proto.IbftMessage_PrepareData{
 			PrepareData: &proto.PrepareMessage{
 				ProposalHash: proposalHash,
 			},

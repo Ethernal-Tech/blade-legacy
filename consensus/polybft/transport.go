@@ -21,7 +21,7 @@ func (p *Polybft) subscribeToIbftTopic() error {
 			return
 		}
 
-		msg, ok := obj.(*ibftProto.Message)
+		msg, ok := obj.(*ibftProto.IbftMessage)
 		if !ok {
 			p.logger.Error("consensus engine: invalid type assertion for message request")
 
@@ -49,7 +49,7 @@ func (p *Polybft) createTopics() (err error) {
 		}
 	}
 
-	p.consensusTopic, err = p.config.Network.NewTopic(pbftProto, &ibftProto.Message{})
+	p.consensusTopic, err = p.config.Network.NewTopic(pbftProto, &ibftProto.IbftMessage{})
 	if err != nil {
 		return fmt.Errorf("failed to create consensus topic: %w", err)
 	}
@@ -58,7 +58,7 @@ func (p *Polybft) createTopics() (err error) {
 }
 
 // Multicast is implementation of core.Transport interface
-func (p *Polybft) Multicast(msg *ibftProto.Message) {
+func (p *Polybft) Multicast(msg *ibftProto.IbftMessage) {
 	if err := p.consensusTopic.Publish(msg); err != nil {
 		p.logger.Warn("failed to multicast consensus message", "error", err)
 	}
