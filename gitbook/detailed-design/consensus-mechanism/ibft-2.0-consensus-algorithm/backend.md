@@ -1,6 +1,6 @@
 ---
 description: >-
-  This chapter gives a detailed description of how IBFT utilizes the IBFT
+  This section gives a detailed description of how IBFT utilizes the IBFT
   backend component to successfully reach consensus for a new block to be added
   to the blockchain.
 ---

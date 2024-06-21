@@ -1,3 +1,9 @@
+---
+description: >-
+  This section gives brief details of Blade's consensus algorithm
+  implementation.
+---
+
 # Implementation
 
 In the diagram below, the key components of IBFT consensus mechanism are shown.
