@@ -21,4 +21,4 @@ Similarly to how the `IBFT` in the `prepare` state collects all Prepare messages
 
 In the `final` state, `IBFT` adds a new block to its local blockchain and removes all messages from its `Message` storage that were used for previous decisions on the correctness of the block. The block is added to the blockchain by invoking the `InsertProposal()` method from the `IBFT Backend.` After successfully adding the new block to the blockchain, `IBFT` sends a signal on the `roundDone` channel, thus halting the execution of the initiated sequence.
 
-<figure><img src="../../../.gitbook/assets/polybft_backend_sequence.png" alt=""><figcaption><p>IBFT and IBFTBackend Interaction Sequence Diagram</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/polybft_backend_sequence (1).png" alt=""><figcaption><p>IBFT and IBFTBackend Interaction Sequence Diagram</p></figcaption></figure>
