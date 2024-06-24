@@ -94,7 +94,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
       - name: Get validator keys
-        run: aws ssm get-parameters --names `aws ec2 describe-instances --filters "Name=tag:BaseDN,Values=${{ inputs.environment }}${{ vars.BASEDN_SUFIX }}" "Name=tag:Role,Values=validator" --query "Reservations[*].Instances[*].Tags[?Key=='Name'].Value[]" --output text | sed 's/.*/\/${{ inputs.environment }}\/&\/validator-key/'` --with-decryption --region ${{ vars.AWS_REGION }} > keys.json
+        run: aws ssm get-parameters --names `aws ec2 describe-instances --filters "Name=tag:BaseDN,Values=${{ inputs.environment }}${{ vars.BASEDN_SUFIX }}" "Name=tag:Role,Values=validator" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].Tags[?Key=='Name'].Value[]" --output text | sed 's/.*/\/${{ inputs.environment }}\/&\/validator-key/'` --with-decryption --region ${{ vars.AWS_REGION }} > keys.json
       - name: Start Sanity Check Test
         id: sanity_check_tests_results
         run: |
