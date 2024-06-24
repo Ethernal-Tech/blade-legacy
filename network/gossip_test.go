@@ -81,11 +81,14 @@ func TestSimpleGossip(t *testing.T) {
 		})
 	require.NoError(t, err, "Unable to publish message")
 
+	ctxMsg, cancelFn := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancelFn()
+
 	messagesGossiped := 0
 
 	for {
 		select {
-		case <-time.After(time.Second * 15):
+		case <-ctxMsg.Done():
 			t.Fatalf("Multicast messages not received before timeout. "+
 				"Received: %d, expected: %d", messagesGossiped, len(servers))
 		case message := <-messageCh:

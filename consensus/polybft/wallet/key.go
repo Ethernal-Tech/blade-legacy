@@ -48,7 +48,7 @@ func (k *Key) SignWithDomain(digest, domain []byte) ([]byte, error) {
 }
 
 // SignIBFTMessage signs the IBFT consensus message with ECDSA key
-func (k *Key) SignIBFTMessage(msg *proto.Message) (*proto.Message, error) {
+func (k *Key) SignIBFTMessage(msg *proto.IbftMessage) (*proto.IbftMessage, error) {
 	msgRaw, err := protobuf.Marshal(msg)
 	if err != nil {
 		return nil, fmt.Errorf("cannot marshal message: %w", err)

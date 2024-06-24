@@ -111,5 +111,5 @@ func newTestJSONRPC(t *testing.T) (*JSONRPC, error) {
 		Addr:  &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: port},
 	}
 
-	return NewJSONRPC(hclog.NewNullLogger(), config)
+	return NewJSONRPC(hclog.NewNullLogger(), config, nil)
 }
