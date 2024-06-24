@@ -728,3 +728,8 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 
 	return nil
 }
+
+type SignTransactionResult struct {
+	Raw []byte             `json:"raw"`
+	Tx  *types.Transaction `json:"tx"`
+}

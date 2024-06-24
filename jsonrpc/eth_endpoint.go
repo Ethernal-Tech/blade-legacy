@@ -334,7 +334,12 @@ func (e *Eth) SignTransaction(txn *txnArgs) (interface{}, error) {
 		return nil, err
 	}
 
-	return keyStore.SignTx(account, tx)
+	signedTx, err := keyStore.SignTx(account, tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SignTransactionResult{Tx: tx, Raw: signedTx.MarshalRLP()}, nil
 }
 
 // SendRawTransaction sends a raw transaction
