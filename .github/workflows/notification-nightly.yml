@@ -71,6 +71,30 @@ on: # yamllint disable-line rule:truthy
         description: Benchmark Tests output
         type: string
         required: true
+      sanity_check_tests_output:
+        description: Sanity Check Tests output
+        type: string
+        required: true
+      stake_test_output:
+        description: Stake Test output
+        type: string
+        required: true
+      unstake_test_output:
+        description: Unstake Test output
+        type: string
+        required: true
+      register_validator_test_output:
+        description: Register Validator Test output
+        type: string
+        required: true
+      withdraw_rewards_test_output:
+        description: Withdraw Rewards Test output
+        type: string
+        required: true
+      unstake_all_test_output:
+        description: Unstake All Test output
+        type: string
+        required: true
       deploy_network_terraform_output:
         description: Deploy Network - Terraform output
         type: string
@@ -187,7 +211,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.load_test_mixed_output == 'true' && inputs.load_test_mixed_txpool_pending_output == '0' && inputs.load_test_mixed_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.sanity_check_tests_output == 'true' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.load_test_mixed_output == 'true' && inputs.load_test_mixed_txpool_pending_output == '0' && inputs.load_test_mixed_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
                     {
@@ -316,6 +340,31 @@ jobs:
                   ]
                 },
                 {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.stake_test_output == 'PASSED' && env.succeed_job || env.failed_job }} *Stake Test*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.unstake_test_output == 'PASSED' && env.succeed_job || env.failed_job }} *Unstake Test*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.register_validator_test_output == 'PASSED' && env.succeed_job || env.failed_job }} *Register Validator Test*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.withdraw_rewards_test_output == 'PASSED' && env.succeed_job || env.failed_job }} *Withdraw Rewards Test*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.unstake_all_test_output == 'PASSED' && env.succeed_job || env.failed_job }} *Unstake All Test*"
+                    }
+                  ]
+                },
+                {
                   "type": "divider"
                 },
                 {
@@ -327,7 +376,7 @@ jobs:
                     },
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.benchmark_test_output == '' && env.succeed_job || env.failed_job }} *Destroy Network*"
+                      "text": "${{ inputs.destroy_network_terraform_output == '' && inputs.destroy_network_logs_output == '' && env.succeed_job || env.failed_job }} *Destroy Network*"
                     },
                     {
                       "type": "mrkdwn",

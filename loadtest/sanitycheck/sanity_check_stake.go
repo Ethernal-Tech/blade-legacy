@@ -85,6 +85,11 @@ func (t *StakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
+	if blockNum%t.config.EpochSize == 0 {
+		// if validator staked on the epoch ending block, it will be added on the next epoch
+		blockNum++
+	}
+
 	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
 	if err != nil {
 		return err
@@ -98,11 +103,13 @@ func (t *StakeTest) Run() error {
 	fmt.Println("Checking if correct validator stake is in validator set delta")
 
 	if extra.Validators == nil || extra.Validators.IsEmpty() {
-		return fmt.Errorf("validator set delta is empty on an epoch ending block")
+		return fmt.Errorf("validator set delta is empty on an epoch ending block. Block: %d. EpochSize: %d",
+			epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	if !extra.Validators.Updated.ContainsAddress(validatorKey.Address()) {
-		return fmt.Errorf("validator %s is not in the updated validator set", validatorKey.Address())
+		return fmt.Errorf("validator %s is not in the updated validator set. Block: %d. EpochSize: %d",
+			validatorKey.Address(), epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	validatorMetaData := extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address())
