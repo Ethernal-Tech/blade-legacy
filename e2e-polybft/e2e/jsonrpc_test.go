@@ -412,12 +412,13 @@ func TestE2E_JsonRPC(t *testing.T) {
 		res, err := ethClient.SignTransaction(txn)
 		require.NoError(t, err)
 		require.NotEmpty(t, res.Raw)
+		require.Equal(t, preminedAcct.Address(), res.Tx.From())
 
 		hash, err := ethClient.SendRawTransaction(res.Raw)
 		require.NoError(t, err)
 		require.NotEqual(t, types.ZeroHash, hash)
 
-		require.NoError(t, cluster.WaitUntil(6*time.Minute, 2*time.Second, func() bool {
+		require.NoError(t, cluster.WaitUntil(2*time.Minute, 2*time.Second, func() bool {
 			receipt, err := ethClient.GetTransactionReceipt(hash)
 			if err != nil || receipt == nil {
 				return false
