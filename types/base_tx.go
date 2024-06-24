@@ -171,19 +171,23 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 		}
 	}
 
-	input, err := UnmarshalJSONBytes(v, "input")
-	if err != nil {
-		return err
+	if HasJSONKey(v, "input") {
+		input, err := UnmarshalJSONBytes(v, "input")
+		if err != nil {
+			return err
+		}
+
+		tx.setInput(input)
 	}
 
-	tx.setInput(input)
+	if HasJSONKey(v, "value") {
+		value, err := UnmarshalJSONBigInt(v, "value")
+		if err != nil {
+			return err
+		}
 
-	value, err := UnmarshalJSONBigInt(v, "value")
-	if err != nil {
-		return err
+		tx.setValue(value)
 	}
-
-	tx.setValue(value)
 
 	nonce, err := UnmarshalJSONUint64(v, "nonce")
 	if err != nil {
@@ -192,19 +196,29 @@ func (tx *BaseTx) unmarshalJSON(v *fastjson.Value) error {
 
 	tx.setNonce(nonce)
 
-	vParity, err := UnmarshalJSONBigInt(v, "v")
-	if err != nil {
-		return err
+	var (
+		vParity, r, s *big.Int
+	)
+
+	if HasJSONKey(v, "v") {
+		vParity, err = UnmarshalJSONBigInt(v, "v")
+		if err != nil {
+			return err
+		}
 	}
 
-	r, err := UnmarshalJSONBigInt(v, "r")
-	if err != nil {
-		return err
+	if HasJSONKey(v, "r") {
+		r, err = UnmarshalJSONBigInt(v, "r")
+		if err != nil {
+			return err
+		}
 	}
 
-	s, err := UnmarshalJSONBigInt(v, "s")
-	if err != nil {
-		return err
+	if HasJSONKey(v, "s") {
+		s, err = UnmarshalJSONBigInt(v, "s")
+		if err != nil {
+			return err
+		}
 	}
 
 	tx.setSignatureValues(vParity, r, s)

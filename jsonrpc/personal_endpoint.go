@@ -67,7 +67,7 @@ func (p *Personal) ImportRawKey(privKey string, password string) (types.Address,
 	return acc.Address, err
 }
 
-func (p *Personal) UnlockAccount(addr types.Address, password string, duration uint64) (bool, error) {
+func (p *Personal) UnlockAccount(addr types.Address, password string, duration argUint64) (bool, error) {
 	const max = 5 * time.Minute
 
 	var d time.Duration

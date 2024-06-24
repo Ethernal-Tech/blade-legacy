@@ -339,7 +339,10 @@ func (e *Eth) SignTransaction(txn *txnArgs) (interface{}, error) {
 		return nil, err
 	}
 
-	return &SignTransactionResult{Tx: tx, Raw: signedTx.MarshalRLP()}, nil
+	return &SignTransactionResult{
+		Raw: *argBytesPtr(signedTx.MarshalRLP()),
+		Tx:  signedTx,
+	}, nil
 }
 
 // SendRawTransaction sends a raw transaction

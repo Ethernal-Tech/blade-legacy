@@ -252,10 +252,10 @@ func (tx *DynamicFeeTx) marshalJSON(a *fastjson.Arena) *fastjson.Value {
 	v := a.NewObject()
 
 	tx.BaseTx.marshalJSON(a, v)
-	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+	v.Set("type", a.NewString(tx.transactionType().ToHexString()))
 
 	if tx.GasTipCap != nil {
-		v.Set("maxPriorityFeePerGas", a.NewString(fmt.Sprintf("0x%x", tx.GasTipCap)))
+		v.Set("maxPriorityFeePerGas", a.NewString(fmt.Sprintf("0x%02x", tx.GasTipCap)))
 	}
 
 	if tx.GasFeeCap != nil {

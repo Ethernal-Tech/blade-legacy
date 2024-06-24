@@ -264,3 +264,43 @@ func (e *EthClient) TxPoolStatus() (*StatusResponse, error) {
 func (e *EthClient) Close() error {
 	return e.client.Close()
 }
+
+// SendTransaction creates new message call transaction or a contract creation
+func (e *EthClient) SignTransaction(msg *CallMsg) (*SignTransactionResult, error) {
+	var signTransactionResult *SignTransactionResult
+	if err := e.client.Call("eth_signTransaction", &signTransactionResult, msg); err != nil {
+		return nil, err
+	}
+
+	return signTransactionResult, nil
+}
+
+// NewAccount creates a new account with the given password
+func (e *EthClient) NewAccount(password string) (types.Address, error) {
+	var addr types.Address
+	if err := e.client.Call("personal_newAccount", &addr, password); err != nil {
+		return types.ZeroAddress, err
+	}
+
+	return addr, nil
+}
+
+// ImportRawKey imports a raw private key into the keystore
+func (e *EthClient) ImportRawKey(privKey string, password string) (types.Address, error) {
+	var addr types.Address
+	if err := e.client.Call("personal_importRawKey", &addr, privKey, password); err != nil {
+		return types.ZeroAddress, err
+	}
+
+	return addr, nil
+}
+
+// Unlock unlocks the account with the given address and password for the given duration
+func (e *EthClient) Unlock(addr types.Address, password string, duration uint64) (bool, error) {
+	var isUnlocked bool
+	if err := e.client.Call("personal_unlockAccount", &isUnlocked, addr, password, duration); err != nil {
+		return false, err
+	}
+
+	return isUnlocked, nil
+}

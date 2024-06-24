@@ -413,7 +413,7 @@ func (tx *AccessListTxn) marshalJSON(a *fastjson.Arena) *fastjson.Value {
 	v := a.NewObject()
 
 	tx.BaseTx.marshalJSON(a, v)
-	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+	v.Set("type", a.NewString(tx.transactionType().ToHexString()))
 
 	if tx.ChainID != nil {
 		v.Set("chainId", a.NewString(fmt.Sprintf("0x%x", tx.ChainID)))

@@ -278,12 +278,7 @@ func generateECDSAKeyAndMarshal() ([]byte, error) {
 }
 
 func HexToECDSA(hexKey string) (*ecdsa.PrivateKey, error) {
-	b, err := hex.DecodeString(hexKey)
-	if err != nil {
-		return nil, errors.New("invalid hex data for private key")
-	}
-
-	return BytesToECDSAPrivateKey(b)
+	return BytesToECDSAPrivateKey([]byte(hexKey))
 }
 
 // BytesToECDSAPrivateKey reads the input byte array and constructs a private key if possible

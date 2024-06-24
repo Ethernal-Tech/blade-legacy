@@ -244,6 +244,10 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 		txn.SetAccessList(*arg.AccessList)
 	}
 
+	if arg.ChainID != nil {
+		txn.SetChainID(new(big.Int).SetUint64(uint64(*arg.ChainID)))
+	}
+
 	switch txType {
 	case types.LegacyTxType:
 		txn.SetGasPrice(new(big.Int).SetBytes(*arg.GasPrice))

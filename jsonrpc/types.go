@@ -352,10 +352,6 @@ func argAddrPtr(a types.Address) *types.Address {
 	return &a
 }
 
-func argHashPtr(h types.Hash) *types.Hash {
-	return &h
-}
-
 type argUint64 uint64
 
 func argUintPtr(n uint64) *argUint64 {
@@ -581,6 +577,8 @@ type CallMsg struct {
 	Data       []byte         // input data, usually an ABI-encoded contract method invocation
 	Type       uint64
 	AccessList types.TxAccessList // EIP-2930 access list
+	ChainID    *big.Int           // ChainID
+	Nonce      uint64             // nonce
 }
 
 // MarshalJSON implements the Marshal interface.
@@ -619,13 +617,16 @@ func (c *CallMsg) MarshalJSON() ([]byte, error) {
 		o.Set("maxPriorityFeePerGas", a.NewString(fmt.Sprintf("0x%x", c.GasTipCap)))
 	}
 
-	if c.Type != 0 {
-		o.Set("type", a.NewString(fmt.Sprintf("0x%x", c.Type)))
-	}
-
 	if c.AccessList != nil {
 		o.Set("accessList", c.AccessList.MarshalJSONWith(a))
 	}
+
+	if c.ChainID != nil {
+		o.Set("chainID", a.NewString(fmt.Sprintf("0x%x", c.ChainID)))
+	}
+
+	o.Set("nonce", a.NewString(fmt.Sprintf("0x%x", c.Nonce)))
+	o.Set("type", a.NewString(fmt.Sprintf("0x%x", c.Type)))
 
 	res := o.MarshalTo(nil)
 
@@ -729,7 +730,8 @@ func (t *Transaction) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// SignTransactionResult represents a RLP encoded signed transaction.
 type SignTransactionResult struct {
-	Raw []byte             `json:"raw"`
+	Raw argBytes           `json:"raw"`
 	Tx  *types.Transaction `json:"tx"`
 }

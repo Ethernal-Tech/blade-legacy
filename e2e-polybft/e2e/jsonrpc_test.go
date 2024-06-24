@@ -15,6 +15,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
+	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/helper/tests"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -368,6 +369,62 @@ func TestE2E_JsonRPC(t *testing.T) {
 		}
 
 		require.True(t, foundContractAddr, fmt.Sprintf("contract address %s was not found in the access list", contractAddr))
+	})
+
+	t.Run("eth_signTransaction", func(t *testing.T) {
+		accPassword := "testpassword"
+
+		keyRaw, err := preminedAcct.MarshallPrivateKey()
+		require.NoError(t, err)
+
+		hexKey := hex.EncodeToString(keyRaw)
+
+		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		require.NoError(t, err)
+		require.Equal(t, preminedAcct.Address(), accAddr)
+
+		nonce, err := ethClient.GetNonce(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
+		require.NoError(t, err)
+
+		chainID, err := ethClient.ChainID()
+		require.NoError(t, err)
+
+		gasPrice, err := ethClient.GasPrice()
+		require.NoError(t, err)
+
+		target := types.StringToAddress("0xDEADBEEF")
+
+		txn := &jsonrpc.CallMsg{
+			From:     preminedAcct.Address(),
+			To:       &target,
+			Gas:      21000,
+			GasPrice: new(big.Int).SetUint64(gasPrice * 2),
+			Nonce:    nonce,
+			ChainID:  chainID,
+			Value:    big.NewInt(1),
+			Type:     uint64(types.LegacyTxType),
+		}
+
+		isUnlocked, err := ethClient.Unlock(preminedAcct.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		require.NoError(t, err)
+		require.True(t, isUnlocked)
+
+		res, err := ethClient.SignTransaction(txn)
+		require.NoError(t, err)
+		require.NotEmpty(t, res.Raw)
+
+		hash, err := ethClient.SendRawTransaction(res.Raw)
+		require.NoError(t, err)
+		require.NotEqual(t, types.ZeroHash, hash)
+
+		require.NoError(t, cluster.WaitUntil(6*time.Minute, 2*time.Second, func() bool {
+			receipt, err := ethClient.GetTransactionReceipt(hash)
+			if err != nil || receipt == nil {
+				return false
+			}
+
+			return true
+		}))
 	})
 }
 

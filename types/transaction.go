@@ -54,6 +54,11 @@ func (t TxType) String() (s string) {
 	return
 }
 
+// ToHexString returns the hex representation of the transaction type.
+func (t TxType) ToHexString() string {
+	return fmt.Sprintf("%02x", byte(t))
+}
+
 type Transaction struct {
 	Inner TxData
 
