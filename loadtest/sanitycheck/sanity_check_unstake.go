@@ -49,7 +49,12 @@ func (t *UnstakeTest) Run() error {
 	fmt.Println("Running", t.Name())
 	defer fmt.Println("Finished", t.Name())
 
-	validatorKey, err := t.decodePrivateKey(t.config.ValidatorKeys[0])
+	validatorIndex := 0
+	if len(t.config.ValidatorKeys) > 1 {
+		validatorIndex = 1
+	}
+
+	validatorKey, err := t.decodePrivateKey(t.config.ValidatorKeys[validatorIndex])
 	if err != nil {
 		return err
 	}
@@ -84,7 +89,7 @@ func (t *UnstakeTest) Run() error {
 		return fmt.Errorf("stake amount is incorrect. Expected: %s, Actual: %s", expectedStake, currentStake)
 	}
 
-	if blockNum%t.config.EpochSize != 0 {
+	if blockNum%t.config.EpochSize == 0 {
 		// if validator unstaked on the epoch ending block, it will be added on the next epoch
 		blockNum++
 	}
@@ -102,11 +107,13 @@ func (t *UnstakeTest) Run() error {
 	fmt.Println("Checking if correct validator stake is in validator set delta")
 
 	if extra.Validators == nil || extra.Validators.IsEmpty() {
-		return fmt.Errorf("validator set delta is empty on an epoch ending block")
+		return fmt.Errorf("validator set delta is empty on an epoch ending block. Block: %d. EpochSize: %d",
+			epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	if !extra.Validators.Updated.ContainsAddress(validatorKey.Address()) {
-		return fmt.Errorf("validator %s is not in the updated validator set", validatorKey.Address())
+		return fmt.Errorf("validator %s is not in the updated validator set. Block: %d. EpochSize: %d",
+			validatorKey.Address(), epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	validatorMetaData := extra.Validators.Updated.GetValidatorMetadata(validatorKey.Address())

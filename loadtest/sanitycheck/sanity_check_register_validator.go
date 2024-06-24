@@ -85,7 +85,7 @@ func (t *RegisterValidatorTest) runTest() (*wallet.Account, error) {
 		return nil, fmt.Errorf("failed to register new validator: %w", err)
 	}
 
-	if blockNum%t.config.EpochSize != 0 {
+	if blockNum%t.config.EpochSize == 0 {
 		// if validator was registered on the epoch ending block, it will become active on the next epoch
 		blockNum++
 	}

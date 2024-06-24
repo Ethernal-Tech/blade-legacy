@@ -61,7 +61,7 @@ func (t *UnstakeAllTest) Run() error {
 		return err
 	}
 
-	if blockNum%t.config.EpochSize != 0 {
+	if blockNum%t.config.EpochSize == 0 {
 		// if validator unstaked all on the epoch ending block, it will be removed on the next epoch
 		blockNum++
 	}
