@@ -322,19 +322,7 @@ func (e *Eth) BlockNumber() (interface{}, error) {
 
 // SignTransaction sign transaction with key of account, key need to be unlocked
 func (e *Eth) SignTransaction(txn *txnArgs) (interface{}, error) {
-	account := accounts.Account{Address: *txn.From}
-
-	keyStore, err := getKeystore(e.accManager)
-	if err != nil {
-		return nil, err
-	}
-
-	tx, err := DecodeTxn(txn, e.store, true)
-	if err != nil {
-		return nil, err
-	}
-
-	signedTx, err := keyStore.SignTx(account, tx)
+	signedTx, err := e.signTx(txn)
 	if err != nil {
 		return nil, err
 	}
@@ -360,10 +348,19 @@ func (e *Eth) SendRawTransaction(buf argBytes) (interface{}, error) {
 	return tx.Hash().String(), nil
 }
 
-// SendTransaction rejects eth_sendTransaction json-rpc call as we don't support wallet management
-func (e *Eth) SendTransaction(_ *txnArgs) (interface{}, error) {
-	return nil, fmt.Errorf("request calls to eth_sendTransaction method are not supported," +
-		" use eth_sendRawTransaction instead")
+// SendTransaction creates a transaction for the given argument, sign it and submit it to the tx pool
+func (e *Eth) SendTransaction(args *txnArgs) (interface{}, error) {
+	signedTx, err := e.signTx(args)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.store.AddTx(signedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	return signedTx.Hash().String(), nil
 }
 
 // GetTransactionByHash returns a transaction by its hash.
@@ -1041,4 +1038,25 @@ func (e *Eth) FeeHistory(blockCount argUint64, newestBlock BlockNumber,
 	}
 
 	return result, nil
+}
+
+// signTx signs a transaction with the account's private key if it exists in store
+func (e *Eth) signTx(args *txnArgs) (*types.Transaction, error) {
+	if err := args.setDefaults(e.priceLimit, e); err != nil {
+		return nil, err
+	}
+
+	tx, err := DecodeTxn(args, e.store, true)
+	if err != nil {
+		return nil, err
+	}
+
+	account := accounts.Account{Address: tx.From()}
+
+	keyStore, err := getKeystore(e.accManager)
+	if err != nil {
+		return nil, err
+	}
+
+	return keyStore.SignTx(account, tx)
 }

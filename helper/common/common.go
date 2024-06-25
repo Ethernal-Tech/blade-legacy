@@ -80,6 +80,15 @@ func BigMin(x, y *big.Int) *big.Int {
 	return x
 }
 
+// BigMax returns the larger of x or y.
+func BigMax(x, y *big.Int) *big.Int {
+	if x.Cmp(y) > 0 {
+		return x
+	}
+
+	return y
+}
+
 func ConvertUnmarshalledUint(x interface{}) (uint64, error) {
 	switch tx := x.(type) {
 	case float64:
