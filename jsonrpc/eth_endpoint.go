@@ -348,7 +348,7 @@ func (e *Eth) SendRawTransaction(buf argBytes) (interface{}, error) {
 	return tx.Hash().String(), nil
 }
 
-// SendTransaction creates a transaction for the given argument, sign it and submit it to the tx pool
+// SendTransaction creates a transaction for the given argument, signs it, and submits it to the tx pool
 func (e *Eth) SendTransaction(args *txnArgs) (interface{}, error) {
 	signedTx, err := e.signTx(args)
 	if err != nil {

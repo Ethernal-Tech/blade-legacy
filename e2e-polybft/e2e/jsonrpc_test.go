@@ -448,22 +448,21 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		target := preminedAcctOne.Address()
 
-		txn := &jsonrpc.CallMsg{
-			From:     preminedAcctTwo.Address(),
-			To:       &target,
-			Gas:      21000,
-			GasPrice: new(big.Int).SetUint64(gasPrice * 2),
-			Nonce:    nonce,
-			ChainID:  chainID,
-			Value:    big.NewInt(1),
-			Type:     uint64(types.LegacyTxType),
-		}
+		txn := types.NewTx(types.NewLegacyTx(
+			types.WithFrom(preminedAcctTwo.Address()),
+			types.WithTo(&target),
+			types.WithGas(21000),
+			types.WithGasPrice(new(big.Int).SetUint64(gasPrice*2)),
+			types.WithNonce(nonce),
+			types.WithChainID(chainID),
+			types.WithValue(big.NewInt(1)),
+		))
 
 		isUnlocked, err := ethClient.Unlock(preminedAcctTwo.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
 		require.NoError(t, err)
 		require.True(t, isUnlocked)
 
-		hash, err := ethClient.SendTransactionCallMsg(txn)
+		hash, err := ethClient.SendTransaction(txn)
 		require.NoError(t, err)
 		require.NotEqual(t, types.ZeroHash, hash)
 	})
