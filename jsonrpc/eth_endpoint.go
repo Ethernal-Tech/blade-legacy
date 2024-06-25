@@ -363,6 +363,28 @@ func (e *Eth) SendTransaction(args *txnArgs) (interface{}, error) {
 	return signedTx.Hash().String(), nil
 }
 
+// Sign calculates an ECDSA signature for the given data
+//
+// Note, the produced signature conforms to the secp256k1 curve R, S and V values,
+// where the V value will be 27 or 28 for legacy reasons.
+//
+// The account associated with addr must be unlocked.
+func (e *Eth) Sign(from types.Address, buf argBytes) (interface{}, error) {
+	account := accounts.Account{Address: from}
+
+	keyStore, err := getKeystore(e.accManager)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := keyStore.SignHash(account, buf)
+	if err == nil {
+		signature[64] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
+	}
+
+	return argBytesPtr(signature), err
+}
+
 // GetTransactionByHash returns a transaction by its hash.
 // If the transaction is still pending -> return the txn with some fields omitted
 // If the transaction is sealed into a block -> return the whole txn with all fields

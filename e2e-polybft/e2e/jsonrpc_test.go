@@ -466,6 +466,52 @@ func TestE2E_JsonRPC(t *testing.T) {
 		require.NoError(t, err)
 		require.NotEqual(t, types.ZeroHash, hash)
 	})
+
+	t.Run("eth_sign", func(t *testing.T) {
+		accPassword := "testpassword"
+
+		key, err := crypto.GenerateECDSAKey()
+		require.NoError(t, err)
+
+		keyRaw, err := key.MarshallPrivateKey()
+		require.NoError(t, err)
+
+		hexKey := hex.EncodeToString(keyRaw)
+
+		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		require.NoError(t, err)
+		require.Equal(t, key.Address(), accAddr)
+
+		nonce, err := ethClient.GetNonce(key.Address(), jsonrpc.LatestBlockNumberOrHash)
+		require.NoError(t, err)
+
+		gasPrice, err := ethClient.GasPrice()
+		require.NoError(t, err)
+
+		receiver := types.StringToAddress("0xDEADFFFF")
+
+		txn := types.NewTx(
+			types.NewLegacyTx(
+				types.WithNonce(nonce),
+				types.WithFrom(key.Address()),
+				types.WithTo(&receiver),
+				types.WithValue(ethgo.Gwei(1)),
+				types.WithGas(21000),
+				types.WithGasPrice(new(big.Int).SetUint64(gasPrice)),
+			))
+
+		isUnlocked, err := ethClient.Unlock(key.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		require.NoError(t, err)
+		require.True(t, isUnlocked)
+
+		dataSign, err := ethClient.Sign(key.Address(), txn.Hash().Bytes())
+		require.NoError(t, err)
+
+		sig, err := hex.DecodeHex(dataSign)
+		require.NoError(t, err)
+		require.Len(t, sig, 65)
+		require.NotEqual(t, 0, sig[64])
+	})
 }
 
 func TestE2E_JsonRPCSelfSignedTLS(t *testing.T) {

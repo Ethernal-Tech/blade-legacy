@@ -304,3 +304,14 @@ func (e *EthClient) Unlock(addr types.Address, password string, duration uint64)
 
 	return isUnlocked, nil
 }
+
+// Sign calculates an ECDSA signature
+func (e *EthClient) Sign(addr types.Address, data []byte) (string, error) {
+	var res string
+
+	if err := e.client.Call("eth_sign", &res, addr, hex.EncodeToHex(data)); err != nil {
+		return "", err
+	}
+
+	return res, nil
+}
