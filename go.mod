@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	cloud.google.com/go/secretmanager v1.13.1
-	github.com/0xPolygon/go-ibft v0.4.1-0.20240621090555-e81a63ff50d7
+	github.com/0xPolygon/go-ibft v0.4.1-0.20240627095231-c43fd6b1de2d
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20231202204931-b886edca635a
 	github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04
 	github.com/armon/go-metrics v0.4.1
