@@ -8,7 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
+	"github.com/Ethernal-Tech/ethgo/wallet"
 )
 
 const (

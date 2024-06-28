@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	empty "google.golang.org/protobuf/types/known/emptypb"

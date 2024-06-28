@@ -6,9 +6,9 @@ import (
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo/abi"
 )
 
 func Test_BlsAggSignsVerification(t *testing.T) {

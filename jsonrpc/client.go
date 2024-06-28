@@ -6,8 +6,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
+	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/jsonrpc"
 )
 
 // EthClient is a wrapper around jsonrpc.Client

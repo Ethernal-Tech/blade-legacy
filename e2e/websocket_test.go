@@ -10,9 +10,9 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
-	"github.com/umbracle/ethgo"
 )
 
 type testWSRequest struct {

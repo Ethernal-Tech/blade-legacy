@@ -15,10 +15,10 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/abi"
+	"github.com/Ethernal-Tech/ethgo/contract"
 	"github.com/hashicorp/go-hclog"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/abi"
-	"github.com/umbracle/ethgo/contract"
 	bolt "go.etcd.io/bbolt"
 )
 

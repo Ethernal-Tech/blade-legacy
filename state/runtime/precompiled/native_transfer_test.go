@@ -8,8 +8,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo/abi"
 )
 
 func Test_NativeTransferPrecompile(t *testing.T) {

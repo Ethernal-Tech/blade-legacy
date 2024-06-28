@@ -11,7 +11,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 // UnstakeTest represents an unstake test.

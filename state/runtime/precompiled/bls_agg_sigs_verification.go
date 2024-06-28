@@ -8,7 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/state/runtime"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo/abi"
+	"github.com/Ethernal-Tech/ethgo/abi"
 )
 
 var (

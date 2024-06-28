@@ -13,8 +13,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
-	"github.com/umbracle/ethgo"
 	bolt "go.etcd.io/bbolt"
 )
 

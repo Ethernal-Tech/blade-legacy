@@ -6,8 +6,8 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo/wallet"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo/wallet"
 )
 
 func TestMnemonic(t *testing.T) {

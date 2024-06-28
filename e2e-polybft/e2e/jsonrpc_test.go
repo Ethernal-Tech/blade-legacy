@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"

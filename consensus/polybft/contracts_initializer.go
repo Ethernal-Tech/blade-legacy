@@ -11,7 +11,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo/abi"
+	"github.com/Ethernal-Tech/ethgo/abi"
 )
 
 const (

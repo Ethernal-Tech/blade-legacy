@@ -14,11 +14,11 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/progress"
 	"github.com/0xPolygon/polygon-edge/txpool"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 )
 
 // the test initializes polybft and chain mock (map of headers) after which a new header is verified

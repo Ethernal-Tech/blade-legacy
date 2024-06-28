@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
+	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/abi"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"

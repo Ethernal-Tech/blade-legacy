@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo/jsonrpc/codec"
+	"github.com/Ethernal-Tech/ethgo/jsonrpc/codec"
 	"github.com/valyala/fasthttp"
 )
 

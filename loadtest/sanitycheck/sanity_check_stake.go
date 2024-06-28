@@ -12,7 +12,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 // StakeTest represents a stake test.

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"

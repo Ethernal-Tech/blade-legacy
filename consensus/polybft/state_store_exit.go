@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 	bolt "go.etcd.io/bbolt"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"

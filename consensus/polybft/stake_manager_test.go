@@ -11,11 +11,11 @@ import (
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/abi"
 )
 
 func TestStakeManager_PostBlock(t *testing.T) {
