@@ -9,7 +9,7 @@ require (
 	github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d
 	github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04
 	github.com/armon/go-metrics v0.4.1
-	github.com/aws/aws-sdk-go v1.53.14
+	github.com/aws/aws-sdk-go v1.54.11
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3
 	github.com/docker/docker v26.1.3+incompatible
 	github.com/docker/go-connections v0.5.0
