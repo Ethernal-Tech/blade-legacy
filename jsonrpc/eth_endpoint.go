@@ -112,6 +112,11 @@ func (e *Eth) ChainId() (interface{}, error) {
 	return argUintPtr(e.chainID), nil
 }
 
+// Accounts returns the collection of accounts this node manages.
+func (e *Eth) Accounts() (interface{}, error) {
+	return e.accManager.Accounts(), nil
+}
+
 func (e *Eth) Syncing() (interface{}, error) {
 	if syncProgression := e.store.GetSyncProgression(); syncProgression != nil {
 		// Node is bulk syncing, return the status
