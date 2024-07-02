@@ -14,5 +14,5 @@
   * [IBFT 2.0 Consensus Algorithm](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/README.md)
     * [Initialization](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/initialization.md)
     * [Implementation](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/implementation.md)
-    * [Backend](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/backend.md)
+    * [Consensus Backend](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/backend.md)
 * [Synchronization](detailed-design/synchronization.md)
