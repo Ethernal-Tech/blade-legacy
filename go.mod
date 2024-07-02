@@ -14,7 +14,7 @@ require (
 	github.com/docker/docker v26.1.3+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
-	github.com/erigontech/mdbx-go v0.38.0
+	github.com/erigontech/mdbx-go v0.38.4
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
@@ -57,7 +57,10 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
-require github.com/DataDog/go-libddwaf/v3 v3.2.1 // indirect
+require (
+	github.com/DataDog/go-libddwaf/v3 v3.2.1 // indirect
+	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20240503222823-736c933a666d // indirect
+)
 
 require (
 	cloud.google.com/go/auth v0.4.1 // indirect
