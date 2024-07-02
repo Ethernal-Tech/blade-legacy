@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	dockertypes "github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	dockerImg "github.com/docker/docker/api/types/image"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
@@ -145,7 +145,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	}
 
 	// try to pull the image
-	reader, err := dockerClient.ImagePull(ctx, image, dockertypes.ImagePullOptions{})
+	reader, err := dockerClient.ImagePull(ctx, image, dockerImg.PullOptions{})
 	if err != nil {
 		return err
 	}
