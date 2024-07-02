@@ -1,6 +1,7 @@
 @startuml
 skinparam packageStyle frame
- left to right direction
+' skinparam style strictuml
+  left to right direction
 <style>
 class {
   MinimumWidth 250
@@ -125,8 +126,8 @@ namespace polybft {
 "syncer.SyncPeerClient" <|-- "syncer.syncPeerClient"
 "syncer.SyncPeerService" <|-- "syncer.syncPeerService"
 "syncer.Syncer" <|-- "syncer.syncer"
-"syncer.Syncer" ..> "syncer.SyncPeerService"
-"syncer.Syncer" ..> "syncer.SyncPeerClient"
+"syncer.syncer" ..> "syncer.SyncPeerService"
+"syncer.syncer" ..> "syncer.SyncPeerClient"
 "polybft.Polybft" ..> "syncer.Syncer"
 
 @enduml

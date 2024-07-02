@@ -1,5 +1,6 @@
 @startuml
 hide footbox
+skinparam style strictuml
 
 BuildProposal -> BlockBuilder: Reset
 BlockBuilder -> Executor: BeginTxn

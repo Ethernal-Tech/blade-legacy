@@ -1,5 +1,6 @@
 @startuml
 hide footbox
+skinparam style strictuml
 
 Polybft -> ConsensusRuntime: newConsensusRuntime
 Polybft <-- ConsensusRuntime: ConsensusRuntime

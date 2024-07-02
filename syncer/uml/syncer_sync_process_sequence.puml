@@ -1,5 +1,6 @@
 @startuml
 hide footbox
+skinparam style strictuml
 
 Polybft -> Syncer: NewSyncer
 activate Polybft
@@ -51,7 +52,9 @@ end
 Polybft -> Syncer: sync
 deactivate Polybft
 Syncer -> PeerMap: BestPeer
+activate PeerMap
 Syncer <-- PeerMap: bestPeer
+deactivate PeerMap
 Syncer -> Syncer: BulkySyncWithPeer
 activate Syncer
 deactivate Syncer

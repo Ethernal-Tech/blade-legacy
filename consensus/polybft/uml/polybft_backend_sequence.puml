@@ -1,5 +1,6 @@
 @startuml
 hide footbox
+skinparam style strictuml
 
 Polybft -> IBFT: RunSequence
 activate IBFT
@@ -29,6 +30,8 @@ loop number of prepare messages
 end
 IBFT -> IBFTBackend: buildCommitMessage
 IBFT -> IBFT: set commit state
+activate IBFT
+deactivate IBFT
 
 loop number of commit messages
     IBFT -> IBFTBackend: isValidProposalHash
