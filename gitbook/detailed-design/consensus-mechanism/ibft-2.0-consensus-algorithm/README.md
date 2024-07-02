@@ -25,7 +25,7 @@ $$
 
 The decision-making process in IBFT 2.0 consensus algorithm is divided into rounds. If a necessary quorum is not reached in a round, meaning no decision is made about the next block, the process moves to the next round. The duration of each round increases exponentially. In each round, one validator from the validator set takes on the role of the proposer for the next block, rotating through a round-robin principle.&#x20;
 
-Upon initiating the algorithm, all validators start the corresponding timer for the initial (0) round and set state variables to their default values. The proposer additionally constructs a block, accepts it (by setting the <mark style="color:red;">`acceptedPB`</mark> state variable to the created block), and then proposes it to other validators in the validator set by broadcasting a `<<PROPOSAL>>` message.&#x20;
+Upon initiating the algorithm, all validators start the corresponding timer for the initial (0) round and set state variables to their default values. The proposer additionally constructs a block, accepts it (by setting the <mark style="color:red;">`acceptedPB`</mark> state variable to the created block), and then proposes it to other validators in the validator set by broadcasting a `<<`<mark style="color:red;">`PROPOSAL`</mark>`>>` message.&#x20;
 
 Here is the list of all state variables and their initial values (we will delve into their roles as they become relevant):
 
