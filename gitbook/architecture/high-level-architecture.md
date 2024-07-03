@@ -8,7 +8,7 @@ description: >-
 
 To better understand the Blade system, the high-level architecture diagram of components is illustrated below. A node in the diagram is any instance of Blade software connected to other computers running Blade software, forming a network. We also refer to this node as the Blade client or client for short.&#x20;
 
-<figure><img src="../.gitbook/assets/system_architecture-high-level arch with syncer.drawio(1).png" alt=""><figcaption><p>High-level Architecture Component Diagram</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/system_architecture-high-level arch with syncer.drawio(3).png" alt=""><figcaption><p>High-level Architecture Component Diagram</p></figcaption></figure>
 
 The client exposes predefined RPC methods through an API (JSON-RPC within the `RPC` component). Among other things, this enables the sending of transactions to the blockchain and the reading of current blockchain data.
 
@@ -18,7 +18,7 @@ The transaction pool prioritizes received transactions, usually by giving an adv
 
 There are two types of Blade clients: full nodes and validators. Full nodes store the entire blockchain and they do not participate in block validation. Validators, as their name suggests, participate in block validation.
 
-If a client node is in the role of a validator, it takes part in the block creation process, and the consensus mechanism is an integral part of its operational behavior. The consensus mechanism, which is essentially an algorithm using state transitions based on the received confirmations, helps validators come to an agreement regarding the validity of a proposed block. The `Consensus` component (the algorithm) is supported by the `Consensus Backend` component, a complex component, comprised of several other components.&#x20;
+If a client node is in the role of a validator, it takes part in the block creation process, and the consensus mechanism is an integral part of its operational behavior. The consensus mechanism, which is essentially an algorithm using state transitions based on the received confirmations, helps validators come to an agreement regarding the validity of a proposed block. The `Consensus` component (the algorithm) is supported by the `Consensus Backend` component.&#x20;
 
 As the algorithm assumes that only one validator from all consensus participants/validators is a block proposer, the `Consensus Backend` also holds the logic to determine whether the validator is a proposer or not. For example, when the consensus algorithm starts, it checks the proposer status of the validator, and if the status is true, it calls the `Block Management` component, which takes transactions from the `TxPool` to form a proposed block. The consensus relies on a number of messages (such as PREPARE, COMMIT, etc.) during different stages of the block creation process. These messages are created by the `Consensus Backend` as well. As all validators equally participate in the consensus, the messages have to be distributed to all of them. The communication layer of the `Consensus Backend` ensures that all messages are sent to all peers through `libp2p`. Messages work in pub/sub manner meaning that only subscribed nodes receive messages for the given topic.&#x20;
 
