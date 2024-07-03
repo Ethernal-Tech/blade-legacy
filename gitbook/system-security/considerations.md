@@ -1,8 +1,8 @@
 # Considerations
 
-### Context
+## Context
 
-This chapter is dedicated to outlining a comprehensive strategy for ensuring data security within the Blade chain for multiple cloud providers. The primary objective is to implement measures facilitating the smooth deployment of Blade across different vendors, thereby mitigating the risk of vendor lock-in. The chapter aims to articulate the necessary steps for adopting a cloud-first Secure by Design approach.
+This section is dedicated to outlining a comprehensive strategy for ensuring data security within the Blade chain for multiple cloud providers. The primary objective is to implement measures facilitating the smooth deployment of Blade across different vendors, thereby mitigating the risk of vendor lock-in. The chapter aims to articulate the necessary steps for adopting a cloud-first Secure by Design approach.
 
 As the focus is on **confidentiality**, the discussion delves into three key aspects of encryption within Blade data protection framework:
 
@@ -34,7 +34,7 @@ To ensure data protection of Blade, it is necessary to execute the following ste
 
 **Data protection processes** are methods and practices to safeguard personal data from unauthorized or unlawful access, use, disclosure, alteration, or destruction. The processes need to be established to ensure software vendor’s alignment with regulations and laws.
 
-### Data Classification <a href="#heading-h.vqazqe8ne9d6" id="heading-h.vqazqe8ne9d6"></a>
+## Data Classification <a href="#heading-h.vqazqe8ne9d6" id="heading-h.vqazqe8ne9d6"></a>
 
 The following table presents an overview of sensitive data types handled by the system. P1 is designated for highly sensitive data, P2 for sensitive data, and P3 for all other business critical data. This classification system helps prioritize the protection of different types of data based on their sensitivity and criticality.
 
@@ -44,13 +44,13 @@ Understanding and categorizing the types of sensitive data is crucial for mainta
 
 The system **does NOT** handle highly sensitive data pertaining to race, ethnicity, political affiliations, biometrics/genetics, health conditions, sexual orientation, criminal offenses, private communications, personal diaries, precise location data, or national unique identifiers.
 
-### Risk based methodology
+## Risk based methodology
 
 From an attacker perspective, it is important to understand that data is typically the end goal of the attacker to deliver the impact of the attack. Per MITRE ATT\&CK framework (see [here](https://attack.mitre.org/matrices/enterprise/)), exfiltration (see [here](https://attack.mitre.org/tactics/TA0010/)) deserved a separate category. However, turning to the STRIDE framework and focusing on Information Disclosure, we can focus on the virtual machines hosting App chain nodes and the communication among these nodes to identify and narrow down the threats requiring mitigation during the operation of Blade.
 
-![Figure 1: Threats to information disclosure](../../.gitbook/assets/1.png)
+![Threats to information disclosure](../.gitbook/assets/1.png)
 
-#### **Threat 1** - Sensitive data in the VM can be disclosed if the OS or the file system in the virtual machine is not encrypted
+### **Threat 1** - Sensitive data in the VM can be disclosed if the OS or the file system in the virtual machine is not encrypted
 
 This threat is mitigated through common mitigation strategies, which involve encrypting disks utilized by virtual machines. These strategies leverage configurations supported by all major cloud vendors. Typically, they rely on standard mechanisms built for different operating system versions – BitLocker for Windows OS family and DM-Crypt technology for UNIX based OS family.
 
@@ -68,7 +68,7 @@ It is important to ensure the encryption keys are stored properly and careful co
 
 **Blade mitigation:** In the deployment phase of the Blade chain, the configuration for instantiating VMs that host Blade nodes is tailored based on the selected cloud provider. This configuration is specifically designed to activate disk encryption. The combined effect of this applied configuration and the cloud provider's capability to encrypt disks ensures comprehensive protection for sensitive data within Blade.
 
-#### **Threat 2 –** Sensitive data can be accessed without customers consent by a vulnerability in CSP platform or it could include a malicious system operator
+### **Threat 2 –** Sensitive data can be accessed without customers consent by a vulnerability in CSP platform or it could include a malicious system operator
 
 The concept of confidential computing protects the data from cloud system software vulnerabilities preventing even other tenants from exploiting other tenants' data, cloud operators, and with the concepts of enclaves, it protects the data from software operators as well. It achieves these goals by relying on TEE (Trusted Execution Environment) supported by new hardware technologies where processors separate different execution areas segregating the data and application code from the OS context. The encryption keys are stored within the processor chips themselves. We may say that this mitigation strategy relies on **data at rest and data in use** encryption.
 
@@ -92,7 +92,7 @@ Trusted computing also has a use case for enterprise blockchains as it enables p
 
 **Blade mitigation:** During the deployment phase of the Blade chain, Trusted Execution Environment (TEE) virtual machines serve as the foundational hosts for the nodes. This strategic choice reflects a deliberate architectural decision aimed at providing the security and reliability of Blade infrastructure. By leveraging TEE virtual machines, Blade ensures a heightened level of trustworthiness in its node hosting environment. TEE technology provides a secure execution environment that safeguards critical operations and data within isolated enclaves, protecting against unauthorized access and tampering attempts.
 
-#### Threat 3 - Sensitive data can be sniffed through unencrypted traffic
+### Threat 3 - Sensitive data can be sniffed through unencrypted traffic
 
 TLS is a protocol that encrypts data in transit between App chain nodes. This encryption ensures that sensitive information is protected from interception and unauthorized access. To implement TLS, one must rely on a TLS certificate from a reliable certificate authority (CA) which usually comes in the form of X509v3 standard certificate.
 
@@ -102,7 +102,7 @@ TLS is a protocol that encrypts data in transit between App chain nodes. This en
 
 \[More information – gRPC]: [Authentication | gRPC](https://grpc.io/docs/guides/auth/)
 
-### Key management <a href="#heading-h.c44t062kvu1" id="heading-h.c44t062kvu1"></a>
+## Key management <a href="#heading-h.c44t062kvu1" id="heading-h.c44t062kvu1"></a>
 
 ### Cryptography <a href="#heading-h.dtb7kuyiv1zv" id="heading-h.dtb7kuyiv1zv"></a>
 

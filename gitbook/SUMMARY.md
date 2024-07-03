@@ -5,6 +5,11 @@
 * [Overview](README.md)
 * [High-level Architecture](architecture/high-level-architecture.md)
 
+## SYSTEM SECURITY
+
+* [Considerations](system-security/considerations.md)
+* [Enterprise Integration](system-security/enterprise-integration.md)
+
 ## DETAILED DESIGN
 
 * [Transaction Pool](detailed-design/transaction-pool-txpool.md)
@@ -16,6 +21,3 @@
     * [Consensus Backend](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/backend.md)
 * [Synchronization](detailed-design/synchronization.md)
 * [Networking](detailed-design/networking.md)
-* [Security](detailed-design/security/README.md)
-  * [Considerations](detailed-design/security/considerations.md)
-  * [System Security Architecture](detailed-design/security/system-security-architecture.md)
