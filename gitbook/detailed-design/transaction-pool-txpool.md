@@ -54,7 +54,7 @@ Some of the main `TxPool` methods include:
 
 Every node has a single instance of `TxPool` in-memory structure, which is created on the node startup. `NewTxPool` method is in charge of creating a new `TxPool` populated with static and dynamic content. Afterwards, transaction `TxPool`'s signer is created and assigned, base fee is determined and assigned, and TxPool is started. `TxPool` listens for a shutdown event, prunes accounts with nonce holes and handles promoted transactions.
 
-<figure><img src="../.gitbook/assets/txpool_instantiation_sequence.png" alt=""><figcaption><p>TxPool Instantiation Process Sequence Diagram</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/txpool_instantiation_sequence (1).png" alt=""><figcaption><p>TxPool Instantiation Process Sequence Diagram</p></figcaption></figure>
 
 ## Role of TxPool in Block Creation <a href="#id-5qvuftlg7knu" id="id-5qvuftlg7knu"></a>
 
@@ -71,7 +71,7 @@ If the transaction is invalid, then, depending on the error, the transaction is 
 
 If the gas limit is reached, the block creation is finished. Otherwise, the process is repeated with the next transaction from the `TxPool` until the predefined time expires.
 
-<figure><img src="../.gitbook/assets/txpool_block_creation_sequence.png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/txpool_block_creation_sequence (1).png" alt=""><figcaption><p>Block Creation Sequence Diagram</p></figcaption></figure>
 
 ## Adding Transactions to TxPool <a href="#n6hacokagz2u" id="n6hacokagz2u"></a>
 

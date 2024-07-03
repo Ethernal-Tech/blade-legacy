@@ -5,7 +5,7 @@ description: >-
   to the blockchain.
 ---
 
-# Backend
+# Consensus Backend
 
 The truth is that every blockchain (in the blockchain system) starts with a genesis block identical for all participants. This is also the case in the Blade solution. Each subsequent block is added to the blockchain using a consensus algorithm, where a set of validators agrees or disagrees with the proposed block. Besides, the data used by selected validators for adding the block varies. To ensure that `IBFT` always has access to the necessary data needed for creation of a new block, the `IBFTBackend` component is leveraged.
 
@@ -21,4 +21,4 @@ Similarly to how the `IBFT` in the `prepare` state collects all Prepare messages
 
 In the `final` state, `IBFT` adds a new block to its local blockchain and removes all messages from its `Message` storage that were used for previous decisions on the correctness of the block. The block is added to the blockchain by invoking the `InsertProposal()` method from the `IBFT Backend.` After successfully adding the new block to the blockchain, `IBFT` sends a signal on the `roundDone` channel, thus halting the execution of the initiated sequence.
 
-<figure><img src="../../../.gitbook/assets/polybft_backend_sequence.png" alt=""><figcaption><p>IBFT and IBFTBackend Interaction Sequence Diagram</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/polybft_backend_sequence (2).png" alt=""><figcaption><p>IBFT and IBFTBackend Interaction Sequence Diagram</p></figcaption></figure>

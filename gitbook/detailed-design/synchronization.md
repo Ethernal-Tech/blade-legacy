@@ -28,5 +28,5 @@ After the successful startup of the `Syncer` synchronization begins. This is ach
 
 The entire synchronization process is illustrated through a sequential diagram below.
 
-<figure><img src="../.gitbook/assets/syncer_sync_process_sequence.png" alt=""><figcaption><p>Synchronization Process Sequence Diagram</p></figcaption></figure>
+<figure><img src="../.gitbook/assets/syncer_sync_process_sequence (2).png" alt=""><figcaption><p>Synchronization Process Sequence Diagram</p></figcaption></figure>
 
