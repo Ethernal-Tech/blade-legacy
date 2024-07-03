@@ -8,7 +8,7 @@ The `PolyBFT` component utilizes a decentralized networking layer based on the `
 
 ### Peer routing
 
-Bootnodes function as rendezvous servers, helping new nodes in discovering and connecting to the network. One or more bootnodes can be specified when the genesis file is created. Bootnodes are defined using libp2p multiaddrs, which include information about the protocol, network address, and node port number.
+Bootnodes (nodes that must exist in the network, i.e the network entry points) function as rendezvous servers, helping new nodes in discovering and connecting to the network. One or more bootnodes can be specified when the genesis file is created. Bootnodes are defined using libp2p multiaddrs, which include information about the protocol, network address, and node port number.
 
 ### Gossipsub
 
