@@ -7,7 +7,10 @@
 
 ## SYSTEM SECURITY
 
-* [Considerations](system-security/considerations.md)
+* [Considerations](system-security/considerations/README.md)
+  * [Data Classification](system-security/considerations/data-classification.md)
+  * [Risk Based Methodology](system-security/considerations/risk-based-methodology.md)
+  * [Key Management](system-security/considerations/key-management.md)
 * [Enterprise Integration](system-security/enterprise-integration.md)
 
 ## DETAILED DESIGN
