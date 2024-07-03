@@ -7,7 +7,6 @@
 
 ## DETAILED DESIGN
 
-* [World State](detailed-design/world-state.md)
 * [Transaction Pool](detailed-design/transaction-pool-txpool.md)
 * [Block Creation Process](detailed-design/block-creation-process.md)
 * [Consensus Mechanism](detailed-design/consensus-mechanism/README.md)
@@ -16,3 +15,4 @@
     * [Implementation](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/implementation.md)
     * [Consensus Backend](detailed-design/consensus-mechanism/ibft-2.0-consensus-algorithm/backend.md)
 * [Synchronization](detailed-design/synchronization.md)
+* [Networking](detailed-design/networking.md)
