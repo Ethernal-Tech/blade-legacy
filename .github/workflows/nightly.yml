@@ -186,6 +186,7 @@ jobs:
       unstake_all_test_output: ${{ needs.sanity_check_tests.outputs.unstake_all_test_output }}
       deploy_network_terraform_output: ${{ needs.deploy_network.outputs.terraform_output }}
       deploy_network_ansible_output: ${{ needs.deploy_network.outputs.ansible_output }}
+      deploy_network_blade_healthcheck_output: ${{ needs.deploy_network.outputs.blade_healthcheck_output }}
       load_test_eoa_output: ${{ needs.load_test_eoa.outputs.load_test_output }}
       load_test_eoa_txpool_pending_output: ${{ needs.load_test_eoa.outputs.txpool_pending }}
       load_test_eoa_txpool_queued_output: ${{ needs.load_test_eoa.outputs.txpool_queued }}

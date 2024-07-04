@@ -90,6 +90,9 @@ on: # yamllint disable-line rule:truthy
       ansible_output:
         description: Ansible output
         value: ${{ jobs.deploy_network.outputs.ansible_output }}
+      blade_healthcheck_output:
+        description: Blade Healthcheck output
+        value: ${{ jobs.deploy_network.outputs.blade_healthcheck_output }}
     secrets:
       AWS_ROLE_ARN:
         required: true
@@ -138,6 +141,7 @@ jobs:
     outputs:
       terraform_output: ${{ steps.terraform_failure.outputs.terraform_output }}
       ansible_output: ${{ steps.ansible_failure.outputs.ansible_output }}
+      blade_healthcheck_output: ${{ steps.blade_healthcheck.outputs.healthcheck }}
       rpc_url: ${{ steps.rpc_url.outputs.url }}
     steps:
       - name: Checkout code
@@ -219,6 +223,9 @@ jobs:
       - name: Set RPC URL
         id: rpc_url
         run: echo "url=$(terraform output -raw aws_lb_ext_domain | grep -o -E '^ext[^:]*')" >> $GITHUB_OUTPUT
+      - name: Blade healthcheck
+        id: blade_healthcheck
+        run: echo "healthcheck=`curl http://${{ steps.rpc_url.outputs.url }} | jq -r 'select(.name == "blade") | length != 0'`" >> $GITHUB_OUTPUT
   notification:
     name: Deploy Notification
     needs: [check_network, deploy_network]
@@ -235,6 +242,7 @@ jobs:
       gossip_msg_size: ${{ inputs.gossip_msg_size }}
       deploy_network_terraform_output: ${{ needs.deploy_network.outputs.terraform_output }}
       deploy_network_ansible_output: ${{ needs.deploy_network.outputs.ansible_output }}
+      deploy_network_blade_healthcheck_output: ${{ needs.deploy_network.outputs.blade_healthcheck_output }}
       rpc_url: ${{ needs.check_network.outputs.rpc_url || needs.deploy_network.outputs.rpc_url }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

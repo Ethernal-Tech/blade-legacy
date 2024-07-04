@@ -253,12 +253,10 @@ jobs:
       txpool_pending: ${{ steps.txpool_status_results.outputs.txpool_pending }}
       txpool_queued: ${{ steps.txpool_status_results.outputs.txpool_queued }}
     steps:
-      - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
       - name: Get txpool status
         id: txpool_status_results
         run: |
-          txpool_status=$(cast rpc --rpc-url "http://${{ needs.check_network.outputs.rpc_url }}" txpool_status | jq)
+          txpool_status=$(curl -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"txpool_status","params":[],"id":1}' http://${{ needs.check_network.outputs.rpc_url }} | jq -r .result)
           echo "txpool_pending=$(echo $txpool_status | jq -r '.pending')" >> $GITHUB_OUTPUT
           echo "txpool_queued=$(echo $txpool_status | jq -r '.queued')" >> $GITHUB_OUTPUT
   notification:

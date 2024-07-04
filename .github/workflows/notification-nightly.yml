@@ -103,6 +103,10 @@ on: # yamllint disable-line rule:truthy
         description: Deploy Network - Ansible output
         type: string
         required: true
+      deploy_network_blade_healthcheck_output:
+        description: Deploy Network - Blade Healthcheck output
+        type: string
+        required: true
       load_test_eoa_output:
         description: Load Test EOA output
         type: string
@@ -211,7 +215,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.sanity_check_tests_output == 'true' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.load_test_mixed_output == 'true' && inputs.load_test_mixed_txpool_pending_output == '0' && inputs.load_test_mixed_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.build_blade_output == '' && inputs.lint_output == '' && inputs.unit_test_output == '' && inputs.e2e_polybft_test_output == '' && inputs.e2e_legacy_test_output == '' && inputs.property_polybft_test_output == '' && inputs.fuzz_test_output == '' && inputs.benchmark_test_output == '' && inputs.sanity_check_tests_output == 'true' && inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.deploy_network_blade_healthcheck_output == 'true' && inputs.load_test_eoa_output == 'true' && inputs.load_test_eoa_txpool_pending_output == '0' && inputs.load_test_eoa_txpool_queued_output == '0' && inputs.load_test_erc20_output == 'true' && inputs.load_test_erc20_txpool_pending_output == '0' && inputs.load_test_erc20_txpool_queued_output == '0' && inputs.load_test_erc721_output == 'true' && inputs.load_test_erc721_txpool_pending_output == '0' && inputs.load_test_erc721_txpool_queued_output == '0' && inputs.load_test_mixed_output == 'true' && inputs.load_test_mixed_txpool_pending_output == '0' && inputs.load_test_mixed_txpool_queued_output == '0' && inputs.destroy_network_logs_output == '' && inputs.destroy_network_terraform_output == '' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
                     {
@@ -372,7 +376,7 @@ jobs:
                   "fields": [
                     {
                       "type": "mrkdwn",
-                      "text": "${{ inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && env.succeed_job || env.failed_job }} *Deploy Network*"
+                      "text": "${{ inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.deploy_network_blade_healthcheck_output == 'true' && env.succeed_job || env.failed_job }} *Deploy Network*"
                     },
                     {
                       "type": "mrkdwn",

@@ -43,6 +43,10 @@ on: # yamllint disable-line rule:truthy
         description: Deploy Network - Ansible output
         type: string
         required: true
+      deploy_network_blade_healthcheck_output:
+        description: Deploy Network - Blade Healthcheck output
+        type: string
+        required: true
       rpc_url:
         description: JSON-RPC URL
         type: string
@@ -87,7 +91,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.deploy_network_terraform_output == '' && inputs.deploy_network_ansible_output == '' && inputs.deploy_network_blade_healthcheck_output == 'true' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     },
                     {
@@ -96,6 +100,7 @@ jobs:
                         "type": "plain_text",
                         "text": "JSON-RPC"
                       },
+                      "style": "${{ inputs.deploy_network_blade_healthcheck_output == 'true' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "http://${{ inputs.rpc_url }}"
                     }
                   ]
