@@ -1,0 +1,169 @@
+@startuml
+namespace runtime {
+    class AccessList << (S,Aquamarine) >> {
+        + ContainsAddress(address types.Address) bool
+        + Contains(address types.Address, slot types.Hash) (bool, bool)
+        + Copy() *AccessList
+        + AddAddress(address ...types.Address) 
+        + AddSlot(address types.Address, slot ...types.Hash) 
+        + PrepareAccessList(from types.Address, to *types.Address, precompiles []types.Address, txAccessList types.TxAccessList) 
+        + DeleteAddress(address types.Address) 
+        + DeleteSlot(address types.Address, slot types.Hash) 
+        + ToTxAccessList() types.TxAccessList
+
+    }
+    class AccessListAddAccountChange << (S,Aquamarine) >> {
+        + Address types.Address
+
+        + Revert(host Host) 
+
+    }
+    class AccessListAddSlotChange << (S,Aquamarine) >> {
+        + Address types.Address
+        + Slot types.Hash
+
+        + Revert(host Host) 
+
+    }
+    class Contract << (S,Aquamarine) >> {
+        + Code []byte
+        + Type CallType
+        + CodeAddress types.Address
+        + Address types.Address
+        + Origin types.Address
+        + Caller types.Address
+        + Depth int
+        + Value *big.Int
+        + Input []byte
+        + Gas uint64
+        + Static bool
+
+    }
+    class ExecutionResult << (S,Aquamarine) >> {
+        + ReturnValue []byte
+        + GasLeft uint64
+        + GasUsed uint64
+        + Err error
+        + Address types.Address
+        + AccessList *AccessList
+
+        + Succeeded() bool
+        + Failed() bool
+        + Reverted() bool
+        + UpdateGasUsed(gasLimit uint64, refund uint64, refundQuotient uint64) 
+
+    }
+    interface Host  {
+        + AccountExists(addr types.Address) bool
+        + GetStorage(addr types.Address, key types.Hash) types.Hash
+        + SetStorage(addr types.Address, key types.Hash, value types.Hash, config *chain.ForksInTime) StorageStatus
+        + SetState(addr types.Address, key types.Hash, value types.Hash) 
+        + SetNonPayable(nonPayable bool) 
+        + GetBalance(addr types.Address) *big.Int
+        + GetCodeSize(addr types.Address) int
+        + GetCodeHash(addr types.Address) types.Hash
+        + GetCode(addr types.Address) []byte
+        + Selfdestruct(addr types.Address, beneficiary types.Address) 
+        + GetTxContext() TxContext
+        + GetBlockHash(number int64) types.Hash
+        + EmitLog(addr types.Address, topics []types.Hash, data []byte) 
+        + Callx( *Contract,  Host) *ExecutionResult
+        + Empty(addr types.Address) bool
+        + GetNonce(addr types.Address) uint64
+        + Transfer(from types.Address, to types.Address, amount *big.Int) error
+        + GetTracer() VMTracer
+        + GetRefund() uint64
+        + AddSlotToAccessList(addr types.Address, slot types.Hash) 
+        + AddAddressToAccessList(addr types.Address) 
+        + ContainsAccessListAddress(addr types.Address) bool
+        + ContainsAccessListSlot(addr types.Address, slot types.Hash) (bool, bool)
+        + DeleteAccessListAddress(addr types.Address) 
+        + DeleteAccessListSlot(addr types.Address, slot types.Hash) 
+
+    }
+    class Journal << (S,Aquamarine) >> {
+        - entries []JournalEntry
+
+        + Append(entry JournalEntry) 
+        + Revert(host Host, snapshot int) 
+        + Len() int
+
+    }
+    interface JournalEntry  {
+        + Revert(host Host) 
+
+    }
+    class JournalRevision << (S,Aquamarine) >> {
+        + ID int
+        + Index int
+
+    }
+    interface Runtime  {
+        + Run(c *Contract, host Host, config *chain.ForksInTime) *ExecutionResult
+        + CanRun(c *Contract, host Host, config *chain.ForksInTime) bool
+        + Name() string
+
+    }
+    class StackOutOfBoundsError << (S,Aquamarine) >> {
+        + StackLen int
+        + RequestedIndex int
+
+        + Error() string
+
+    }
+    class StackOverflowError << (S,Aquamarine) >> {
+        + StackLen int
+        + Limit int
+
+        + Error() string
+
+    }
+    class StackUnderflowError << (S,Aquamarine) >> {
+        + StackLen int
+        + Required int
+
+        + Error() string
+
+    }
+    class StorageStatus << (S,Aquamarine) >> {
+        + String() string
+
+    }
+    class TxContext << (S,Aquamarine) >> {
+        + GasPrice types.Hash
+        + Origin types.Address
+        + Coinbase types.Address
+        + Number int64
+        + Timestamp int64
+        + GasLimit int64
+        + ChainID int64
+        + Difficulty types.Hash
+        + Tracer tracer.Tracer
+        + NonPayable bool
+        + BaseFee *big.Int
+        + BurnContract types.Address
+
+    }
+    interface VMTracer  {
+        + CaptureState(memory []byte, stack []uint256.Int, opCode int, contractAddress types.Address, sp int, host tracer.RuntimeHost, state tracer.VMState) 
+        + ExecuteState(contractAddress types.Address, ip uint64, opcode string, availableGas uint64, cost uint64, lastReturnData []byte, depth int, err error, host tracer.RuntimeHost) 
+
+    }
+    class runtime.AccessList << (T, #FF7700) >>  {
+    }
+    class runtime.CallType << (T, #FF7700) >>  {
+    }
+    class runtime.StorageStatus << (T, #FF7700) >>  {
+    }
+    class "<font color=blue>map</font>[types.Address]<font color=blue>map</font>[types.Hash]<font color=blue>struct</font>{}" as fontcolorbluemapfonttypesAddressfontcolorbluemapfonttypesHashfontcolorbluestructfont {
+        'This class was created so that we can correctly have an alias pointing to this name. Since it contains dots that can break namespaces
+    }
+}
+
+"runtime.JournalEntry" <|-- "runtime.AccessListAddAccountChange"
+"runtime.JournalEntry" <|-- "runtime.AccessListAddSlotChange"
+
+"__builtin__.int" #.. "runtime.CallType"
+"__builtin__.int" #.. "runtime.StorageStatus"
+"runtime.fontcolorbluemapfonttypesAddressfontcolorbluemapfonttypesHashfontcolorbluestructfont" #.. "runtime.AccessList"
+@enduml

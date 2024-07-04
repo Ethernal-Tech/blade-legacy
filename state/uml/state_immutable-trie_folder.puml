@@ -1,0 +1,180 @@
+@startuml
+namespace itrie {
+    interface Batch  {
+        + Put(k []byte, v []byte) 
+        + Write() error
+
+    }
+    class FullNode << (S,Aquamarine) >> {
+        - epoch uint32
+        - value Node
+        - children []Node
+
+        - copy() *FullNode
+        - setEdge(idx byte, e Node) 
+        - getEdge(idx byte) Node
+
+    }
+    class KVBatch << (S,Aquamarine) >> {
+        - db *leveldb.DB
+        - batch *leveldb.Batch
+
+        + Put(k []byte, v []byte) 
+        + Write() error
+
+    }
+    class KVStorage << (S,Aquamarine) >> {
+        - db *leveldb.DB
+
+        + SetCode(hash types.Hash, code []byte) error
+        + GetCode(hash types.Hash) ([]byte, bool)
+        + Batch() Batch
+        + Put(k []byte, v []byte) error
+        + Get(k []byte) ([]byte, bool, error)
+        + Close() error
+
+    }
+    interface Node  {
+        + Hash() ([]byte, bool)
+        + SetHash(b []byte) []byte
+
+    }
+    interface Putter  {
+        + Put(k []byte, v []byte) 
+
+    }
+    class ShortNode << (S,Aquamarine) >> {
+        - key []byte
+        - child Node
+
+    }
+    class Snapshot << (S,Aquamarine) >> {
+        - state *State
+        - trie *Trie
+
+        + GetStorage(addr types.Address, root types.Hash, rawkey types.Hash) types.Hash
+        + GetAccount(addr types.Address) (*state.Account, error)
+        + GetCode(hash types.Hash) ([]byte, bool)
+        + Commit(objs []*state.Object) (state.Snapshot, []byte, error)
+
+    }
+    class State << (S,Aquamarine) >> {
+        - storage Storage
+        - cache *golang-lru.Cache
+
+        - newTrie() *Trie
+        - newTrieAt(root types.Hash) (*Trie, error)
+
+        + NewSnapshot() state.Snapshot
+        + NewSnapshotAt(root types.Hash) (state.Snapshot, error)
+        + SetCode(hash types.Hash, code []byte) error
+        + GetCode(hash types.Hash) ([]byte, bool)
+        + AddState(root types.Hash, t *Trie) 
+
+    }
+    interface Storage  {
+        + Put(k []byte, v []byte) error
+        + Get(k []byte) ([]byte, bool, error)
+        + Batch() Batch
+        + SetCode(hash types.Hash, code []byte) error
+        + GetCode(hash types.Hash) ([]byte, bool)
+        + Close() error
+
+    }
+    class Trie << (S,Aquamarine) >> {
+        - root Node
+        - epoch uint32
+
+        - hashRoot() []byte
+
+        + Get(k []byte, storage Storage) ([]byte, bool)
+        + Hash() types.Hash
+        + Txn(storage Storage) *Txn
+
+    }
+    class Txn << (S,Aquamarine) >> {
+        - root Node
+        - epoch uint32
+        - storage Storage
+        - batch Putter
+
+        - hash(node Node, h *hasher, a *fastrlp.Arena, d int) *fastrlp.Value
+        - lookup(node <font color=blue>interface</font>{}, key []byte) (Node, []byte)
+        - writeNode(n *FullNode) *FullNode
+        - insert(node Node, search []byte, value []byte) Node
+        - delete(node Node, search []byte) (Node, bool)
+
+        + Hash() ([]byte, error)
+        + Commit() *Trie
+        + Lookup(key []byte) []byte
+        + Insert(key []byte, value []byte) 
+        + Delete(key []byte) 
+
+    }
+    class ValueNode << (S,Aquamarine) >> {
+        - hash bool
+        - buf []byte
+
+        + Hash() ([]byte, bool)
+        + SetHash(b []byte) []byte
+
+    }
+    class common << (S,Aquamarine) >> {
+        - hash []byte
+
+        + Hash() ([]byte, bool)
+        + SetHash(b []byte) []byte
+
+    }
+    interface hashImpl  {
+        + Read( []byte) (int, error)
+
+    }
+    class hasher << (S,Aquamarine) >> {
+        - arena []*fastrlp.Arena
+        - buf []byte
+        - hash hashImpl
+        - tmp []byte
+
+        + Reset() 
+        + ReleaseArenas(idx int) 
+        + ReleaseArena(a *fastrlp.Arena) 
+        + AcquireArena() (*fastrlp.Arena, int)
+        + Hash(data []byte) []byte
+
+    }
+    class memBatch << (S,Aquamarine) >> {
+        - l *sync.Mutex
+        - db *<font color=blue>map</font>[string][]byte
+
+        + Put(p []byte, v []byte) 
+        + Write() error
+
+    }
+    class memStorage << (S,Aquamarine) >> {
+        - l *sync.Mutex
+        - db <font color=blue>map</font>[string][]byte
+        - code <font color=blue>map</font>[string][]byte
+
+        + Put(p []byte, v []byte) error
+        + Get(p []byte) ([]byte, bool, error)
+        + SetCode(hash types.Hash, code []byte) error
+        + GetCode(hash types.Hash) ([]byte, bool)
+        + Batch() Batch
+        + Close() error
+
+    }
+}
+"itrie.common" *-- "itrie.FullNode"
+"itrie.common" *-- "itrie.ShortNode"
+
+"itrie.Batch" <|-- "itrie.KVBatch"
+"itrie.Putter" <|-- "itrie.KVBatch"
+"itrie.Storage" <|-- "itrie.KVStorage"
+"itrie.Node" <|-- "itrie.ValueNode"
+"itrie.Node" <|-- "itrie.common"
+"itrie.Batch" <|-- "itrie.memBatch"
+"itrie.Putter" <|-- "itrie.memBatch"
+"itrie.Storage" <|-- "itrie.memStorage"
+
+@enduml
