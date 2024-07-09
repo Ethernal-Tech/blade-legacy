@@ -15,6 +15,8 @@
 
 ## DETAILED DESIGN
 
+* [Block Structure](detailed-design/block-structure.md)
+* [World State](detailed-design/world-state.md)
 * [Transaction Pool](detailed-design/transaction-pool-txpool.md)
 * [Block Creation Process](detailed-design/block-creation-process.md)
 * [Consensus Mechanism](detailed-design/consensus-mechanism/README.md)
