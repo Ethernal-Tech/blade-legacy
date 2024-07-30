@@ -11,7 +11,7 @@ require (
 	github.com/armon/go-metrics v0.4.1
 	github.com/aws/aws-sdk-go v1.54.12
 	github.com/btcsuite/btcd/btcec/v2 v2.3.3
-	github.com/docker/docker v27.0.3+incompatible
+	github.com/docker/docker v27.1.0+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/erigontech/mdbx-go v0.38.4
