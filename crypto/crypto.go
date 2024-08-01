@@ -202,10 +202,7 @@ func Sign(priv *ecdsa.PrivateKey, hash []byte) ([]byte, error) {
 
 	defer btcPrivKey.Zero()
 
-	sig, err := btc_ecdsa.SignCompact(btcPrivKey, hash, false)
-	if err != nil {
-		return nil, err
-	}
+	sig := btc_ecdsa.SignCompact(btcPrivKey, hash, false)
 
 	// Convert to Ethereum signature format with 'recovery id' v at the end.
 	v := sig[0] - recoveryID

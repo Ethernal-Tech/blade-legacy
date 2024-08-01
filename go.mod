@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/secretmanager v1.13.3
 	github.com/0xPolygon/go-ibft v0.4.1-0.20240621090555-e81a63ff50d7
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240628125004-67308570b6e2
-	github.com/Ethernal-Tech/ethgo v0.0.0-20240628122946-b6b88f4f501d
+	github.com/Ethernal-Tech/ethgo v0.0.0-20240801172627-47215d9e504c
 	github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04
 	github.com/armon/go-metrics v0.4.1
 	github.com/aws/aws-sdk-go v1.54.12
@@ -45,7 +45,7 @@ require (
 	github.com/umbracle/go-eth-bn256 v0.0.0-20230125114011-47cb310d9b0b
 	github.com/valyala/fastjson v1.6.4
 	go.etcd.io/bbolt v1.3.10
-	golang.org/x/crypto v0.24.0
+	golang.org/x/crypto v0.25.0
 	golang.org/x/sync v0.7.0
 	golang.org/x/tools v0.22.0
 	google.golang.org/genproto v0.0.0-20240624140628-dc46fd24d27d
@@ -243,8 +243,8 @@ require (
 	golang.org/x/mod v0.18.0 // indirect
 	golang.org/x/net v0.26.0 // indirect
 	golang.org/x/oauth2 v0.21.0 // indirect
-	golang.org/x/sys v0.21.0 // indirect
-	golang.org/x/term v0.21.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
+	golang.org/x/term v0.22.0 // indirect
 	golang.org/x/text v0.16.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
