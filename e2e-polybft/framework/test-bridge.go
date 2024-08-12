@@ -19,6 +19,7 @@ import (
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
+	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -411,7 +412,7 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 	args := []string{
 		"mint-erc20",
 		"--jsonrpc", t.JSONRPCAddr(),
-		"--erc20-token", polybftConfig.Bridge[polybftConfig.NativeTokenConfig.ChainID].RootNativeERC20Addr.String(),
+		"--erc20-token", polybftConfig.Bridge[tokenConfig.ChainID].RootNativeERC20Addr.String(),
 	}
 
 	// mint something for every validator
@@ -462,8 +463,8 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			"--jsonrpc", t.JSONRPCAddr(),
 			"--premine-amount", premineAmount.String(),
 			"--stake-amount", stakedAmount.String(),
-			"--erc20-token", polybftConfig.Bridge[polybftConfig.NativeTokenConfig.ChainID].RootNativeERC20Addr.String(),
-			"--blade-manager", polybftConfig.Bridge[polybftConfig.NativeTokenConfig.ChainID].BladeManagerAddr.String(),
+			"--erc20-token", polybftConfig.Bridge[tokenConfig.ChainID].RootNativeERC20Addr.String(),
+			"--blade-manager", polybftConfig.Bridge[tokenConfig.ChainID].BladeManagerAddr.String(),
 		}
 
 		if secret != "" {
@@ -556,4 +557,18 @@ func (t *TestBridge) finalizeGenesis(genesisPath string,
 	}
 
 	return nil
+}
+
+func (t *TestBridge) getChainID() (uint64, error) {
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(t.JSONRPCAddr()))
+	if err != nil {
+		return 0, err
+	}
+
+	chainID, err := rootchainTxRelayer.Client().ChainID()
+	if err != nil {
+		return 0, err
+	}
+
+	return chainID.Uint64(), nil
 }
