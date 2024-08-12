@@ -456,11 +456,11 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	require.NoError(t, err)
 
 	polyBftConfig := &PolyBFTConfig{
-		Bridge: &BridgeConfig{
+		Bridge: map[uint64]*BridgeConfig{0: &BridgeConfig{
 			StateSenderAddr:       types.Address{0x13},
 			CheckpointManagerAddr: types.Address{0x10},
 			JSONRPCEndpoint:       "testEndpoint",
-		},
+		}},
 		EpochSize:  10,
 		SprintSize: 10,
 		BlockTime:  common.Duration{Duration: 2 * time.Second},
@@ -510,8 +510,8 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	assert.Equal(t, uint64(10), runtime.config.GenesisConfig.SprintSize)
 	assert.Equal(t, uint64(10), runtime.config.GenesisConfig.EpochSize)
 	assert.Equal(t, "0x0000000000000000000000000000000000000101", contracts.EpochManagerContract.String())
-	assert.Equal(t, "0x1300000000000000000000000000000000000000", runtime.config.GenesisConfig.Bridge.StateSenderAddr.String())
-	assert.Equal(t, "0x1000000000000000000000000000000000000000", runtime.config.GenesisConfig.Bridge.CheckpointManagerAddr.String())
+	assert.Equal(t, "0x1300000000000000000000000000000000000000", runtime.config.GenesisConfig.Bridge[0].StateSenderAddr.String())
+	assert.Equal(t, "0x1000000000000000000000000000000000000000", runtime.config.GenesisConfig.Bridge[0].CheckpointManagerAddr.String())
 	assert.True(t, runtime.IsBridgeEnabled())
 	systemStateMock.AssertExpectations(t)
 	blockchainMock.AssertExpectations(t)

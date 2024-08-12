@@ -17,6 +17,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
@@ -77,13 +78,6 @@ func setFlags(cmd *cobra.Command) {
 		bridgeHelper.GenesisPathFlagDesc,
 	)
 
-	cmd.Flags().StringVar(
-		&params.bladeManager,
-		bridgeHelper.BladeManagerFlag,
-		"",
-		bridgeHelper.BladeManagerFlagDesc,
-	)
-
 	cmd.Flags().DurationVar(
 		&params.txTimeout,
 		helper.TxTimeoutFlag,
@@ -94,7 +88,6 @@ func setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
-	_ = cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
 
 	helper.RegisterJSONRPCFlag(cmd)
 }
@@ -102,6 +95,33 @@ func setFlags(cmd *cobra.Command) {
 func runCommand(cmd *cobra.Command, _ []string) error {
 	outputter := command.InitializeOutputter(cmd)
 	defer outputter.WriteOutput()
+
+	client, err := jsonrpc.NewEthClient(params.jsonRPC)
+	if err != nil {
+		return err
+	}
+
+	chainID, err := client.ChainID()
+	if err != nil {
+		return err
+	}
+
+	// get genesis config
+	chainConfig, err := chain.ImportFromFile(params.genesisPath)
+	if err != nil {
+		return fmt.Errorf("failed to read chain configuration: %w", err)
+	}
+
+	consensusConfig, err := polybft.GetPolyBFTConfig(chainConfig.Params)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve consensus configuration: %w", err)
+	}
+
+	bladeManagerAddr := consensusConfig.Bridge[chainID.Uint64()].BladeManagerAddr
+
+	if !consensusConfig.NativeTokenConfig.IsMintable {
+		consensusConfig.NativeTokenConfig.ChainID = chainID.Uint64()
+	}
 
 	ownerKey, err := bridgeHelper.GetECDSAKey(params.privateKey, params.accountDir, params.accountConfig)
 	if err != nil {
@@ -113,8 +133,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return fmt.Errorf("enlist validator failed: %w", err)
 	}
-
-	bladeManagerAddr := params.bladeManagerAddr
 
 	// finalize genesis accounts on BladeManager so that no one can stake and premine no more
 	encoded, err := finalizeGenesisABIFn.Encode([]interface{}{})
@@ -135,17 +153,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		}
 	} else if !strings.Contains(err.Error(), "execution reverted: GenesisLib: already finalized") {
 		return err
-	}
-
-	// get genesis config
-	chainConfig, err := chain.ImportFromFile(params.genesisPath)
-	if err != nil {
-		return fmt.Errorf("failed to read chain configuration: %w", err)
-	}
-
-	consensusConfig, err := polybft.GetPolyBFTConfig(chainConfig.Params)
-	if err != nil {
-		return fmt.Errorf("failed to retrieve consensus configuration: %w", err)
 	}
 
 	// get genesis account set from BladeManager
@@ -207,7 +214,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	// initialize CheckpointManager contract since it needs to have a valid VotingPowers of validators
 	if err := initializeCheckpointManager(outputter, txRelayer,
-		consensusConfig, chainConfig.Params.ChainID, ownerKey); err != nil {
+		consensusConfig, chainConfig.Params.ChainID, ownerKey, chainID.Uint64()); err != nil {
 		return fmt.Errorf("could not initialize CheckpointManager with finalized genesis validator set: %w", err)
 	}
 
@@ -324,7 +331,7 @@ func validatorSetToABISlice(o command.OutputFormatter,
 func initializeCheckpointManager(outputter command.OutputFormatter,
 	txRelayer txrelayer.TxRelayer,
 	consensusConfig polybft.PolyBFTConfig, chainID int64,
-	deployerKey crypto.Key) error {
+	deployerKey crypto.Key, rootchainChainID uint64) error {
 	validatorSet, err := validatorSetToABISlice(outputter, consensusConfig.InitialValidatorSet)
 	if err != nil {
 		return fmt.Errorf("failed to convert validators to map: %w", err)
@@ -332,8 +339,8 @@ func initializeCheckpointManager(outputter command.OutputFormatter,
 
 	initParams := &contractsapi.InitializeCheckpointManagerFn{
 		ChainID_:        big.NewInt(chainID),
-		NewBls:          consensusConfig.Bridge.BLSAddress,
-		NewBn256G2:      consensusConfig.Bridge.BN256G2Address,
+		NewBls:          consensusConfig.Bridge[rootchainChainID].BLSAddress,
+		NewBn256G2:      consensusConfig.Bridge[rootchainChainID].BN256G2Address,
 		NewValidatorSet: validatorSet,
 	}
 
@@ -342,7 +349,7 @@ func initializeCheckpointManager(outputter command.OutputFormatter,
 		return fmt.Errorf("failed to encode initialization params for CheckpointManager.initialize. error: %w", err)
 	}
 
-	if _, err := bridgeHelper.SendTransaction(txRelayer, consensusConfig.Bridge.CheckpointManagerAddr,
+	if _, err := bridgeHelper.SendTransaction(txRelayer, consensusConfig.Bridge[rootchainChainID].CheckpointManagerAddr,
 		input, "CheckpointManager", deployerKey); err != nil {
 		return err
 	}

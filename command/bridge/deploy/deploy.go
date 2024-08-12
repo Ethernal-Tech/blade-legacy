@@ -376,8 +376,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	if consensusCfg.Bridge != nil {
-		code, err := client.GetCode(consensusCfg.Bridge.StateSenderAddr, jsonrpc.LatestBlockNumberOrHash)
+	chainID, err := client.ChainID()
+	if err != nil {
+		outputter.SetError(fmt.Errorf("failed to get chainID for provided IP address: %s: %w", params.jsonRPCAddress, err))
+	}
+
+	if consensusCfg.Bridge[chainID.Uint64()] != nil {
+		code, err := client.GetCode(consensusCfg.Bridge[chainID.Uint64()].StateSenderAddr, jsonrpc.LatestBlockNumberOrHash)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("failed to check if rootchain contracts are deployed: %w", err))
 
@@ -411,9 +416,9 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	// populate bridge configuration
-	consensusCfg.Bridge = deploymentResultInfo.RootchainCfg.ToBridgeConfig()
+	consensusCfg.Bridge[chainID.Uint64()] = deploymentResultInfo.RootchainCfg.ToBridgeConfig()
 
-	consensusCfg.Bridge.EventTrackerStartBlocks = map[types.Address]uint64{
+	consensusCfg.Bridge[chainID.Uint64()].EventTrackerStartBlocks = map[types.Address]uint64{
 		deploymentResultInfo.RootchainCfg.StateSenderAddress: blockNum,
 	}
 

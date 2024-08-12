@@ -411,7 +411,7 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 	args := []string{
 		"mint-erc20",
 		"--jsonrpc", t.JSONRPCAddr(),
-		"--erc20-token", polybftConfig.Bridge.RootNativeERC20Addr.String(),
+		"--erc20-token", polybftConfig.Bridge[polybftConfig.NativeTokenConfig.ChainID].RootNativeERC20Addr.String(),
 	}
 
 	// mint something for every validator
@@ -462,8 +462,8 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			"--jsonrpc", t.JSONRPCAddr(),
 			"--premine-amount", premineAmount.String(),
 			"--stake-amount", stakedAmount.String(),
-			"--erc20-token", polybftConfig.Bridge.RootNativeERC20Addr.String(),
-			"--blade-manager", polybftConfig.Bridge.BladeManagerAddr.String(),
+			"--erc20-token", polybftConfig.Bridge[polybftConfig.NativeTokenConfig.ChainID].RootNativeERC20Addr.String(),
+			"--blade-manager", polybftConfig.Bridge[polybftConfig.NativeTokenConfig.ChainID].BladeManagerAddr.String(),
 		}
 
 		if secret != "" {
@@ -549,7 +549,6 @@ func (t *TestBridge) finalizeGenesis(genesisPath string,
 		"--jsonrpc", t.JSONRPCAddr(),
 		"--private-key", bridgeHelper.TestAccountPrivKey,
 		"--genesis", genesisPath,
-		"--blade-manager", polybftConfig.Bridge.BladeManagerAddr.String(),
 	}
 
 	if err := t.cmdRun(args...); err != nil {

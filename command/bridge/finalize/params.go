@@ -7,7 +7,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
-	"github.com/0xPolygon/polygon-edge/types"
 )
 
 type finalizeParams struct {
@@ -15,11 +14,8 @@ type finalizeParams struct {
 	accountConfig string
 	privateKey    string
 	jsonRPC       string
-	bladeManager  string
 	genesisPath   string
 	txTimeout     time.Duration
-
-	bladeManagerAddr types.Address
 }
 
 func (fp *finalizeParams) validateFlags() error {
@@ -27,11 +23,6 @@ func (fp *finalizeParams) validateFlags() error {
 
 	if fp.privateKey == "" {
 		return validatorHelper.ValidateSecretFlags(fp.accountDir, fp.accountConfig)
-	}
-
-	fp.bladeManagerAddr, err = types.IsValidAddress(fp.bladeManager, false)
-	if err != nil {
-		return fmt.Errorf("invalid blade manager address is provided: %w", err)
 	}
 
 	if _, err := os.Stat(fp.genesisPath); err != nil {

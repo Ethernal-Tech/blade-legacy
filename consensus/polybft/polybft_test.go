@@ -309,7 +309,7 @@ func Test_GenesisPostHookFactory(t *testing.T) {
 			name: "access lists disabled",
 			config: &PolyBFTConfig{
 				InitialValidatorSet: validators.GetParamValidators(),
-				Bridge:              bridgeCfg,
+				Bridge:              map[uint64]*BridgeConfig{0: bridgeCfg},
 				EpochSize:           epochSize,
 				RewardConfig:        &RewardsConfig{WalletAmount: ethgo.Ether(1000)},
 				NativeTokenConfig:   &TokenConfig{Name: "Test", Symbol: "TEST", Decimals: 18},
@@ -327,7 +327,7 @@ func Test_GenesisPostHookFactory(t *testing.T) {
 			name: "access lists enabled",
 			config: &PolyBFTConfig{
 				InitialValidatorSet: validators.GetParamValidators(),
-				Bridge:              bridgeCfg,
+				Bridge:              map[uint64]*BridgeConfig{0: bridgeCfg},
 				EpochSize:           epochSize,
 				RewardConfig:        &RewardsConfig{WalletAmount: ethgo.Ether(1000)},
 				NativeTokenConfig:   &TokenConfig{Name: "Test Mintable", Symbol: "TEST_MNT", Decimals: 18},

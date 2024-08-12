@@ -41,7 +41,7 @@ type PolyBFTConfig struct {
 	InitialValidatorSet []*validator.GenesisValidator `json:"initialValidatorSet"`
 
 	// Bridge is the rootchain bridge configuration
-	Bridge *BridgeConfig `json:"bridge"`
+	Bridge map[uint64]*BridgeConfig `json:"bridge"`
 
 	// EpochSize is size of epoch
 	EpochSize uint64 `json:"epochSize"`
@@ -211,6 +211,7 @@ type TokenConfig struct {
 	Symbol     string `json:"symbol"`
 	Decimals   uint8  `json:"decimals"`
 	IsMintable bool   `json:"isMintable"`
+	ChainID    uint64 `json:"chainID"`
 }
 
 func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {

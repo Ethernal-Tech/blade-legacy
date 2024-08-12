@@ -153,7 +153,7 @@ func createTestPolybftConfig() *PolyBFTConfig {
 				Stake:   big.NewInt(100),
 			},
 		},
-		Bridge: &BridgeConfig{
+		Bridge: map[uint64]*BridgeConfig{0: &BridgeConfig{
 			StateSenderAddr:                   types.StringToAddress("0xStateSenderAddr"),
 			CheckpointManagerAddr:             types.StringToAddress("0xCheckpointManagerAddr"),
 			ExitHelperAddr:                    types.StringToAddress("0xExitHelperAddr"),
@@ -171,7 +171,7 @@ func createTestPolybftConfig() *PolyBFTConfig {
 			JSONRPCEndpoint:                   "http://mumbai-rpc.com",
 			EventTrackerStartBlocks: map[types.Address]uint64{
 				types.StringToAddress("SomeRootAddress"): 365_000,
-			},
+			}},
 		},
 		EpochSize:           10,
 		EpochReward:         1000,

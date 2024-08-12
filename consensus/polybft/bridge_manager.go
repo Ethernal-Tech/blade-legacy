@@ -211,21 +211,22 @@ func newBridgeManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	eventProvider *EventProvider,
-	logger hclog.Logger) (BridgeManager, error) {
+	logger hclog.Logger,
+	chainID uint64) (BridgeManager, error) {
 	if !runtimeConfig.GenesisConfig.IsBridgeEnabled() {
 		return &dummyBridgeManager{}, nil
 	}
 
-	stateSenderAddr := runtimeConfig.GenesisConfig.Bridge.StateSenderAddr
+	stateSenderAddr := runtimeConfig.GenesisConfig.Bridge[chainID].StateSenderAddr
 	bridgeManager := &bridgeManager{
 		logger: logger.Named("bridge-manager"),
 		eventTrackerConfig: &eventTrackerConfig{
 			EventTracker:          *runtimeConfig.eventTracker,
 			stateSenderAddr:       stateSenderAddr,
-			exitHelperAddr:        runtimeConfig.GenesisConfig.Bridge.ExitHelperAddr,
-			checkpointManagerAddr: runtimeConfig.GenesisConfig.Bridge.CheckpointManagerAddr,
-			jsonrpcAddr:           runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint,
-			startBlock:            runtimeConfig.GenesisConfig.Bridge.EventTrackerStartBlocks[stateSenderAddr],
+			exitHelperAddr:        runtimeConfig.GenesisConfig.Bridge[chainID].ExitHelperAddr,
+			checkpointManagerAddr: runtimeConfig.GenesisConfig.Bridge[chainID].CheckpointManagerAddr,
+			jsonrpcAddr:           runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint,
+			startBlock:            runtimeConfig.GenesisConfig.Bridge[chainID].EventTrackerStartBlocks[stateSenderAddr],
 			trackerPollInterval:   runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
 		},
 	}
@@ -234,7 +235,7 @@ func newBridgeManager(
 		return nil, err
 	}
 
-	if err := bridgeManager.initCheckpointManager(eventProvider, runtimeConfig, logger); err != nil {
+	if err := bridgeManager.initCheckpointManager(eventProvider, runtimeConfig, logger, chainID); err != nil {
 		return nil, err
 	}
 
@@ -242,7 +243,7 @@ func newBridgeManager(
 		return nil, err
 	}
 
-	if err := bridgeManager.initExitRelayer(bridgeBackend, runtimeConfig, logger); err != nil {
+	if err := bridgeManager.initExitRelayer(bridgeBackend, runtimeConfig, logger, chainID); err != nil {
 		return nil, err
 	}
 
@@ -345,11 +346,11 @@ func (b *bridgeManager) initStateSyncManager(
 func (b *bridgeManager) initCheckpointManager(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
-	logger hclog.Logger) error {
+	logger hclog.Logger, chainID uint64) error {
 	log := logger.Named("checkpoint_manager")
 
 	txRelayer, err := txrelayer.NewTxRelayer(
-		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint),
+		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint),
 		txrelayer.WithWriter(log.StandardWriter(&hclog.StandardLoggerOptions{})))
 	if err != nil {
 		return err
@@ -357,7 +358,7 @@ func (b *bridgeManager) initCheckpointManager(
 
 	b.checkpointManager = newCheckpointManager(
 		wallet.NewEcdsaSigner(runtimeConfig.Key),
-		runtimeConfig.GenesisConfig.Bridge.CheckpointManagerAddr,
+		runtimeConfig.GenesisConfig.Bridge[chainID].CheckpointManagerAddr,
 		txRelayer,
 		runtimeConfig.blockchain,
 		runtimeConfig.polybftBackend,
@@ -409,9 +410,9 @@ func (b *bridgeManager) initStateSyncRelayer(
 func (b *bridgeManager) initExitRelayer(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
-	logger hclog.Logger) error {
+	logger hclog.Logger, chainID uint64) error {
 	if runtimeConfig.consensusConfig.IsRelayer {
-		txRelayer, err := getBridgeTxRelayer(runtimeConfig.GenesisConfig.Bridge.JSONRPCEndpoint, logger)
+		txRelayer, err := getBridgeTxRelayer(runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint, logger)
 		if err != nil {
 			return err
 		}
@@ -426,7 +427,7 @@ func (b *bridgeManager) initExitRelayer(
 				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
 				maxAttemptsToSend:        defaultMaxAttemptsToSend,
 				maxEventsPerBatch:        defaultMaxEventsPerBatch,
-				eventExecutionAddr:       runtimeConfig.GenesisConfig.Bridge.ExitHelperAddr,
+				eventExecutionAddr:       runtimeConfig.GenesisConfig.Bridge[chainID].ExitHelperAddr,
 			},
 			logger.Named("exit_relayer"))
 	} else {

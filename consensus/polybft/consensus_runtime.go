@@ -164,9 +164,11 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 	var bridgeManager BridgeManager
 
 	if runtime.IsBridgeEnabled() {
-		bridgeManager, err = newBridgeManager(runtime, config, runtime.eventProvider, log)
-		if err != nil {
-			return nil, err
+		for chainID, _ := range config.GenesisConfig.Bridge {
+			bridgeManager, err = newBridgeManager(runtime, config, runtime.eventProvider, log, chainID)
+			if err != nil {
+				return nil, err
+			}
 		}
 	} else {
 		bridgeManager = &dummyBridgeManager{}
