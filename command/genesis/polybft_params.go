@@ -196,6 +196,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 			ForkParamsAddr:    contracts.ForkParamsContract,
 		},
 		StakeTokenAddr: p.stakeTokenAddr,
+		Bridge:         make(map[uint64]*polybft.BridgeConfig),
 	}
 
 	// Disable london hardfork if burn contract address is not provided
