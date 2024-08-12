@@ -763,6 +763,9 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
 		require.NoError(t, err)
 
+		tokenConfig.ChainID, err = cluster.Bridge.getChainID()
+		require.NoError(t, err)
+
 		// fund addresses on the rootchain
 		err = cluster.Bridge.fundAddressesOnRoot(polybftConfig)
 		require.NoError(t, err)
