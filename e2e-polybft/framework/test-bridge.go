@@ -19,7 +19,6 @@ import (
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
-	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -558,18 +557,4 @@ func (t *TestBridge) finalizeGenesis(genesisPath string, tokenConfig *polybft.To
 	}
 
 	return nil
-}
-
-func (t *TestBridge) getChainID() (uint64, error) {
-	client, err := jsonrpc.NewEthClient(t.JSONRPCAddr())
-	if err != nil {
-		return 0, err
-	}
-
-	chainID, err := client.ChainID()
-	if err != nil {
-		return 0, err
-	}
-
-	return chainID.Uint64(), nil
 }
