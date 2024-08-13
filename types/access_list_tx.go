@@ -207,6 +207,9 @@ func (tx *AccessListTxn) chainID() *big.Int       { return tx.ChainID }
 func (tx *AccessListTxn) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *AccessListTxn) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *AccessListTxn) gasFeeCap() *big.Int     { return tx.GasPrice }
+func (tx *AccessListTxn) effectiveGasPrice(baseFee *big.Int) *big.Int {
+	return new(big.Int).Set(tx.gasPrice())
+}
 
 func (tx *AccessListTxn) accessList() TxAccessList {
 	return tx.AccessList
