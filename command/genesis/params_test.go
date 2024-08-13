@@ -61,12 +61,13 @@ func Test_extractNativeTokenMetadata(t *testing.T) {
 		},
 		{
 			name:      "non-mintable valid config",
-			rawConfig: "MyToken:MTK:9:false",
+			rawConfig: "MyToken:MTK:9:false:1",
 			expectedCfg: &polybft.TokenConfig{
 				Name:       "MyToken",
 				Symbol:     "MTK",
 				Decimals:   9,
 				IsMintable: false,
+				ChainID:    1,
 			},
 			expectErr: false,
 		},
