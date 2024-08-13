@@ -456,7 +456,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	require.NoError(t, err)
 
 	polyBftConfig := &PolyBFTConfig{
-		Bridge: map[uint64]*BridgeConfig{0: &BridgeConfig{
+		Bridge: map[uint64]*BridgeConfig{0: {
 			StateSenderAddr:       types.Address{0x13},
 			CheckpointManagerAddr: types.Address{0x10},
 			JSONRPCEndpoint:       "testEndpoint",

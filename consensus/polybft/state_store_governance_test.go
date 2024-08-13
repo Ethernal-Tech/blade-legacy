@@ -153,7 +153,7 @@ func createTestPolybftConfig() *PolyBFTConfig {
 				Stake:   big.NewInt(100),
 			},
 		},
-		Bridge: map[uint64]*BridgeConfig{0: &BridgeConfig{
+		Bridge: map[uint64]*BridgeConfig{0: {
 			StateSenderAddr:                   types.StringToAddress("0xStateSenderAddr"),
 			CheckpointManagerAddr:             types.StringToAddress("0xCheckpointManagerAddr"),
 			ExitHelperAddr:                    types.StringToAddress("0xExitHelperAddr"),

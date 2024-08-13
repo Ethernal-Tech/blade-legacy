@@ -537,8 +537,7 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 }
 
 // finalizeGenesis finalizes genesis on BladeManager contract on root
-func (t *TestBridge) finalizeGenesis(genesisPath string,
-	tokenConfig *polybft.TokenConfig, polybftConfig polybft.PolyBFTConfig) error {
+func (t *TestBridge) finalizeGenesis(genesisPath string, tokenConfig *polybft.TokenConfig) error {
 	if tokenConfig.IsMintable {
 		// we don't need to finalize anything when we have mintable (child originated) token
 		return nil

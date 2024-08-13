@@ -232,8 +232,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					owner = bridgeBlockListAdmin
 				}
 
-				for chainID, _ := range bridgeCfg {
-
+				for chainID := range bridgeCfg {
 					// initialize ChildERC20PredicateAccessList SC
 					input, err := getInitERC20PredicateACLInput(bridgeCfg[chainID], owner,
 						useBridgeAllowList, useBridgeBlockList, false)
@@ -308,7 +307,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 				}
 			} else {
-				for chainID, _ := range bridgeCfg {
+				for chainID := range bridgeCfg {
 					// initialize ChildERC20Predicate SC
 					input, err := getInitERC20PredicateInput(bridgeCfg[chainID], false)
 					if err != nil {
