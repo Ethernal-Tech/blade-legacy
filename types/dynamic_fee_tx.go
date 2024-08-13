@@ -39,10 +39,12 @@ func (tx *DynamicFeeTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
 	if baseFee == nil {
 		return tmp.Set(tx.GasFeeCap)
 	}
+
 	tip := tmp.Sub(tx.GasFeeCap, baseFee)
 	if tip.Cmp(tx.GasTipCap) > 0 {
 		tip.Set(tx.GasTipCap)
 	}
+
 	return tip.Add(tip, baseFee)
 }
 
