@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -68,14 +69,16 @@ type debugStore interface {
 
 // Debug is the debug jsonrpc endpoint
 type Debug struct {
-	store      debugStore
-	throttling *Throttling
+	store        debugStore
+	throttling   *Throttling
+	ReadFileFunc func(filename string) ([]byte, error)
 }
 
 func NewDebug(store debugStore, requestsPerSecond uint64) *Debug {
 	return &Debug{
-		store:      store,
-		throttling: NewThrottling(requestsPerSecond, time.Second),
+		store:        store,
+		throttling:   NewThrottling(requestsPerSecond, time.Second),
+		ReadFileFunc: os.ReadFile,
 	}
 }
 
@@ -138,6 +141,28 @@ func (d *Debug) TraceBlock(
 			blockByte, decodeErr := hex.DecodeHex(input)
 			if decodeErr != nil {
 				return nil, fmt.Errorf("unable to decode block, %w", decodeErr)
+			}
+
+			block := &types.Block{}
+			if err := block.UnmarshalRLP(blockByte); err != nil {
+				return nil, err
+			}
+
+			return d.traceBlock(block, config)
+		},
+	)
+}
+
+func (d *Debug) TraceBlockFromFile(
+	input string,
+	config *TraceConfig,
+) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			blockByte, decodeErr := d.ReadFileFunc(input)
+			if decodeErr != nil {
+				return nil, fmt.Errorf("could not read file: %w", decodeErr)
 			}
 
 			block := &types.Block{}

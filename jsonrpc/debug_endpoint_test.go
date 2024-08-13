@@ -2,6 +2,7 @@ package jsonrpc
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -417,6 +418,80 @@ func TestTraceBlock(t *testing.T) {
 			endpoint := NewDebug(test.store, 100000)
 
 			res, err := endpoint.TraceBlock(test.input, test.config)
+
+			assert.Equal(t, test.result, res)
+
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestTraceBlockFromFile(t *testing.T) {
+	t.Parallel()
+
+	blockBytes := testLatestBlock.MarshalRLP()
+
+	tests := []struct {
+		name    string
+		input   []byte
+		fileErr error
+		config  *TraceConfig
+		store   *debugEndpointMockStore
+		result  interface{}
+		err     bool
+	}{
+		{
+			name:    "should follow the given block from the file",
+			input:   blockBytes,
+			fileErr: nil,
+			config:  &TraceConfig{},
+			store: &debugEndpointMockStore{
+				traceBlockFn: func(block *types.Block, tracer tracer.Tracer) ([]interface{}, error) {
+					assert.Equal(t, testLatestBlock, block)
+
+					return testTraceResults, nil
+				},
+			},
+			result: testTraceResults,
+			err:    false,
+		},
+		{
+			name:    "should return error in case of invalid block from the file",
+			input:   nil,
+			fileErr: fmt.Errorf("file is incorrect"),
+			config:  &TraceConfig{},
+			store:   &debugEndpointMockStore{},
+			result:  nil,
+			err:     true,
+		},
+		{
+			name:    "should return error in case of invalid block from the UnmarshalRLP method",
+			input:   []byte{},
+			fileErr: nil,
+			config:  &TraceConfig{},
+			store:   &debugEndpointMockStore{},
+			result:  nil,
+			err:     true,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			endpoint.ReadFileFunc = func(filename string) ([]byte, error) {
+				return test.input, test.fileErr
+			}
+
+			res, err := endpoint.TraceBlockFromFile("testfile.txt", test.config)
 
 			assert.Equal(t, test.result, res)
 
