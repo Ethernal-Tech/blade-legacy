@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
@@ -21,28 +22,22 @@ type premineParams struct {
 	accountDir      string
 	accountConfig   string
 	privateKey      string
-	bladeManager    string
 	nativeTokenRoot string
 	jsonRPC         string
 	stakedAmount    string
 	premineAmount   string
 	txTimeout       time.Duration
+	genesisPath     string
 
 	premineAmountValue  *big.Int
 	stakedValue         *big.Int
 	nativeTokenRootAddr types.Address
-	bladeManagerAddr    types.Address
 }
 
 func (p *premineParams) validateFlags() (err error) {
 	p.nativeTokenRootAddr, err = types.IsValidAddress(p.nativeTokenRoot, false)
 	if err != nil {
 		return fmt.Errorf("invalid erc20 token address is provided: %w", err)
-	}
-
-	p.bladeManagerAddr, err = types.IsValidAddress(p.bladeManager, false)
-	if err != nil {
-		return fmt.Errorf("invalid blade manager address is provided: %w", err)
 	}
 
 	if p.premineAmountValue, err = common.ParseUint256orHex(&p.premineAmount); err != nil {
@@ -60,6 +55,10 @@ func (p *premineParams) validateFlags() (err error) {
 
 	if p.privateKey == "" {
 		return validatorHelper.ValidateSecretFlags(p.accountDir, p.accountConfig)
+	}
+
+	if _, err := os.Stat(p.genesisPath); err != nil {
+		return fmt.Errorf("provided genesis path '%s' is invalid. Error: %w ", p.genesisPath, err)
 	}
 
 	return nil

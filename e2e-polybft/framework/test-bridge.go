@@ -19,7 +19,7 @@ import (
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
-	"github.com/0xPolygon/polygon-edge/txrelayer"
+	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/sync/errgroup"
 )
@@ -442,13 +442,15 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 }
 
 // premineNativeRootToken will premine token on root for every validator and other addresses in premine flag
-func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
+func (t *TestBridge) premineNativeRootToken(genesisPath string, tokenConfig *polybft.TokenConfig,
 	polybftConfig polybft.PolyBFTConfig) error {
 	if tokenConfig.IsMintable {
 		// if token is mintable, it is premined in genesis command,
 		// so we just return here
 		return nil
 	}
+
+	bridgeConfig := polybftConfig.Bridge[tokenConfig.ChainID]
 
 	validatorSecrets, err := genesis.GetValidatorKeyFiles(t.clusterConfig.TmpDir, t.clusterConfig.ValidatorPrefix)
 	if err != nil {
@@ -463,8 +465,8 @@ func (t *TestBridge) premineNativeRootToken(tokenConfig *polybft.TokenConfig,
 			"--jsonrpc", t.JSONRPCAddr(),
 			"--premine-amount", premineAmount.String(),
 			"--stake-amount", stakedAmount.String(),
-			"--erc20-token", polybftConfig.Bridge[tokenConfig.ChainID].RootNativeERC20Addr.String(),
-			"--blade-manager", polybftConfig.Bridge[tokenConfig.ChainID].BladeManagerAddr.String(),
+			"--erc20-token", bridgeConfig.RootNativeERC20Addr.String(),
+			"--genesis", genesisPath,
 		}
 
 		if secret != "" {
@@ -559,12 +561,12 @@ func (t *TestBridge) finalizeGenesis(genesisPath string, tokenConfig *polybft.To
 }
 
 func (t *TestBridge) getChainID() (uint64, error) {
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(t.JSONRPCAddr()))
+	client, err := jsonrpc.NewEthClient(t.JSONRPCAddr())
 	if err != nil {
 		return 0, err
 	}
 
-	chainID, err := rootchainTxRelayer.Client().ChainID()
+	chainID, err := client.ChainID()
 	if err != nil {
 		return 0, err
 	}

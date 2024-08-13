@@ -763,9 +763,6 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
 		require.NoError(t, err)
 
-		tokenConfig.ChainID, err = cluster.Bridge.getChainID()
-		require.NoError(t, err)
-
 		// fund addresses on the rootchain
 		err = cluster.Bridge.fundAddressesOnRoot(polybftConfig)
 		require.NoError(t, err)
@@ -774,7 +771,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		err = cluster.Bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
 		require.NoError(t, err)
 
-		err = cluster.Bridge.premineNativeRootToken(tokenConfig, polybftConfig)
+		err = cluster.Bridge.premineNativeRootToken(genesisPath, tokenConfig, polybftConfig)
 		require.NoError(t, err)
 
 		// finalize genesis validators on the rootchain

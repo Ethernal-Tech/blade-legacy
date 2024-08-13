@@ -119,10 +119,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	bladeManagerAddr := consensusConfig.Bridge[chainID.Uint64()].BladeManagerAddr
 
-	if !consensusConfig.NativeTokenConfig.IsMintable {
-		consensusConfig.NativeTokenConfig.ChainID = chainID.Uint64()
-	}
-
 	ownerKey, err := bridgeHelper.GetECDSAKey(params.privateKey, params.accountDir, params.accountConfig)
 	if err != nil {
 		return err

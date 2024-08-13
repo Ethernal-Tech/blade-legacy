@@ -5,10 +5,12 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -64,13 +66,6 @@ func setFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().StringVar(
-		&params.bladeManager,
-		bridgeHelper.BladeManagerFlag,
-		"",
-		bridgeHelper.BladeManagerFlagDesc,
-	)
-
-	cmd.Flags().StringVar(
 		&params.premineAmount,
 		premineAmountFlag,
 		"",
@@ -84,6 +79,13 @@ func setFlags(cmd *cobra.Command) {
 		"amount to premine as a staked balance",
 	)
 
+	cmd.Flags().StringVar(
+		&params.genesisPath,
+		bridgeHelper.GenesisPathFlag,
+		bridgeHelper.DefaultGenesisPath,
+		bridgeHelper.GenesisPathFlagDesc,
+	)
+
 	cmd.Flags().DurationVar(
 		&params.txTimeout,
 		helper.TxTimeoutFlag,
@@ -94,7 +96,6 @@ func setFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.AccountDirFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountConfigFlag)
 	cmd.MarkFlagsMutuallyExclusive(polybftsecrets.PrivateKeyFlag, polybftsecrets.AccountDirFlag)
-	_ = cmd.MarkFlagRequired(bridgeHelper.BladeManagerFlag)
 	_ = cmd.MarkFlagRequired(bridgeHelper.Erc20TokenFlag)
 }
 
@@ -119,9 +120,27 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	chainID, err := txRelayer.Client().ChainID()
+	if err != nil {
+		return err
+	}
+
+	// get genesis config
+	chainConfig, err := chain.ImportFromFile(params.genesisPath)
+	if err != nil {
+		return fmt.Errorf("failed to read chain configuration: %w", err)
+	}
+
+	consensusConfig, err := polybft.GetPolyBFTConfig(chainConfig.Params)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve consensus configuration: %w", err)
+	}
+
+	bladeManagerAddr := consensusConfig.Bridge[chainID.Uint64()].BladeManagerAddr
+
 	approveTxn, err := bridgeHelper.CreateApproveERC20Txn(
 		new(big.Int).Add(params.premineAmountValue, params.stakedValue),
-		params.bladeManagerAddr,
+		bladeManagerAddr,
 		params.nativeTokenRootAddr, true)
 	if err != nil {
 		return err
@@ -146,7 +165,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	bladeManagerAddr := types.StringToAddress(params.bladeManager)
 	txn := bridgeHelper.CreateTransaction(ownerKey.Address(), &bladeManagerAddr, premineInput, nil, false)
 
 	receipt, err = txRelayer.SendTransaction(txn, ownerKey)

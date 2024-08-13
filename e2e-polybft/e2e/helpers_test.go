@@ -22,7 +22,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-const nativeTokenNonMintableConfig = "Blade:BLD:18:false"
+const nativeTokenNonMintableConfig = "Blade:BLD:18:false:1337"
 
 var (
 	stateSyncResultEvent contractsapi.StateSyncResultEvent

@@ -248,11 +248,25 @@ func ParseRawTokenConfig(rawConfig string) (*TokenConfig, error) {
 		return nil, errInvalidTokenParams
 	}
 
+	var chainID uint64
+
+	if !isMintable {
+		if len(params) == minNativeTokenParamsNumber+1 {
+			chainID, err = strconv.ParseUint(strings.TrimSpace(params[4]), 10, 16)
+			if err != nil {
+				return nil, errInvalidTokenParams
+			}
+		} else {
+			return nil, errInvalidTokenParams
+		}
+	}
+
 	return &TokenConfig{
 		Name:       name,
 		Symbol:     symbol,
 		Decimals:   uint8(decimals),
 		IsMintable: isMintable,
+		ChainID:    chainID,
 	}, nil
 }
 
