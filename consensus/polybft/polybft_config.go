@@ -156,7 +156,7 @@ type BridgeConfig struct {
 }
 
 func (p *PolyBFTConfig) IsBridgeEnabled() bool {
-	return p.Bridge != nil
+	return len(p.Bridge) > 0
 }
 
 // RootchainConfig contains rootchain metadata (such as JSON RPC endpoint and contract addresses)
