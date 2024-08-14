@@ -34,7 +34,7 @@ func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
 
 func (tx *DynamicFeeTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
-	var tmp = new(big.Int)
+	tmp := new(big.Int)
 
 	if baseFee == nil {
 		return tmp.Set(tx.GasFeeCap)
