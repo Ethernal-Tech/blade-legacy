@@ -40,12 +40,12 @@ func (tx *DynamicFeeTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
 		return tmp.Set(tx.GasFeeCap)
 	}
 
-	tip := tmp.Sub(tx.GasFeeCap, baseFee)
-	if tip.Cmp(tx.GasTipCap) > 0 {
-		tip.Set(tx.GasTipCap)
+	tmp.Sub(tx.GasFeeCap, baseFee)
+	if tmp.Cmp(tx.GasTipCap) > 0 {
+		tmp.Set(tx.GasTipCap)
 	}
 
-	return tip.Add(tip, baseFee)
+	return tmp.Add(tmp, baseFee)
 }
 
 func (tx *DynamicFeeTx) accessList() TxAccessList { return tx.AccessList }
