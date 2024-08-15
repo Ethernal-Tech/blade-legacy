@@ -126,6 +126,10 @@ type TxData interface {
 	marshalJSON(a *fastjson.Arena) *fastjson.Value
 	unmarshalJSON(v *fastjson.Value) error
 	copy() TxData
+
+	// effectiveGasPrice computes the gas price paid by the transaction, given
+	// the inclusion block baseFee.
+	effectiveGasPrice(baseFee *big.Int) *big.Int
 }
 
 func (tx *Transaction) String() string {
@@ -192,6 +196,10 @@ func (t *Transaction) Hash() Hash {
 
 func (t *Transaction) RawSignatureValues() (v, r, s *big.Int) {
 	return t.Inner.rawSignatureValues()
+}
+
+func (t *Transaction) EffectiveGasPrice(baseFee *big.Int) *big.Int {
+	return t.Inner.effectiveGasPrice(baseFee)
 }
 
 // set methods for transaction fields

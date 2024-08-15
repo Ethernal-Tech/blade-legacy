@@ -33,6 +33,22 @@ func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
 func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
 
+func (tx *DynamicFeeTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
+	tmp := new(big.Int)
+
+	if baseFee == nil {
+		return tmp.Set(tx.GasFeeCap)
+	}
+
+	tmp.Sub(tx.GasFeeCap, baseFee)
+
+	if tmp.Cmp(tx.GasTipCap) > 0 {
+		tmp.Set(tx.GasTipCap)
+	}
+
+	return tmp.Add(tmp, baseFee)
+}
+
 func (tx *DynamicFeeTx) accessList() TxAccessList { return tx.AccessList }
 
 func (tx *DynamicFeeTx) setChainID(id *big.Int) {

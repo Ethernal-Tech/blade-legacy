@@ -28,6 +28,9 @@ func (tx *StateTx) chainID() *big.Int       { return deriveChainID(tx.v()) }
 func (tx *StateTx) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *StateTx) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *StateTx) gasFeeCap() *big.Int     { return tx.GasPrice }
+func (tx *StateTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
+	return new(big.Int).Set(tx.gasPrice())
+}
 
 func (tx *StateTx) accessList() TxAccessList {
 	return nil

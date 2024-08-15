@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/0xPolygon/polygon-edge/secrets"
@@ -45,24 +46,24 @@ func SecretsManagerFactory(
 	}
 
 	// Check if the extra map is present
-	if config.Extra == nil ||
-		config.Extra["region"] == nil ||
-		config.Extra["ssm-parameter-path"] == nil ||
-		config.Extra["role"] == nil {
-		return nil, errors.New("required extra map containing 'region' and 'ssm-parameter-path' " +
-			"and 'role' not found for alibaba-ssm")
+	if config.Extra == nil || config.Extra["region"] == nil || config.Extra["ssm-parameter-path"] == nil {
+		return nil, errors.New("required extra map containing 'region' and 'ssm-parameter-path' not found for alibaba-ssm")
 	}
 
 	// / Set up the base object
 	alibabaSsmManager := &AlibabaSsmManager{
 		logger:   params.Logger.Named(string(secrets.AlibabaSSM)),
 		region:   fmt.Sprintf("%v", config.Extra["region"]),
-		role:     fmt.Sprintf("%v", config.Extra["role"]),
 		endpoint: config.ServerURL,
 	}
 
 	// Set the base path to store the secrets in OOS parameter store
 	alibabaSsmManager.basePath = fmt.Sprintf("%s/%s", config.Extra["ssm-parameter-path"], config.Name)
+
+	// Set role if found
+	if config.Extra["role"] != nil {
+		alibabaSsmManager.role = fmt.Sprintf("%v", config.Extra["role"])
+	}
 
 	// Run the initial setup
 	if err := alibabaSsmManager.Setup(); err != nil {
@@ -74,22 +75,9 @@ func SecretsManagerFactory(
 
 // Setup sets up the Alibaba secrets manager
 func (a *AlibabaSsmManager) Setup() error {
-	creds, err := getCredentials(a.role)
+	config, err := a.getSdkConfig()
 	if err != nil {
 		return err
-	}
-
-	config := &openapi.Config{
-		// Required
-		AccessKeyId: creds.AccessKeyId,
-		// Required
-		AccessKeySecret: creds.AccessKeySecret,
-		// Required
-		SecurityToken: creds.SecurityToken,
-		// config.Endpoint = tea.String("oos.eu-central-1.aliyuncs.com")
-		Endpoint: tea.String(a.endpoint),
-		// eu-central-1
-		RegionId: tea.String(a.region),
 	}
 
 	client, err := oos20190601.NewClient(config)
@@ -234,6 +222,40 @@ func (a *AlibabaSsmManager) logError(err error) {
 		recommend := m["Recommend"]
 		a.logger.Info("recommend", recommend)
 	}
+}
+
+func (a *AlibabaSsmManager) getSdkConfig() (*openapi.Config, error) {
+	var config *openapi.Config
+
+	if a.role != "" {
+		creds, err := getCredentials(a.role)
+		if err != nil {
+			return nil, err
+		}
+
+		config = &openapi.Config{
+			// Required
+			AccessKeyId: creds.AccessKeyId,
+			// Required
+			AccessKeySecret: creds.AccessKeySecret,
+			// Required
+			SecurityToken: creds.SecurityToken,
+		}
+	} else {
+		config = &openapi.Config{
+			// Required, please ensure that the environment variable ALICLOUD_ACCESS_KEY is set.
+			AccessKeyId: tea.String(os.Getenv("ALICLOUD_ACCESS_KEY")),
+			// Required, please ensure that the environment variable ALICLOUD_SECRET_KEY is set.
+			AccessKeySecret: tea.String(os.Getenv("ALICLOUD_SECRET_KEY")),
+		}
+	}
+
+	// oos.eu-central-1.aliyuncs.com
+	config.Endpoint = tea.String(a.endpoint)
+	// eu-central-1
+	config.RegionId = tea.String(a.region)
+
+	return config, nil
 }
 
 func getCredentials(role string) (*aliyun.CredentialModel, error) {

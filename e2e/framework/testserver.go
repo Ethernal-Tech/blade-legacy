@@ -49,9 +49,8 @@ const (
 type TestServer struct {
 	t *testing.T
 
-	Config  *TestServerConfig
-	cmd     *exec.Cmd
-	chainID *big.Int
+	Config *TestServerConfig
+	cmd    *exec.Cmd
 }
 
 func NewTestServer(t *testing.T, rootDir string, callback TestServerConfigCallback) *TestServer {
@@ -273,14 +272,6 @@ func (t *TestServer) Start(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-
-	// query the chain id
-	chainID, err := t.JSONRPC().ChainID()
-	if err != nil {
-		return err
-	}
-
-	t.chainID = chainID
 
 	return nil
 }
