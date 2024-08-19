@@ -85,6 +85,10 @@ var (
 		getProxyNameForImpl(rootERC20PredicateName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.RootERC20PredicateAddress = addr
 		},
+		getProxyNameForImpl(childERC20MintablePredicateName): func(
+			rootchainConfig *polybft.RootchainConfig, addr types.Address) {
+			rootchainConfig.ChildERC20PredicateAddress = addr
+		},
 		rootERC20Name: func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.RootNativeERC20Address = addr
 		},
@@ -94,11 +98,19 @@ var (
 		getProxyNameForImpl(rootERC721PredicateName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.RootERC721PredicateAddress = addr
 		},
+		getProxyNameForImpl(childERC721MintablePredicateName): func(
+			rootchainConfig *polybft.RootchainConfig, addr types.Address) {
+			rootchainConfig.ChildERC721PredicateAddress = addr
+		},
 		erc721TemplateName: func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.ChildERC721Address = addr
 		},
 		getProxyNameForImpl(rootERC1155PredicateName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.RootERC1155PredicateAddress = addr
+		},
+		getProxyNameForImpl(childERC1155MintablePredicateName): func(
+			rootchainConfig *polybft.RootchainConfig, addr types.Address) {
+			rootchainConfig.ChildERC1155PredicateAddress = addr
 		},
 		erc1155TemplateName: func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.ChildERC1155Address = addr
@@ -159,13 +171,28 @@ var (
 			inputParams := &contractsapi.InitializeRootERC20PredicateFn{
 				NewGateway:                  config.Gateway,
 				NewChildERC20Predicate:      contracts.ChildERC20PredicateContract,
-				NewDestinationTokenTemplate: contracts.ChildERC20Contract, //CHECK-NOT-SURE
+				NewDestinationTokenTemplate: contracts.ChildERC20Contract,
 				// root native token address should be non-zero only if native token is non-mintable on a childchain
 				NewNativeTokenRoot: config.RootNativeERC20Address,
 			}
 
 			return initContract(fmt, relayer, inputParams,
 				config.RootERC20PredicateAddress, rootERC20PredicateName, key)
+		},
+		getProxyNameForImpl(childERC20MintablePredicateName): func(fmt command.OutputFormatter,
+			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
+			config *polybft.RootchainConfig,
+			key crypto.Key,
+			chainID int64) error {
+			initParams := &contractsapi.InitializeChildERC20PredicateFn{
+				NewGateway:                  config.Gateway,
+				NewRootERC20Predicate:       contracts.RootERC20PredicateContract,
+				NewDestinationTokenTemplate: config.ChildERC20Address,
+			}
+
+			return initContract(fmt, relayer, initParams,
+				config.ChildERC20PredicateAddress, childERC20MintablePredicateName, key)
 		},
 		getProxyNameForImpl(rootERC721PredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
@@ -176,11 +203,26 @@ var (
 			initParams := &contractsapi.InitializeRootERC721PredicateFn{
 				NewGateway:                  config.Gateway,
 				NewChildERC721Predicate:     contracts.ChildERC721PredicateContract,
-				NewDestinationTokenTemplate: contracts.ChildERC721Contract, //CHECK-NOT-SURE
+				NewDestinationTokenTemplate: contracts.ChildERC721Contract,
 			}
 
 			return initContract(fmt, relayer, initParams,
 				config.RootERC721PredicateAddress, rootERC721PredicateName, key)
+		},
+		getProxyNameForImpl(childERC721MintablePredicateName): func(fmt command.OutputFormatter,
+			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
+			config *polybft.RootchainConfig,
+			key crypto.Key,
+			chainID int64) error {
+			initParams := &contractsapi.InitializeChildERC721PredicateFn{
+				NewGateway:                  config.Gateway,
+				NewRootERC721Predicate:      contracts.RootERC721PredicateContract,
+				NewDestinationTokenTemplate: config.ChildERC721Address,
+			}
+
+			return initContract(fmt, relayer, initParams,
+				config.ChildERC721PredicateAddress, childERC721MintablePredicateName, key)
 		},
 		getProxyNameForImpl(rootERC1155PredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
@@ -196,6 +238,21 @@ var (
 
 			return initContract(fmt, relayer, initParams,
 				config.RootERC1155PredicateAddress, rootERC1155PredicateName, key)
+		},
+		getProxyNameForImpl(childERC1155MintablePredicateName): func(fmt command.OutputFormatter,
+			relayer txrelayer.TxRelayer,
+			genesisValidators []*validator.GenesisValidator,
+			config *polybft.RootchainConfig,
+			key crypto.Key,
+			chainID int64) error {
+			initParams := &contractsapi.InitializeChildERC1155PredicateFn{
+				NewGateway:                  config.Gateway,
+				NewRootERC1155Predicate:     contracts.RootERC1155PredicateContract,
+				NewDestinationTokenTemplate: config.ChildERC1155Address,
+			}
+
+			return initContract(fmt, relayer, initParams,
+				config.ChildERC1155PredicateAddress, childERC1155MintablePredicateName, key)
 		},
 		getProxyNameForImpl(bladeManagerName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
@@ -404,7 +461,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	consensusCfg.Bridge[chainID.Uint64()] = deploymentResultInfo.RootchainCfg.ToBridgeConfig()
 
 	consensusCfg.Bridge[chainID.Uint64()].EventTrackerStartBlocks = map[types.Address]uint64{
-		deploymentResultInfo.RootchainCfg.Gateway: blockNum, //CHECK-NOT-SURE
+		deploymentResultInfo.RootchainCfg.Gateway: blockNum,
 	}
 
 	// write updated consensus configuration
@@ -528,6 +585,11 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClien
 			hasProxy: true,
 		},
 		{
+			name:     childERC20MintablePredicateName,
+			artifact: contractsapi.ChildERC20Predicate,
+			hasProxy: true,
+		},
+		{
 			name:     erc20TemplateName,
 			artifact: contractsapi.ChildERC20,
 		},
@@ -537,12 +599,22 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClien
 			hasProxy: true,
 		},
 		{
+			name:     childERC721MintablePredicateName,
+			artifact: contractsapi.ChildERC721Predicate,
+			hasProxy: true,
+		},
+		{
 			name:     erc721TemplateName,
 			artifact: contractsapi.ChildERC721,
 		},
 		{
 			name:     rootERC1155PredicateName,
 			artifact: contractsapi.RootERC1155Predicate,
+			hasProxy: true,
+		},
+		{
+			name:     childERC1155MintablePredicateName,
+			artifact: contractsapi.ChildERC1155Predicate,
 			hasProxy: true,
 		},
 		{

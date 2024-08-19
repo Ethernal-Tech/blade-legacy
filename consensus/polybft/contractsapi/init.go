@@ -25,9 +25,6 @@ var (
 	RootERC20Predicate              *contracts.Artifact
 	RootERC721Predicate             *contracts.Artifact
 	RootERC1155Predicate            *contracts.Artifact
-	ChildMintableERC20Predicate     *contracts.Artifact
-	ChildMintableERC721Predicate    *contracts.Artifact
-	ChildMintableERC1155Predicate   *contracts.Artifact
 	BLS                             *contracts.Artifact
 	BLS256                          *contracts.Artifact
 	System                          *contracts.Artifact
@@ -39,17 +36,14 @@ var (
 	ChildERC20                      *contracts.Artifact
 	ChildERC20Predicate             *contracts.Artifact
 	ChildERC20PredicateACL          *contracts.Artifact
-	RootMintableERC20Predicate      *contracts.Artifact
 	RootMintableERC20PredicateACL   *contracts.Artifact
 	ChildERC721                     *contracts.Artifact
 	ChildERC721Predicate            *contracts.Artifact
 	ChildERC721PredicateACL         *contracts.Artifact
-	RootMintableERC721Predicate     *contracts.Artifact
 	RootMintableERC721PredicateACL  *contracts.Artifact
 	ChildERC1155                    *contracts.Artifact
 	ChildERC1155Predicate           *contracts.Artifact
 	ChildERC1155PredicateACL        *contracts.Artifact
-	RootMintableERC1155Predicate    *contracts.Artifact
 	RootMintableERC1155PredicateACL *contracts.Artifact
 	L2StateSender                   *contracts.Artifact
 	CustomSupernetManager           *contracts.Artifact
@@ -341,9 +335,6 @@ func init() {
 		"RootERC20Predicate":              RootERC20Predicate,
 		"RootERC721Predicate":             RootERC721Predicate,
 		"RootERC1155Predicate":            RootERC1155Predicate,
-		"ChildMintableERC20Predicate":     ChildMintableERC20Predicate,
-		"ChildMintableERC721Predicate":    ChildMintableERC721Predicate,
-		"ChildMintableERC1155Predicate":   ChildMintableERC1155Predicate,
 		"BLS":                             BLS,
 		"BLS256":                          BLS256,
 		"System":                          System,
@@ -355,17 +346,14 @@ func init() {
 		"ChildERC20":                      ChildERC20,
 		"ChildERC20Predicate":             ChildERC20Predicate,
 		"ChildERC20PredicateACL":          ChildERC20PredicateACL,
-		"RootMintableERC20Predicate":      RootMintableERC20Predicate,
 		"RootMintableERC20PredicateACL":   RootMintableERC20PredicateACL,
 		"ChildERC721":                     ChildERC721,
 		"ChildERC721Predicate":            ChildERC721Predicate,
 		"ChildERC721PredicateACL":         ChildERC721PredicateACL,
-		"RootMintableERC721Predicate":     RootMintableERC721Predicate,
 		"RootMintableERC721PredicateACL":  RootMintableERC721PredicateACL,
 		"ChildERC1155":                    ChildERC1155,
 		"ChildERC1155Predicate":           ChildERC1155Predicate,
 		"ChildERC1155PredicateACL":        ChildERC1155PredicateACL,
-		"RootMintableERC1155Predicate":    RootMintableERC1155Predicate,
 		"RootMintableERC1155PredicateACL": RootMintableERC1155PredicateACL,
 		"L2StateSender":                   L2StateSender,
 		"CustomSupernetManager":           CustomSupernetManager,
