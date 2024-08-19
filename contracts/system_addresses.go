@@ -39,6 +39,18 @@ var (
 	StakeManagerContract = types.StringToAddress("0x10022")
 	// StakeManagerContract is an address of stake manager contract on child chain
 	StakeManagerContractV1 = types.StringToAddress("0x100221")
+	// ValidatorSetStorageContract is an address of validator set storage contract on the child chain
+	ValidatorSetStorageContract = types.StringToAddress("0x10031")
+	// ValidatorSetStorageContractV1 is an address of validator set storage contract on the child chain
+	ValidatorSetStorageContractV1 = types.StringToAddress("0x100311")
+	// GatewayCotnract is an address of gateway contract on child chain
+	GatewayContract = types.StringToAddress("0x10032")
+	// GatewayCotnractV1 is an address of gateway contract on child chain
+	GatewayContractV1 = types.StringToAddress("0x100321")
+	// BridgeStorageContract is an address of bridge storage contract on child chain
+	BridgeStorageContract = types.StringToAddress("0x10033")
+	// BridgeStorageContractV1 is an address of bridge storage contract on child chain
+	BridgeStorageContractV1 = types.StringToAddress("0x100331")
 
 	// ChildERC20Contract is an address of bridgable ERC20 token contract on the child chain
 	ChildERC20Contract = types.StringToAddress("0x1003")
@@ -59,17 +71,17 @@ var (
 	// ChildERC1155PredicateContractV1 is an address of child ERC1155 predicate contract on the child chain
 	ChildERC1155PredicateContractV1 = types.StringToAddress("0x10081")
 	// RootMintableERC20PredicateContract is an address of mintable ERC20 proxy predicate on the child chain
-	RootMintableERC20PredicateContract = types.StringToAddress("0x1009")
+	RootERC20PredicateContract = types.StringToAddress("0x1009")
 	// RootMintableERC20PredicateContractV1 is an address of mintable ERC20 predicate on the child chain
-	RootMintableERC20PredicateContractV1 = types.StringToAddress("0x10091")
+	RootERC20PredicateContractV1 = types.StringToAddress("0x10091")
 	// RootMintableERC721PredicateContract is an address of mintable ERC721 proxy predicate on the child chain
-	RootMintableERC721PredicateContract = types.StringToAddress("0x100a")
+	RootERC721PredicateContract = types.StringToAddress("0x100a")
 	// RootMintableERC721PredicateContractV1 is an address of mintable ERC721 predicate on the child chain
-	RootMintableERC721PredicateContractV1 = types.StringToAddress("0x100a1")
+	RootERC721PredicateContractV1 = types.StringToAddress("0x100a1")
 	// RootMintableERC1155PredicateContract is an address of mintable ERC1155 proxy predicate on the child chain
-	RootMintableERC1155PredicateContract = types.StringToAddress("0x100b")
+	RootERC1155PredicateContract = types.StringToAddress("0x100b")
 	// RootMintableERC1155PredicateContractV1 is an address of mintable ERC1155 predicate on the child chain
-	RootMintableERC1155PredicateContractV1 = types.StringToAddress("0x100b1")
+	RootERC1155PredicateContractV1 = types.StringToAddress("0x100b1")
 
 	// Governance contracts ===============================================================================
 
@@ -116,22 +128,22 @@ var (
 // GetProxyImplementationMapping retrieves the addresses of proxy contracts that should be deployed unconditionally
 func GetProxyImplementationMapping() map[types.Address]types.Address {
 	return map[types.Address]types.Address{
-		StateReceiverContract:                StateReceiverContractV1,
-		BLSContract:                          BLSContractV1,
-		MerkleContract:                       MerkleContractV1,
-		L2StateSenderContract:                L2StateSenderContractV1,
-		EpochManagerContract:                 EpochManagerContractV1,
-		StakeManagerContract:                 StakeManagerContractV1,
-		NativeERC20TokenContract:             NativeERC20TokenContractV1,
-		ChildERC20PredicateContract:          ChildERC20PredicateContractV1,
-		ChildERC721PredicateContract:         ChildERC721PredicateContractV1,
-		ChildERC1155PredicateContract:        ChildERC1155PredicateContractV1,
-		RootMintableERC20PredicateContract:   RootMintableERC20PredicateContractV1,
-		RootMintableERC721PredicateContract:  RootMintableERC721PredicateContractV1,
-		RootMintableERC1155PredicateContract: RootMintableERC1155PredicateContractV1,
-		NetworkParamsContract:                NetworkParamsContractV1,
-		ForkParamsContract:                   ForkParamsContractV1,
-		ChildTimelockContract:                ChildTimelockContractV1,
-		ChildGovernorContract:                ChildGovernorContractV1,
+		ValidatorSetStorageContract:   ValidatorSetStorageContractV1,
+		GatewayContract:               GatewayContractV1,
+		BridgeStorageContract:         BridgeStorageContractV1,
+		StateReceiverContract:         StateReceiverContractV1,
+		BLSContract:                   BLSContractV1,
+		MerkleContract:                MerkleContractV1,
+		L2StateSenderContract:         L2StateSenderContractV1,
+		EpochManagerContract:          EpochManagerContractV1,
+		StakeManagerContract:          StakeManagerContractV1,
+		NativeERC20TokenContract:      NativeERC20TokenContractV1,
+		ChildERC20PredicateContract:   ChildERC20PredicateContractV1,
+		ChildERC721PredicateContract:  ChildERC721PredicateContractV1,
+		ChildERC1155PredicateContract: ChildERC1155PredicateContractV1,
+		NetworkParamsContract:         NetworkParamsContractV1,
+		ForkParamsContract:            ForkParamsContractV1,
+		ChildTimelockContract:         ChildTimelockContractV1,
+		ChildGovernorContract:         ChildGovernorContractV1,
 	}
 }

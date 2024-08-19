@@ -375,6 +375,18 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 
 	genesisContracts := []*contractInfo{
 		{
+			artifact: contractsapi.ValidatorSetStorage,
+			address:  contracts.ValidatorSetStorageContractV1,
+		},
+		{
+			artifact: contractsapi.Gateway,
+			address:  contracts.GatewayContractV1,
+		},
+		{
+			artifact: contractsapi.BridgeStorage,
+			address:  contracts.BridgeStorageContractV1,
+		},
+		{
 			// State receiver contract
 			artifact: contractsapi.StateReceiver,
 			address:  contracts.StateReceiverContractV1,
@@ -480,25 +492,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 				artifact: contractsapi.ChildERC1155PredicateACL,
 				address:  contracts.ChildERC1155PredicateContractV1,
 			})
-
-		// childchain originated tokens predicates (with access lists)
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.RootMintableERC20PredicateACL,
-				address:  contracts.RootMintableERC20PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.RootMintableERC721PredicateACL,
-				address:  contracts.RootMintableERC721PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.RootMintableERC1155PredicateACL,
-				address:  contracts.RootMintableERC1155PredicateContractV1,
-			})
 	} else {
 		// rootchain originated tokens predicates
 		genesisContracts = append(genesisContracts,
@@ -517,25 +510,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			&contractInfo{
 				artifact: contractsapi.ChildERC1155Predicate,
 				address:  contracts.ChildERC1155PredicateContractV1,
-			})
-
-		// childchain originated tokens predicates
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.RootMintableERC20Predicate,
-				address:  contracts.RootMintableERC20PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.RootMintableERC721Predicate,
-				address:  contracts.RootMintableERC721PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.RootMintableERC1155Predicate,
-				address:  contracts.RootMintableERC1155PredicateContractV1,
 			})
 	}
 

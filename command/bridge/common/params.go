@@ -206,34 +206,20 @@ func ExtractExitEventIDs(receipt *ethgo.Receipt) ([]*big.Int, error) {
 // ExtractChildTokenAddr extracts predicted deterministic child token address
 func ExtractChildTokenAddr(receipt *ethgo.Receipt, childChainMintable bool) (*types.Address, error) {
 	var (
-		l1TokenMapped contractsapi.TokenMappedEvent
-		l2TokenMapped contractsapi.L2MintableTokenMappedEvent
+		tokenMapped contractsapi.TokenMappedEvent
 	)
 
 	for _, log := range receipt.Logs {
-		if childChainMintable {
-			doesMatch, err := l2TokenMapped.ParseLog(log)
-			if err != nil {
-				return nil, err
-			}
-
-			if !doesMatch {
-				continue
-			}
-
-			return &l2TokenMapped.ChildToken, nil
-		} else {
-			doesMatch, err := l1TokenMapped.ParseLog(log)
-			if err != nil {
-				return nil, err
-			}
-
-			if !doesMatch {
-				continue
-			}
-
-			return &l1TokenMapped.ChildToken, nil
+		doesMatch, err := tokenMapped.ParseLog(log)
+		if err != nil {
+			return nil, err
 		}
+
+		if !doesMatch {
+			continue
+		}
+
+		return &tokenMapped.ChildToken, nil
 	}
 
 	return nil, nil

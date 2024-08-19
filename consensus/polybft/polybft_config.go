@@ -133,20 +133,22 @@ func GetPolyBFTConfig(chainParams *chain.Params) (PolyBFTConfig, error) {
 
 // BridgeConfig is the rootchain configuration, needed for bridging
 type BridgeConfig struct {
-	StateSenderAddr                   types.Address `json:"stateSenderAddress"`
-	CheckpointManagerAddr             types.Address `json:"checkpointManagerAddress"`
-	ExitHelperAddr                    types.Address `json:"exitHelperAddress"`
-	RootERC20PredicateAddr            types.Address `json:"erc20PredicateAddress"`
-	ChildMintableERC20PredicateAddr   types.Address `json:"erc20ChildMintablePredicateAddress"`
-	RootNativeERC20Addr               types.Address `json:"nativeERC20Address"`
-	RootERC721PredicateAddr           types.Address `json:"erc721PredicateAddress"`
-	ChildMintableERC721PredicateAddr  types.Address `json:"erc721ChildMintablePredicateAddress"`
-	RootERC1155PredicateAddr          types.Address `json:"erc1155PredicateAddress"`
-	ChildMintableERC1155PredicateAddr types.Address `json:"erc1155ChildMintablePredicateAddress"`
-	ChildERC20Addr                    types.Address `json:"childERC20Address"`
-	ChildERC721Addr                   types.Address `json:"childERC721Address"`
-	ChildERC1155Addr                  types.Address `json:"childERC1155Address"`
-	BladeManagerAddr                  types.Address `json:"bladeManagerAddress"`
+	StateSenderAddr           types.Address `json:"stateSenderAddress"`
+	CheckpointManagerAddr     types.Address `json:"checkpointManagerAddress"`
+	ExitHelperAddr            types.Address `json:"exitHelperAddress"`
+	ValidatorSetStorageAddr   types.Address `json:"validatorSetStorageAddress"`
+	GatewayAddr               types.Address `json:"gatewayAddress"`
+	RootERC20PredicateAddr    types.Address `json:"erc20PredicateAddress"`
+	ChildERC20PredicateAddr   types.Address `json:"erc20ChildPredicateAddress"`
+	RootNativeERC20Addr       types.Address `json:"nativeERC20Address"`
+	RootERC721PredicateAddr   types.Address `json:"erc721PredicateAddress"`
+	ChildERC721PredicateAddr  types.Address `json:"erc721ChildMintablePredicateAddress"`
+	RootERC1155PredicateAddr  types.Address `json:"erc1155PredicateAddress"`
+	ChildERC1155PredicateAddr types.Address `json:"erc1155ChildMintablePredicateAddress"`
+	ChildERC20Addr            types.Address `json:"childERC20Address"`
+	ChildERC721Addr           types.Address `json:"childERC721Address"`
+	ChildERC1155Addr          types.Address `json:"childERC1155Address"`
+	BladeManagerAddr          types.Address `json:"bladeManagerAddress"`
 	// only populated if stake-manager-deploy command is executed, and used for e2e tests
 	BLSAddress     types.Address `json:"blsAddr"`
 	BN256G2Address types.Address `json:"bn256G2Addr"`
@@ -163,22 +165,24 @@ func (p *PolyBFTConfig) IsBridgeEnabled() bool {
 type RootchainConfig struct {
 	JSONRPCAddr string
 
-	StateSenderAddress                   types.Address
-	CheckpointManagerAddress             types.Address
-	BLSAddress                           types.Address
-	BN256G2Address                       types.Address
-	ExitHelperAddress                    types.Address
-	RootERC20PredicateAddress            types.Address
-	ChildMintableERC20PredicateAddress   types.Address
-	RootNativeERC20Address               types.Address
-	ChildERC20Address                    types.Address
-	RootERC721PredicateAddress           types.Address
-	ChildMintableERC721PredicateAddress  types.Address
-	ChildERC721Address                   types.Address
-	RootERC1155PredicateAddress          types.Address
-	ChildMintableERC1155PredicateAddress types.Address
-	ChildERC1155Address                  types.Address
-	BladeManagerAddress                  types.Address
+	ValidatorSetStorage          types.Address
+	Gateway                      types.Address
+	StateSenderAddress           types.Address
+	CheckpointManagerAddress     types.Address
+	BLSAddress                   types.Address
+	BN256G2Address               types.Address
+	ExitHelperAddress            types.Address
+	RootERC20PredicateAddress    types.Address
+	ChildERC20PredicateAddress   types.Address
+	RootNativeERC20Address       types.Address
+	ChildERC20Address            types.Address
+	RootERC721PredicateAddress   types.Address
+	ChildERC721PredicateAddress  types.Address
+	ChildERC721Address           types.Address
+	RootERC1155PredicateAddress  types.Address
+	ChildERC1155PredicateAddress types.Address
+	ChildERC1155Address          types.Address
+	BladeManagerAddress          types.Address
 }
 
 // ToBridgeConfig creates BridgeConfig instance
@@ -186,22 +190,24 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 	return &BridgeConfig{
 		JSONRPCEndpoint: r.JSONRPCAddr,
 
-		StateSenderAddr:                   r.StateSenderAddress,
-		CheckpointManagerAddr:             r.CheckpointManagerAddress,
-		ExitHelperAddr:                    r.ExitHelperAddress,
-		RootERC20PredicateAddr:            r.RootERC20PredicateAddress,
-		ChildMintableERC20PredicateAddr:   r.ChildMintableERC20PredicateAddress,
-		RootNativeERC20Addr:               r.RootNativeERC20Address,
-		RootERC721PredicateAddr:           r.RootERC721PredicateAddress,
-		ChildMintableERC721PredicateAddr:  r.ChildMintableERC721PredicateAddress,
-		RootERC1155PredicateAddr:          r.RootERC1155PredicateAddress,
-		ChildMintableERC1155PredicateAddr: r.ChildMintableERC1155PredicateAddress,
-		ChildERC20Addr:                    r.ChildERC20Address,
-		ChildERC721Addr:                   r.ChildERC721Address,
-		ChildERC1155Addr:                  r.ChildERC1155Address,
-		BLSAddress:                        r.BLSAddress,
-		BN256G2Address:                    r.BN256G2Address,
-		BladeManagerAddr:                  r.BladeManagerAddress,
+		ValidatorSetStorageAddr:   r.ValidatorSetStorage,
+		GatewayAddr:               r.Gateway,
+		StateSenderAddr:           r.StateSenderAddress,
+		CheckpointManagerAddr:     r.CheckpointManagerAddress,
+		ExitHelperAddr:            r.ExitHelperAddress,
+		RootERC20PredicateAddr:    r.RootERC20PredicateAddress,
+		ChildERC20PredicateAddr:   r.ChildERC20PredicateAddress,
+		RootNativeERC20Addr:       r.RootNativeERC20Address,
+		RootERC721PredicateAddr:   r.RootERC721PredicateAddress,
+		ChildERC721PredicateAddr:  r.ChildERC721PredicateAddress,
+		RootERC1155PredicateAddr:  r.RootERC1155PredicateAddress,
+		ChildERC1155PredicateAddr: r.ChildERC1155PredicateAddress,
+		ChildERC20Addr:            r.ChildERC20Address,
+		ChildERC721Addr:           r.ChildERC721Address,
+		ChildERC1155Addr:          r.ChildERC1155Address,
+		BLSAddress:                r.BLSAddress,
+		BN256G2Address:            r.BN256G2Address,
+		BladeManagerAddr:          r.BladeManagerAddress,
 	}
 }
 

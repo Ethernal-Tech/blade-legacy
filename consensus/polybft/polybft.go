@@ -276,20 +276,10 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.RootMintableERC20PredicateContract, input,
-						"RootMintableERC20PredicateAccessList", transition); err != nil {
-						return err
-					}
-
 					// initialize RootMintableERC721PredicateAccessList SC
 					input, err = getInitERC721PredicateACLInput(bridgeCfg[chainID], owner,
 						useBridgeAllowList, useBridgeBlockList, true)
 					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootMintableERC721PredicateContract, input,
-						"RootMintableERC721PredicateAccessList", transition); err != nil {
 						return err
 					}
 
@@ -299,12 +289,6 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					if err != nil {
 						return err
 					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootMintableERC1155PredicateContract, input,
-						"RootMintableERC1155PredicateAccessList", transition); err != nil {
-						return err
-					}
-
 				}
 			} else {
 				for chainID := range bridgeCfg {
@@ -347,30 +331,15 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.RootMintableERC20PredicateContract, input,
-						"RootMintableERC20Predicate", transition); err != nil {
-						return err
-					}
-
 					// initialize RootMintableERC721Predicate SC
 					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], true)
 					if err != nil {
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.RootMintableERC721PredicateContract, input,
-						"RootMintableERC721Predicate", transition); err != nil {
-						return err
-					}
-
 					// initialize RootMintableERC1155Predicate SC
 					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], true)
 					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootMintableERC1155PredicateContract, input,
-						"RootMintableERC1155Predicate", transition); err != nil {
 						return err
 					}
 				}

@@ -14,10 +14,14 @@ const (
 )
 
 var (
+
 	// Blade smart contracts
 	CheckpointManager               *contracts.Artifact
 	ExitHelper                      *contracts.Artifact
 	StateSender                     *contracts.Artifact
+	ValidatorSetStorage             *contracts.Artifact
+	Gateway                         *contracts.Artifact
+	BridgeStorage                   *contracts.Artifact
 	RootERC20Predicate              *contracts.Artifact
 	RootERC721Predicate             *contracts.Artifact
 	RootERC1155Predicate            *contracts.Artifact
@@ -97,6 +101,21 @@ func init() {
 		log.Fatal(err)
 	}
 
+	ValidatorSetStorage, err = contracts.DecodeArtifact([]byte(ValidatorSetStorageArtifact))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	Gateway, err = contracts.DecodeArtifact([]byte(GatewayArtifact))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	BridgeStorage, err = contracts.DecodeArtifact([]byte(BridgeStorageArtifact))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	BLS, err = contracts.DecodeArtifact([]byte(BLSArtifact))
 	if err != nil {
 		log.Fatal(err)
@@ -132,21 +151,6 @@ func init() {
 		log.Fatal(err)
 	}
 
-	ChildMintableERC20Predicate, err = contracts.DecodeArtifact([]byte(ChildMintableERC20PredicateArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ChildMintableERC721Predicate, err = contracts.DecodeArtifact([]byte(ChildMintableERC721PredicateArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ChildMintableERC1155Predicate, err = contracts.DecodeArtifact([]byte(ChildMintableERC1155PredicateArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	StateReceiver, err = contracts.DecodeArtifact([]byte(StateReceiverArtifact))
 	if err != nil {
 		log.Fatal(err)
@@ -172,11 +176,6 @@ func init() {
 		log.Fatal(err)
 	}
 
-	RootMintableERC20Predicate, err = contracts.DecodeArtifact([]byte(RootMintableERC20PredicateArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	RootMintableERC20PredicateACL, err = contracts.DecodeArtifact([]byte(RootMintableERC20PredicateACLArtifact))
 	if err != nil {
 		log.Fatal(err)
@@ -197,11 +196,6 @@ func init() {
 		log.Fatal(err)
 	}
 
-	RootMintableERC721Predicate, err = contracts.DecodeArtifact([]byte(RootMintableERC721PredicateArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	RootMintableERC721PredicateACL, err = contracts.DecodeArtifact([]byte(RootMintableERC721PredicateACLArtifact))
 	if err != nil {
 		log.Fatal(err)
@@ -218,11 +212,6 @@ func init() {
 	}
 
 	ChildERC1155PredicateACL, err = contracts.DecodeArtifact([]byte(ChildERC1155PredicateACLArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	RootMintableERC1155Predicate, err = contracts.DecodeArtifact([]byte(RootMintableERC1155PredicateArtifact))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -346,6 +335,9 @@ func init() {
 		"CheckpointManager":               CheckpointManager,
 		"ExitHelper":                      ExitHelper,
 		"StateSender":                     StateSender,
+		"ValidatorSetStorage":             ValidatorSetStorage,
+		"Gateway":                         Gateway,
+		"BridgeStorage":                   BridgeStorage,
 		"RootERC20Predicate":              RootERC20Predicate,
 		"RootERC721Predicate":             RootERC721Predicate,
 		"RootERC1155Predicate":            RootERC1155Predicate,

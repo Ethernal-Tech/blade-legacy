@@ -116,19 +116,23 @@ func main() {
 			gensc.ChildERC20PredicateACL,
 			false,
 			[]string{
-				"initialize(address,address,address,address,address,bool,bool,address)",
+				"initialize(address,address,address,address,bool,bool,address)",
 				"withdrawTo",
 			},
 			[]string{},
 		},
 		{
-			"RootMintableERC20Predicate",
-			gensc.RootMintableERC20Predicate,
+			"RootERC20Predicate",
+			gensc.RootERC20Predicate,
 			false,
 			[]string{
 				"initialize",
+				"deposit",
+				"depositTo",
 			},
-			[]string{},
+			[]string{
+				"TokenMapped",
+			},
 		},
 		{
 			"RootMintableERC20PredicateACL",
@@ -159,29 +163,6 @@ func main() {
 			[]string{},
 		},
 		{
-			"RootERC20Predicate",
-			gensc.RootERC20Predicate,
-			false,
-			[]string{
-				"initialize",
-				"depositTo",
-			},
-			[]string{
-				"TokenMapped",
-			},
-		},
-		{
-			"ChildMintableERC20Predicate",
-			gensc.ChildMintableERC20Predicate,
-			false,
-			[]string{
-				"initialize",
-			},
-			[]string{
-				"MintableTokenMapped",
-			},
-		},
-		{
 			"RootERC20",
 			gensc.RootERC20,
 			false,
@@ -199,15 +180,6 @@ func main() {
 			[]string{
 				"initialize",
 				"depositBatch",
-			},
-			[]string{},
-		},
-		{
-			"ChildMintableERC1155Predicate",
-			gensc.ChildMintableERC1155Predicate,
-			false,
-			[]string{
-				"initialize",
 			},
 			[]string{},
 		},
@@ -243,24 +215,13 @@ func main() {
 			[]string{},
 		},
 		{
-			"RootMintableERC1155Predicate",
-			gensc.RootMintableERC1155Predicate,
-			false,
-			[]string{
-				"initialize",
-			},
-			[]string{},
-		},
-		{
 			"RootMintableERC1155PredicateACL",
 			gensc.RootMintableERC1155PredicateACL,
 			false,
 			[]string{
 				"initialize",
 			},
-			[]string{
-				"L2MintableTokenMapped",
-			},
+			[]string{},
 		},
 		{
 			"ChildERC1155",
@@ -279,15 +240,6 @@ func main() {
 			[]string{
 				"initialize",
 				"depositBatch",
-			},
-			[]string{},
-		},
-		{
-			"ChildMintableERC721Predicate",
-			gensc.ChildMintableERC721Predicate,
-			false,
-			[]string{
-				"initialize",
 			},
 			[]string{},
 		},
@@ -318,15 +270,6 @@ func main() {
 			[]string{
 				"initialize",
 				"withdrawBatch",
-			},
-			[]string{},
-		},
-		{
-			"RootMintableERC721Predicate",
-			gensc.RootMintableERC721Predicate,
-			false,
-			[]string{
-				"initialize",
 			},
 			[]string{},
 		},
@@ -482,6 +425,40 @@ func main() {
 				"initialize",
 			},
 			[]string{},
+		},
+		{
+			"ValidatorSetStorage",
+			gensc.ValidatorSetStorage,
+			false,
+			[]string{
+				"initialize",
+				"commitValidatorSet",
+			},
+			[]string{},
+		},
+		{
+			"Gateway",
+			gensc.Gateway,
+			false,
+			[]string{
+				"initialize",
+			},
+			[]string{
+				"BridgeMessageResult",
+				"BridgeMessageEvent",
+			},
+		},
+		{
+			"BridgeStorage",
+			gensc.BridgeStorage,
+			false,
+			[]string{
+				"initialize",
+				"commitBatch",
+			},
+			[]string{
+				"NewBatch",
+			},
 		},
 	}
 
