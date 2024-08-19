@@ -800,9 +800,9 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		}))
 
 		// retrieve child mintable token address from both chains and make sure they are the same
-		l1ChildToken := getChildToken(t, contractsapi.ChildMintableERC20Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC20PredicateAddr,
+		l1ChildToken := getChildToken(t, contractsapi.ChildERC20Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC20PredicateAddr,
 			rootToken, rootchainTxRelayer)
-		l2ChildToken := getChildToken(t, contractsapi.RootMintableERC20Predicate.Abi, contracts.RootERC20PredicateContract,
+		l2ChildToken := getChildToken(t, contractsapi.RootERC20Predicate.Abi, contracts.RootERC20PredicateContract,
 			rootToken, childchainTxRelayer)
 
 		t.Log("L1 child token", l1ChildToken)
@@ -942,9 +942,9 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		}))
 
 		// retrieve child token addresses on both chains and make sure they are the same
-		l1ChildToken := getChildToken(t, contractsapi.ChildMintableERC721Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC721PredicateAddr,
+		l1ChildToken := getChildToken(t, contractsapi.ChildERC721Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC721PredicateAddr,
 			types.Address(rootERC721Token), rootchainTxRelayer)
-		l2ChildToken := getChildToken(t, contractsapi.RootMintableERC721Predicate.Abi, contracts.RootERC721PredicateContract,
+		l2ChildToken := getChildToken(t, contractsapi.RootERC721Predicate.Abi, contracts.RootERC721PredicateContract,
 			types.Address(rootERC721Token), childchainTxRelayer)
 
 		t.Log("L1 child token", l1ChildToken)
