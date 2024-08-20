@@ -207,7 +207,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	// populate child token address if a token is mapped alongside with deposit
-	childToken, err := common.ExtractChildTokenAddr(receipt, dp.ChildChainMintable)
+	childToken, err := common.ExtractChildTokenAddr(receipt)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to extract child token address: %w", err))
 

@@ -30,7 +30,6 @@ const (
 
 	stateSenderName                   = "StateSender"
 	checkpointManagerName             = "CheckpointManager"
-	validatorSetStorageName           = "ValidatorSetStorage"
 	gatewayName                       = "Gateway"
 	blsName                           = "BLS"
 	bn256G2Name                       = "BN256G2"
@@ -66,9 +65,6 @@ var (
 		},
 		getProxyNameForImpl(checkpointManagerName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.CheckpointManagerAddress = addr
-		},
-		getProxyNameForImpl(validatorSetStorageName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
-			rootchainConfig.ValidatorSetStorage = addr
 		},
 		getProxyNameForImpl(blsName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.BLSAddress = addr
@@ -279,26 +275,6 @@ var (
 			return initContract(fmt, relayer, initParams,
 				config.BladeManagerAddress, bladeManagerName, key)
 		},
-		getProxyNameForImpl(validatorSetStorageName): func(fmt command.OutputFormatter,
-			relayer txrelayer.TxRelayer,
-			genesisValidators []*validator.GenesisValidator,
-			config *polybft.RootchainConfig,
-			key crypto.Key,
-			chainID int64) error {
-			validatorSet, err := getValidatorSet(fmt, genesisValidators)
-			if err != nil {
-				return err
-			}
-
-			inputParams := &contractsapi.InitializeValidatorSetStorageFn{
-				NewBls:     config.BLSAddress,
-				NewBn256G2: config.BN256G2Address,
-				Validators: validatorSet,
-			}
-
-			return initContract(fmt, relayer, inputParams, config.ValidatorSetStorage,
-				validatorSetStorageName, key)
-		},
 		getProxyNameForImpl(gatewayName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
@@ -310,7 +286,7 @@ var (
 				return err
 			}
 
-			inputParams := &contractsapi.InitializeValidatorSetStorageFn{
+			inputParams := &contractsapi.InitializeGatewayFn{
 				NewBls:     config.BLSAddress,
 				NewBn256G2: config.BN256G2Address,
 				Validators: validatorSet,
@@ -553,11 +529,6 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClien
 
 				return append(contractsapi.CheckpointManager.Bytecode, input...), nil
 			},
-		},
-		{
-			name:     validatorSetStorageName,
-			artifact: contractsapi.ValidatorSetStorage,
-			hasProxy: true,
 		},
 		{
 			name:     gatewayName,

@@ -39,15 +39,15 @@ var (
 	StakeManagerContract = types.StringToAddress("0x10022")
 	// StakeManagerContract is an address of stake manager contract on child chain
 	StakeManagerContractV1 = types.StringToAddress("0x100221")
-	// ValidatorSetStorageContract is an address of validator set storage contract on the child chain
+	// ValidatorSetStorageContract is an address of validator set storage proxy contract
 	ValidatorSetStorageContract = types.StringToAddress("0x10031")
 	// ValidatorSetStorageContractV1 is an address of validator set storage contract on the child chain
 	ValidatorSetStorageContractV1 = types.StringToAddress("0x100311")
-	// GatewayCotnract is an address of gateway contract on child chain
+	// GatewayCotnract is an address of gateway proxy contract
 	GatewayContract = types.StringToAddress("0x10032")
-	// GatewayCotnractV1 is an address of gateway contract on child chain
+	// GatewayCotnractV1 is an address of gateway contract
 	GatewayContractV1 = types.StringToAddress("0x100321")
-	// BridgeStorageContract is an address of bridge storage contract on child chain
+	// BridgeStorageContract is an address of bridge storage proxy contract
 	BridgeStorageContract = types.StringToAddress("0x10033")
 	// BridgeStorageContractV1 is an address of bridge storage contract on child chain
 	BridgeStorageContractV1 = types.StringToAddress("0x100331")

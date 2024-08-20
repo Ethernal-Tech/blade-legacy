@@ -277,7 +277,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					if err = callContract(contracts.SystemCaller, contracts.RootERC20PredicateContract, input,
-						"RootMintableERC20PredicateAccessList", transition); err != nil {
+						"RootERC20PredicateAccessList", transition); err != nil {
 						return err
 					}
 
@@ -289,7 +289,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					if err = callContract(contracts.SystemCaller, contracts.RootERC721PredicateContract, input,
-						"RootMintableERC20PredicateAccessList", transition); err != nil {
+						"RootERC721PredicateAccessList", transition); err != nil {
 						return err
 					}
 
@@ -301,7 +301,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					if err = callContract(contracts.SystemCaller, contracts.RootERC1155PredicateContract, input,
-						"RootMintableERC20PredicateAccessList", transition); err != nil {
+						"RootERC1155PredicateAccessList", transition); err != nil {
 						return err
 					}
 
@@ -358,8 +358,8 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.RootERC20PredicateContract, input,
-						"RootERC20Predicate", transition); err != nil {
+					if err = callContract(contracts.SystemCaller, contracts.RootERC721PredicateContract, input,
+						"RootERC721Predicate", transition); err != nil {
 						return err
 					}
 
@@ -369,8 +369,8 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.RootERC20PredicateContract, input,
-						"RootERC20Predicate", transition); err != nil {
+					if err = callContract(contracts.SystemCaller, contracts.RootERC1155PredicateContract, input,
+						"RootERC1155Predicate", transition); err != nil {
 						return err
 					}
 
