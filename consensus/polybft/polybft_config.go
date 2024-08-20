@@ -136,7 +136,6 @@ type BridgeConfig struct {
 	StateSenderAddr           types.Address `json:"stateSenderAddress"`
 	CheckpointManagerAddr     types.Address `json:"checkpointManagerAddress"`
 	ExitHelperAddr            types.Address `json:"exitHelperAddress"`
-	ValidatorSetStorageAddr   types.Address `json:"validatorSetStorageAddress"`
 	GatewayAddr               types.Address `json:"gatewayAddress"`
 	RootERC20PredicateAddr    types.Address `json:"erc20PredicateAddress"`
 	ChildERC20PredicateAddr   types.Address `json:"erc20ChildPredicateAddress"`
@@ -165,7 +164,6 @@ func (p *PolyBFTConfig) IsBridgeEnabled() bool {
 type RootchainConfig struct {
 	JSONRPCAddr string
 
-	ValidatorSetStorage          types.Address
 	Gateway                      types.Address
 	StateSenderAddress           types.Address
 	CheckpointManagerAddress     types.Address
@@ -190,7 +188,6 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 	return &BridgeConfig{
 		JSONRPCEndpoint: r.JSONRPCAddr,
 
-		ValidatorSetStorageAddr:   r.ValidatorSetStorage,
 		GatewayAddr:               r.Gateway,
 		StateSenderAddr:           r.StateSenderAddress,
 		CheckpointManagerAddr:     r.CheckpointManagerAddress,
