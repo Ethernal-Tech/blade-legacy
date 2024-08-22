@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -71,6 +73,7 @@ type debugStore interface {
 type Debug struct {
 	store        debugStore
 	throttling   *Throttling
+	handler      *HandlerT
 	ReadFileFunc func(filename string) ([]byte, error)
 }
 
@@ -78,8 +81,227 @@ func NewDebug(store debugStore, requestsPerSecond uint64) *Debug {
 	return &Debug{
 		store:        store,
 		throttling:   NewThrottling(requestsPerSecond, time.Second),
+		handler:      new(HandlerT),
 		ReadFileFunc: os.ReadFile,
 	}
+}
+
+// CpuProfile turns on CPU profiling for nsec seconds and writes
+// profile data to file.
+func (d *Debug) CPUProfile(file string, nsec uint,
+) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartCPUProfile(file); err != nil {
+				return nil, err
+			}
+
+			time.Sleep(time.Duration(nsec) * time.Second)
+
+			if err := d.handler.StopCPUProfile(); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// FreeOSMemory forces a garbage collection.
+func (d *Debug) FreeOSMemory() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			debug.FreeOSMemory()
+
+			return nil, nil
+		},
+	)
+}
+
+// GcStats returns GC statistics.
+func (d *Debug) GcStats() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			s := new(debug.GCStats)
+			debug.ReadGCStats(s)
+
+			return s, nil
+		},
+	)
+}
+
+// MemStats returns detailed runtime memory statistics.
+func (d *Debug) MemStats() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			s := new(runtime.MemStats)
+			runtime.ReadMemStats(s)
+
+			return s, nil
+		},
+	)
+}
+
+// MutexProfile turns on mutex profiling for nsec seconds and writes profile data to file.
+// It uses a profile rate of 1 for most accurate information. If a different rate is
+// desired, set the rate and write the profile manually.
+func (d *Debug) MutexProfile(file string, nsec uint) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetMutexProfileFraction(1)
+			time.Sleep(time.Duration(nsec) * time.Second)
+			defer runtime.SetMutexProfileFraction(0)
+
+			return writeProfile("mutex", file), nil
+		},
+	)
+}
+
+// BlockProfile turns on goroutine profiling for nsec seconds and writes profile data to
+// file. It uses a profile rate of 1 for most accurate information. If a different rate is
+// desired, set the rate and write the profile manually.
+func (d *Debug) BlockProfile(file string, nsec uint) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetBlockProfileRate(1)
+			time.Sleep(time.Duration(nsec) * time.Second)
+
+			defer runtime.SetBlockProfileRate(0)
+
+			return writeProfile("block", file), nil
+		},
+	)
+}
+
+// SetBlockProfileRate sets the rate of goroutine block profile data collection.
+// rate 0 disables block profiling.
+func (d *Debug) SetBlockProfileRate(rate int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetBlockProfileRate(rate)
+
+			return nil, nil
+		},
+	)
+}
+
+// SetGCPercent sets the garbage collection target percentage. It returns the previous
+// setting. A negative value disables GC.
+func (d *Debug) SetGCPercent(v int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return debug.SetGCPercent(v), nil
+		},
+	)
+}
+
+// SetMutexProfileFraction sets the rate of mutex profiling.
+func (d *Debug) SetMutexProfileFraction(rate int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetMutexProfileFraction(rate)
+
+			return nil, nil
+		},
+	)
+}
+
+// StartCPUProfile turns on CPU profiling, writing to the given file.
+func (d *Debug) StartCPUProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartCPUProfile(file); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// StartGoTrace turns on tracing, writing to the given file.
+func (d *Debug) StartGoTrace(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartGoTrace(file); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// StopCPUProfile stops an ongoing CPU profile.
+func (d *Debug) StopCPUProfile() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StopCPUProfile(); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// StopTrace stops an ongoing trace.
+func (d *Debug) StopGoTrace() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StopGoTrace(); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// WriteBlockProfile writes a goroutine blocking profile to the given file.
+func (d *Debug) WriteBlockProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return nil, writeProfile("block", file)
+		},
+	)
+}
+
+// WriteMemProfile writes an allocation profile to the given file.
+// Note that the profiling rate cannot be set through the API,
+// it must be set on the command line.
+// WriteBlockProfile writes a goroutine blocking profile to the given file.
+func (d *Debug) WriteMemProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return nil, writeProfile("heap", file)
+		},
+	)
+}
+
+// WriteMutexProfile writes a goroutine blocking profile to the given file.
+func (d *Debug) WriteMutexProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return nil, writeProfile("mutex", file)
+		},
+	)
 }
 
 type TraceConfig struct {
