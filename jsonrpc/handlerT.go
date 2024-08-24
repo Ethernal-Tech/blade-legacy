@@ -51,11 +51,11 @@ func (h *HandlerT) StopCPUProfile() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	pprof.StopCPUProfile()
-
 	if h.cpuW == nil {
 		return errors.New("CPU profiling not in progress")
 	}
+
+	pprof.StopCPUProfile()
 
 	h.cpuW.Close()
 	h.cpuW = nil
@@ -96,11 +96,11 @@ func (h *HandlerT) StopGoTrace() error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	trace.Stop()
-
 	if h.traceW == nil {
 		return errors.New("trace not in progress")
 	}
+
+	trace.Stop()
 
 	h.traceW.Close()
 	h.traceW = nil

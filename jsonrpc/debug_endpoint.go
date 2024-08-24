@@ -88,8 +88,7 @@ func NewDebug(store debugStore, requestsPerSecond uint64) *Debug {
 
 // CpuProfile turns on CPU profiling for nsec seconds and writes
 // profile data to file.
-func (d *Debug) CPUProfile(file string, nsec uint,
-) (interface{}, error) {
+func (d *Debug) CPUProfile(file string, nsec int64) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
@@ -149,7 +148,7 @@ func (d *Debug) MemStats() (interface{}, error) {
 // MutexProfile turns on mutex profiling for nsec seconds and writes profile data to file.
 // It uses a profile rate of 1 for most accurate information. If a different rate is
 // desired, set the rate and write the profile manually.
-func (d *Debug) MutexProfile(file string, nsec uint) (interface{}, error) {
+func (d *Debug) MutexProfile(file string, nsec int64) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
@@ -165,7 +164,7 @@ func (d *Debug) MutexProfile(file string, nsec uint) (interface{}, error) {
 // BlockProfile turns on goroutine profiling for nsec seconds and writes profile data to
 // file. It uses a profile rate of 1 for most accurate information. If a different rate is
 // desired, set the rate and write the profile manually.
-func (d *Debug) BlockProfile(file string, nsec uint) (interface{}, error) {
+func (d *Debug) BlockProfile(file string, nsec int64) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
