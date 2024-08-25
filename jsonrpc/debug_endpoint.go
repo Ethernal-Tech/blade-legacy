@@ -238,6 +238,26 @@ func (d *Debug) TraceCall(
 	)
 }
 
+// GetRawTransaction returns the bytes of the transaction for the given hash.
+func (d *Debug) GetRawHeader(txHash types.Hash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			tx, block := GetTxAndBlockByTxHash(txHash, d.store)
+
+			if tx == nil {
+				return nil, fmt.Errorf("tx %s not found", txHash.String())
+			}
+
+			if block.Number() == 0 {
+				return nil, ErrTraceGenesisBlock
+			}
+
+			return tx.MarshalRLP(), nil
+		},
+	)
+}
+
 func (d *Debug) traceBlock(
 	block *types.Block,
 	config *TraceConfig,
