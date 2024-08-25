@@ -303,6 +303,18 @@ func (d *Debug) WriteMutexProfile(file string) (interface{}, error) {
 	)
 }
 
+// Stacks returns a printed representation of the stacks of all goroutines. It
+// also permits the following optional filters to be used:
+//   - filter: boolean expression of packages to filter for
+func (d *Debug) Stacks(filter *string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return d.handler.Stacks(filter)
+		},
+	)
+}
+
 type TraceConfig struct {
 	EnableMemory      bool    `json:"enableMemory"`
 	DisableStack      bool    `json:"disableStack"`

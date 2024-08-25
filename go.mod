@@ -23,6 +23,7 @@ require (
 	github.com/golang/protobuf v1.5.4
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
+	github.com/hashicorp/go-bexpr v0.1.14
 	github.com/hashicorp/go-hclog v1.6.3
 	github.com/hashicorp/go-immutable-radix v1.3.1
 	github.com/hashicorp/go-multierror v1.1.1
@@ -72,6 +73,7 @@ require (
 	github.com/alibabacloud-go/tea-xml v1.1.3 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20240503222823-736c933a666d // indirect
+	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
