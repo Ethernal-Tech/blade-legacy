@@ -238,6 +238,21 @@ func (d *Debug) TraceCall(
 	)
 }
 
+// GetRawHeader retrieves the RLP encoding for a single header.
+func (d *Debug) GetRawHeader(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, ErrHeaderNotFound
+			}
+
+			return header.MarshalRLP(), nil
+		},
+	)
+}
+
 func (d *Debug) traceBlock(
 	block *types.Block,
 	config *TraceConfig,
