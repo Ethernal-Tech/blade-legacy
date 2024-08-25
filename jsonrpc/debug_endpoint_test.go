@@ -813,7 +813,7 @@ func TestGetRawHeader(t *testing.T) {
 	}{
 		{
 			name:   "HeaderNotFound",
-			filter: BlockNumberOrHash{BlockHash: (*types.Hash)(&hash1)},
+			filter: BlockNumberOrHash{BlockHash: &hash1},
 			store: &debugEndpointMockStore{
 				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
 					return nil, false
