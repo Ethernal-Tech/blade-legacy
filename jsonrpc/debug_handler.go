@@ -150,8 +150,8 @@ func (*DebugHandler) Stacks(filter *string) (string, error) {
 }
 
 func expandFilter(filter string) (string, error) {
-	expanded := identifierRegex.ReplaceAllString(filter, "`$0` in Value")
-	expanded = notRegex.ReplaceAllString(expanded, "`$1` not")
+	expanded := identifierRegex.ReplaceAllString(filter, "$0 in Value")
+	expanded = notRegex.ReplaceAllString(expanded, "$1 not")
 
 	expanded = strings.ReplaceAll(expanded, "||", "or")
 	expanded = strings.ReplaceAll(expanded, "&&", "and")
