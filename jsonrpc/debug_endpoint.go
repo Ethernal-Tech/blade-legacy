@@ -245,7 +245,7 @@ func (d *Debug) GetRawHeader(filter BlockNumberOrHash) (interface{}, error) {
 		func() (interface{}, error) {
 			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
 			if err != nil {
-				return nil, ErrHeaderNotFound
+				return nil, err
 			}
 
 			return header.MarshalRLP(), nil
