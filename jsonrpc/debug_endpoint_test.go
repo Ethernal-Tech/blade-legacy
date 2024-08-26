@@ -801,6 +801,84 @@ func TestTraceCall(t *testing.T) {
 	}
 }
 
+func TestGetRawBlock(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		filter BlockNumberOrHash
+		store  *debugEndpointMockStore
+		result interface{}
+		err    bool
+	}{
+		{
+			name:   "HeaderNotFound",
+			filter: BlockNumberOrHash{},
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return nil, false
+				},
+			},
+			result: nil,
+			err:    true,
+		},
+		{
+			name:   "BlockNotFound",
+			filter: LatestBlockNumberOrHash,
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return nil, false
+				},
+			},
+			result: nil,
+			err:    true,
+		},
+		{
+			name:   "Success",
+			filter: LatestBlockNumberOrHash,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+			},
+			result: testLatestBlock.MarshalRLP(),
+			err:    false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.GetRawBlock(test.filter)
+
+			assert.Equal(t, test.result, res)
+
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestGetRawHeader(t *testing.T) {
 	t.Parallel()
 

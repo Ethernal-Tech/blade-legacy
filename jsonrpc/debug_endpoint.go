@@ -238,6 +238,26 @@ func (d *Debug) TraceCall(
 	)
 }
 
+// GetRawBlock retrieves the RLP encoded for a single block.
+func (d *Debug) GetRawBlock(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			block, ok := d.store.GetBlockByHash(header.Hash, true)
+			if !ok {
+				return nil, fmt.Errorf("block %s not found", header.Hash)
+			}
+
+			return block.MarshalRLP(), nil
+		},
+	)
+}
+
 // GetRawHeader retrieves the RLP encoding for a single header.
 func (d *Debug) GetRawHeader(filter BlockNumberOrHash) (interface{}, error) {
 	return d.throttling.AttemptRequest(
