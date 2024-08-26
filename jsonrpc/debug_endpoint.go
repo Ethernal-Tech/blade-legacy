@@ -37,6 +37,9 @@ type debugBlockchainStore interface {
 	// ReadTxLookup returns a block hash in which a given txn was mined
 	ReadTxLookup(txnHash types.Hash) (uint64, bool)
 
+	// GetPendingTx returns the transaction by hash in the TxPool (pending txn) [Thread-safe]
+	GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
+
 	// GetBlockByHash gets a block using the provided hash
 	GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool)
 
@@ -250,6 +253,32 @@ func (d *Debug) GetRawHeader(txHash types.Hash) (interface{}, error) {
 			}
 
 			if block.Number() == 0 {
+				return nil, ErrTraceGenesisBlock
+			}
+
+			return tx.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawTransaction returns the bytes of the transaction for the given hash.
+func (d *Debug) GetRawTransaction(txHash types.Hash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			tx, block := GetTxAndBlockByTxHash(txHash, d.store)
+
+			if tx == nil {
+				if txPending, ok := d.store.GetPendingTx(txHash); ok {
+					tx = txPending
+				}
+			}
+
+			if tx == nil {
+				return nil, fmt.Errorf("tx %s not found", txHash.String())
+			}
+
+			if block != nil && block.Number() == 0 {
 				return nil, ErrTraceGenesisBlock
 			}
 
