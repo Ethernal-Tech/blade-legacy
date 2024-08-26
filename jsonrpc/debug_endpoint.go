@@ -73,7 +73,7 @@ type debugStore interface {
 type Debug struct {
 	store        debugStore
 	throttling   *Throttling
-	handler      *HandlerT
+	handler      *DebugHandler
 	ReadFileFunc func(filename string) ([]byte, error)
 }
 
@@ -81,12 +81,12 @@ func NewDebug(store debugStore, requestsPerSecond uint64) *Debug {
 	return &Debug{
 		store:        store,
 		throttling:   NewThrottling(requestsPerSecond, time.Second),
-		handler:      new(HandlerT),
+		handler:      new(DebugHandler),
 		ReadFileFunc: os.ReadFile,
 	}
 }
 
-// CpuProfile turns on CPU profiling for nsec seconds and writes
+// CPUProfile turns on CPU profiling for nsec seconds and writes
 // profile data to file.
 func (d *Debug) CPUProfile(file string, nsec int64) (interface{}, error) {
 	return d.throttling.AttemptRequest(
