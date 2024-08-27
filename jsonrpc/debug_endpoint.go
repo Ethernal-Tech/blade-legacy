@@ -282,11 +282,8 @@ func (d *Debug) GetRawTransaction(txHash types.Hash) (interface{}, error) {
 		context.Background(),
 		func() (interface{}, error) {
 			tx, block := GetTxAndBlockByTxHash(txHash, d.store)
-
 			if tx == nil {
-				if txPending, ok := d.store.GetPendingTx(txHash); ok {
-					tx = txPending
-				}
+				tx, _ = d.store.GetPendingTx(txHash)
 			}
 
 			if tx == nil {
