@@ -76,9 +76,6 @@ require (
 	github.com/mitchellh/pointerstructure v1.2.1 // indirect
 	github.com/tjfoc/gmsm v1.3.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-)
-
-require (
 	cloud.google.com/go/auth v0.7.2 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.3 // indirect
 	cloud.google.com/go/compute/metadata v0.5.0 // indirect
