@@ -19,7 +19,6 @@ var (
 	CheckpointManager               *contracts.Artifact
 	ExitHelper                      *contracts.Artifact
 	StateSender                     *contracts.Artifact
-	ValidatorSetStorage             *contracts.Artifact
 	Gateway                         *contracts.Artifact
 	BridgeStorage                   *contracts.Artifact
 	RootERC20Predicate              *contracts.Artifact
@@ -91,11 +90,6 @@ func init() {
 	}
 
 	L2StateSender, err = contracts.DecodeArtifact([]byte(L2StateSenderArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ValidatorSetStorage, err = contracts.DecodeArtifact([]byte(ValidatorSetStorageArtifact))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -329,7 +323,6 @@ func init() {
 		"CheckpointManager":               CheckpointManager,
 		"ExitHelper":                      ExitHelper,
 		"StateSender":                     StateSender,
-		"ValidatorSetStorage":             ValidatorSetStorage,
 		"Gateway":                         Gateway,
 		"BridgeStorage":                   BridgeStorage,
 		"RootERC20Predicate":              RootERC20Predicate,

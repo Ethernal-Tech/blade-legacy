@@ -44,16 +44,15 @@ var (
 // BridgeBackend is an interface that defines functions required by bridge components
 type BridgeBackend interface {
 	Runtime
-	StateSyncProofRetriever
-	ExitEventProofRetriever
 }
 
 // RelayerEventMetaData keeps information about a relayer event
 type RelayerEventMetaData struct {
-	EventID     uint64 `json:"eventID"`
-	CountTries  uint64 `json:"countTries"`
-	BlockNumber uint64 `json:"blockNumber"` // block when event is sent
-	SentStatus  bool   `json:"sentStatus"`
+	EventID            uint64 `json:"eventID"`
+	CountTries         uint64 `json:"countTries"`
+	BlockNumber        uint64 `json:"blockNumber"` // block when event is sent
+	SentStatus         bool   `json:"sentStatus"`
+	DestinationChainID uint64 `json:"destinationChainId"`
 }
 
 func (ed RelayerEventMetaData) String() string {
@@ -83,7 +82,7 @@ type eventTrackerConfig struct {
 // RelayerState is an interface that defines functions that a relayer store has to implement
 type RelayerState interface {
 	GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventMetaData, err error)
-	UpdateRelayerEvents(events []*RelayerEventMetaData, removeIDs []uint64, dbTx *bolt.Tx) error
+	UpdateRelayerEvents(events []*RelayerEventMetaData, removedEvents []*RelayerEventMetaData, dbTx *bolt.Tx) error
 }
 
 // relayerEventsProcessor is a parent struct of both state sync and exit relayer
@@ -112,7 +111,7 @@ func (r *relayerEventsProcessor) processEvents() {
 		return
 	}
 
-	removedEventIDs := make([]uint64, 0, len(events))
+	removedEventIDs := make([]*RelayerEventMetaData, 0, len(events))
 	sendingEvents := make([]*RelayerEventMetaData, 0, len(events))
 	currentBlockNumber := r.blockchain.CurrentHeader().Number
 
@@ -125,7 +124,7 @@ func (r *relayerEventsProcessor) processEvents() {
 
 		// remove event if it is processed too many times
 		if event.CountTries+1 > r.config.maxAttemptsToSend {
-			removedEventIDs = append(removedEventIDs, event.EventID)
+			removedEventIDs = append(removedEventIDs, event)
 		} else {
 			event.CountTries++
 			event.BlockNumber = currentBlockNumber
@@ -169,7 +168,6 @@ type BridgeManager interface {
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
 	BuildExitEventRoot(epoch uint64) (types.Hash, error)
-	GenerateProof(eventID uint64, pType proofType) (types.Proof, error)
 	Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
 }
 
@@ -204,6 +202,7 @@ type bridgeManager struct {
 
 	eventTrackerConfig *eventTrackerConfig
 	logger             hclog.Logger
+	chainID            uint64
 }
 
 // newBridgeManager creates a new instance of bridgeManager
@@ -219,7 +218,8 @@ func newBridgeManager(
 
 	stateSenderAddr := runtimeConfig.GenesisConfig.Bridge[chainID].StateSenderAddr
 	bridgeManager := &bridgeManager{
-		logger: logger.Named("bridge-manager"),
+		chainID: chainID,
+		logger:  logger.Named("bridge-manager"),
 		eventTrackerConfig: &eventTrackerConfig{
 			EventTracker:          *runtimeConfig.eventTracker,
 			stateSenderAddr:       stateSenderAddr,
@@ -239,11 +239,7 @@ func newBridgeManager(
 		return nil, err
 	}
 
-	if err := bridgeManager.initStateSyncRelayer(bridgeBackend, eventProvider, runtimeConfig, logger); err != nil {
-		return nil, err
-	}
-
-	if err := bridgeManager.initExitRelayer(bridgeBackend, runtimeConfig, logger, chainID); err != nil {
+	if err := bridgeManager.initStateSyncRelayer(eventProvider, runtimeConfig, logger); err != nil {
 		return nil, err
 	}
 
@@ -275,7 +271,7 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 
 // PostEpoch is a function executed on epoch ending / start of new epoch
 func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
-	if err := b.stateSyncManager.PostEpoch(req); err != nil {
+	if err := b.stateSyncManager.PostEpoch(req, b.chainID); err != nil {
 		return fmt.Errorf("failed to execute post epoch in state sync manager. Error: %w", err)
 	}
 
@@ -290,18 +286,6 @@ func (b *bridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 // Commitment returns the pending signed state sync commitment
 func (b *bridgeManager) Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error) {
 	return b.stateSyncManager.Commitment(pendingBlockNumber)
-}
-
-// GenerateProof generates proof for a specific event type
-func (b *bridgeManager) GenerateProof(eventID uint64, pType proofType) (types.Proof, error) {
-	switch pType {
-	case StateSync:
-		return b.stateSyncManager.GetStateSyncProof(eventID)
-	case Exit:
-		return b.checkpointManager.GenerateExitProof(eventID)
-	default:
-		return types.Proof{}, fmt.Errorf("unknown proof type requested: %v", pType)
-	}
 }
 
 // PostBlockAsync is called on finalization of each block (either from consensus or syncer)
@@ -373,7 +357,6 @@ func (b *bridgeManager) initCheckpointManager(
 // initStateSyncRelayer initializes state sync relayer
 // if not enabled, then a dummy state sync relayer will be used
 func (b *bridgeManager) initStateSyncRelayer(
-	bridgeBackend BridgeBackend,
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
@@ -385,8 +368,7 @@ func (b *bridgeManager) initStateSyncRelayer(
 
 		b.stateSyncRelayer = newStateSyncRelayer(
 			txRelayer,
-			runtimeConfig.State.StateSyncStore,
-			bridgeBackend,
+			runtimeConfig.State.BridgeMessageStore,
 			runtimeConfig.blockchain,
 			wallet.NewEcdsaSigner(runtimeConfig.Key),
 			&relayerConfig{
@@ -403,38 +385,6 @@ func (b *bridgeManager) initStateSyncRelayer(
 	eventProvider.Subscribe(b.stateSyncRelayer)
 
 	return b.stateSyncRelayer.Init()
-}
-
-// initStateSyncRelayer initializes exit event relayer
-// if not enabled, then a dummy exit event relayer will be used
-func (b *bridgeManager) initExitRelayer(
-	bridgeBackend BridgeBackend,
-	runtimeConfig *runtimeConfig,
-	logger hclog.Logger, chainID uint64) error {
-	if runtimeConfig.consensusConfig.IsRelayer {
-		txRelayer, err := getBridgeTxRelayer(runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint, logger)
-		if err != nil {
-			return err
-		}
-
-		b.exitEventRelayer = newExitRelayer(
-			txRelayer,
-			wallet.NewEcdsaSigner(runtimeConfig.Key),
-			bridgeBackend,
-			runtimeConfig.blockchain,
-			runtimeConfig.State.ExitStore,
-			&relayerConfig{
-				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
-				maxAttemptsToSend:        defaultMaxAttemptsToSend,
-				maxEventsPerBatch:        defaultMaxEventsPerBatch,
-				eventExecutionAddr:       runtimeConfig.GenesisConfig.Bridge[chainID].ExitHelperAddr,
-			},
-			logger.Named("exit_relayer"))
-	} else {
-		b.exitEventRelayer = &dummyExitRelayer{}
-	}
-
-	return b.exitEventRelayer.Init()
 }
 
 // initTracker starts a new event tracker (to receive bridge events)

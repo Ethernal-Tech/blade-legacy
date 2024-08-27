@@ -1,7 +1,6 @@
 package polybft
 
 import (
-	"encoding/hex"
 	"errors"
 	"math/big"
 	"testing"
@@ -67,31 +66,9 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 		blockhainMock.On("CurrentHeader").Return(h).Once()
 	}
 
-	proofMock := &mockExitProofRetriever{
-		fn: func(exitEventID uint64) (types.Proof, error) {
-			mockEvent := &contractsapi.L2StateSyncedEvent{
-				ID:       big.NewInt(int64(exitEventID)),
-				Sender:   types.StringToAddress("0xffee"),
-				Receiver: types.StringToAddress("0xeeff"),
-			}
-			encodedEvent, err := mockEvent.Encode()
-			require.NoError(t, err)
-
-			return types.Proof{
-				Data: []types.Hash{types.StringToHash("0x1122334455")},
-				Metadata: map[string]interface{}{
-					"ExitEvent":       hex.EncodeToString(encodedEvent),
-					"CheckpointBlock": big.NewInt(10),
-					"LeafIndex":       uint64(0),
-				},
-			}, nil
-		},
-	}
-
 	exitRelayer := newExitRelayer(
 		dummyTxRelayer,
 		testKey,
-		proofMock,
 		blockhainMock,
 		state.ExitStore,
 		&relayerConfig{
@@ -120,7 +97,7 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err := state.ExitStore.GetAllAvailableRelayerEvents(0)
+	events, err := state.ExitStore.GetAllAvailableRelayerEvents(0, 0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 4)
@@ -139,7 +116,7 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.ExitStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.ExitStore.GetAllAvailableRelayerEvents(0, 0)
 
 	require.NoError(t, err)
 	// should only have two since first two were successfully executed
@@ -155,7 +132,7 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.ExitStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.ExitStore.GetAllAvailableRelayerEvents(0, 0)
 
 	require.NoError(t, err)
 	// should only have two since first two were successfully executed
@@ -171,7 +148,7 @@ func TestExitRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.ExitStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.ExitStore.GetAllAvailableRelayerEvents(0, 0)
 
 	require.NoError(t, err)
 	// should have no events since all of them were executed successfully

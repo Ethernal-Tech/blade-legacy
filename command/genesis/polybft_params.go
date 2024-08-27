@@ -375,10 +375,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 
 	genesisContracts := []*contractInfo{
 		{
-			artifact: contractsapi.ValidatorSetStorage,
-			address:  contracts.ValidatorSetStorageContractV1,
-		},
-		{
 			artifact: contractsapi.Gateway,
 			address:  contracts.GatewayContractV1,
 		},

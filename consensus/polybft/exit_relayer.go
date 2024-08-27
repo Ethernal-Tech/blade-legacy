@@ -33,22 +33,17 @@ func (d *dummyExitRelayer) Init() error                           { return nil }
 func (d *dummyExitRelayer) AddLog(eventLog *ethgo.Log) error      { return nil }
 func (d *dummyExitRelayer) PostBlock(req *PostBlockRequest) error { return nil }
 
-// ExitEventProofRetriever is an interface that exposes function for retrieving exit proof
-type ExitEventProofRetriever interface {
-	GenerateExitProof(exitID uint64) (types.Proof, error)
-}
-
+// ExitEventProofRetriever is an interface that exposes function for retrieving exit proo
 var _ ExitRelayer = (*exitRelayer)(nil)
 
 // exitRelayer handles checkpoint submitted events and executes exit events
 type exitRelayer struct {
 	*relayerEventsProcessor
 
-	key            crypto.Key
-	proofRetriever ExitEventProofRetriever
-	txRelayer      txrelayer.TxRelayer
-	logger         hclog.Logger
-	exitStore      *ExitStore
+	key       crypto.Key
+	txRelayer txrelayer.TxRelayer
+	logger    hclog.Logger
+	exitStore *ExitStore
 
 	notifyCh chan struct{}
 	closeCh  chan struct{}
@@ -58,23 +53,20 @@ type exitRelayer struct {
 func newExitRelayer(
 	txRelayer txrelayer.TxRelayer,
 	key crypto.Key,
-	proofRetriever ExitEventProofRetriever,
 	blockchain blockchainBackend,
 	exitStore *ExitStore,
 	config *relayerConfig,
 	logger hclog.Logger) *exitRelayer {
 	relayer := &exitRelayer{
-		key:            key,
-		logger:         logger,
-		exitStore:      exitStore,
-		txRelayer:      txRelayer,
-		proofRetriever: proofRetriever,
-		closeCh:        make(chan struct{}),
-		notifyCh:       make(chan struct{}, 1),
+		key:       key,
+		logger:    logger,
+		exitStore: exitStore,
+		txRelayer: txRelayer,
+		closeCh:   make(chan struct{}),
+		notifyCh:  make(chan struct{}, 1),
 		relayerEventsProcessor: &relayerEventsProcessor{
 			config:     config,
 			logger:     logger,
-			state:      exitStore,
 			blockchain: blockchain,
 		},
 	}
@@ -187,7 +179,7 @@ func (e *exitRelayer) AddLog(eventLog *ethgo.Log) error {
 		if exitProcessedEvent.Success {
 			e.logger.Debug("exit processed event has been handled", "eventID", eventID)
 
-			return e.state.UpdateRelayerEvents(nil, []uint64{eventID}, nil)
+			return e.state.UpdateRelayerEvents(nil, []*RelayerEventMetaData{{EventID: eventID}}, nil)
 		}
 
 		e.logger.Debug("exit event was not successfully executed",
@@ -205,20 +197,6 @@ func (e *exitRelayer) sendTx(events []*RelayerEventMetaData) error {
 	defer e.logger.Debug("sending exit events in batch to be executed on ExitHelper finished", "exitEvents", len(events))
 
 	inputs := make([]*contractsapi.BatchExitInput, len(events))
-
-	for i, event := range events {
-		proof, err := e.proofRetriever.GenerateExitProof(event.EventID)
-		if err != nil {
-			return fmt.Errorf("failed to get proof for exit event %d: %w", event.EventID, err)
-		}
-
-		exitInput, err := GetExitInputFromProof(proof)
-		if err != nil {
-			return err
-		}
-
-		inputs[i] = exitInput
-	}
 
 	input, err := (&contractsapi.BatchExitExitHelperFn{
 		Inputs: inputs,

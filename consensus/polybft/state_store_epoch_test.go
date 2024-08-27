@@ -104,7 +104,7 @@ func TestState_InsertVoteConcurrent(t *testing.T) {
 
 	state := newTestState(t)
 	epoch := uint64(1)
-	assert.NoError(t, state.EpochStore.insertEpoch(epoch, nil))
+	assert.NoError(t, state.EpochStore.insertEpoch(epoch, nil, 0))
 
 	hash := []byte{1, 2}
 
@@ -116,16 +116,16 @@ func TestState_InsertVoteConcurrent(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 
-			_, _ = state.StateSyncStore.insertMessageVote(epoch, hash, &MessageSignature{
+			_, _ = state.BridgeMessageStore.insertMessageVote(epoch, hash, &MessageSignature{
 				From:      fmt.Sprintf("NODE_%d", i),
 				Signature: []byte{1, 2},
-			}, nil)
+			}, nil, 0)
 		}(i)
 	}
 
 	wg.Wait()
 
-	signatures, err := state.StateSyncStore.getMessageVotes(epoch, hash)
+	signatures, err := state.BridgeMessageStore.getMessageVotes(epoch, hash, 0)
 	assert.NoError(t, err)
 	assert.Len(t, signatures, 100)
 }
@@ -138,14 +138,14 @@ func TestState_Insert_And_Cleanup(t *testing.T) {
 
 	for i := uint64(1); i <= 500; i++ {
 		epoch := i
-		err := state.EpochStore.insertEpoch(epoch, nil)
+		err := state.EpochStore.insertEpoch(epoch, nil, 0)
 
 		assert.NoError(t, err)
 
-		_, _ = state.StateSyncStore.insertMessageVote(epoch, hash1, &MessageSignature{
+		_, _ = state.BridgeMessageStore.insertMessageVote(epoch, hash1, &MessageSignature{
 			From:      "NODE_1",
 			Signature: []byte{1, 2},
-		}, nil)
+		}, nil, 0)
 	}
 
 	stats, err := state.EpochStore.epochsDBStats()
@@ -164,18 +164,18 @@ func TestState_Insert_And_Cleanup(t *testing.T) {
 	assert.Equal(t, 0, stats.BucketN-1)
 
 	// there should be no votes for given epoch since we cleaned the db
-	votes, _ := state.StateSyncStore.getMessageVotes(1, hash1)
+	votes, _ := state.BridgeMessageStore.getMessageVotes(1, hash1, 0)
 	assert.Nil(t, votes)
 
 	for i := uint64(501); i <= 1000; i++ {
 		epoch := i
-		err := state.EpochStore.insertEpoch(epoch, nil)
+		err := state.EpochStore.insertEpoch(epoch, nil, 0)
 		assert.NoError(t, err)
 
-		_, _ = state.StateSyncStore.insertMessageVote(epoch, hash1, &MessageSignature{
+		_, _ = state.BridgeMessageStore.insertMessageVote(epoch, hash1, &MessageSignature{
 			From:      "NODE_1",
 			Signature: []byte{1, 2},
-		}, nil)
+		}, nil, 0)
 	}
 
 	stats, err = state.EpochStore.epochsDBStats()
@@ -183,7 +183,7 @@ func TestState_Insert_And_Cleanup(t *testing.T) {
 
 	assert.Equal(t, 1000, stats.BucketN-1)
 
-	votes, _ = state.StateSyncStore.getMessageVotes(1000, hash1)
+	votes, _ = state.BridgeMessageStore.getMessageVotes(1000, hash1, 0)
 	assert.Equal(t, 1, len(votes))
 }
 

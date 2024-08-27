@@ -22,14 +22,16 @@ type MessageSignature struct {
 
 // TransportMessage represents the payload which is gossiped across the network
 type TransportMessage struct {
-	// Hash is encoded data
-	Hash []byte
+	// BatchByte is encoded data
+	BatchByte []byte
 	// Message signature
 	Signature []byte
 	// From is the address of the message signer
 	From string
 	// Number of epoch
 	EpochNumber uint64
+
+	DestinationChainID uint64
 }
 
 // State represents a persistence layer which persists consensus data off-chain
@@ -37,7 +39,7 @@ type State struct {
 	db    *bolt.DB
 	close chan struct{}
 
-	StateSyncStore        *StateSyncStore
+	BridgeMessageStore    *BridgeMessageStore
 	ExitStore             *ExitStore
 	EpochStore            *EpochStore
 	ProposerSnapshotStore *ProposerSnapshotStore
@@ -46,7 +48,7 @@ type State struct {
 }
 
 // newState creates new instance of State
-func newState(path string, closeCh chan struct{}) (*State, error) {
+func newState(path string, closeCh chan struct{}, chainIDs []uint64) (*State, error) {
 	db, err := bolt.Open(path, 0666, nil)
 	if err != nil {
 		return nil, err
@@ -55,7 +57,7 @@ func newState(path string, closeCh chan struct{}) (*State, error) {
 	s := &State{
 		db:                    db,
 		close:                 closeCh,
-		StateSyncStore:        &StateSyncStore{db: db},
+		BridgeMessageStore:    &BridgeMessageStore{db: db, chainIDs: chainIDs},
 		ExitStore:             &ExitStore{db: db},
 		EpochStore:            &EpochStore{db: db},
 		ProposerSnapshotStore: &ProposerSnapshotStore{db: db},
@@ -74,7 +76,7 @@ func newState(path string, closeCh chan struct{}) (*State, error) {
 func (s *State) initStorages() error {
 	// init the buckets
 	return s.db.Update(func(tx *bolt.Tx) error {
-		if err := s.StateSyncStore.initialize(tx); err != nil {
+		if err := s.BridgeMessageStore.initialize(tx); err != nil {
 			return err
 		}
 

@@ -103,19 +103,19 @@ func createTestDistributeRewardsInput(t *testing.T, epochID uint64,
 	}
 }
 
-func generateStateSyncEvents(t *testing.T, eventsCount int, startIdx uint64) []*contractsapi.StateSyncedEvent {
+func generateBridgeMessageEvents(t *testing.T, eventsCount int, startIdx uint64) []*contractsapi.BridgeMessageEventEvent {
 	t.Helper()
 
-	stateSyncEvents := make([]*contractsapi.StateSyncedEvent, eventsCount)
+	bridgeMessageEvents := make([]*contractsapi.BridgeMessageEventEvent, eventsCount)
 	for i := 0; i < eventsCount; i++ {
-		stateSyncEvents[i] = &contractsapi.StateSyncedEvent{
+		bridgeMessageEvents[i] = &contractsapi.BridgeMessageEventEvent{
 			ID:     big.NewInt(int64(startIdx + uint64(i))),
 			Sender: types.StringToAddress(fmt.Sprintf("0x5%d", i)),
 			Data:   generateRandomBytes(t),
 		}
 	}
 
-	return stateSyncEvents
+	return bridgeMessageEvents
 }
 
 // generateRandomBytes generates byte array with random data of 32 bytes length
@@ -154,7 +154,7 @@ func newTestState(tb testing.TB) *State {
 		tb.Fatal(err)
 	}
 
-	state, err := newState(path.Join(dir, "my.db"), make(chan struct{}))
+	state, err := newState(path.Join(dir, "my.db"), make(chan struct{}), []uint64{0})
 	if err != nil {
 		tb.Fatal(err)
 	}

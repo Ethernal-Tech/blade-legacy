@@ -36,29 +36,13 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 		{Number: 2}, {Number: 3}, {Number: 4}, {Number: 5},
 	}
 
-	proofMock := &mockStateSyncProofRetriever{
-		fn: func(stateSyncID uint64) (types.Proof, error) {
-			return types.Proof{
-				Data: []types.Hash{types.StringToHash("0x1122334455")},
-				Metadata: map[string]interface{}{
-					"StateSync": map[string]interface{}{
-						"ID":       stateSyncID,
-						"Sender":   types.StringToAddress("0xffee"),
-						"Receiver": types.StringToAddress("0xeeff"),
-						"Data":     nil,
-					},
-				},
-			}, nil
-		},
-	}
 	blockhainMock := &blockchainMock{}
 	dummyTxRelayer := newDummyStakeTxRelayer(t, nil)
 	state := newTestState(t)
 
 	stateSyncRelayer := newStateSyncRelayer(
 		dummyTxRelayer,
-		state.StateSyncStore,
-		proofMock,
+		state.BridgeMessageStore,
 		blockhainMock,
 		testKey,
 		&relayerConfig{
@@ -91,7 +75,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err := state.StateSyncStore.GetAllAvailableRelayerEvents(0)
+	events, err := state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -107,7 +91,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 4)
@@ -122,7 +106,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -137,7 +121,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -151,7 +135,7 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	time.Sleep(time.Second * 2) // wait for some time
 
-	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(0)
+	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 0)

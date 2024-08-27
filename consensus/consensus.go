@@ -38,9 +38,6 @@ type Consensus interface {
 	// GetLatestChainConfig retrieves the latest chain configuration
 	GetLatestChainConfig() (*chain.Params, error)
 
-	// GetBridgeProvider returns an instance of BridgeDataProvider
-	GetBridgeProvider() BridgeDataProvider
-
 	// FilterExtra filters extra data in header that is not a part of block hash
 	FilterExtra(extra []byte) ([]byte, error)
 
@@ -95,15 +92,6 @@ type Params struct {
 
 // Factory is the factory function to create a discovery consensus
 type Factory func(*Params) (Consensus, error)
-
-// BridgeDataProvider is an interface providing bridge related functions
-type BridgeDataProvider interface {
-	// GenerateExit proof generates proof of exit for given exit event
-	GenerateExitProof(exitID uint64) (types.Proof, error)
-
-	// GetStateSyncProof retrieves the StateSync proof
-	GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
-}
 
 type EventTracker struct {
 	NumBlockConfirmations  uint64

@@ -192,10 +192,6 @@ func main() {
 			"blade/Gateway.sol",
 			"Gateway",
 		},
-		{
-			"blade/ValidatorSetStorage.sol",
-			"ValidatorSetStorage",
-		},
 	}
 
 	str := `// This is auto-generated file. DO NOT EDIT.

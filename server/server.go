@@ -664,7 +664,6 @@ type jsonRPCHub struct {
 	*state.Executor
 	*network.Server
 	consensus.Consensus
-	consensus.BridgeDataProvider
 	gasprice.GasStore
 }
 
@@ -896,7 +895,6 @@ func (s *Server) setupJSONRPC() error {
 		Executor:           s.executor,
 		Consensus:          s.consensus,
 		Server:             s.network,
-		BridgeDataProvider: s.consensus.GetBridgeProvider(),
 		GasStore:           s.gasHelper,
 	}
 

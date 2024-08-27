@@ -43,7 +43,6 @@ type endpoints struct {
 	Web3     *Web3
 	Net      *Net
 	TxPool   *TxPool
-	Bridge   *Bridge
 	Debug    *Debug
 	Personal *Personal
 }
@@ -116,9 +115,6 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager accounts.Acco
 	d.endpoints.TxPool = &TxPool{
 		store,
 	}
-	d.endpoints.Bridge = &Bridge{
-		store,
-	}
 	d.endpoints.Debug = NewDebug(store, d.params.concurrentRequestsDebug)
 	d.endpoints.Personal = NewPersonal(manager)
 
@@ -137,10 +133,6 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager accounts.Acco
 	}
 
 	if err = d.registerService("txpool", d.endpoints.TxPool); err != nil {
-		return err
-	}
-
-	if err = d.registerService("bridge", d.endpoints.Bridge); err != nil {
 		return err
 	}
 

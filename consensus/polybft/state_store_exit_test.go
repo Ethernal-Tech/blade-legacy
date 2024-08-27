@@ -213,12 +213,12 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 
 	// update
 	require.NoError(t, state.ExitStore.UpdateRelayerEvents([]*RelayerEventMetaData{
-		{EventID: 1},
-		{EventID: 2, SentStatus: true, BlockNumber: 10},
-	}, []uint64{}, nil))
+		{EventID: 1, DestinationChainID: 0},
+		{EventID: 2, SentStatus: true, BlockNumber: 10, DestinationChainID: 0},
+	}, []*RelayerEventMetaData{}, nil))
 
 	// get available events
-	events, err := state.ExitStore.GetAllAvailableRelayerEvents(0)
+	events, err := state.ExitStore.GetAllAvailableRelayerEvents(0, 0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 2)
@@ -228,15 +228,16 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 	// update again
 	require.NoError(t, state.ExitStore.UpdateRelayerEvents(
 		[]*RelayerEventMetaData{
-			{EventID: 3},
-			{EventID: 4},
+			{EventID: 3, DestinationChainID: 0},
+			{EventID: 4, DestinationChainID: 0},
 		},
-		[]uint64{1, 2},
+		[]*RelayerEventMetaData{
+			{EventID: 1, DestinationChainID: 0}},
 		nil,
 	))
 
 	// get available events
-	events, err = state.ExitStore.GetAllAvailableRelayerEvents(10)
+	events, err = state.ExitStore.GetAllAvailableRelayerEvents(10, 0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 2)
@@ -246,10 +247,10 @@ func TestState_ExitRelayerDataAndEvents(t *testing.T) {
 	require.Equal(t, false, events[1].SentStatus)
 
 	events[1].SentStatus = true
-	require.NoError(t, state.ExitStore.UpdateRelayerEvents(events[1:2], []uint64{3}, nil))
+	require.NoError(t, state.ExitStore.UpdateRelayerEvents(events[1:2], []*RelayerEventMetaData{{EventID: 3, DestinationChainID: 0}}, nil))
 
 	// get available events with limit
-	events, err = state.ExitStore.GetAllAvailableRelayerEvents(2)
+	events, err = state.ExitStore.GetAllAvailableRelayerEvents(2, 0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 1)

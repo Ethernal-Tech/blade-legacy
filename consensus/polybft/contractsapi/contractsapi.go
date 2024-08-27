@@ -461,6 +461,7 @@ type InitializeChildERC20PredicateFn struct {
 	NewRootERC20Predicate       types.Address `abi:"newRootERC20Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
 	NewNativeTokenRootAddress   types.Address `abi:"newNativeTokenRootAddress"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 }
 
 func (i *InitializeChildERC20PredicateFn) Sig() []byte {
@@ -498,21 +499,22 @@ type InitializeChildERC20PredicateACLFn struct {
 	NewRootERC20Predicate       types.Address `abi:"newRootERC20Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
 	NewNativeTokenRootAddress   types.Address `abi:"newNativeTokenRootAddress"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 	NewUseAllowList             bool          `abi:"newUseAllowList"`
 	NewUseBlockList             bool          `abi:"newUseBlockList"`
 	NewOwner                    types.Address `abi:"newOwner"`
 }
 
 func (i *InitializeChildERC20PredicateACLFn) Sig() []byte {
-	return ChildERC20PredicateACL.Abi.MethodsBySignature["initialize(address,address,address,address,bool,bool,address)"].ID()
+	return ChildERC20PredicateACL.Abi.MethodsBySignature["initialize(address,address,address,address,uint256,bool,bool,address)"].ID()
 }
 
 func (i *InitializeChildERC20PredicateACLFn) EncodeAbi() ([]byte, error) {
-	return ChildERC20PredicateACL.Abi.MethodsBySignature["initialize(address,address,address,address,bool,bool,address)"].Encode(i)
+	return ChildERC20PredicateACL.Abi.MethodsBySignature["initialize(address,address,address,address,uint256,bool,bool,address)"].Encode(i)
 }
 
 func (i *InitializeChildERC20PredicateACLFn) DecodeAbi(buf []byte) error {
-	return decodeMethod(ChildERC20PredicateACL.Abi.MethodsBySignature["initialize(address,address,address,address,bool,bool,address)"], buf, i)
+	return decodeMethod(ChildERC20PredicateACL.Abi.MethodsBySignature["initialize(address,address,address,address,uint256,bool,bool,address)"], buf, i)
 }
 
 type WithdrawToChildERC20PredicateACLFn struct {
@@ -538,6 +540,7 @@ type InitializeRootERC20PredicateFn struct {
 	NewChildERC20Predicate      types.Address `abi:"newChildERC20Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
 	NewNativeTokenRoot          types.Address `abi:"newNativeTokenRoot"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 }
 
 func (i *InitializeRootERC20PredicateFn) Sig() []byte {
@@ -613,10 +616,13 @@ func (t *TokenMappedEvent) Decode(input []byte) error {
 }
 
 type InitializeRootMintableERC20PredicateACLFn struct {
-	NewGateway                  types.Address `abi:"newGateway"`
-	NewChildERC20Predicate      types.Address `abi:"newChildERC20Predicate"`
-	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
-	NewNativeTokenRoot          types.Address `abi:"newNativeTokenRoot"`
+	NewGateway             types.Address `abi:"newGateway"`
+	NewChildERC20Predicate types.Address `abi:"newChildERC20Predicate"`
+	NewTokenTemplate       types.Address `abi:"newTokenTemplate"`
+	NewDestinationChainID  *big.Int      `abi:"newDestinationChainId"`
+	NewUseAllowList        bool          `abi:"newUseAllowList"`
+	NewUseBlockList        bool          `abi:"newUseBlockList"`
+	NewOwner               types.Address `abi:"newOwner"`
 }
 
 func (i *InitializeRootMintableERC20PredicateACLFn) Sig() []byte {
@@ -745,6 +751,7 @@ type InitializeRootERC1155PredicateFn struct {
 	NewGateway                  types.Address `abi:"newGateway"`
 	NewChildERC1155Predicate    types.Address `abi:"newChildERC1155Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 }
 
 func (i *InitializeRootERC1155PredicateFn) Sig() []byte {
@@ -835,6 +842,7 @@ type InitializeChildERC1155PredicateFn struct {
 	NewGateway                  types.Address `abi:"newGateway"`
 	NewRootERC1155Predicate     types.Address `abi:"newRootERC1155Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 }
 
 func (i *InitializeChildERC1155PredicateFn) Sig() []byte {
@@ -872,6 +880,10 @@ type InitializeChildERC1155PredicateACLFn struct {
 	NewGateway                  types.Address `abi:"newGateway"`
 	NewRootERC1155Predicate     types.Address `abi:"newRootERC1155Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
+	NewUseAllowList             bool          `abi:"newUseAllowList"`
+	NewUseBlockList             bool          `abi:"newUseBlockList"`
+	NewOwner                    types.Address `abi:"newOwner"`
 }
 
 func (i *InitializeChildERC1155PredicateACLFn) Sig() []byte {
@@ -906,9 +918,13 @@ func (w *WithdrawBatchChildERC1155PredicateACLFn) DecodeAbi(buf []byte) error {
 }
 
 type InitializeRootMintableERC1155PredicateACLFn struct {
-	NewGateway                  types.Address `abi:"newGateway"`
-	NewChildERC1155Predicate    types.Address `abi:"newChildERC1155Predicate"`
-	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewGateway               types.Address `abi:"newGateway"`
+	NewChildERC1155Predicate types.Address `abi:"newChildERC1155Predicate"`
+	NewTokenTemplate         types.Address `abi:"newTokenTemplate"`
+	NewDestinationChainID    *big.Int      `abi:"newDestinationChainId"`
+	NewUseAllowList          bool          `abi:"newUseAllowList"`
+	NewUseBlockList          bool          `abi:"newUseBlockList"`
+	NewOwner                 types.Address `abi:"newOwner"`
 }
 
 func (i *InitializeRootMintableERC1155PredicateACLFn) Sig() []byte {
@@ -961,6 +977,7 @@ type InitializeRootERC721PredicateFn struct {
 	NewGateway                  types.Address `abi:"newGateway"`
 	NewChildERC721Predicate     types.Address `abi:"newChildERC721Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 }
 
 func (i *InitializeRootERC721PredicateFn) Sig() []byte {
@@ -1030,6 +1047,7 @@ type InitializeChildERC721PredicateFn struct {
 	NewGateway                  types.Address `abi:"newGateway"`
 	NewRootERC721Predicate      types.Address `abi:"newRootERC721Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
 }
 
 func (i *InitializeChildERC721PredicateFn) Sig() []byte {
@@ -1066,6 +1084,10 @@ type InitializeChildERC721PredicateACLFn struct {
 	NewGateway                  types.Address `abi:"newGateway"`
 	NewRootERC721Predicate      types.Address `abi:"newRootERC721Predicate"`
 	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewDestinationChainID       *big.Int      `abi:"newDestinationChainId"`
+	NewUseAllowList             bool          `abi:"newUseAllowList"`
+	NewUseBlockList             bool          `abi:"newUseBlockList"`
+	NewOwner                    types.Address `abi:"newOwner"`
 }
 
 func (i *InitializeChildERC721PredicateACLFn) Sig() []byte {
@@ -1099,9 +1121,13 @@ func (w *WithdrawBatchChildERC721PredicateACLFn) DecodeAbi(buf []byte) error {
 }
 
 type InitializeRootMintableERC721PredicateACLFn struct {
-	NewGateway                  types.Address `abi:"newGateway"`
-	NewChildERC721Predicate     types.Address `abi:"newChildERC721Predicate"`
-	NewDestinationTokenTemplate types.Address `abi:"newDestinationTokenTemplate"`
+	NewGateway              types.Address `abi:"newGateway"`
+	NewChildERC721Predicate types.Address `abi:"newChildERC721Predicate"`
+	NewTokenTemplate        types.Address `abi:"newTokenTemplate"`
+	NewDestinationChainID   *big.Int      `abi:"newDestinationChainId"`
+	NewUseAllowList         bool          `abi:"newUseAllowList"`
+	NewUseBlockList         bool          `abi:"newUseBlockList"`
+	NewOwner                types.Address `abi:"newOwner"`
 }
 
 func (i *InitializeRootMintableERC721PredicateACLFn) Sig() []byte {
@@ -2303,113 +2329,6 @@ func (i *InitializeChildTimelockFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(ChildTimelock.Abi.Methods["initialize"], buf, i)
 }
 
-type InitializeValidatorSetStorageFn struct {
-	NewBls     types.Address `abi:"newBls"`
-	NewBn256G2 types.Address `abi:"newBn256G2"`
-	Validators []*Validator  `abi:"validators"`
-}
-
-func (i *InitializeValidatorSetStorageFn) Sig() []byte {
-	return ValidatorSetStorage.Abi.Methods["initialize"].ID()
-}
-
-func (i *InitializeValidatorSetStorageFn) EncodeAbi() ([]byte, error) {
-	return ValidatorSetStorage.Abi.Methods["initialize"].Encode(i)
-}
-
-func (i *InitializeValidatorSetStorageFn) DecodeAbi(buf []byte) error {
-	return decodeMethod(ValidatorSetStorage.Abi.Methods["initialize"], buf, i)
-}
-
-type CommitValidatorSetValidatorSetStorageFn struct {
-	NewValidatorSet []*Validator `abi:"newValidatorSet"`
-	Signature       [2]*big.Int  `abi:"signature"`
-	Bitmap          []byte       `abi:"bitmap"`
-}
-
-func (c *CommitValidatorSetValidatorSetStorageFn) Sig() []byte {
-	return ValidatorSetStorage.Abi.Methods["commitValidatorSet"].ID()
-}
-
-func (c *CommitValidatorSetValidatorSetStorageFn) EncodeAbi() ([]byte, error) {
-	return ValidatorSetStorage.Abi.Methods["commitValidatorSet"].Encode(c)
-}
-
-func (c *CommitValidatorSetValidatorSetStorageFn) DecodeAbi(buf []byte) error {
-	return decodeMethod(ValidatorSetStorage.Abi.Methods["commitValidatorSet"], buf, c)
-}
-
-type InitializeGatewayFn struct {
-	NewBls     types.Address `abi:"newBls"`
-	NewBn256G2 types.Address `abi:"newBn256G2"`
-	Validators []*Validator  `abi:"validators"`
-}
-
-func (i *InitializeGatewayFn) Sig() []byte {
-	return Gateway.Abi.Methods["initialize"].ID()
-}
-
-func (i *InitializeGatewayFn) EncodeAbi() ([]byte, error) {
-	return Gateway.Abi.Methods["initialize"].Encode(i)
-}
-
-func (i *InitializeGatewayFn) DecodeAbi(buf []byte) error {
-	return decodeMethod(Gateway.Abi.Methods["initialize"], buf, i)
-}
-
-type BridgeMessageResultEvent struct {
-	Counter *big.Int `abi:"counter"`
-	Status  bool     `abi:"status"`
-	Message []byte   `abi:"message"`
-}
-
-func (*BridgeMessageResultEvent) Sig() ethgo.Hash {
-	return Gateway.Abi.Events["BridgeMessageResult"].ID()
-}
-
-func (b *BridgeMessageResultEvent) Encode() ([]byte, error) {
-	return Gateway.Abi.Events["BridgeMessageResult"].Inputs.Encode(b)
-}
-
-func (b *BridgeMessageResultEvent) ParseLog(log *ethgo.Log) (bool, error) {
-	if !Gateway.Abi.Events["BridgeMessageResult"].Match(log) {
-		return false, nil
-	}
-
-	return true, decodeEvent(Gateway.Abi.Events["BridgeMessageResult"], log, b)
-}
-
-func (b *BridgeMessageResultEvent) Decode(input []byte) error {
-	return Gateway.Abi.Events["BridgeMessageResult"].Inputs.DecodeStruct(input, &b)
-}
-
-type BridgeMessageEventEvent struct {
-	ID       *big.Int      `abi:"id"`
-	Sender   types.Address `abi:"sender"`
-	Receiver types.Address `abi:"receiver"`
-	Data     []byte        `abi:"data"`
-}
-
-func (*BridgeMessageEventEvent) Sig() ethgo.Hash {
-	return Gateway.Abi.Events["BridgeMessageEvent"].ID()
-}
-
-func (b *BridgeMessageEventEvent) Encode() ([]byte, error) {
-	return Gateway.Abi.Events["BridgeMessageEvent"].Inputs.Encode(b)
-}
-
-func (b *BridgeMessageEventEvent) ParseLog(log *ethgo.Log) (bool, error) {
-	if !Gateway.Abi.Events["BridgeMessageEvent"].Match(log) {
-		return false, nil
-	}
-
-	return true, decodeEvent(Gateway.Abi.Events["BridgeMessageEvent"], log, b)
-}
-
-func (b *BridgeMessageEventEvent) Decode(input []byte) error {
-	return Gateway.Abi.Events["BridgeMessageEvent"].Inputs.DecodeStruct(input, &b)
-}
-
 type InitializeBridgeStorageFn struct {
 	NewBls     types.Address `abi:"newBls"`
 	NewBn256G2 types.Address `abi:"newBn256G2"`
@@ -2481,6 +2400,24 @@ func (c *CommitBatchBridgeStorageFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(BridgeStorage.Abi.Methods["commitBatch"], buf, c)
 }
 
+type CommitValidatorSetBridgeStorageFn struct {
+	NewValidatorSet []*Validator `abi:"newValidatorSet"`
+	Signature       [2]*big.Int  `abi:"signature"`
+	Bitmap          []byte       `abi:"bitmap"`
+}
+
+func (c *CommitValidatorSetBridgeStorageFn) Sig() []byte {
+	return BridgeStorage.Abi.Methods["commitValidatorSet"].ID()
+}
+
+func (c *CommitValidatorSetBridgeStorageFn) EncodeAbi() ([]byte, error) {
+	return BridgeStorage.Abi.Methods["commitValidatorSet"].Encode(c)
+}
+
+func (c *CommitValidatorSetBridgeStorageFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(BridgeStorage.Abi.Methods["commitValidatorSet"], buf, c)
+}
+
 type NewBatchEvent struct {
 	ID *big.Int `abi:"id"`
 }
@@ -2503,4 +2440,77 @@ func (n *NewBatchEvent) ParseLog(log *ethgo.Log) (bool, error) {
 
 func (n *NewBatchEvent) Decode(input []byte) error {
 	return BridgeStorage.Abi.Events["NewBatch"].Inputs.DecodeStruct(input, &n)
+}
+
+type InitializeGatewayFn struct {
+	NewBls     types.Address `abi:"newBls"`
+	NewBn256G2 types.Address `abi:"newBn256G2"`
+	Validators []*Validator  `abi:"validators"`
+}
+
+func (i *InitializeGatewayFn) Sig() []byte {
+	return Gateway.Abi.Methods["initialize"].ID()
+}
+
+func (i *InitializeGatewayFn) EncodeAbi() ([]byte, error) {
+	return Gateway.Abi.Methods["initialize"].Encode(i)
+}
+
+func (i *InitializeGatewayFn) DecodeAbi(buf []byte) error {
+	return decodeMethod(Gateway.Abi.Methods["initialize"], buf, i)
+}
+
+type BridgeMessageResultEvent struct {
+	Counter *big.Int `abi:"counter"`
+	Status  bool     `abi:"status"`
+	Message []byte   `abi:"message"`
+}
+
+func (*BridgeMessageResultEvent) Sig() ethgo.Hash {
+	return Gateway.Abi.Events["BridgeMessageResult"].ID()
+}
+
+func (b *BridgeMessageResultEvent) Encode() ([]byte, error) {
+	return Gateway.Abi.Events["BridgeMessageResult"].Inputs.Encode(b)
+}
+
+func (b *BridgeMessageResultEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !Gateway.Abi.Events["BridgeMessageResult"].Match(log) {
+		return false, nil
+	}
+
+	return true, decodeEvent(Gateway.Abi.Events["BridgeMessageResult"], log, b)
+}
+
+func (b *BridgeMessageResultEvent) Decode(input []byte) error {
+	return Gateway.Abi.Events["BridgeMessageResult"].Inputs.DecodeStruct(input, &b)
+}
+
+type BridgeMessageEventEvent struct {
+	ID                 *big.Int      `abi:"id"`
+	Sender             types.Address `abi:"sender"`
+	Receiver           types.Address `abi:"receiver"`
+	Data               []byte        `abi:"data"`
+	SourceChainID      *big.Int      `abi:"sourceChainId"`
+	DestinationChainID *big.Int      `abi:"destinationChainId"`
+}
+
+func (*BridgeMessageEventEvent) Sig() ethgo.Hash {
+	return Gateway.Abi.Events["BridgeMessageEvent"].ID()
+}
+
+func (b *BridgeMessageEventEvent) Encode() ([]byte, error) {
+	return Gateway.Abi.Events["BridgeMessageEvent"].Inputs.Encode(b)
+}
+
+func (b *BridgeMessageEventEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !Gateway.Abi.Events["BridgeMessageEvent"].Match(log) {
+		return false, nil
+	}
+
+	return true, decodeEvent(Gateway.Abi.Events["BridgeMessageEvent"], log, b)
+}
+
+func (b *BridgeMessageEventEvent) Decode(input []byte) error {
+	return Gateway.Abi.Events["BridgeMessageEvent"].Inputs.DecodeStruct(input, &b)
 }

@@ -1,12 +1,9 @@
 package polybft
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
-	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,18 +14,10 @@ func TestCommitmentMessage_Hash(t *testing.T) {
 		eventsCount = 10
 	)
 
-	stateSyncEvents := generateStateSyncEvents(t, eventsCount, 0)
-
-	trie1, err := createMerkleTree(stateSyncEvents)
-	require.NoError(t, err)
-
-	trie2, err := createMerkleTree(stateSyncEvents[0 : len(stateSyncEvents)-1])
-	require.NoError(t, err)
-
-	commitmentMessage1 := newTestCommitmentSigned(t, types.Hash(trie1.Hash()), 2, 8)
-	commitmentMessage2 := newTestCommitmentSigned(t, types.Hash(trie1.Hash()), 2, 8)
-	commitmentMessage3 := newTestCommitmentSigned(t, types.Hash(trie1.Hash()), 6, 10)
-	commitmentMessage4 := newTestCommitmentSigned(t, types.Hash(trie2.Hash()), 2, 8)
+	commitmentMessage1 := newTestCommitmentSigned(t)
+	commitmentMessage2 := newTestCommitmentSigned(t)
+	commitmentMessage3 := newTestCommitmentSigned(t)
+	commitmentMessage4 := newTestCommitmentSigned(t)
 
 	hash1, err := commitmentMessage1.Hash()
 	require.NoError(t, err)
@@ -51,7 +40,7 @@ func TestCommitmentMessage_ToRegisterCommitmentInputData(t *testing.T) {
 	const epoch, eventsCount = uint64(100), 11
 	pendingCommitment, _, _ := buildCommitmentAndStateSyncs(t, eventsCount, epoch, uint64(2))
 	expectedSignedCommitmentMsg := &CommitmentMessageSigned{
-		Message: pendingCommitment.StateSyncCommitment,
+		MessageBatch: pendingCommitment.BridgeMessageBatch,
 		AggSignature: Signature{
 			Bitmap:              []byte{5, 1},
 			AggregatedSignature: []byte{1, 1},
@@ -66,107 +55,30 @@ func TestCommitmentMessage_ToRegisterCommitmentInputData(t *testing.T) {
 
 	require.NoError(t, actualSignedCommitmentMsg.DecodeAbi(inputData))
 	require.NoError(t, err)
-	require.Equal(t, *expectedSignedCommitmentMsg.Message, *actualSignedCommitmentMsg.Message)
+	require.Equal(t, *expectedSignedCommitmentMsg.MessageBatch, *actualSignedCommitmentMsg.MessageBatch)
 	require.Equal(t, expectedSignedCommitmentMsg.AggSignature, actualSignedCommitmentMsg.AggSignature)
 }
 
-func TestCommitmentMessage_VerifyProof(t *testing.T) {
-	t.Parallel()
-
-	const epoch, eventsCount = uint64(100), 11
-	commitment, commitmentSigned, stateSyncs := buildCommitmentAndStateSyncs(t, eventsCount, epoch, 0)
-	require.Equal(t, uint64(10), commitment.EndID.Sub(commitment.EndID, commitment.StartID).Uint64())
-
-	for _, stateSync := range stateSyncs {
-		leaf, err := stateSync.EncodeAbi()
-		require.NoError(t, err)
-
-		proof, err := commitment.MerkleTree.GenerateProof(leaf)
-		require.NoError(t, err)
-
-		execute := &contractsapi.ExecuteStateReceiverFn{
-			Proof: types.FromMerkleToTypesHash(proof),
-			Obj:   (*contractsapi.StateSync)(stateSync),
-		}
-
-		inputData, err := execute.EncodeAbi()
-		require.NoError(t, err)
-
-		executionStateSync := &contractsapi.ExecuteStateReceiverFn{}
-		require.NoError(t, executionStateSync.DecodeAbi(inputData))
-		require.Equal(t, stateSync.ID.Uint64(), executionStateSync.Obj.ID.Uint64())
-		require.Equal(t, stateSync.Sender, executionStateSync.Obj.Sender)
-		require.Equal(t, stateSync.Receiver, executionStateSync.Obj.Receiver)
-		require.Equal(t, stateSync.Data, executionStateSync.Obj.Data)
-		require.Equal(t, proof, types.FromTypesToMerkleHash(executionStateSync.Proof))
-
-		err = commitmentSigned.VerifyStateSyncProof(executionStateSync.Proof,
-			(*contractsapi.StateSyncedEvent)(executionStateSync.Obj))
-		require.NoError(t, err)
-	}
-}
-
-func TestCommitmentMessage_VerifyProof_NoStateSyncsInCommitment(t *testing.T) {
-	t.Parallel()
-
-	commitment := &CommitmentMessageSigned{Message: &contractsapi.StateSyncCommitment{StartID: big.NewInt(1), EndID: big.NewInt(10)}}
-	err := commitment.VerifyStateSyncProof([]types.Hash{}, nil)
-	assert.ErrorContains(t, err, "no state sync event")
-}
-
-func TestCommitmentMessage_VerifyProof_StateSyncHashNotEqualToProof(t *testing.T) {
-	t.Parallel()
-
-	const (
-		fromIndex = 0
-		toIndex   = 4
-	)
-
-	stateSyncs := generateStateSyncEvents(t, 5, 0)
-	tree, err := createMerkleTree(stateSyncs)
-	require.NoError(t, err)
-
-	leaf, err := stateSyncs[0].EncodeAbi()
-	require.NoError(t, err)
-
-	proof, err := tree.GenerateProof(leaf)
-	require.NoError(t, err)
-
-	commitment := &CommitmentMessageSigned{
-		Message: &contractsapi.StateSyncCommitment{
-			StartID: big.NewInt(fromIndex),
-			EndID:   big.NewInt(toIndex),
-			Root:    types.Hash(tree.Hash()),
-		},
-	}
-
-	assert.ErrorContains(t, commitment.VerifyStateSyncProof(types.FromMerkleToTypesHash(proof), stateSyncs[4]), "not a member of merkle tree")
-}
-
-func newTestCommitmentSigned(t *testing.T, root types.Hash, startID, endID int64) *CommitmentMessageSigned {
+func newTestCommitmentSigned(t *testing.T) *CommitmentMessageSigned {
 	t.Helper()
 
 	return &CommitmentMessageSigned{
-		Message: &contractsapi.StateSyncCommitment{
-			StartID: big.NewInt(startID),
-			EndID:   big.NewInt(endID),
-			Root:    root,
-		},
+		MessageBatch: &contractsapi.BridgeMessageBatch{},
 		AggSignature: Signature{},
 		PublicKeys:   [][]byte{},
 	}
 }
 
-func buildCommitmentAndStateSyncs(t *testing.T, stateSyncsCount int,
-	epoch, startIdx uint64) (*PendingCommitment, *CommitmentMessageSigned, []*contractsapi.StateSyncedEvent) {
+func buildCommitmentAndStateSyncs(t *testing.T, bridgeMessageCount int,
+	epoch, startIdx uint64) (*PendingCommitment, *CommitmentMessageSigned, []*contractsapi.BridgeMessageEventEvent) {
 	t.Helper()
 
-	stateSyncEvents := generateStateSyncEvents(t, stateSyncsCount, startIdx)
-	commitment, err := NewPendingCommitment(epoch, stateSyncEvents)
+	bridgeMessageEvents := generateBridgeMessageEvents(t, bridgeMessageCount, startIdx)
+	commitment, err := NewPendingCommitment(epoch, bridgeMessageEvents)
 	require.NoError(t, err)
 
 	commitmentSigned := &CommitmentMessageSigned{
-		Message: commitment.StateSyncCommitment,
+		MessageBatch: commitment.BridgeMessageBatch,
 		AggSignature: Signature{
 			AggregatedSignature: []byte{},
 			Bitmap:              []byte{},
@@ -174,5 +86,5 @@ func buildCommitmentAndStateSyncs(t *testing.T, stateSyncsCount int,
 		PublicKeys: [][]byte{},
 	}
 
-	return commitment, commitmentSigned, stateSyncEvents
+	return commitment, commitmentSigned, bridgeMessageEvents
 }

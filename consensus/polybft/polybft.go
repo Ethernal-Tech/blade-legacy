@@ -235,7 +235,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 				for chainID := range bridgeCfg {
 					// initialize ChildERC20PredicateAccessList SC
 					input, err := getInitERC20PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, false)
+						useBridgeAllowList, useBridgeBlockList, false, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -247,7 +247,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 					// initialize ChildERC721PredicateAccessList SC
 					input, err = getInitERC721PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, false)
+						useBridgeAllowList, useBridgeBlockList, false, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -259,7 +259,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 					// initialize ChildERC1155PredicateAccessList SC
 					input, err = getInitERC1155PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, false)
+						useBridgeAllowList, useBridgeBlockList, false, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -271,7 +271,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 					// initialize RootMintableERC20PredicateAccessList SC
 					input, err = getInitERC20PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, true)
+						useBridgeAllowList, useBridgeBlockList, true, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -283,7 +283,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 					// initialize RootMintableERC721PredicateAccessList SC
 					input, err = getInitERC721PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, true)
+						useBridgeAllowList, useBridgeBlockList, true, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -295,7 +295,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 					// initialize RootMintableERC1155PredicateAccessList SC
 					input, err = getInitERC1155PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, true)
+						useBridgeAllowList, useBridgeBlockList, true, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -499,7 +499,7 @@ func (p *Polybft) Initialize() error {
 		return fmt.Errorf("failed to create data directory. Error: %w", err)
 	}
 
-	stt, err := newState(filepath.Join(p.dataDir, stateFileName), p.closeCh)
+	stt, err := newState(filepath.Join(p.dataDir, stateFileName), p.closeCh, p.getChainIDs())
 	if err != nil {
 		return fmt.Errorf("failed to create state instance. Error: %w", err)
 	}
@@ -846,15 +846,19 @@ func (p *Polybft) GetLatestChainConfig() (*chain.Params, error) {
 	return nil, nil
 }
 
-// GetBridgeProvider is an implementation of Consensus interface
-// Returns an instance of BridgeDataProvider
-func (p *Polybft) GetBridgeProvider() consensus.BridgeDataProvider {
-	return p.runtime
-}
-
 // FilterExtra is an implementation of Consensus interface
 func (p *Polybft) FilterExtra(extra []byte) ([]byte, error) {
 	return GetIbftExtraClean(extra)
+}
+
+func (p *Polybft) getChainIDs() []uint64 {
+	var chainIDs []uint64
+
+	for chainID, _ := range p.genesisClientConfig.Bridge {
+		chainIDs = append(chainIDs, chainID)
+	}
+
+	return chainIDs
 }
 
 // initProxies initializes proxy contracts, that allow upgradeability of contracts implementation

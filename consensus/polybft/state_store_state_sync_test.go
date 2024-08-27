@@ -8,7 +8,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/types"
-	merkle "github.com/Ethernal-Tech/merkle-tree"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
@@ -18,17 +17,17 @@ func TestState_InsertEvent(t *testing.T) {
 	t.Parallel()
 
 	state := newTestState(t)
-	event1 := &contractsapi.StateSyncedEvent{
+	event1 := &contractsapi.BridgeMessageEventEvent{
 		ID:       big.NewInt(0),
 		Sender:   types.Address{},
 		Receiver: types.Address{},
 		Data:     []byte{},
 	}
 
-	err := state.StateSyncStore.insertStateSyncEvent(event1)
+	err := state.BridgeMessageStore.insertBridgeMessageEvent(event1)
 	assert.NoError(t, err)
 
-	events, err := state.StateSyncStore.list()
+	events, err := state.BridgeMessageStore.list()
 	assert.NoError(t, err)
 	assert.Len(t, events, 1)
 }
@@ -38,17 +37,17 @@ func TestState_Insert_And_Get_MessageVotes(t *testing.T) {
 
 	state := newTestState(t)
 	epoch := uint64(1)
-	assert.NoError(t, state.EpochStore.insertEpoch(epoch, nil))
+	assert.NoError(t, state.EpochStore.insertEpoch(epoch, nil, 0))
 
 	hash := []byte{1, 2}
-	_, err := state.StateSyncStore.insertMessageVote(1, hash, &MessageSignature{
+	_, err := state.BridgeMessageStore.insertMessageVote(1, hash, &MessageSignature{
 		From:      "NODE_1",
 		Signature: []byte{1, 2},
-	}, nil)
+	}, nil, 0)
 
 	assert.NoError(t, err)
 
-	votes, err := state.StateSyncStore.getMessageVotes(epoch, hash)
+	votes, err := state.BridgeMessageStore.getMessageVotes(epoch, hash, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(votes))
 	assert.Equal(t, "NODE_1", votes[0].From)
@@ -61,13 +60,15 @@ func TestState_getStateSyncEventsForCommitment_NotEnoughEvents(t *testing.T) {
 	state := newTestState(t)
 
 	for i := 0; i < maxCommitmentSize-2; i++ {
-		assert.NoError(t, state.StateSyncStore.insertStateSyncEvent(&contractsapi.StateSyncedEvent{
-			ID:   big.NewInt(int64(i)),
-			Data: []byte{1, 2},
+		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMessageEventEvent{
+			ID:                 big.NewInt(int64(i)),
+			Data:               []byte{1, 2},
+			SourceChainID:      big.NewInt(1),
+			DestinationChainID: bigZero,
 		}))
 	}
 
-	_, err := state.StateSyncStore.getStateSyncEventsForCommitment(0, maxCommitmentSize-1, nil)
+	_, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize-1, nil, 0)
 	assert.ErrorIs(t, err, errNotEnoughStateSyncs)
 }
 
@@ -77,16 +78,18 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 	state := newTestState(t)
 
 	for i := 0; i < maxCommitmentSize; i++ {
-		assert.NoError(t, state.StateSyncStore.insertStateSyncEvent(&contractsapi.StateSyncedEvent{
-			ID:   big.NewInt(int64(i)),
-			Data: []byte{1, 2},
+		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMessageEventEvent{
+			ID:                 big.NewInt(int64(i)),
+			Data:               []byte{1, 2},
+			SourceChainID:      big.NewInt(1),
+			DestinationChainID: bigZero,
 		}))
 	}
 
 	t.Run("Return all - forced. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.StateSyncStore.getStateSyncEventsForCommitment(0, maxCommitmentSize-1, nil)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize-1, nil, 0)
 		require.NoError(t, err)
 		require.Equal(t, maxCommitmentSize, len(events))
 	})
@@ -94,14 +97,14 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 	t.Run("Return all - forced. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := state.StateSyncStore.getStateSyncEventsForCommitment(0, maxCommitmentSize+1, nil)
+		_, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize+1, nil, 0)
 		require.ErrorIs(t, err, errNotEnoughStateSyncs)
 	})
 
 	t.Run("Return all you can. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.StateSyncStore.getStateSyncEventsForCommitment(0, maxCommitmentSize-1, nil)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize-1, nil, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, maxCommitmentSize, len(events))
 	})
@@ -109,7 +112,7 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 	t.Run("Return all you can. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.StateSyncStore.getStateSyncEventsForCommitment(0, maxCommitmentSize+1, nil)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize+1, nil, 0)
 		assert.ErrorIs(t, err, errNotEnoughStateSyncs)
 		assert.Equal(t, maxCommitmentSize, len(events))
 	})
@@ -118,32 +121,18 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 func TestState_insertCommitmentMessage(t *testing.T) {
 	t.Parallel()
 
-	commitment := createTestCommitmentMessage(t, 11)
+	commitment := createTestCommitmentMessage(t)
 
 	state := newTestState(t)
-	assert.NoError(t, state.StateSyncStore.insertCommitmentMessage(commitment, nil))
+	assert.NoError(t, state.BridgeMessageStore.insertCommitmentMessage(commitment, nil))
 
-	commitmentFromDB, err := state.StateSyncStore.getCommitmentMessage(commitment.Message.EndID.Uint64())
+	length := len(commitment.MessageBatch.Messages)
+
+	commitmentFromDB, err := state.BridgeMessageStore.getCommitmentMessage(commitment.MessageBatch.Messages[length-1].ID.Uint64())
 
 	assert.NoError(t, err)
 	assert.NotNil(t, commitmentFromDB)
 	assert.Equal(t, commitment, commitmentFromDB)
-}
-
-func TestState_StateSync_insertAndGetStateSyncProof(t *testing.T) {
-	t.Parallel()
-
-	state := newTestState(t)
-	commitment := createTestCommitmentMessage(t, 0)
-	require.NoError(t, state.StateSyncStore.insertCommitmentMessage(commitment, nil))
-
-	insertTestStateSyncProofs(t, state, 10)
-
-	proofFromDB, err := state.StateSyncStore.getStateSyncProof(1)
-
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(1), proofFromDB.StateSync.ID.Uint64())
-	assert.NotNil(t, proofFromDB.Proof)
 }
 
 func TestState_getCommitmentForStateSync(t *testing.T) {
@@ -179,7 +168,7 @@ func TestState_getCommitmentForStateSync(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		commitment, err := state.StateSyncStore.getCommitmentForStateSync(c.stateSyncID)
+		commitment, err := state.BridgeMessageStore.getCommitmentForBridgeEvents(c.stateSyncID)
 
 		if c.hasCommitment {
 			require.NoError(t, err, fmt.Sprintf("state sync %v", c.stateSyncID))
@@ -224,10 +213,10 @@ func TestState_GetNestedBucketInEpoch(t *testing.T) {
 			)
 
 			s := newTestState(t)
-			require.NoError(t, s.EpochStore.insertEpoch(c.epochNumber, nil))
+			require.NoError(t, s.EpochStore.insertEpoch(c.epochNumber, nil, 0))
 
 			err = s.db.View(func(tx *bbolt.Tx) error {
-				nestedBucket, err = getNestedBucketInEpoch(tx, c.epochNumber, c.bucketName)
+				nestedBucket, err = getNestedBucketInEpoch(tx, c.epochNumber, c.bucketName, 0)
 
 				return err
 			})
@@ -242,25 +231,17 @@ func TestState_GetNestedBucketInEpoch(t *testing.T) {
 	}
 }
 
-func createTestCommitmentMessage(t *testing.T, fromIndex uint64) *CommitmentMessageSigned {
+func createTestCommitmentMessage(t *testing.T) *CommitmentMessageSigned {
 	t.Helper()
 
-	tree, err := merkle.NewMerkleTree([][]byte{
-		{0, 1},
-		{2, 3},
-		{4, 5},
-	})
-
-	require.NoError(t, err)
-
-	msg := &contractsapi.StateSyncCommitment{
-		Root:    types.Hash(tree.Hash()),
-		StartID: big.NewInt(int64(fromIndex)),
-		EndID:   big.NewInt(int64(fromIndex + maxCommitmentSize - 1)),
+	msg := &contractsapi.BridgeMessageBatch{
+		Messages:           []*contractsapi.BridgeMessage{},
+		SourceChainID:      big.NewInt(1),
+		DestinationChainID: big.NewInt(0),
 	}
 
 	return &CommitmentMessageSigned{
-		Message:      msg,
+		MessageBatch: msg,
 		AggSignature: Signature{},
 	}
 }
@@ -269,25 +250,9 @@ func insertTestCommitments(t *testing.T, state *State, numberOfCommitments uint6
 	t.Helper()
 
 	for i := uint64(0); i <= numberOfCommitments; i++ {
-		commitment := createTestCommitmentMessage(t, i*maxCommitmentSize+1)
-		require.NoError(t, state.StateSyncStore.insertCommitmentMessage(commitment, nil))
+		commitment := createTestCommitmentMessage(t)
+		require.NoError(t, state.BridgeMessageStore.insertCommitmentMessage(commitment, nil))
 	}
-}
-
-func insertTestStateSyncProofs(t *testing.T, state *State, numberOfProofs int64) {
-	t.Helper()
-
-	ssProofs := make([]*StateSyncProof, numberOfProofs)
-
-	for i := int64(0); i < numberOfProofs; i++ {
-		proofs := &StateSyncProof{
-			Proof:     []types.Hash{types.BytesToHash(generateRandomBytes(t))},
-			StateSync: createTestStateSync(i),
-		}
-		ssProofs[i] = proofs
-	}
-
-	require.NoError(t, state.StateSyncStore.insertStateSyncProofs(ssProofs, nil))
 }
 
 func createTestStateSync(index int64) *contractsapi.StateSyncedEvent {
@@ -305,14 +270,14 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	state := newTestState(t)
 
 	// update
-	require.NoError(t, state.StateSyncStore.UpdateRelayerEvents([]*RelayerEventMetaData{
-		{EventID: 2},
-		{EventID: 4},
-		{EventID: 7, SentStatus: true, BlockNumber: 100},
-	}, []uint64{}, nil))
+	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents([]*RelayerEventMetaData{
+		{EventID: 2, DestinationChainID: 0},
+		{EventID: 4, DestinationChainID: 0},
+		{EventID: 7, SentStatus: true, BlockNumber: 100, DestinationChainID: 0},
+	}, []*RelayerEventMetaData{}, nil))
 
 	// get available events
-	events, err := state.StateSyncStore.GetAllAvailableRelayerEvents(0)
+	events, err := state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
 
 	require.NoError(t, err)
 	require.Len(t, events, 3)
@@ -321,18 +286,18 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	require.Equal(t, uint64(7), events[2].EventID)
 
 	// update again
-	require.NoError(t, state.StateSyncStore.UpdateRelayerEvents(
+	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents(
 		[]*RelayerEventMetaData{
-			{EventID: 10},
-			{EventID: 12},
-			{EventID: 11},
+			{EventID: 10, DestinationChainID: 0},
+			{EventID: 12, DestinationChainID: 0},
+			{EventID: 11, DestinationChainID: 0},
 		},
-		[]uint64{4, 7},
+		[]*RelayerEventMetaData{{EventID: 4, DestinationChainID: 0}, {EventID: 7, DestinationChainID: 0}},
 		nil,
 	))
 
 	// get available events
-	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(1000)
+	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(1000)
 
 	require.NoError(t, err)
 	require.Len(t, events, 4)
@@ -343,10 +308,10 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	require.Equal(t, uint64(12), events[3].EventID)
 
 	events[1].SentStatus = true
-	require.NoError(t, state.StateSyncStore.UpdateRelayerEvents(events[1:2], []uint64{2}, nil))
+	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents(events[1:2], []*RelayerEventMetaData{{EventID: 2, DestinationChainID: 0}}, nil))
 
 	// get available events with limit
-	events, err = state.StateSyncStore.GetAllAvailableRelayerEvents(2)
+	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(2)
 
 	require.NoError(t, err)
 	require.Len(t, events, 2)

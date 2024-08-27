@@ -1,7 +1,6 @@
 package polybft
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -32,11 +31,6 @@ type StateSyncRelayer interface {
 	Close()
 }
 
-// StateSyncProofRetriever is an interface that exposes function for retrieving state sync proof
-type StateSyncProofRetriever interface {
-	GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
-}
-
 var _ StateSyncRelayer = (*dummyStateSyncRelayer)(nil)
 
 // dummyStateSyncRelayer is a dummy implementation of a StateSyncRelayer
@@ -59,10 +53,9 @@ var _ StateSyncRelayer = (*stateSyncRelayerImpl)(nil)
 type stateSyncRelayerImpl struct {
 	*relayerEventsProcessor
 
-	txRelayer      txrelayer.TxRelayer
-	key            crypto.Key
-	proofRetriever StateSyncProofRetriever
-	logger         hclog.Logger
+	txRelayer txrelayer.TxRelayer
+	key       crypto.Key
+	logger    hclog.Logger
 
 	notifyCh chan struct{}
 	closeCh  chan struct{}
@@ -70,20 +63,18 @@ type stateSyncRelayerImpl struct {
 
 func newStateSyncRelayer(
 	txRelayer txrelayer.TxRelayer,
-	state *StateSyncStore,
-	store StateSyncProofRetriever,
+	state *BridgeMessageStore,
 	blockchain blockchainBackend,
 	key crypto.Key,
 	config *relayerConfig,
 	logger hclog.Logger,
 ) *stateSyncRelayerImpl {
 	relayer := &stateSyncRelayerImpl{
-		txRelayer:      txRelayer,
-		key:            key,
-		proofRetriever: store,
-		closeCh:        make(chan struct{}),
-		notifyCh:       make(chan struct{}, 1),
-		logger:         logger,
+		txRelayer: txRelayer,
+		key:       key,
+		closeCh:   make(chan struct{}),
+		notifyCh:  make(chan struct{}, 1),
+		logger:    logger,
 		relayerEventsProcessor: &relayerEventsProcessor{
 			state:      state,
 			logger:     logger,
@@ -129,28 +120,6 @@ func (ssr *stateSyncRelayerImpl) PostBlock(req *PostBlockRequest) error {
 func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 	proofs := make([][]types.Hash, len(events))
 	objs := make([]*contractsapi.StateSync, len(events))
-
-	for i, event := range events {
-		proof, err := ssr.proofRetriever.GetStateSyncProof(event.EventID)
-		if err != nil {
-			return fmt.Errorf("failed to get proof for %d: %w", event.EventID, err)
-		}
-
-		// since state sync event is a map in the jsonrpc response,
-		// to not have custom logic of converting the map to state sync event
-		// json encoding is used, since it manages to successfully unmarshal the
-		// event from the marshaled map
-		raw, err := json.Marshal(proof.Metadata["StateSync"])
-		if err != nil {
-			return fmt.Errorf("failed to marshal event %d: %w", event.EventID, err)
-		}
-
-		if err = json.Unmarshal(raw, &objs[i]); err != nil {
-			return fmt.Errorf("failed to unmarshal event %d: %w", event.EventID, err)
-		}
-
-		proofs[i] = proof.Data
-	}
 
 	input, err := (&contractsapi.BatchExecuteStateReceiverFn{
 		Proofs: proofs,
@@ -229,7 +198,7 @@ func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log
 		if stateSyncResultEvent.Status {
 			ssr.logger.Debug("state sync result event has been processed", "block", header.Number, "stateSyncID", eventID)
 
-			return ssr.state.UpdateRelayerEvents(nil, []uint64{eventID}, dbTx)
+			return ssr.state.UpdateRelayerEvents(nil, []*RelayerEventMetaData{&RelayerEventMetaData{EventID: eventID}}, dbTx)
 		}
 
 		ssr.logger.Debug("state sync result event failed to process", "block", header.Number,

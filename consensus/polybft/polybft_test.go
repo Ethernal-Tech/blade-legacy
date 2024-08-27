@@ -216,7 +216,7 @@ func TestPolybft_Close(t *testing.T) {
 		closeCh: make(chan struct{}),
 		syncer:  syncer,
 		runtime: &consensusRuntime{
-			bridgeManager: &dummyBridgeManager{},
+			bridgeManagers: map[uint64]BridgeManager{0: &dummyBridgeManager{}},
 		},
 		state: &State{db: &bbolt.DB{}},
 	}

@@ -81,10 +81,6 @@ func (d *Dummy) Close() error {
 	return nil
 }
 
-func (d *Dummy) GetBridgeProvider() consensus.BridgeDataProvider {
-	return nil
-}
-
 func (d *Dummy) FilterExtra(extra []byte) ([]byte, error) {
 	return extra, nil
 }

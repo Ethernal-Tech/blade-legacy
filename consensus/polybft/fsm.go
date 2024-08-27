@@ -83,6 +83,8 @@ type fsm struct {
 	// It is populated only for epoch-ending blocks.
 	commitEpochInput *contractsapi.CommitEpochEpochManagerFn
 
+	commitValidatorSetInput *contractsapi.CommitValidatorSetBridgeStorageFn
+
 	// distributeRewardsInput holds info about validators work in a single epoch
 	// mainly, how many blocks they signed during given epoch
 	// It is populated only for epoch-ending blocks.
@@ -98,7 +100,7 @@ type fsm struct {
 	isFirstBlockOfEpoch bool
 
 	// proposerCommitmentToRegister is a commitment that is registered via state transaction by proposer
-	proposerCommitmentToRegister *CommitmentMessageSigned
+	proposerCommitmentToRegister map[uint64]*CommitmentMessageSigned
 
 	// logger instance
 	logger hclog.Logger
@@ -157,8 +159,10 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 	}
 
 	if f.config.IsBridgeEnabled() {
-		if err := f.applyBridgeCommitmentTx(); err != nil {
-			return nil, err
+		if f.isEndOfSprint {
+			if err := f.applyBridgeCommitmentTx(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -172,6 +176,27 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		}
 
 		extra.Validators = f.newValidatorsDelta
+
+		if f.config.IsBridgeEnabled() {
+			signature, err := bls.UnmarshalSignature(extra.Committed.AggregatedSignature)
+			if err != nil {
+				return nil, err
+			}
+
+			signatureBig, err := signature.ToBigInt()
+			if err != nil {
+				return nil, err
+			}
+
+			f.commitValidatorSetInput = createCommitValidatorSetInput(nextValidators, signatureBig, extra.Committed.Bitmap)
+
+			tx, err := f.createValidatorSetCommit()
+			if err != nil {
+				return nil, err
+			}
+
+			f.blockBuilder.WriteTx(tx)
+		}
 	}
 
 	currentValidatorsHash, err := f.validators.Accounts().Hash()
@@ -242,14 +267,16 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 
 // applyBridgeCommitmentTx builds state transaction which contains data for bridge commitment registration
 func (f *fsm) applyBridgeCommitmentTx() error {
-	if f.proposerCommitmentToRegister != nil {
-		bridgeCommitmentTx, err := f.createBridgeCommitmentTx()
-		if err != nil {
-			return fmt.Errorf("creation of bridge commitment transaction failed: %w", err)
-		}
+	for chainId, proposerCommitmentToRegister := range f.proposerCommitmentToRegister {
+		if proposerCommitmentToRegister != nil {
+			bridgeCommitmentTx, err := f.createBridgeCommitmentTx(chainId)
+			if err != nil {
+				return fmt.Errorf("creation of bridge commitment transaction failed: %w", err)
+			}
 
-		if err := f.blockBuilder.WriteTx(bridgeCommitmentTx); err != nil {
-			return fmt.Errorf("failed to apply bridge commitment state transaction. Error: %w", err)
+			if err := f.blockBuilder.WriteTx(bridgeCommitmentTx); err != nil {
+				return fmt.Errorf("failed to apply bridge commitment state transaction. Error: %w", err)
+			}
 		}
 	}
 
@@ -257,13 +284,17 @@ func (f *fsm) applyBridgeCommitmentTx() error {
 }
 
 // createBridgeCommitmentTx builds bridge commitment registration transaction
-func (f *fsm) createBridgeCommitmentTx() (*types.Transaction, error) {
-	inputData, err := f.proposerCommitmentToRegister.EncodeAbi()
-	if err != nil {
-		return nil, fmt.Errorf("failed to encode input data for bridge commitment registration: %w", err)
+func (f *fsm) createBridgeCommitmentTx(chainId uint64) (*types.Transaction, error) {
+	if proposerCommitmentToRegister, ok := f.proposerCommitmentToRegister[chainId]; !ok {
+		inputData, err := proposerCommitmentToRegister.EncodeAbi()
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode input data for bridge commitment registration: %w", err)
+		}
+
+		return createStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
 	}
 
-	return createStateTransactionWithData(contracts.StateReceiverContract, inputData), nil
+	return nil, fmt.Errorf("map without that chainId")
 }
 
 // getValidatorsTransition applies delta to the current validators,
@@ -287,6 +318,15 @@ func (f *fsm) createCommitEpochTx() (*types.Transaction, error) {
 	}
 
 	return createStateTransactionWithData(contracts.EpochManagerContract, input), nil
+}
+
+func (f *fsm) createValidatorSetCommit() (*types.Transaction, error) {
+	input, err := f.commitValidatorSetInput.EncodeAbi()
+	if err != nil {
+		return nil, err
+	}
+
+	return createStateTransactionWithData(contracts.BridgeStorageContract, input), nil
 }
 
 // createDistributeRewardsTx create a StateTransaction, which invokes RewardPool smart contract
@@ -739,6 +779,14 @@ func validateHeaderFields(parent *types.Header, header *types.Header, blockTimeD
 	}
 
 	return nil
+}
+
+func createCommitValidatorSetInput(validators validator.AccountSet, signature [2]*big.Int, bitmap []byte) *contractsapi.CommitValidatorSetBridgeStorageFn {
+	return &contractsapi.CommitValidatorSetBridgeStorageFn{
+		NewValidatorSet: validators.ToAPIBinding(),
+		Signature:       signature,
+		Bitmap:          bitmap,
+	}
 }
 
 // createStateTransactionWithData creates a state transaction

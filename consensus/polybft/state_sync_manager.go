@@ -28,20 +28,14 @@ type Runtime interface {
 	IsActiveValidator() bool
 }
 
-type StateSyncProof struct {
-	Proof     []types.Hash
-	StateSync *contractsapi.StateSyncedEvent
-}
-
 // StateSyncManager is an interface that defines functions for state sync workflow
 type StateSyncManager interface {
 	EventSubscriber
 	Init() error
 	AddLog(eventLog *ethgo.Log) error
 	Commitment(blockNumber uint64) (*CommitmentMessageSigned, error)
-	GetStateSyncProof(stateSyncID uint64) (types.Proof, error)
 	PostBlock(req *PostBlockRequest) error
-	PostEpoch(req *PostEpochRequest) error
+	PostEpoch(req *PostEpochRequest, destinationChainID uint64) error
 }
 
 var _ StateSyncManager = (*dummyStateSyncManager)(nil)
@@ -55,9 +49,8 @@ func (d *dummyStateSyncManager) Commitment(blockNumber uint64) (*CommitmentMessa
 	return nil, nil
 }
 func (d *dummyStateSyncManager) PostBlock(req *PostBlockRequest) error { return nil }
-func (d *dummyStateSyncManager) PostEpoch(req *PostEpochRequest) error { return nil }
-func (d *dummyStateSyncManager) GetStateSyncProof(stateSyncID uint64) (types.Proof, error) {
-	return types.Proof{}, nil
+func (d *dummyStateSyncManager) PostEpoch(req *PostEpochRequest, chainID uint64) error {
+	return nil
 }
 
 // EventSubscriber implementation
@@ -92,7 +85,7 @@ type stateSyncManager struct {
 	pendingCommitments []*PendingCommitment
 	validatorSet       validator.ValidatorSet
 	epoch              uint64
-	nextCommittedIndex uint64
+	nextCommittedIndex map[uint64]uint64
 
 	runtime Runtime
 }
@@ -165,12 +158,12 @@ func (s *stateSyncManager) saveVote(msg *TransportMessage) error {
 	}
 
 	if msg.EpochNumber == epoch+1 {
-		if err := s.state.EpochStore.insertEpoch(epoch+1, nil); err != nil {
+		if err := s.state.EpochStore.insertEpoch(epoch+1, nil, msg.DestinationChainID); err != nil {
 			return fmt.Errorf("error saving msg vote from a future epoch: %d. Error: %w", epoch+1, err)
 		}
 	}
 
-	if err := s.verifyVoteSignature(valSet, types.StringToAddress(msg.From), msg.Signature, msg.Hash); err != nil {
+	if err := s.verifyVoteSignature(valSet, types.StringToAddress(msg.From), msg.Signature, msg.BatchByte); err != nil {
 		return fmt.Errorf("error verifying vote signature: %w", err)
 	}
 
@@ -179,14 +172,14 @@ func (s *stateSyncManager) saveVote(msg *TransportMessage) error {
 		Signature: msg.Signature,
 	}
 
-	numSignatures, err := s.state.StateSyncStore.insertMessageVote(msg.EpochNumber, msg.Hash, msgVote, nil)
+	numSignatures, err := s.state.BridgeMessageStore.insertMessageVote(msg.EpochNumber, msg.BatchByte, msgVote, nil, msg.DestinationChainID)
 	if err != nil {
 		return fmt.Errorf("error inserting message vote: %w", err)
 	}
 
 	s.logger.Info(
 		"deliver message",
-		"hash", hex.EncodeToString(msg.Hash),
+		"hash", hex.EncodeToString(msg.BatchByte),
 		"sender", msg.From,
 		"signatures", numSignatures,
 	)
@@ -216,7 +209,7 @@ func (s *stateSyncManager) verifyVoteSignature(valSet validator.ValidatorSet, si
 
 // AddLog saves the received log from event tracker if it matches a state sync event ABI
 func (s *stateSyncManager) AddLog(eventLog *ethgo.Log) error {
-	event := &contractsapi.StateSyncedEvent{}
+	event := &contractsapi.BridgeMessageEventEvent{}
 
 	doesMatch, err := event.ParseLog(eventLog)
 	if !doesMatch {
@@ -224,28 +217,28 @@ func (s *stateSyncManager) AddLog(eventLog *ethgo.Log) error {
 	}
 
 	s.logger.Info(
-		"Add State sync event",
+		"Add Bridge message event",
 		"block", eventLog.BlockNumber,
 		"hash", eventLog.TransactionHash,
 		"index", eventLog.LogIndex,
 	)
 
 	if err != nil {
-		s.logger.Error("could not decode state sync event", "err", err)
+		s.logger.Error("could not decode bridge message event", "err", err)
 
 		return err
 	}
 
-	if err := s.state.StateSyncStore.insertStateSyncEvent(event); err != nil {
+	if err := s.state.BridgeMessageStore.insertBridgeMessageEvent(event); err != nil {
 		s.logger.Error("could not save state sync event to boltDb", "err", err)
 
 		return err
 	}
 
-	if err := s.buildCommitment(nil); err != nil {
+	if err := s.buildCommitment(nil, event.DestinationChainID.Uint64()); err != nil {
 		// we don't return an error here. If state sync event is inserted in db,
 		// we will just try to build a commitment on next block or next event arrival
-		s.logger.Error("could not build a commitment on arrival of new state sync", "err", err, "stateSyncID", event.ID)
+		s.logger.Error("could not build a commitment on arrival of new state sync", "err", err, "bridgeMessageID", event.ID)
 	}
 
 	return nil
@@ -267,8 +260,8 @@ func (s *stateSyncManager) Commitment(blockNumber uint64) (*CommitmentMessageSig
 			if errors.Is(err, errQuorumNotReached) {
 				// a valid case, commitment has no quorum, we should not return an error
 				s.logger.Debug("can not submit a commitment, quorum not reached",
-					"from", commitment.StartID.Uint64(),
-					"to", commitment.EndID.Uint64())
+					"from", commitment.BridgeMessageBatch.SourceChainID.Uint64(),
+					"to", commitment.BridgeMessageBatch.DestinationChainID.Uint64())
 
 				continue
 			}
@@ -277,7 +270,7 @@ func (s *stateSyncManager) Commitment(blockNumber uint64) (*CommitmentMessageSig
 		}
 
 		largestCommitment = &CommitmentMessageSigned{
-			Message:      commitment.StateSyncCommitment,
+			MessageBatch: commitment.BridgeMessageBatch,
 			AggSignature: aggregatedSignature,
 			PublicKeys:   publicKeys,
 		}
@@ -307,7 +300,7 @@ func (s *stateSyncManager) getAggSignatureForCommitmentMessage(blockNumber uint6
 	}
 
 	// get all the votes from the database for this commitment
-	votes, err := s.state.StateSyncStore.getMessageVotes(commitment.Epoch, commitmentHash.Bytes())
+	votes, err := s.state.BridgeMessageStore.getMessageVotes(commitment.Epoch, commitmentHash.Bytes(), commitment.BridgeMessageBatch.DestinationChainID.Uint64())
 	if err != nil {
 		return Signature{}, nil, err
 	}
@@ -355,7 +348,7 @@ func (s *stateSyncManager) getAggSignatureForCommitmentMessage(blockNumber uint6
 
 // PostEpoch notifies the state sync manager that an epoch has changed,
 // so that it can discard any previous epoch commitments, and build a new one (since validator set changed)
-func (s *stateSyncManager) PostEpoch(req *PostEpochRequest) error {
+func (s *stateSyncManager) PostEpoch(req *PostEpochRequest, chainID uint64) error {
 	s.lock.Lock()
 
 	s.pendingCommitments = nil
@@ -363,18 +356,18 @@ func (s *stateSyncManager) PostEpoch(req *PostEpochRequest) error {
 	s.epoch = req.NewEpochID
 
 	// build a new commitment at the end of the epoch
-	nextCommittedIndex, err := req.SystemState.GetNextCommittedIndex()
+	nextCommittedIndex, err := req.SystemState.GetNextCommittedIndex(chainID)
 	if err != nil {
 		s.lock.Unlock()
 
 		return err
 	}
 
-	s.nextCommittedIndex = nextCommittedIndex
+	s.nextCommittedIndex[chainID] = nextCommittedIndex
 
 	s.lock.Unlock()
 
-	return s.buildCommitment(req.DBTx)
+	return s.buildCommitment(req.DBTx, chainID)
 }
 
 // PostBlock notifies state sync manager that a block was finalized,
@@ -391,110 +384,24 @@ func (s *stateSyncManager) PostBlock(req *PostBlockRequest) error {
 		return nil
 	}
 
-	if err := s.state.StateSyncStore.insertCommitmentMessage(commitment, req.DBTx); err != nil {
+	if err := s.state.BridgeMessageStore.insertCommitmentMessage(commitment, req.DBTx); err != nil {
 		return fmt.Errorf("insert commitment message error: %w", err)
-	}
-
-	if err := s.buildProofs(commitment.Message, req.DBTx); err != nil {
-		return fmt.Errorf("build commitment proofs error: %w", err)
 	}
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
+
+	length := len(commitment.MessageBatch.Messages)
 	// update the nextCommittedIndex since a commitment was submitted
-	s.nextCommittedIndex = commitment.Message.EndID.Uint64() + 1
+	s.nextCommittedIndex[commitment.MessageBatch.DestinationChainID.Uint64()] = commitment.MessageBatch.Messages[length-1].ID.Uint64() + 1
 	// commitment was submitted, so discard what we have in memory, so we can build a new one
 	s.pendingCommitments = nil
 
 	return nil
 }
 
-// GetStateSyncProof returns the proof for the state sync
-func (s *stateSyncManager) GetStateSyncProof(stateSyncID uint64) (types.Proof, error) {
-	stateSyncProof, err := s.state.StateSyncStore.getStateSyncProof(stateSyncID)
-	if err != nil {
-		return types.Proof{}, fmt.Errorf("cannot get state sync proof for StateSync id %d: %w", stateSyncID, err)
-	}
-
-	if stateSyncProof == nil {
-		// check if we might've missed a commitment. if it is so, we didn't build proofs for it while syncing
-		// if we are all synced up, commitment will be saved through PostBlock, but we won't have proofs,
-		// so we will build them now and save them to db so that we have proofs for missed commitment
-		commitment, err := s.state.StateSyncStore.getCommitmentForStateSync(stateSyncID)
-		if err != nil {
-			return types.Proof{}, fmt.Errorf("cannot find commitment for StateSync id %d: %w", stateSyncID, err)
-		}
-
-		if err := s.buildProofs(commitment.Message, nil); err != nil {
-			return types.Proof{}, fmt.Errorf("cannot build proofs for commitment for StateSync id %d: %w", stateSyncID, err)
-		}
-
-		stateSyncProof, err = s.state.StateSyncStore.getStateSyncProof(stateSyncID)
-		if err != nil {
-			return types.Proof{}, fmt.Errorf("cannot get state sync proof for StateSync id %d: %w", stateSyncID, err)
-		}
-	}
-
-	return types.Proof{
-		Data: stateSyncProof.Proof,
-		Metadata: map[string]interface{}{
-			"StateSync": stateSyncProof.StateSync,
-		},
-	}, nil
-}
-
-// buildProofs builds state sync proofs for the submitted commitment and saves them in boltDb for later execution
-func (s *stateSyncManager) buildProofs(commitmentMsg *contractsapi.StateSyncCommitment,
-	dbTx *bolt.Tx) error {
-	from := commitmentMsg.StartID.Uint64()
-	to := commitmentMsg.EndID.Uint64()
-
-	s.logger.Debug(
-		"[buildProofs] Building proofs for commitment...",
-		"fromIndex", from,
-		"toIndex", to,
-	)
-
-	events, err := s.state.StateSyncStore.getStateSyncEventsForCommitment(from, to, dbTx)
-	if err != nil {
-		return fmt.Errorf("failed to get state sync events for commitment to build proofs. Error: %w", err)
-	}
-
-	tree, err := createMerkleTree(events)
-	if err != nil {
-		return fmt.Errorf("could not create merkle tree. error: %w", err)
-	}
-
-	stateSyncProofs := make([]*StateSyncProof, len(events))
-
-	for i, event := range events {
-		leaf, err := event.EncodeAbi()
-		if err != nil {
-			return fmt.Errorf("could not encode state sync event. error: %w", err)
-		}
-
-		p, err := tree.GenerateProof(leaf)
-		if err != nil {
-			return fmt.Errorf("error generating proof for event: %v. error: %w", event.ID, err)
-		}
-
-		stateSyncProofs[i] = &StateSyncProof{
-			Proof:     types.FromMerkleToTypesHash(p),
-			StateSync: event,
-		}
-	}
-
-	s.logger.Debug(
-		"[buildProofs] Building proofs for commitment finished.",
-		"fromIndex", from,
-		"toIndex", to,
-	)
-
-	return s.state.StateSyncStore.insertStateSyncProofs(stateSyncProofs, dbTx)
-}
-
 // buildCommitment builds a new commitment, signs it and gossips its vote for it
-func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
+func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx, chainId uint64) error {
 	if !s.runtime.IsActiveValidator() {
 		// don't build commitment if not a validator
 		return nil
@@ -504,21 +411,21 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 
 	// Since lock is reduced grab original values into local variables in order to keep them
 	epoch := s.epoch
-	stateSyncEvents, err := s.state.StateSyncStore.getStateSyncEventsForCommitment(s.nextCommittedIndex,
-		s.nextCommittedIndex+s.config.maxCommitmentSize-1, dbTx)
+	bridgeMessageEvents, err := s.state.BridgeMessageStore.getBridgeMessageEventsForCommitment(s.nextCommittedIndex[chainId],
+		s.nextCommittedIndex[chainId]+s.config.maxCommitmentSize-1, dbTx, chainId)
 	if err != nil && !errors.Is(err, errNotEnoughStateSyncs) {
 		s.lock.RUnlock()
 		return fmt.Errorf("failed to get state sync events for commitment. Error: %w", err)
 	}
 
-	if len(stateSyncEvents) == 0 {
+	if len(bridgeMessageEvents) == 0 {
 		// there are no state sync events
 		s.lock.RUnlock()
 		return nil
 	}
 
 	if len(s.pendingCommitments) > 0 &&
-		s.pendingCommitments[len(s.pendingCommitments)-1].StartID.Cmp(stateSyncEvents[len(stateSyncEvents)-1].ID) >= 0 {
+		s.pendingCommitments[len(s.pendingCommitments)-1].BridgeMessageBatch.Messages[0].ID.Cmp(bridgeMessageEvents[len(bridgeMessageEvents)-1].ID) >= 0 {
 		// already built a commitment of this size which is pending to be submitted
 		s.lock.RUnlock()
 		return nil
@@ -526,19 +433,17 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 
 	s.lock.RUnlock()
 
-	commitment, err := NewPendingCommitment(epoch, stateSyncEvents)
+	commitment, err := NewPendingCommitment(epoch, bridgeMessageEvents)
 	if err != nil {
 		return err
 	}
 
-	hash, err := commitment.Hash()
+	batchBytes, err := commitment.BridgeMessageBatch.EncodeAbi()
 	if err != nil {
-		return fmt.Errorf("failed to generate hash for commitment. Error: %w", err)
+		return err
 	}
 
-	hashBytes := hash.Bytes()
-
-	signature, err := s.config.key.SignWithDomain(hashBytes, signer.DomainStateReceiver)
+	signature, err := s.config.key.SignWithDomain(batchBytes, signer.DomainStateReceiver)
 	if err != nil {
 		return fmt.Errorf("failed to sign commitment message. Error: %w", err)
 	}
@@ -548,27 +453,34 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		Signature: signature,
 	}
 
-	if _, err = s.state.StateSyncStore.insertMessageVote(epoch, hashBytes, sig, dbTx); err != nil {
+	destinationChainId := commitment.BridgeMessageBatch.DestinationChainID.Uint64()
+
+	if _, err = s.state.BridgeMessageStore.insertMessageVote(epoch, batchBytes, sig, dbTx, destinationChainId); err != nil {
 		return fmt.Errorf(
-			"failed to insert signature for hash=%v to the state. Error: %w",
-			hex.EncodeToString(hashBytes),
+			"failed to insert signature for message batch to the state. Error: %w",
 			err,
 		)
 	}
 
 	// gossip message
 	s.multicast(&TransportMessage{
-		Hash:        hashBytes,
-		Signature:   signature,
-		From:        s.config.key.String(),
-		EpochNumber: epoch,
+		BatchByte:          batchBytes,
+		Signature:          signature,
+		From:               s.config.key.String(),
+		EpochNumber:        epoch,
+		DestinationChainID: destinationChainId,
 	})
 
-	s.logger.Debug(
-		"[buildCommitment] Built commitment",
-		"from", commitment.StartID.Uint64(),
-		"to", commitment.EndID.Uint64(),
-	)
+	length := len(commitment.BridgeMessageBatch.Messages)
+
+	if length > 0 {
+
+		s.logger.Debug(
+			"[buildCommitment] Built commitment",
+			"from", commitment.BridgeMessageBatch.Messages[0].ID.Uint64(),
+			"to", commitment.BridgeMessageBatch.Messages[length].ID.Uint64(),
+		)
+	}
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -610,9 +522,9 @@ func (s *stateSyncManager) GetLogFilters() map[types.Address][]types.Hash {
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (s *stateSyncManager) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
-	var stateSyncResultEvent contractsapi.StateSyncResultEvent
+	var bridgeMessageResultEvent *contractsapi.BridgeMessageResultEvent
 
-	doesMatch, err := stateSyncResultEvent.ParseLog(log)
+	doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
 	if err != nil {
 		return err
 	}
@@ -621,5 +533,5 @@ func (s *stateSyncManager) ProcessLog(header *types.Header, log *ethgo.Log, dbTx
 		return nil
 	}
 
-	return s.state.StateSyncStore.removeStateSyncEventsAndProofs([]uint64{stateSyncResultEvent.Counter.Uint64()})
+	return s.state.BridgeMessageStore.removeStateSyncEventsAndProofs(bridgeMessageResultEvent)
 }

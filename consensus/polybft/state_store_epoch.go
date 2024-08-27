@@ -129,9 +129,14 @@ func (s *EpochStore) getNearestOrEpochSnapshot(epoch uint64, dbTx *bolt.Tx) (*va
 }
 
 // insertEpoch inserts a new epoch to db with its meta data
-func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx) error {
+func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx, chainId uint64) error {
 	insertFn := func(tx *bolt.Tx) error {
-		epochBucket, err := tx.Bucket(epochsBucket).CreateBucketIfNotExists(common.EncodeUint64ToBytes(epoch))
+		chainIdBucket, err := tx.Bucket(epochsBucket).CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainId))
+		if err != nil {
+			return err
+		}
+
+		epochBucket, err := chainIdBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(epoch))
 		if err != nil {
 			return err
 		}
@@ -154,17 +159,17 @@ func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx) error {
 }
 
 // isEpochInserted checks if given epoch is present in db
-func (s *EpochStore) isEpochInserted(epoch uint64) bool {
+func (s *EpochStore) isEpochInserted(epoch uint64, chainId uint64) bool {
 	return s.db.View(func(tx *bolt.Tx) error {
-		_, err := getEpochBucket(tx, epoch)
+		_, err := getEpochBucket(tx, epoch, chainId)
 
 		return err
 	}) == nil
 }
 
 // getEpochBucket returns bucket from db associated with given epoch
-func getEpochBucket(tx *bolt.Tx, epoch uint64) (*bolt.Bucket, error) {
-	epochBucket := tx.Bucket(epochsBucket).Bucket(common.EncodeUint64ToBytes(epoch))
+func getEpochBucket(tx *bolt.Tx, epoch uint64, chainId uint64) (*bolt.Bucket, error) {
+	epochBucket := tx.Bucket(epochsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Bucket(common.EncodeUint64ToBytes(epoch))
 	if epochBucket == nil {
 		return nil, fmt.Errorf("could not find bucket for epoch: %v", epoch)
 	}
@@ -277,8 +282,8 @@ func (s *EpochStore) validatorSnapshotsDBStats() (*bolt.BucketStats, error) {
 }
 
 // getNestedBucketInEpoch returns a nested (child) bucket from db associated with given epoch
-func getNestedBucketInEpoch(tx *bolt.Tx, epoch uint64, bucketKey []byte) (*bolt.Bucket, error) {
-	epochBucket, err := getEpochBucket(tx, epoch)
+func getNestedBucketInEpoch(tx *bolt.Tx, epoch uint64, bucketKey []byte, chainId uint64) (*bolt.Bucket, error) {
+	epochBucket, err := getEpochBucket(tx, epoch, chainId)
 	if err != nil {
 		return nil, err
 	}

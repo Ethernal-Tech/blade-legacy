@@ -236,7 +236,7 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 			CurrentClientConfig: config.GenesisConfig,
 		},
 		lastBuiltBlock: &types.Header{Number: header.Number - 1},
-		bridgeManager:  &dummyBridgeManager{},
+		bridgeManagers: map[uint64]BridgeManager{0: &dummyBridgeManager{}},
 		stakeManager:   &dummyStakeManager{},
 		eventProvider:  NewEventProvider(blockchainMock),
 		governanceManager: &dummyGovernanceManager{
@@ -246,7 +246,7 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 	}
 	runtime.OnBlockInserted(&types.FullBlock{Block: builtBlock})
 
-	require.True(t, runtime.state.EpochStore.isEpochInserted(currentEpochNumber+1))
+	require.True(t, runtime.state.EpochStore.isEpochInserted(currentEpochNumber+1, 0))
 	require.Equal(t, newEpochNumber, runtime.epoch.Number)
 
 	blockchainMock.AssertExpectations(t)
@@ -367,7 +367,7 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 		},
 		lastBuiltBlock: lastBlock,
 		state:          newTestState(t),
-		bridgeManager:  &dummyBridgeManager{},
+		bridgeManagers: map[uint64]BridgeManager{0: &dummyBridgeManager{}},
 	}
 	runtime.setIsActiveValidator(true)
 
@@ -407,7 +407,7 @@ func TestConsensusRuntime_FSM_EndOfEpoch_BuildCommitEpoch(t *testing.T) {
 	blockchainMock.On("NewBlockBuilder", mock.Anything).Return(&BlockBuilder{}, nil).Once()
 
 	state := newTestState(t)
-	require.NoError(t, state.EpochStore.insertEpoch(epoch, nil))
+	require.NoError(t, state.EpochStore.insertEpoch(epoch, nil, 0))
 
 	config := &runtimeConfig{
 		GenesisConfig: &PolyBFTConfig{
@@ -435,7 +435,7 @@ func TestConsensusRuntime_FSM_EndOfEpoch_BuildCommitEpoch(t *testing.T) {
 		config:             config,
 		lastBuiltBlock:     &types.Header{Number: 9},
 		stakeManager:       &dummyStakeManager{},
-		bridgeManager:      &dummyBridgeManager{},
+		bridgeManagers:     map[uint64]BridgeManager{0: &dummyBridgeManager{}},
 	}
 
 	err := runtime.FSM()

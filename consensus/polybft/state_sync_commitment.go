@@ -2,9 +2,9 @@ package polybft
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 
+	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/state/runtime/precompiled"
@@ -14,32 +14,32 @@ import (
 
 // PendingCommitment holds merkle trie of bridge transactions accompanied by epoch number
 type PendingCommitment struct {
-	*contractsapi.StateSyncCommitment
-	MerkleTree *merkle.MerkleTree
-	Epoch      uint64
+	*contractsapi.BridgeMessageBatch
+	Epoch uint64
 }
 
 // NewPendingCommitment creates a new commitment object
-func NewPendingCommitment(epoch uint64, stateSyncEvents []*contractsapi.StateSyncedEvent) (*PendingCommitment, error) {
-	tree, err := createMerkleTree(stateSyncEvents)
-	if err != nil {
-		return nil, err
+func NewPendingCommitment(epoch uint64, bridgeEvents []*contractsapi.BridgeMessageEventEvent) (*PendingCommitment, error) {
+
+	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
+
+	for i, bridgeEvent := range bridgeEvents {
+		messages[i] = &contractsapi.BridgeMessage{
+			ID:       bridgeEvent.ID,
+			Sender:   bridgeEvent.Sender,
+			Receiver: bridgeEvent.Receiver,
+			Payload:  bridgeEvent.Data}
 	}
 
 	return &PendingCommitment{
-		MerkleTree: tree,
-		Epoch:      epoch,
-		StateSyncCommitment: &contractsapi.StateSyncCommitment{
-			StartID: stateSyncEvents[0].ID,
-			EndID:   stateSyncEvents[len(stateSyncEvents)-1].ID,
-			Root:    types.Hash(tree.Hash()),
-		},
+		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{Messages: messages},
+		Epoch:              epoch,
 	}, nil
 }
 
 // Hash calculates hash value for commitment object.
 func (cm *PendingCommitment) Hash() (types.Hash, error) {
-	data, err := cm.StateSyncCommitment.EncodeAbi()
+	data, err := cm.BridgeMessageBatch.EncodeAbi()
 	if err != nil {
 		return types.Hash{}, err
 	}
@@ -51,14 +51,14 @@ var _ contractsapi.StateTransactionInput = &CommitmentMessageSigned{}
 
 // CommitmentMessageSigned encapsulates commitment message with aggregated signatures
 type CommitmentMessageSigned struct {
-	Message      *contractsapi.StateSyncCommitment
+	MessageBatch *contractsapi.BridgeMessageBatch
 	AggSignature Signature
 	PublicKeys   [][]byte
 }
 
 // Hash calculates hash value for commitment object.
 func (cm *CommitmentMessageSigned) Hash() (types.Hash, error) {
-	data, err := cm.Message.EncodeAbi()
+	data, err := cm.MessageBatch.EncodeAbi()
 	if err != nil {
 		return types.Hash{}, err
 	}
@@ -66,31 +66,9 @@ func (cm *CommitmentMessageSigned) Hash() (types.Hash, error) {
 	return crypto.Keccak256Hash(data), nil
 }
 
-// VerifyStateSyncProof validates given state sync proof
-// against merkle tree root hash contained in the CommitmentMessage
-func (cm *CommitmentMessageSigned) VerifyStateSyncProof(proof []types.Hash,
-	stateSync *contractsapi.StateSyncedEvent) error {
-	if stateSync == nil {
-		return errors.New("no state sync event")
-	}
-
-	if stateSync.ID.Uint64() < cm.Message.StartID.Uint64() ||
-		stateSync.ID.Uint64() > cm.Message.EndID.Uint64() {
-		return errors.New("invalid state sync ID")
-	}
-
-	hash, err := stateSync.EncodeAbi()
-	if err != nil {
-		return err
-	}
-
-	return merkle.VerifyProof(stateSync.ID.Uint64()-cm.Message.StartID.Uint64(),
-		hash, types.FromTypesToMerkleHash(proof), merkle.Hash(cm.Message.Root))
-}
-
 // ContainsStateSync checks if commitment contains given state sync event
 func (cm *CommitmentMessageSigned) ContainsStateSync(stateSyncID uint64) bool {
-	return cm.Message.StartID.Uint64() <= stateSyncID && cm.Message.EndID.Uint64() >= stateSyncID
+	return cm.MessageBatch.SourceChainID.Uint64() == stateSyncID && cm.MessageBatch.DestinationChainID.Uint64() == stateSyncID
 }
 
 // EncodeAbi contains logic for encoding arbitrary data into ABI format
@@ -101,10 +79,20 @@ func (cm *CommitmentMessageSigned) EncodeAbi() ([]byte, error) {
 		return nil, err
 	}
 
-	commit := &contractsapi.CommitStateReceiverFn{
-		Commitment: cm.Message,
-		Signature:  cm.AggSignature.AggregatedSignature,
-		Bitmap:     blsVerificationPart,
+	blsSignatrure, err := bls.UnmarshalSignature(cm.AggSignature.AggregatedSignature)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := blsSignatrure.ToBigInt()
+	if err != nil {
+		return nil, err
+	}
+
+	commit := &contractsapi.CommitBatchBridgeStorageFn{
+		Batch:     cm.MessageBatch,
+		Signature: signature,
+		Bitmap:    blsVerificationPart,
 	}
 
 	return commit.EncodeAbi()
@@ -116,7 +104,7 @@ func (cm *CommitmentMessageSigned) DecodeAbi(txData []byte) error {
 		return fmt.Errorf("invalid commitment data, len = %d", len(txData))
 	}
 
-	commit := contractsapi.CommitStateReceiverFn{}
+	commit := contractsapi.CommitBatchBridgeStorageFn{}
 
 	err := commit.DecodeAbi(txData)
 	if err != nil {
@@ -143,10 +131,15 @@ func (cm *CommitmentMessageSigned) DecodeAbi(txData []byte) error {
 		return fmt.Errorf("invalid commitment data. Could not find bitmap part")
 	}
 
+	var signature []byte
+
+	signature = append(signature, commit.Signature[0].Bytes()...)
+	signature = append(signature, commit.Signature[1].Bytes()...)
+
 	*cm = CommitmentMessageSigned{
-		Message: commit.Commitment,
+		MessageBatch: commit.Batch,
 		AggSignature: Signature{
-			AggregatedSignature: commit.Signature,
+			AggregatedSignature: signature,
 			Bitmap:              bitmap,
 		},
 		PublicKeys: publicKeys,
@@ -181,17 +174,17 @@ func getCommitmentMessageSignedTx(txs []*types.Transaction) (*CommitmentMessageS
 // createMerkleTree creates a merkle tree from provided state sync events
 // if only one state sync event is provided, a second, empty leaf will be added to merkle tree
 // so that we can have a commitment with a single state sync event
-func createMerkleTree(stateSyncEvents []*contractsapi.StateSyncedEvent) (*merkle.MerkleTree, error) {
-	stateSyncData := make([][]byte, len(stateSyncEvents))
+func createMerkleTree(bridgeMessageEvent []*contractsapi.BridgeMessageEventEvent) (*merkle.MerkleTree, error) {
+	bridgeMessageData := make([][]byte, len(bridgeMessageEvent))
 
-	for i, sse := range stateSyncEvents {
-		data, err := sse.EncodeAbi()
+	for i, event := range bridgeMessageEvent {
+		data, err := event.Encode()
 		if err != nil {
 			return nil, err
 		}
 
-		stateSyncData[i] = data
+		bridgeMessageData[i] = data
 	}
 
-	return merkle.NewMerkleTree(stateSyncData)
+	return merkle.NewMerkleTree(bridgeMessageData)
 }

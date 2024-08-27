@@ -8,7 +8,6 @@ import (
 
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/Ethernal-Tech/ethgo/abi"
-	merkle "github.com/Ethernal-Tech/merkle-tree"
 	"github.com/hashicorp/go-hclog"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/stretchr/testify/require"
@@ -29,7 +28,7 @@ func newTestStateSyncManager(t *testing.T, key *validator.TestValidator, runtime
 	require.NoError(t, err)
 
 	state := newTestState(t)
-	require.NoError(t, state.EpochStore.insertEpoch(0, nil))
+	require.NoError(t, state.EpochStore.insertEpoch(0, nil, 0))
 
 	topic := &mockTopic{}
 
@@ -59,31 +58,35 @@ func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
 		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		// there are no state syncs
-		require.NoError(t, s.buildCommitment(nil))
+		require.NoError(t, s.buildCommitment(nil, 0))
 		require.Nil(t, s.pendingCommitments)
 
-		stateSyncs10 := generateStateSyncEvents(t, 10, 0)
+		stateSyncs10 := generateBridgeMessageEvents(t, 10, 0)
 
 		// add 5 state syncs starting in index 0, it will generate one smaller commitment
 		for i := 0; i < 5; i++ {
-			require.NoError(t, s.state.StateSyncStore.insertStateSyncEvent(stateSyncs10[i]))
+			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(stateSyncs10[i]))
 		}
 
-		require.NoError(t, s.buildCommitment(nil))
+		length := len(s.pendingCommitments[0].BridgeMessageBatch.Messages)
+
+		require.NoError(t, s.buildCommitment(nil, 0))
 		require.Len(t, s.pendingCommitments, 1)
-		require.Equal(t, uint64(0), s.pendingCommitments[0].StartID.Uint64())
-		require.Equal(t, uint64(4), s.pendingCommitments[0].EndID.Uint64())
+		require.Equal(t, uint64(0), s.pendingCommitments[0].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(4), s.pendingCommitments[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 		require.Equal(t, uint64(0), s.pendingCommitments[0].Epoch)
 
 		// add the next 5 state syncs, at that point, so that it generates a larger commitment
 		for i := 5; i < 10; i++ {
-			require.NoError(t, s.state.StateSyncStore.insertStateSyncEvent(stateSyncs10[i]))
+			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(stateSyncs10[i]))
 		}
 
-		require.NoError(t, s.buildCommitment(nil))
+		length = len(s.pendingCommitments[1].BridgeMessageBatch.Messages)
+
+		require.NoError(t, s.buildCommitment(nil, 0))
 		require.Len(t, s.pendingCommitments, 2)
-		require.Equal(t, uint64(0), s.pendingCommitments[1].StartID.Uint64())
-		require.Equal(t, uint64(9), s.pendingCommitments[1].EndID.Uint64())
+		require.Equal(t, uint64(0), s.pendingCommitments[1].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(9), s.pendingCommitments[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 		require.Equal(t, uint64(0), s.pendingCommitments[1].Epoch)
 
 		// the message was sent
@@ -95,15 +98,15 @@ func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
 
 		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
-		stateSyncs10 := generateStateSyncEvents(t, 10, 0)
+		stateSyncs10 := generateBridgeMessageEvents(t, 10, 0)
 
 		// add 5 state syncs starting in index 0, they will be saved to db
 		for i := 0; i < 5; i++ {
-			require.NoError(t, s.state.StateSyncStore.insertStateSyncEvent(stateSyncs10[i]))
+			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(stateSyncs10[i]))
 		}
 
 		// I am not a validator so no commitments should be built
-		require.NoError(t, s.buildCommitment(nil))
+		require.NoError(t, s.buildCommitment(nil, 0))
 		require.Len(t, s.pendingCommitments, 0)
 	})
 }
@@ -156,12 +159,12 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 		require.NoError(t, s.saveVote(msg))
 
 		// no votes for the current epoch
-		votes, err := s.state.StateSyncStore.getMessageVotes(0, msg.Hash)
+		votes, err := s.state.BridgeMessageStore.getMessageVotes(0, msg.BatchByte, 0)
 		require.NoError(t, err)
 		require.Len(t, votes, 0)
 
 		// returns an error for the invalid epoch
-		_, err = s.state.StateSyncStore.getMessageVotes(1, msg.Hash)
+		_, err = s.state.BridgeMessageStore.getMessageVotes(1, msg.BatchByte, 0)
 		require.Error(t, err)
 	})
 
@@ -204,18 +207,18 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 		// vote with validator 1
 		require.NoError(t, s.saveVote(val1signed))
 
-		votes, err := s.state.StateSyncStore.getMessageVotes(0, msg.hash)
+		votes, err := s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 0)
 		require.NoError(t, err)
 		require.Len(t, votes, 1)
 
 		// vote with validator 1 again (the votes do not increase)
 		require.NoError(t, s.saveVote(val1signed))
-		votes, _ = s.state.StateSyncStore.getMessageVotes(0, msg.hash)
+		votes, _ = s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 0)
 		require.Len(t, votes, 1)
 
 		// vote with validator 2
 		require.NoError(t, s.saveVote(val2signed))
-		votes, _ = s.state.StateSyncStore.getMessageVotes(0, msg.hash)
+		votes, _ = s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 0)
 		require.Len(t, votes, 2)
 	})
 }
@@ -231,16 +234,11 @@ func TestStateSyncManager_BuildCommitment(t *testing.T) {
 	require.NoError(t, err)
 	require.Nil(t, commitment)
 
-	tree, err := merkle.NewMerkleTree([][]byte{{0x1}})
-	require.NoError(t, err)
-
 	s.pendingCommitments = []*PendingCommitment{
 		{
-			MerkleTree: tree,
-			StateSyncCommitment: &contractsapi.StateSyncCommitment{
-				Root:    types.Hash(tree.Hash()),
-				StartID: big.NewInt(0),
-				EndID:   big.NewInt(1),
+			BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
+				SourceChainID:      big.NewInt(0),
+				DestinationChainID: big.NewInt(1),
 			},
 		},
 	}
@@ -286,17 +284,18 @@ func TestStateSyncerManager_BuildProofs(t *testing.T) {
 
 	s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
-	for _, evnt := range generateStateSyncEvents(t, 20, 0) {
-		require.NoError(t, s.state.StateSyncStore.insertStateSyncEvent(evnt))
+	for _, evnt := range generateBridgeMessageEvents(t, 20, 0) {
+		require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(evnt))
 	}
 
-	require.NoError(t, s.buildCommitment(nil))
+	require.NoError(t, s.buildCommitment(nil, 0))
 	require.Len(t, s.pendingCommitments, 1)
 
 	mockMsg := &CommitmentMessageSigned{
-		Message: &contractsapi.StateSyncCommitment{
-			StartID: s.pendingCommitments[0].StartID,
-			EndID:   s.pendingCommitments[0].EndID,
+		MessageBatch: &contractsapi.BridgeMessageBatch{
+			Messages:           s.pendingCommitments[0].BridgeMessageBatch.Messages,
+			SourceChainID:      s.pendingCommitments[0].BridgeMessageBatch.SourceChainID,
+			DestinationChainID: s.pendingCommitments[0].BridgeMessageBatch.DestinationChainID,
 		},
 	}
 
@@ -313,14 +312,10 @@ func TestStateSyncerManager_BuildProofs(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, s.PostBlock(req))
-	require.Equal(t, mockMsg.Message.EndID.Uint64()+1, s.nextCommittedIndex)
+	length := len(mockMsg.MessageBatch.Messages)
 
-	for i := uint64(0); i < 10; i++ {
-		proof, err := s.state.StateSyncStore.getStateSyncProof(i)
-		require.NoError(t, err)
-		require.NotNil(t, proof)
-	}
+	require.NoError(t, s.PostBlock(req))
+	require.Equal(t, mockMsg.MessageBatch.Messages[length-1].ID.Uint64()+1, s.nextCommittedIndex)
 }
 
 func TestStateSyncerManager_RemoveProcessedEventsAndProofs(t *testing.T) {
@@ -329,26 +324,15 @@ func TestStateSyncerManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	vals := validator.NewTestValidators(t, 5)
 
 	s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
-	stateSyncEvents := generateStateSyncEvents(t, stateSyncEventsCount, 0)
+	stateSyncEvents := generateBridgeMessageEvents(t, stateSyncEventsCount, 0)
 
 	for _, event := range stateSyncEvents {
-		require.NoError(t, s.state.StateSyncStore.insertStateSyncEvent(event))
+		require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(event))
 	}
 
-	require.NoError(t, s.buildProofs(&contractsapi.StateSyncCommitment{
-		StartID: stateSyncEvents[0].ID,
-		EndID:   stateSyncEvents[len(stateSyncEvents)-1].ID,
-	}, nil))
-
-	stateSyncEventsBefore, err := s.state.StateSyncStore.list()
+	stateSyncEventsBefore, err := s.state.BridgeMessageStore.list()
 	require.NoError(t, err)
 	require.Equal(t, stateSyncEventsCount, len(stateSyncEventsBefore))
-
-	for _, event := range stateSyncEvents {
-		proof, err := s.state.StateSyncStore.getStateSyncProof(event.ID.Uint64())
-		require.NoError(t, err)
-		require.NotNil(t, proof)
-	}
 
 	for _, event := range stateSyncEvents {
 		eventLog := createTestLogForStateSyncResultEvent(t, event.ID.Uint64())
@@ -356,15 +340,9 @@ func TestStateSyncerManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	}
 
 	// all state sync events and their proofs should be removed from the store
-	stateSyncEventsAfter, err := s.state.StateSyncStore.list()
+	stateSyncEventsAfter, err := s.state.BridgeMessageStore.list()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(stateSyncEventsAfter))
-
-	for _, event := range stateSyncEvents {
-		proof, err := s.state.StateSyncStore.getStateSyncProof(event.ID.Uint64())
-		require.NoError(t, err)
-		require.Nil(t, proof)
-	}
 }
 
 func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
@@ -379,7 +357,7 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 
 		// empty log which is not an state sync
 		require.NoError(t, s.AddLog(&ethgo.Log{}))
-		stateSyncs, err := s.state.StateSyncStore.list()
+		stateSyncs, err := s.state.BridgeMessageStore.list()
 
 		require.NoError(t, err)
 		require.Len(t, stateSyncs, 0)
@@ -390,7 +368,7 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 
 		// log with the state sync topic but incorrect content
 		require.Error(t, s.AddLog(&ethgo.Log{Topics: []ethgo.Hash{stateSyncEventID}}))
-		stateSyncs, err = s.state.StateSyncStore.list()
+		stateSyncs, err = s.state.BridgeMessageStore.list()
 
 		require.NoError(t, err)
 		require.Len(t, stateSyncs, 0)
@@ -411,12 +389,13 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 
 		require.NoError(t, s.AddLog(goodLog))
 
-		stateSyncs, err = s.state.StateSyncStore.getStateSyncEventsForCommitment(0, 0, nil)
+		stateSyncs, err = s.state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, 0, nil, 0)
 		require.NoError(t, err)
 		require.Len(t, stateSyncs, 1)
 		require.Len(t, s.pendingCommitments, 1)
-		require.Equal(t, uint64(0), s.pendingCommitments[0].StartID.Uint64())
-		require.Equal(t, uint64(0), s.pendingCommitments[0].EndID.Uint64())
+		length := len(s.pendingCommitments[0].BridgeMessageBatch.Messages)
+		require.Equal(t, uint64(0), s.pendingCommitments[0].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingCommitments[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 
 		// add one more log to have a minimum commitment
 		goodLog2 := goodLog.Copy()
@@ -424,8 +403,9 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 		require.NoError(t, s.AddLog(goodLog2))
 
 		require.Len(t, s.pendingCommitments, 2)
-		require.Equal(t, uint64(0), s.pendingCommitments[1].StartID.Uint64())
-		require.Equal(t, uint64(1), s.pendingCommitments[1].EndID.Uint64())
+		length = len(s.pendingCommitments[1].BridgeMessageBatch.Messages)
+		require.Equal(t, uint64(0), s.pendingCommitments[1].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(1), s.pendingCommitments[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 
 		// add two more logs to have larger commitments
 		goodLog3 := goodLog.Copy()
@@ -436,9 +416,11 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x3}) // state sync index 3
 		require.NoError(t, s.AddLog(goodLog4))
 
+		length = len(s.pendingCommitments[3].BridgeMessageBatch.Messages)
+
 		require.Len(t, s.pendingCommitments, 4)
-		require.Equal(t, uint64(0), s.pendingCommitments[3].StartID.Uint64())
-		require.Equal(t, uint64(3), s.pendingCommitments[3].EndID.Uint64())
+		require.Equal(t, uint64(0), s.pendingCommitments[3].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(3), s.pendingCommitments[3].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 	})
 
 	t.Run("Node is not a validator", func(t *testing.T) {
@@ -465,103 +447,12 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 		require.NoError(t, s.AddLog(goodLog))
 
 		// node should have inserted given state sync event, but it shouldn't build any commitment
-		stateSyncs, err := s.state.StateSyncStore.getStateSyncEventsForCommitment(0, 0, nil)
+		stateSyncs, err := s.state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, 0, nil, 0)
 		require.NoError(t, err)
 		require.Len(t, stateSyncs, 1)
 		require.Equal(t, uint64(0), stateSyncs[0].ID.Uint64())
 		require.Len(t, s.pendingCommitments, 0)
 	})
-}
-
-func TestStateSyncManager_GetProofs(t *testing.T) {
-	t.Parallel()
-
-	const (
-		stateSyncID = uint64(5)
-	)
-
-	state := newTestState(t)
-	insertTestStateSyncProofs(t, state, maxCommitmentSize)
-
-	stateSyncManager := &stateSyncManager{state: state}
-
-	proof, err := stateSyncManager.GetStateSyncProof(stateSyncID)
-	require.NoError(t, err)
-
-	stateSync, ok := (proof.Metadata["StateSync"]).(*contractsapi.StateSyncedEvent)
-	require.True(t, ok)
-	require.Equal(t, stateSyncID, stateSync.ID.Uint64())
-	require.NotEmpty(t, proof.Data)
-}
-
-func TestStateSyncManager_GetProofs_NoProof_NoCommitment(t *testing.T) {
-	t.Parallel()
-
-	const (
-		stateSyncID = uint64(5)
-	)
-
-	stateSyncManager := &stateSyncManager{state: newTestState(t)}
-
-	_, err := stateSyncManager.GetStateSyncProof(stateSyncID)
-	require.ErrorContains(t, err, "cannot find commitment for StateSync id")
-}
-
-func TestStateSyncManager_GetProofs_NoProof_HasCommitment_NoStateSyncs(t *testing.T) {
-	t.Parallel()
-
-	const (
-		stateSyncID = uint64(5)
-	)
-
-	state := newTestState(t)
-	require.NoError(t, state.StateSyncStore.insertCommitmentMessage(createTestCommitmentMessage(t, 1), nil))
-
-	stateSyncManager := &stateSyncManager{state: state, logger: hclog.NewNullLogger()}
-
-	_, err := stateSyncManager.GetStateSyncProof(stateSyncID)
-	require.ErrorContains(t, err, "failed to get state sync events for commitment to build proofs")
-}
-
-func TestStateSyncManager_GetProofs_NoProof_BuildProofs(t *testing.T) {
-	t.Parallel()
-
-	const (
-		stateSyncID = uint64(5)
-		fromIndex   = 1
-	)
-
-	state := newTestState(t)
-	stateSyncs := generateStateSyncEvents(t, maxCommitmentSize, fromIndex)
-
-	tree, err := createMerkleTree(stateSyncs)
-	require.NoError(t, err)
-
-	commitment := &CommitmentMessageSigned{
-		Message: &contractsapi.StateSyncCommitment{
-			StartID: big.NewInt(fromIndex),
-			EndID:   big.NewInt(maxCommitmentSize),
-			Root:    types.Hash(tree.Hash()),
-		},
-	}
-
-	for _, sse := range stateSyncs {
-		require.NoError(t, state.StateSyncStore.insertStateSyncEvent(sse))
-	}
-
-	require.NoError(t, state.StateSyncStore.insertCommitmentMessage(commitment, nil))
-
-	stateSyncManager := &stateSyncManager{state: state, logger: hclog.NewNullLogger()}
-
-	proof, err := stateSyncManager.GetStateSyncProof(stateSyncID)
-	require.NoError(t, err)
-
-	stateSync, ok := (proof.Metadata["StateSync"]).(*contractsapi.StateSyncedEvent)
-	require.True(t, ok)
-	require.Equal(t, stateSyncID, stateSync.ID.Uint64())
-	require.NotEmpty(t, proof.Data)
-
-	require.NoError(t, commitment.VerifyStateSyncProof(proof.Data, stateSync))
 }
 
 func createTestLogForStateSyncResultEvent(t *testing.T, stateSyncEventID uint64) *types.Log {
@@ -633,7 +524,7 @@ func (m *mockMsg) sign(val *validator.TestValidator, domain []byte) (*TransportM
 	}
 
 	return &TransportMessage{
-		Hash:        m.hash,
+		BatchByte:   m.hash,
 		Signature:   signature,
 		From:        val.Address().String(),
 		EpochNumber: m.epoch,

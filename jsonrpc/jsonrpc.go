@@ -37,7 +37,6 @@ type JSONRPCStore interface {
 	networkStore
 	txPoolStore
 	filterManagerStore
-	bridgeStore
 	debugStore
 }
 
