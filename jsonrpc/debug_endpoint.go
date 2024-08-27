@@ -281,17 +281,13 @@ func (d *Debug) GetRawTransaction(txHash types.Hash) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			tx, block := GetTxAndBlockByTxHash(txHash, d.store)
+			tx, _ := GetTxAndBlockByTxHash(txHash, d.store)
 			if tx == nil {
 				tx, _ = d.store.GetPendingTx(txHash)
 			}
 
 			if tx == nil {
-				return nil, fmt.Errorf("tx %s not found", txHash.String())
-			}
-
-			if block != nil && block.Number() == 0 {
-				return nil, ErrTraceGenesisBlock
+				return nil, nil
 			}
 
 			return tx.MarshalRLP(), nil

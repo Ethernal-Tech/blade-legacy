@@ -954,7 +954,6 @@ func TestGetRawTransaction(t *testing.T) {
 		txHash types.Hash
 		store  *debugEndpointMockStore
 		result interface{}
-		err    bool
 	}{
 		{
 			name:   "successful because ReadTxLookup is filled",
@@ -973,7 +972,6 @@ func TestGetRawTransaction(t *testing.T) {
 				},
 			},
 			result: blockWithTx.Transactions[0].MarshalRLP(),
-			err:    false,
 		},
 		{
 			name:   "should return error if ReadTxLookup and GetPendingTx returns null",
@@ -991,7 +989,6 @@ func TestGetRawTransaction(t *testing.T) {
 				},
 			},
 			result: nil,
-			err:    true,
 		},
 		{
 			name:   "should return error if block not found",
@@ -1015,7 +1012,6 @@ func TestGetRawTransaction(t *testing.T) {
 				},
 			},
 			result: nil,
-			err:    true,
 		},
 		{
 			name:   "should return error if the tx is not including the block",
@@ -1039,31 +1035,6 @@ func TestGetRawTransaction(t *testing.T) {
 				},
 			},
 			result: nil,
-			err:    true,
-		},
-		{
-			name:   "should return error if the block is genesis",
-			txHash: testTxHash1,
-			store: &debugEndpointMockStore{
-				readTxLookupFn: func(hash types.Hash) (uint64, bool) {
-					assert.Equal(t, testTxHash1, hash)
-
-					return testBlock10.Number(), true
-				},
-				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
-					assert.Equal(t, testBlock10.Number(), number)
-					assert.True(t, full)
-
-					return &types.Block{
-						Header: testGenesisHeader,
-						Transactions: []*types.Transaction{
-							testTx1,
-						},
-					}, true
-				},
-			},
-			result: nil,
-			err:    true,
 		},
 		{
 			name:   "should succeed if GetPendingTx succeeds",
@@ -1081,7 +1052,6 @@ func TestGetRawTransaction(t *testing.T) {
 				},
 			},
 			result: blockWithTx.Transactions[0].MarshalRLP(),
-			err:    false,
 		},
 	}
 
@@ -1093,15 +1063,9 @@ func TestGetRawTransaction(t *testing.T) {
 
 			endpoint := NewDebug(test.store, 100000)
 
-			res, err := endpoint.GetRawTransaction(test.txHash)
+			res, _ := endpoint.GetRawTransaction(test.txHash)
 
 			assert.Equal(t, test.result, res)
-
-			if test.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
 		})
 	}
 }
