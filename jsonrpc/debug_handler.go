@@ -20,8 +20,8 @@ var (
 	errCPUProfilingNotInProgress = errors.New("CPU profiling not in progress")
 	errTraceAlreadyInProgress    = errors.New("trace already in progress")
 	errTraceNotInProgress        = errors.New("trace not in progress")
-	identifierRegex              = regexp.MustCompile(`[:/\.A-Za-z0-9_-]+`)
-	notRegex                     = regexp.MustCompile(`!([:/\.A-Za-z0-9_-]+)`)
+	expressionRegex              = regexp.MustCompile(`[:/\.A-Za-z0-9_-]+`)
+	notExpressionRegex           = regexp.MustCompile(`!([:/\.A-Za-z0-9_-]+)`)
 )
 
 // DebugHandler implements the debugging API.
@@ -44,7 +44,7 @@ func (debug *DebugHandler) StartCPUProfile(file string) error {
 		return errCPUProfilingInProgress
 	}
 
-	f, err := os.Create(expandHome(file))
+	f, err := os.Create(resolveHomeDirectory(file))
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,10 @@ func (debug *DebugHandler) StopCPUProfile() error {
 
 	pprof.StopCPUProfile()
 
-	debug.cpuW.Close()
+	if err := debug.cpuW.Close(); err != nil {
+		return err
+	}
+
 	debug.cpuW = nil
 	debug.cpuProfileFile = ""
 
@@ -88,7 +91,7 @@ func (debug *DebugHandler) StartGoTrace(file string) error {
 		return errTraceAlreadyInProgress
 	}
 
-	f, err := os.Create(expandHome(file))
+	f, err := os.Create(resolveHomeDirectory(file))
 
 	if err != nil {
 		return err
@@ -150,8 +153,8 @@ func (*DebugHandler) Stacks(filter *string) (string, error) {
 }
 
 func expandFilter(filter string) (string, error) {
-	expanded := identifierRegex.ReplaceAllString(filter, "$0 in Value")
-	expanded = notRegex.ReplaceAllString(expanded, "$1 not")
+	expanded := expressionRegex.ReplaceAllString(filter, "$0 in Value")
+	expanded = notExpressionRegex.ReplaceAllString(expanded, "$1 not")
 
 	expanded = strings.ReplaceAll(expanded, "||", "or")
 	expanded = strings.ReplaceAll(expanded, "&&", "and")

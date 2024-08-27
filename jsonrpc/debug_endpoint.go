@@ -17,6 +17,9 @@ import (
 )
 
 const callTracerName = "callTracer"
+const blockString = "block"
+const mutexString = "mutex"
+const heapString = "heap"
 
 var (
 	defaultTraceTimeout = 5 * time.Second
@@ -156,7 +159,7 @@ func (d *Debug) MutexProfile(file string, nsec int64) (interface{}, error) {
 			time.Sleep(time.Duration(nsec) * time.Second)
 			defer runtime.SetMutexProfileFraction(0)
 
-			return writeProfile("mutex", file), nil
+			return writeProfile(mutexString, file), nil
 		},
 	)
 }
@@ -173,7 +176,7 @@ func (d *Debug) BlockProfile(file string, nsec int64) (interface{}, error) {
 
 			defer runtime.SetBlockProfileRate(0)
 
-			return writeProfile("block", file), nil
+			return writeProfile(blockString, file), nil
 		},
 	)
 }
@@ -256,7 +259,7 @@ func (d *Debug) StopCPUProfile() (interface{}, error) {
 	)
 }
 
-// StopTrace stops an ongoing trace.
+// StopGoTrace stops an ongoing trace.
 func (d *Debug) StopGoTrace() (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
@@ -275,7 +278,7 @@ func (d *Debug) WriteBlockProfile(file string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			return nil, writeProfile("block", file)
+			return nil, writeProfile(blockString, file)
 		},
 	)
 }
@@ -288,7 +291,7 @@ func (d *Debug) WriteMemProfile(file string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			return nil, writeProfile("heap", file)
+			return nil, writeProfile(heapString, file)
 		},
 	)
 }
@@ -298,7 +301,7 @@ func (d *Debug) WriteMutexProfile(file string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			return nil, writeProfile("mutex", file)
+			return nil, writeProfile(mutexString, file)
 		},
 	)
 }

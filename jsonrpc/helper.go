@@ -278,7 +278,7 @@ func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Tran
 
 // expands home directory in file paths.
 // ~someuser/tmp will not be expanded.
-func expandHome(p string) string {
+func resolveHomeDirectory(p string) string {
 	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
 		home := os.Getenv("HOME")
 		if home == "" {
@@ -298,7 +298,7 @@ func expandHome(p string) string {
 func writeProfile(name, file string) error {
 	p := pprof.Lookup(name)
 
-	f, err := os.Create(expandHome(file))
+	f, err := os.Create(resolveHomeDirectory(file))
 	if err != nil {
 		return err
 	}
