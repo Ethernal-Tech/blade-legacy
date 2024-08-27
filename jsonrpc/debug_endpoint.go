@@ -34,6 +34,9 @@ type debugBlockchainStore interface {
 	// GetHeaderByNumber gets a header using the provided number
 	GetHeaderByNumber(uint64) (*types.Header, bool)
 
+	// GetReceiptsByHash returns the receipts by block hash
+	GetReceiptsByHash(types.Hash) ([]*types.Receipt, error)
+
 	// ReadTxLookup returns a block hash in which a given txn was mined
 	ReadTxLookup(txnHash types.Hash) (uint64, bool)
 
@@ -291,6 +294,33 @@ func (d *Debug) GetRawTransaction(txHash types.Hash) (interface{}, error) {
 			}
 
 			return tx.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawReceipts retrieves the binary-encoded receipts of a single block.
+func (d *Debug) GetRawReceipts(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			receipts, err := d.store.GetReceiptsByHash(header.Hash)
+			if err != nil {
+				return nil, err
+			}
+
+			result := make([][]byte, len(receipts))
+
+			for i, receipt := range receipts {
+				b := receipt.MarshalRLP()
+				result[i] = b
+			}
+
+			return result, nil
 		},
 	)
 }

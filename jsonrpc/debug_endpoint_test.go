@@ -19,6 +19,7 @@ import (
 type debugEndpointMockStore struct {
 	headerFn            func() *types.Header
 	getHeaderByNumberFn func(uint64) (*types.Header, bool)
+	getReceiptsByHashFn func(types.Hash) ([]*types.Receipt, error)
 	readTxLookupFn      func(types.Hash) (uint64, bool)
 	getPendingTxFn      func(types.Hash) (*types.Transaction, bool)
 	getBlockByHashFn    func(types.Hash, bool) (*types.Block, bool)
@@ -36,6 +37,10 @@ func (s *debugEndpointMockStore) Header() *types.Header {
 
 func (s *debugEndpointMockStore) GetHeaderByNumber(num uint64) (*types.Header, bool) {
 	return s.getHeaderByNumberFn(num)
+}
+
+func (s *debugEndpointMockStore) GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error) {
+	return s.getReceiptsByHashFn(hash)
 }
 
 func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (uint64, bool) {
@@ -1066,6 +1071,97 @@ func TestGetRawTransaction(t *testing.T) {
 			res, _ := endpoint.GetRawTransaction(test.txHash)
 
 			assert.Equal(t, test.result, res)
+		})
+	}
+}
+
+func TestGetRawReceipts(t *testing.T) {
+	t.Parallel()
+
+	const (
+		cumulativeGasUsed = 28000
+		gasUsed           = 26000
+	)
+
+	rec := createTestReceipt(nil, cumulativeGasUsed, gasUsed, testTx1.Hash())
+	receipts := []*types.Receipt{rec}
+
+	tests := []struct {
+		name   string
+		filter BlockNumberOrHash
+		store  *debugEndpointMockStore
+		result interface{}
+		err    bool
+	}{
+		{
+			name:   "HeaderNotFound",
+			filter: EarliestBlockNumberOrHash,
+			store: &debugEndpointMockStore{
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					assert.Equal(t, uint64(0), num)
+
+					return nil, false
+				},
+			},
+			result: nil,
+			err:    true,
+		},
+		{
+			name:   "ReceiptsNotFound",
+			filter: LatestBlockNumberOrHash,
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+				getReceiptsByHashFn: func(hash types.Hash) ([]*types.Receipt, error) {
+					return nil, ErrExecutionTimeout
+				},
+			},
+			result: nil,
+			err:    true,
+		},
+		{
+			name:   "Success",
+			filter: LatestBlockNumberOrHash,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+
+				getReceiptsByHashFn: func(hash types.Hash) ([]*types.Receipt, error) {
+					return receipts, nil
+				},
+			},
+			result: [][]byte{rec.MarshalRLP()},
+			err:    false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.GetRawReceipts(test.filter)
+
+			assert.Equal(t, test.result, res)
+
+			if test.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
 		})
 	}
 }
