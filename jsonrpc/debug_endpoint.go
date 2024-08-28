@@ -16,10 +16,12 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-const callTracerName = "callTracer"
-const blockString = "block"
-const mutexString = "mutex"
-const heapString = "heap"
+const (
+	callTracerName = "callTracer"
+	blockString    = "block"
+	mutexString    = "mutex"
+	heapString     = "heap"
+)
 
 var (
 	defaultTraceTimeout = 5 * time.Second
