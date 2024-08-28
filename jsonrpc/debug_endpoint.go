@@ -316,8 +316,7 @@ func (d *Debug) GetRawReceipts(filter BlockNumberOrHash) (interface{}, error) {
 			result := make([][]byte, len(receipts))
 
 			for i, receipt := range receipts {
-				b := receipt.MarshalRLP()
-				result[i] = b
+				result[i] = receipt.MarshalRLP()
 			}
 
 			return result, nil
