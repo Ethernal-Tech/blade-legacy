@@ -195,7 +195,9 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 				return nil, err
 			}
 
-			f.blockBuilder.WriteTx(tx)
+			if err := f.blockBuilder.WriteTx(tx); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -781,7 +783,10 @@ func validateHeaderFields(parent *types.Header, header *types.Header, blockTimeD
 	return nil
 }
 
-func createCommitValidatorSetInput(validators validator.AccountSet, signature [2]*big.Int, bitmap []byte) *contractsapi.CommitValidatorSetBridgeStorageFn {
+func createCommitValidatorSetInput(
+	validators validator.AccountSet,
+	signature [2]*big.Int,
+	bitmap []byte) *contractsapi.CommitValidatorSetBridgeStorageFn {
 	return &contractsapi.CommitValidatorSetBridgeStorageFn{
 		NewValidatorSet: validators.ToAPIBinding(),
 		Signature:       signature,

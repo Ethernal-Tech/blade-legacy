@@ -179,7 +179,9 @@ func (s *EpochStore) isEpochInserted(epoch uint64, chainId uint64) bool {
 
 // getEpochBucket returns bucket from db associated with given epoch
 func getEpochBucket(tx *bolt.Tx, epoch uint64, chainId uint64) (*bolt.Bucket, error) {
-	epochBucket := tx.Bucket(epochsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Bucket(common.EncodeUint64ToBytes(epoch))
+	epochBucket := tx.Bucket(epochsBucket).
+		Bucket(common.EncodeUint64ToBytes(chainId)).
+		Bucket(common.EncodeUint64ToBytes(epoch))
 	if epochBucket == nil {
 		return nil, fmt.Errorf("could not find bucket for epoch: %v", epoch)
 	}

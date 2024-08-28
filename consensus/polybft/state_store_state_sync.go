@@ -110,8 +110,8 @@ func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Bridge
 // removeStateSyncEventsAndProofs removes state sync events and their proofs from the buckets in db
 func (s *BridgeMessageStore) removeStateSyncEventsAndProofs(bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
-		eventsBucket := tx.Bucket(bridgeMessageEventsBucket)         //FIX need destinationChainID
-		proofsBucket := tx.Bucket([]byte(bridgeMessageProofsBucket)) //FIX need destinationChainID
+		eventsBucket := tx.Bucket(bridgeMessageEventsBucket)
+		proofsBucket := tx.Bucket([]byte(bridgeMessageProofsBucket))
 
 		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
 
@@ -197,7 +197,7 @@ func (s *BridgeMessageStore) getCommitmentForBridgeEvents(bridgeMessageID, chain
 	var commitment *CommitmentMessageSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor() //FIX
+		c := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor()
 
 		k, v := c.Seek(common.EncodeUint64ToBytes(bridgeMessageID))
 		if k == nil {
