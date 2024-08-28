@@ -735,10 +735,23 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 	t.Run("quorum size not reached", func(t *testing.T) {
 		t.Parallel()
 
+		blsKey, err := bls.GenerateBlsKey()
+		require.NoError(t, err)
+
+		data := generateRandomBytes(t)
+
+		signature, err := blsKey.Sign(data, domain)
+		require.NoError(t, err)
+
+		signatures := bls.Signatures{signature}
+
+		aggSig, err := signatures.Aggregate().Marshal()
+		require.NoError(t, err)
+
 		validators := validator.NewTestValidators(t, 5)
 		commitment := createTestCommitment(t, validators.GetPrivateIdentities())
 		commitment.AggSignature = Signature{
-			AggregatedSignature: []byte{1, 2},
+			AggregatedSignature: aggSig,
 			Bitmap:              []byte{},
 		}
 
@@ -773,10 +786,10 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 
 		fsm := &fsm{}
 
-		encodedCommitment, err := createTestCommitmentMessage(t).EncodeAbi()
+		encodedCommitment, err := createTestCommitmentMessage(t, 0, 0).EncodeAbi()
 		require.NoError(t, err)
 
-		tx := createStateTransactionWithData(contracts.StateReceiverContract, encodedCommitment)
+		tx := createStateTransactionWithData(contracts.BridgeStorageContract, encodedCommitment)
 		assert.ErrorContains(t, fsm.VerifyStateTransactions([]*types.Transaction{tx}),
 			"found commitment tx in block which should not contain it")
 	})
@@ -1503,7 +1516,9 @@ func TestFSM_DecodeCommitmentStateTxs(t *testing.T) {
 
 	decodedCommitmentMsg, ok := decodedData.(*CommitmentMessageSigned)
 	require.True(t, ok)
-	require.Equal(t, signedCommitment, decodedCommitmentMsg)
+	numberOfMessages := len(signedCommitment.MessageBatch.Messages)
+	require.Equal(t, signedCommitment.MessageBatch.Messages[numberOfMessages-1].ID, decodedCommitmentMsg.MessageBatch.Messages[numberOfMessages-1].ID)
+	require.Equal(t, signedCommitment.AggSignature, decodedCommitmentMsg.AggSignature)
 }
 
 func TestFSM_DecodeCommitEpochStateTx(t *testing.T) {

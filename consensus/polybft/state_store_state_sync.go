@@ -101,7 +101,7 @@ func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Bridge
 			return err
 		}
 
-		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(event.DestinationChainID.Uint64())) //FIX need destinationChainID in event
+		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(event.DestinationChainID.Uint64()))
 
 		return bucket.Put(common.EncodeUint64ToBytes(event.ID.Uint64()), raw)
 	})
@@ -193,13 +193,13 @@ func (s *BridgeMessageStore) getBridgeMessageEventsForCommitment(
 }
 
 // getCommitmentForStateSync returns the commitment that contains given state sync event if it exists
-func (s *BridgeMessageStore) getCommitmentForBridgeEvents(stateSyncID uint64) (*CommitmentMessageSigned, error) {
+func (s *BridgeMessageStore) getCommitmentForBridgeEvents(bridgeMessageID, chainId uint64) (*CommitmentMessageSigned, error) {
 	var commitment *CommitmentMessageSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket([]byte(commitmentsBucket)).Cursor() //FIX
+		c := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor() //FIX
 
-		k, v := c.Seek(common.EncodeUint64ToBytes(stateSyncID))
+		k, v := c.Seek(common.EncodeUint64ToBytes(bridgeMessageID))
 		if k == nil {
 			return errNoCommitmentForStateSync
 		}
@@ -208,7 +208,7 @@ func (s *BridgeMessageStore) getCommitmentForBridgeEvents(stateSyncID uint64) (*
 			return err
 		}
 
-		if !commitment.ContainsStateSync(stateSyncID) {
+		if !commitment.ContainsBridgeMessage(bridgeMessageID) {
 			return errNoCommitmentForStateSync
 		}
 
@@ -228,9 +228,14 @@ func (s *BridgeMessageStore) insertCommitmentMessage(commitment *CommitmentMessa
 		}
 
 		length := len(commitment.MessageBatch.Messages)
+		var lastId = uint64(0)
+
+		if length > 0 {
+			lastId = commitment.MessageBatch.Messages[length-1].ID.Uint64()
+		}
 
 		if err := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(commitment.MessageBatch.DestinationChainID.Uint64())).Put(
-			common.EncodeUint64ToBytes(commitment.MessageBatch.Messages[length-1].ID.Uint64()), raw); err != nil {
+			common.EncodeUint64ToBytes(lastId), raw); err != nil {
 			return err
 		}
 
@@ -247,11 +252,11 @@ func (s *BridgeMessageStore) insertCommitmentMessage(commitment *CommitmentMessa
 }
 
 // getCommitmentMessage queries the signed commitment from the db
-func (s *BridgeMessageStore) getCommitmentMessage(toIndex uint64) (*CommitmentMessageSigned, error) {
+func (s *BridgeMessageStore) getCommitmentMessage(toIndex uint64, chainId uint64) (*CommitmentMessageSigned, error) {
 	var commitment *CommitmentMessageSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		raw := tx.Bucket([]byte(commitmentsBucket)).Get(common.EncodeUint64ToBytes(toIndex)) //FIX
+		raw := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Get(common.EncodeUint64ToBytes(toIndex)) //FIX
 		if raw == nil {
 			return nil
 		}
@@ -384,7 +389,7 @@ func (s *BridgeMessageStore) GetAllAvailableRelayerEvents(limit int) (result []*
 
 // getAvailableRelayerEvents retrieves all relayer that should be sent as a transactions
 func getAvailableRelayerEvents(limit int, bucket []byte, tx *bolt.Tx, chainId uint64) (result []*RelayerEventMetaData, err error) {
-	cursor := tx.Bucket([]byte(bucket)).Cursor()
+	cursor := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor()
 
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 		var event *RelayerEventMetaData

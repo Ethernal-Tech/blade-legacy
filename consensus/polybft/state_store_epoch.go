@@ -41,17 +41,27 @@ validatorSnapshots/
 */
 
 type EpochStore struct {
-	db *bolt.DB
+	db       *bolt.DB
+	chainIds []uint64
 }
 
 // initialize creates necessary buckets in DB if they don't already exist
 func (s *EpochStore) initialize(tx *bolt.Tx) error {
-	if _, err := tx.CreateBucketIfNotExists(epochsBucket); err != nil {
+	var epochBucket *bolt.Bucket
+	var err error
+
+	if epochBucket, err = tx.CreateBucketIfNotExists(epochsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(epochsBucket), err)
 	}
 
 	if _, err := tx.CreateBucketIfNotExists(validatorSnapshotsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(validatorSnapshotsBucket), err)
+	}
+
+	for _, chainId := range s.chainIds {
+		if _, err := epochBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainId)); err != nil {
+			return fmt.Errorf("failed to create bucket=%s: %w", string(epochsBucket), err)
+		}
 	}
 
 	return nil
@@ -184,9 +194,19 @@ func (s *EpochStore) cleanEpochsFromDB(dbTx *bolt.Tx) error {
 			return err
 		}
 
-		_, err := tx.CreateBucket(epochsBucket)
+		epochBucket, err := tx.CreateBucket(epochsBucket)
+		if err != nil {
+			return err
+		}
 
-		return err
+		for _, chainId := range s.chainIds {
+			if _, err := epochBucket.CreateBucket(common.EncodeUint64ToBytes(chainId)); err != nil {
+				return err
+			}
+
+		}
+
+		return nil
 	}
 
 	if dbTx == nil {

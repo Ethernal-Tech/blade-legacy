@@ -109,9 +109,12 @@ func generateBridgeMessageEvents(t *testing.T, eventsCount int, startIdx uint64)
 	bridgeMessageEvents := make([]*contractsapi.BridgeMessageEventEvent, eventsCount)
 	for i := 0; i < eventsCount; i++ {
 		bridgeMessageEvents[i] = &contractsapi.BridgeMessageEventEvent{
-			ID:     big.NewInt(int64(startIdx + uint64(i))),
-			Sender: types.StringToAddress(fmt.Sprintf("0x5%d", i)),
-			Data:   generateRandomBytes(t),
+			ID:                 big.NewInt(int64(startIdx + uint64(i))),
+			Sender:             types.StringToAddress(fmt.Sprintf("0x5%d", i)),
+			Receiver:           types.StringToAddress(fmt.Sprintf("0x4%d", i)),
+			Data:               generateRandomBytes(t),
+			SourceChainID:      big.NewInt(1),
+			DestinationChainID: big.NewInt(0),
 		}
 	}
 

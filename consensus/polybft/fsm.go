@@ -285,7 +285,7 @@ func (f *fsm) applyBridgeCommitmentTx() error {
 
 // createBridgeCommitmentTx builds bridge commitment registration transaction
 func (f *fsm) createBridgeCommitmentTx(chainId uint64) (*types.Transaction, error) {
-	if proposerCommitmentToRegister, ok := f.proposerCommitmentToRegister[chainId]; !ok {
+	if proposerCommitmentToRegister, ok := f.proposerCommitmentToRegister[chainId]; ok {
 		inputData, err := proposerCommitmentToRegister.EncodeAbi()
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode input data for bridge commitment registration: %w", err)

@@ -427,19 +427,20 @@ func (c *consensusRuntime) FSM() error {
 	valSet := validator.NewValidatorSet(epoch.Validators, c.logger)
 
 	ff := &fsm{
-		config:              epoch.CurrentClientConfig,
-		forks:               c.config.Forks,
-		parent:              parent,
-		backend:             c.config.blockchain,
-		polybftBackend:      c.config.polybftBackend,
-		epochNumber:         epoch.Number,
-		blockBuilder:        blockBuilder,
-		validators:          valSet,
-		isEndOfEpoch:        isEndOfEpoch,
-		isEndOfSprint:       isEndOfSprint,
-		isFirstBlockOfEpoch: isFirstBlockOfEpoch,
-		proposerSnapshot:    proposerSnapshot,
-		logger:              c.logger.Named("fsm"),
+		config:                       epoch.CurrentClientConfig,
+		forks:                        c.config.Forks,
+		parent:                       parent,
+		backend:                      c.config.blockchain,
+		polybftBackend:               c.config.polybftBackend,
+		epochNumber:                  epoch.Number,
+		blockBuilder:                 blockBuilder,
+		validators:                   valSet,
+		isEndOfEpoch:                 isEndOfEpoch,
+		isEndOfSprint:                isEndOfSprint,
+		isFirstBlockOfEpoch:          isFirstBlockOfEpoch,
+		proposerSnapshot:             proposerSnapshot,
+		logger:                       c.logger.Named("fsm"),
+		proposerCommitmentToRegister: make(map[uint64]*CommitmentMessageSigned),
 	}
 
 	if isEndOfSprint {

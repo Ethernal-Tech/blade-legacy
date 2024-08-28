@@ -25,14 +25,16 @@ func NewPendingCommitment(epoch uint64, bridgeEvents []*contractsapi.BridgeMessa
 
 	for i, bridgeEvent := range bridgeEvents {
 		messages[i] = &contractsapi.BridgeMessage{
-			ID:       bridgeEvent.ID,
-			Sender:   bridgeEvent.Sender,
-			Receiver: bridgeEvent.Receiver,
-			Payload:  bridgeEvent.Data}
+			ID:                 bridgeEvent.ID,
+			Sender:             bridgeEvent.Sender,
+			Receiver:           bridgeEvent.Receiver,
+			Payload:            bridgeEvent.Data,
+			SourceChainID:      bridgeEvent.SourceChainID,
+			DestinationChainID: bridgeEvent.DestinationChainID}
 	}
 
 	return &PendingCommitment{
-		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{Messages: messages},
+		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{Messages: messages, DestinationChainID: bridgeEvents[0].DestinationChainID, SourceChainID: bridgeEvents[0].SourceChainID},
 		Epoch:              epoch,
 	}, nil
 }
@@ -67,8 +69,12 @@ func (cm *CommitmentMessageSigned) Hash() (types.Hash, error) {
 }
 
 // ContainsStateSync checks if commitment contains given state sync event
-func (cm *CommitmentMessageSigned) ContainsStateSync(stateSyncID uint64) bool {
-	return cm.MessageBatch.SourceChainID.Uint64() == stateSyncID && cm.MessageBatch.DestinationChainID.Uint64() == stateSyncID
+func (cm *CommitmentMessageSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool {
+	length := len(cm.MessageBatch.Messages)
+	if length == 0 {
+		return false
+	}
+	return cm.MessageBatch.Messages[0].ID.Uint64() <= bridgeMessageID && cm.MessageBatch.Messages[length-1].ID.Uint64() >= bridgeMessageID
 }
 
 // EncodeAbi contains logic for encoding arbitrary data into ABI format
@@ -150,7 +156,7 @@ func (cm *CommitmentMessageSigned) DecodeAbi(txData []byte) error {
 
 // getCommitmentMessageSignedTx returns a CommitmentMessageSigned object from a commit state transaction
 func getCommitmentMessageSignedTx(txs []*types.Transaction) (*CommitmentMessageSigned, error) {
-	var commitFn contractsapi.CommitStateReceiverFn
+	var commitFn contractsapi.CommitBatchBridgeStorageFn
 	for _, tx := range txs {
 		// skip non state CommitmentMessageSigned transactions
 		if tx.Type() != types.StateTxType ||

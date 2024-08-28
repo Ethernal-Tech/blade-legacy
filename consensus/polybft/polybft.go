@@ -309,7 +309,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 			} else {
 				for chainID := range bridgeCfg {
 					// initialize ChildERC20Predicate SC
-					input, err := getInitERC20PredicateInput(bridgeCfg[chainID], false)
+					input, err := getInitERC20PredicateInput(bridgeCfg[chainID], false, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -320,7 +320,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					// initialize ChildERC721Predicate SC
-					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], false)
+					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], false, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -331,7 +331,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					// initialize ChildERC1155Predicate SC
-					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], false)
+					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], false, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -342,7 +342,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					// initialize RootMintableERC20Predicate SC
-					input, err = getInitERC20PredicateInput(bridgeCfg[chainID], true)
+					input, err = getInitERC20PredicateInput(bridgeCfg[chainID], true, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -353,7 +353,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					// initialize RootMintableERC721Predicate SC
-					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], true)
+					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], true, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}
@@ -364,7 +364,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 
 					// initialize RootMintableERC1155Predicate SC
-					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], true)
+					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], true, new(big.Int).SetUint64(chainID))
 					if err != nil {
 						return err
 					}

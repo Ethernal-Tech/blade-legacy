@@ -6,22 +6,28 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.etcd.io/bbolt"
 )
 
+var domain = crypto.Keccak256([]byte("DOMAIN"))
+
 func TestState_InsertEvent(t *testing.T) {
 	t.Parallel()
 
 	state := newTestState(t)
 	event1 := &contractsapi.BridgeMessageEventEvent{
-		ID:       big.NewInt(0),
-		Sender:   types.Address{},
-		Receiver: types.Address{},
-		Data:     []byte{},
+		ID:                 big.NewInt(0),
+		Sender:             types.Address{},
+		Receiver:           types.Address{},
+		Data:               []byte{},
+		SourceChainID:      big.NewInt(1),
+		DestinationChainID: bigZero,
 	}
 
 	err := state.BridgeMessageStore.insertBridgeMessageEvent(event1)
@@ -121,14 +127,12 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 func TestState_insertCommitmentMessage(t *testing.T) {
 	t.Parallel()
 
-	commitment := createTestCommitmentMessage(t)
+	commitment := createTestCommitmentMessage(t, 0, 0)
 
 	state := newTestState(t)
 	assert.NoError(t, state.BridgeMessageStore.insertCommitmentMessage(commitment, nil))
 
-	length := len(commitment.MessageBatch.Messages)
-
-	commitmentFromDB, err := state.BridgeMessageStore.getCommitmentMessage(commitment.MessageBatch.Messages[length-1].ID.Uint64())
+	commitmentFromDB, err := state.BridgeMessageStore.getCommitmentMessage(0, 0)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, commitmentFromDB)
@@ -145,8 +149,8 @@ func TestState_getCommitmentForStateSync(t *testing.T) {
 	insertTestCommitments(t, state, numOfCommitments)
 
 	var cases = []struct {
-		stateSyncID   uint64
-		hasCommitment bool
+		bridgeMessageID uint64
+		hasCommitment   bool
 	}{
 		{1, true},
 		{10, true},
@@ -168,11 +172,11 @@ func TestState_getCommitmentForStateSync(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		commitment, err := state.BridgeMessageStore.getCommitmentForBridgeEvents(c.stateSyncID)
+		commitment, err := state.BridgeMessageStore.getCommitmentForBridgeEvents(c.bridgeMessageID, 0)
 
 		if c.hasCommitment {
-			require.NoError(t, err, fmt.Sprintf("state sync %v", c.stateSyncID))
-			require.Equal(t, c.hasCommitment, commitment.ContainsStateSync(c.stateSyncID))
+			require.NoError(t, err, fmt.Sprintf("state sync %v", c.bridgeMessageID))
+			require.Equal(t, c.hasCommitment, commitment.ContainsBridgeMessage(c.bridgeMessageID))
 		} else {
 			require.ErrorIs(t, errNoCommitmentForStateSync, err)
 		}
@@ -231,18 +235,44 @@ func TestState_GetNestedBucketInEpoch(t *testing.T) {
 	}
 }
 
-func createTestCommitmentMessage(t *testing.T) *CommitmentMessageSigned {
+func createTestCommitmentMessage(t *testing.T, numberOfMessages, firstIndex uint64) *CommitmentMessageSigned {
 	t.Helper()
 
-	msg := &contractsapi.BridgeMessageBatch{
-		Messages:           []*contractsapi.BridgeMessage{},
+	messages := make([]*contractsapi.BridgeMessage, numberOfMessages)
+
+	for i := firstIndex; i < firstIndex+numberOfMessages; i++ {
+		messages[i-firstIndex] = &contractsapi.BridgeMessage{
+			ID:                 new(big.Int).SetUint64(i),
+			SourceChainID:      big.NewInt(1),
+			DestinationChainID: bigZero,
+			Sender:             types.Address{},
+			Receiver:           types.Address{},
+			Payload:            []byte{}}
+	}
+
+	msg := contractsapi.BridgeMessageBatch{
+		Messages:           messages,
 		SourceChainID:      big.NewInt(1),
 		DestinationChainID: big.NewInt(0),
 	}
 
+	blsKey, err := bls.GenerateBlsKey()
+	require.NoError(t, err)
+
+	data := generateRandomBytes(t)
+
+	signature, err := blsKey.Sign(data, domain)
+	require.NoError(t, err)
+
+	signatures := bls.Signatures{signature}
+
+	aggSig, err := signatures.Aggregate().Marshal()
+	require.NoError(t, err)
+
 	return &CommitmentMessageSigned{
-		MessageBatch: msg,
-		AggSignature: Signature{},
+		MessageBatch: &msg,
+		AggSignature: Signature{AggregatedSignature: aggSig},
+		PublicKeys:   [][]byte{blsKey.PublicKey().Marshal()},
 	}
 }
 
@@ -250,7 +280,7 @@ func insertTestCommitments(t *testing.T, state *State, numberOfCommitments uint6
 	t.Helper()
 
 	for i := uint64(0); i <= numberOfCommitments; i++ {
-		commitment := createTestCommitmentMessage(t)
+		commitment := createTestCommitmentMessage(t, 10, 10*i)
 		require.NoError(t, state.BridgeMessageStore.insertCommitmentMessage(commitment, nil))
 	}
 }
@@ -278,8 +308,8 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 
 	// get available events
 	events, err := state.BridgeMessageStore.GetAllAvailableRelayerEvents(0)
-
 	require.NoError(t, err)
+
 	require.Len(t, events, 3)
 	require.Equal(t, uint64(2), events[0].EventID)
 	require.Equal(t, uint64(4), events[1].EventID)

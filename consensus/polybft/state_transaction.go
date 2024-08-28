@@ -17,7 +17,7 @@ func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, 
 	sig := txData[:abiMethodIDLength]
 
 	var (
-		commitBridgeTxFn    contractsapi.CommitStateReceiverFn
+		commitBridgeTxFn    contractsapi.CommitBatchBridgeStorageFn
 		commitEpochFn       contractsapi.CommitEpochEpochManagerFn
 		distributeRewardsFn contractsapi.DistributeRewardForEpochManagerFn
 		obj                 contractsapi.StateTransactionInput

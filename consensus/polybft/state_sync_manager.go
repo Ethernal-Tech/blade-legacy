@@ -100,10 +100,11 @@ type topic interface {
 func newStateSyncManager(logger hclog.Logger, state *State, config *stateSyncConfig,
 	runtime Runtime) *stateSyncManager {
 	return &stateSyncManager{
-		logger:  logger,
-		state:   state,
-		config:  config,
-		runtime: runtime,
+		logger:             logger,
+		state:              state,
+		config:             config,
+		runtime:            runtime,
+		nextCommittedIndex: make(map[uint64]uint64),
 	}
 }
 
@@ -478,7 +479,7 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx, chainId uint64) error 
 		s.logger.Debug(
 			"[buildCommitment] Built commitment",
 			"from", commitment.BridgeMessageBatch.Messages[0].ID.Uint64(),
-			"to", commitment.BridgeMessageBatch.Messages[length].ID.Uint64(),
+			"to", commitment.BridgeMessageBatch.Messages[length-1].ID.Uint64(),
 		)
 	}
 
