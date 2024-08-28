@@ -39,10 +39,6 @@ var (
 	StakeManagerContract = types.StringToAddress("0x10022")
 	// StakeManagerContract is an address of stake manager contract on child chain
 	StakeManagerContractV1 = types.StringToAddress("0x100221")
-	// ValidatorSetStorageContract is an address of validator set storage proxy contract
-	ValidatorSetStorageContract = types.StringToAddress("0x10031")
-	// ValidatorSetStorageContractV1 is an address of validator set storage contract on the child chain
-	ValidatorSetStorageContractV1 = types.StringToAddress("0x100311")
 	// GatewayCotnract is an address of gateway proxy contract
 	GatewayContract = types.StringToAddress("0x10032")
 	// GatewayCotnractV1 is an address of gateway contract
@@ -128,7 +124,6 @@ var (
 // GetProxyImplementationMapping retrieves the addresses of proxy contracts that should be deployed unconditionally
 func GetProxyImplementationMapping() map[types.Address]types.Address {
 	return map[types.Address]types.Address{
-		ValidatorSetStorageContract:   ValidatorSetStorageContractV1,
 		GatewayContract:               GatewayContractV1,
 		BridgeStorageContract:         BridgeStorageContractV1,
 		StateReceiverContract:         StateReceiverContractV1,
