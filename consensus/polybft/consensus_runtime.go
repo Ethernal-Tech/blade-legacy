@@ -526,7 +526,7 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		c.logger.Error("Could not clean previous epochs from db.", "error", err)
 	}
 
-	for chainId, _ := range c.bridgeManagers {
+	for chainId := range c.bridgeManagers {
 		if err := c.state.EpochStore.insertEpoch(epochNumber, dbTx, chainId); err != nil {
 			return nil, fmt.Errorf("an error occurred while inserting new epoch in db. Reason: %w", err)
 		}

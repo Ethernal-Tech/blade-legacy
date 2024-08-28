@@ -198,7 +198,7 @@ func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log
 		if stateSyncResultEvent.Status {
 			ssr.logger.Debug("state sync result event has been processed", "block", header.Number, "stateSyncID", eventID)
 
-			return ssr.state.UpdateRelayerEvents(nil, []*RelayerEventMetaData{&RelayerEventMetaData{EventID: eventID}}, dbTx)
+			return ssr.state.UpdateRelayerEvents(nil, []*RelayerEventMetaData{{EventID: eventID}}, dbTx)
 		}
 
 		ssr.logger.Debug("state sync result event failed to process", "block", header.Number,
