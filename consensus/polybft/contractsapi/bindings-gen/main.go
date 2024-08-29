@@ -448,7 +448,7 @@ func main() {
 			},
 			[]string{
 				"BridgeMessageResult",
-				"BridgeMessageEvent",
+				"BridgeMsg",
 			},
 		},
 	}

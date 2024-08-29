@@ -103,12 +103,12 @@ func createTestDistributeRewardsInput(t *testing.T, epochID uint64,
 	}
 }
 
-func generateBridgeMessageEvents(t *testing.T, eventsCount int, startIdx uint64) []*contractsapi.BridgeMessageEventEvent {
+func generateBridgeMessageEvents(t *testing.T, eventsCount int, startIdx uint64) []*contractsapi.BridgeMsgEvent {
 	t.Helper()
 
-	bridgeMessageEvents := make([]*contractsapi.BridgeMessageEventEvent, eventsCount)
+	bridgeMessageEvents := make([]*contractsapi.BridgeMsgEvent, eventsCount)
 	for i := 0; i < eventsCount; i++ {
-		bridgeMessageEvents[i] = &contractsapi.BridgeMessageEventEvent{
+		bridgeMessageEvents[i] = &contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(startIdx + uint64(i))),
 			Sender:             types.StringToAddress(fmt.Sprintf("0x5%d", i)),
 			Receiver:           types.StringToAddress(fmt.Sprintf("0x4%d", i)),

@@ -215,7 +215,7 @@ func (s *bridgeEventManager) verifyVoteSignature(valSet validator.ValidatorSet, 
 
 // AddLog saves the received log from event tracker if it matches a bridge message event ABI
 func (s *bridgeEventManager) AddLog(eventLog *ethgo.Log) error {
-	event := &contractsapi.BridgeMessageEventEvent{}
+	event := &contractsapi.BridgeMsgEvent{}
 
 	doesMatch, err := event.ParseLog(eventLog)
 	if !doesMatch {

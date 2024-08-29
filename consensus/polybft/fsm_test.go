@@ -655,7 +655,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 
 		var (
 			pendingBridgeBatches [2]*PendingBridgeBatch
-			bridgeMessageEvents  [2][]*contractsapi.BridgeMessageEventEvent
+			bridgeMessageEvents  [2][]*contractsapi.BridgeMsgEvent
 			signedBridgeBatches  [2]*BridgeBatchSigned
 		)
 
@@ -1646,10 +1646,10 @@ func createTestBridgeBatch(t *testing.T, accounts []*wallet.Account) *BridgeBatc
 	t.Helper()
 
 	bitmap := bitmap.Bitmap{}
-	bridgeMessageEvents := make([]*contractsapi.BridgeMessageEventEvent, len(accounts))
+	bridgeMessageEvents := make([]*contractsapi.BridgeMsgEvent, len(accounts))
 
 	for i := 0; i < len(accounts); i++ {
-		bridgeMessageEvents[i] = &contractsapi.BridgeMessageEventEvent{
+		bridgeMessageEvents[i] = &contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(i)),
 			Sender:             types.Address(accounts[i].Ecdsa.Address()),
 			Receiver:           types.Address(accounts[0].Ecdsa.Address()),

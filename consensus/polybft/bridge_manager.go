@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	bridgeMessageEventSig       = new(contractsapi.BridgeMessageEventEvent).Sig()
+	bridgeMessageEventSig       = new(contractsapi.BridgeMsgEvent).Sig()
 	checkpointSubmittedEventSig = new(contractsapi.CheckpointSubmittedEvent).Sig()
 	exitProcessedEventSig       = new(contractsapi.ExitProcessedEvent).Sig()
 )

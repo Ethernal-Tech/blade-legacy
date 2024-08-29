@@ -2486,7 +2486,7 @@ func (b *BridgeMessageResultEvent) Decode(input []byte) error {
 	return Gateway.Abi.Events["BridgeMessageResult"].Inputs.DecodeStruct(input, &b)
 }
 
-type BridgeMessageEventEvent struct {
+type BridgeMsgEvent struct {
 	ID                 *big.Int      `abi:"id"`
 	Sender             types.Address `abi:"sender"`
 	Receiver           types.Address `abi:"receiver"`
@@ -2495,22 +2495,22 @@ type BridgeMessageEventEvent struct {
 	DestinationChainID *big.Int      `abi:"destinationChainId"`
 }
 
-func (*BridgeMessageEventEvent) Sig() ethgo.Hash {
-	return Gateway.Abi.Events["BridgeMessageEvent"].ID()
+func (*BridgeMsgEvent) Sig() ethgo.Hash {
+	return Gateway.Abi.Events["BridgeMsg"].ID()
 }
 
-func (b *BridgeMessageEventEvent) Encode() ([]byte, error) {
-	return Gateway.Abi.Events["BridgeMessageEvent"].Inputs.Encode(b)
+func (b *BridgeMsgEvent) Encode() ([]byte, error) {
+	return Gateway.Abi.Events["BridgeMsg"].Inputs.Encode(b)
 }
 
-func (b *BridgeMessageEventEvent) ParseLog(log *ethgo.Log) (bool, error) {
-	if !Gateway.Abi.Events["BridgeMessageEvent"].Match(log) {
+func (b *BridgeMsgEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !Gateway.Abi.Events["BridgeMsg"].Match(log) {
 		return false, nil
 	}
 
-	return true, decodeEvent(Gateway.Abi.Events["BridgeMessageEvent"], log, b)
+	return true, decodeEvent(Gateway.Abi.Events["BridgeMsg"], log, b)
 }
 
-func (b *BridgeMessageEventEvent) Decode(input []byte) error {
-	return Gateway.Abi.Events["BridgeMessageEvent"].Inputs.DecodeStruct(input, &b)
+func (b *BridgeMsgEvent) Decode(input []byte) error {
+	return Gateway.Abi.Events["BridgeMsg"].Inputs.DecodeStruct(input, &b)
 }

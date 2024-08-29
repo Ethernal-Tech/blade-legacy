@@ -31,11 +31,11 @@ var (
 /*
 Bolt DB schema:
 
-state sync events/
-|--> chainId --> stateSyncEvent.Id -> *StateSyncEvent (json marshalled)
+bridge message events/
+|--> chainId --> bridgeMessageEvent.Id -> *BridgeMsgEvent (json marshalled)
 
-commitments/
-|--> chainId --> commitment.Message.ToIndex -> *CommitmentMessageSigned (json marshalled)
+bridge batches/
+|--> chainId --> bridgeBatches.Message[last].Id -> *BridgeBatchSigned (json marshalled)
 
 stateSyncProofs/
 |--> chainId --> stateSyncProof.StateSync.Id -> *StateSyncProof (json marshalled)
@@ -94,7 +94,7 @@ func (s *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 }
 
 // insertBridgeMessageEvent inserts a new bridge message event to state event bucket in db
-func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.BridgeMessageEventEvent) error {
+func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.BridgeMsgEvent) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		raw, err := json.Marshal(event)
 		if err != nil {
@@ -130,13 +130,13 @@ func (s *BridgeMessageStore) removeBridgeEventsAndProofs(bridgeMessageEventIDs *
 }
 
 // list iterates through all events in events bucket in db, un-marshals them, and returns as array
-func (s *BridgeMessageStore) list() ([]*contractsapi.BridgeMessageEventEvent, error) {
-	events := []*contractsapi.BridgeMessageEventEvent{}
+func (s *BridgeMessageStore) list() ([]*contractsapi.BridgeMsgEvent, error) {
+	events := []*contractsapi.BridgeMsgEvent{}
 
 	for _, chainID := range s.chainIDs {
 		err := s.db.View(func(tx *bolt.Tx) error {
 			return tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(chainID)).ForEach(func(k, v []byte) error {
-				var event *contractsapi.BridgeMessageEventEvent
+				var event *contractsapi.BridgeMsgEvent
 				if err := json.Unmarshal(v, &event); err != nil {
 					return err
 				}
@@ -156,9 +156,9 @@ func (s *BridgeMessageStore) list() ([]*contractsapi.BridgeMessageEventEvent, er
 
 // getBridgeMessageEventsForBridgeBatch returns bridge events for bridge batch
 func (s *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
-	fromIndex, toIndex uint64, dbTx *bolt.Tx, destinationChainID uint64) ([]*contractsapi.BridgeMessageEventEvent, error) {
+	fromIndex, toIndex uint64, dbTx *bolt.Tx, destinationChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
 	var (
-		events []*contractsapi.BridgeMessageEventEvent
+		events []*contractsapi.BridgeMsgEvent
 		err    error
 	)
 
@@ -170,7 +170,7 @@ func (s *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
 				return errNotEnoughBridgeEvents
 			}
 
-			var event *contractsapi.BridgeMessageEventEvent
+			var event *contractsapi.BridgeMsgEvent
 			if err := json.Unmarshal(v, &event); err != nil {
 				return err
 			}

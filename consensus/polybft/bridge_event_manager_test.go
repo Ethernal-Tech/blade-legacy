@@ -382,7 +382,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, bridgeEvents, 0)
 
-		var bridgeMessageEvent contractsapi.BridgeMessageEventEvent
+		var bridgeMessageEvent contractsapi.BridgeMsgEvent
 
 		bridgeMessageEventID := bridgeMessageEvent.Sig()
 
@@ -452,7 +452,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		data, err := abi.MustNewType("tuple(string a)").Encode([]string{"data"})
 		require.NoError(t, err)
 
-		var bridgeMessageEvent contractsapi.BridgeMessageEventEvent
+		var bridgeMessageEvent contractsapi.BridgeMsgEvent
 
 		goodLog := &ethgo.Log{
 			Topics: []ethgo.Hash{

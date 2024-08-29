@@ -98,7 +98,7 @@ func newTestBridgeBatchSigned(t *testing.T, sourceChainId, destinationChainId ui
 }
 
 func buildBridgeBatchAndBridgeEvents(t *testing.T, bridgeMessageCount int,
-	epoch, startIdx uint64) (*PendingBridgeBatch, *BridgeBatchSigned, []*contractsapi.BridgeMessageEventEvent) {
+	epoch, startIdx uint64) (*PendingBridgeBatch, *BridgeBatchSigned, []*contractsapi.BridgeMsgEvent) {
 	t.Helper()
 
 	bridgeMessageEvents := generateBridgeMessageEvents(t, bridgeMessageCount, startIdx)

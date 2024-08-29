@@ -20,7 +20,7 @@ type PendingBridgeBatch struct {
 
 // NewPendingBridgeBatch creates a new commitment object
 func NewPendingBridgeBatch(epoch uint64,
-	bridgeEvents []*contractsapi.BridgeMessageEventEvent) (*PendingBridgeBatch, error) {
+	bridgeEvents []*contractsapi.BridgeMsgEvent) (*PendingBridgeBatch, error) {
 
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
@@ -185,7 +185,7 @@ func getBridgeBatchSignedTx(txs []*types.Transaction) (*BridgeBatchSigned, error
 // createMerkleTree creates a merkle tree from provided state sync events
 // if only one state sync event is provided, a second, empty leaf will be added to merkle tree
 // so that we can have a commitment with a single state sync event
-func createMerkleTree(bridgeMessageEvent []*contractsapi.BridgeMessageEventEvent) (*merkle.MerkleTree, error) {
+func createMerkleTree(bridgeMessageEvent []*contractsapi.BridgeMsgEvent) (*merkle.MerkleTree, error) {
 	bridgeMessageData := make([][]byte, len(bridgeMessageEvent))
 
 	for i, event := range bridgeMessageEvent {

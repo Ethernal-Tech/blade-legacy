@@ -21,7 +21,7 @@ func TestState_InsertEvent(t *testing.T) {
 	t.Parallel()
 
 	state := newTestState(t)
-	event1 := &contractsapi.BridgeMessageEventEvent{
+	event1 := &contractsapi.BridgeMsgEvent{
 		ID:                 big.NewInt(0),
 		Sender:             types.Address{},
 		Receiver:           types.Address{},
@@ -66,7 +66,7 @@ func TestState_getBridgeEventsForBridgeBatch_NotEnoughEvents(t *testing.T) {
 	state := newTestState(t)
 
 	for i := 0; i < maxCommitmentSize-2; i++ {
-		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMessageEventEvent{
+		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(i)),
 			Data:               []byte{1, 2},
 			SourceChainID:      big.NewInt(1),
@@ -84,7 +84,7 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 	state := newTestState(t)
 
 	for i := 0; i < maxCommitmentSize; i++ {
-		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMessageEventEvent{
+		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(i)),
 			Data:               []byte{1, 2},
 			SourceChainID:      big.NewInt(1),
