@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 	"runtime/debug"
 	"time"
@@ -109,7 +110,12 @@ func (d *Debug) CpuProfile(file string, nsec int64) (interface{}, error) {
 				return nil, err
 			}
 
-			return nil, nil
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, nil
 		},
 	)
 }
@@ -163,7 +169,12 @@ func (d *Debug) MutexProfile(file string, nsec int64) (interface{}, error) {
 			time.Sleep(time.Duration(nsec) * time.Second)
 			defer runtime.SetMutexProfileFraction(0)
 
-			return writeProfile(mutexString, file), nil
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, writeProfile(mutexString, file)
 		},
 	)
 }
@@ -180,7 +191,12 @@ func (d *Debug) BlockProfile(file string, nsec int64) (interface{}, error) {
 
 			defer runtime.SetBlockProfileRate(0)
 
-			return writeProfile(blockString, file), nil
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, writeProfile(blockString, file)
 		},
 	)
 }
@@ -230,7 +246,12 @@ func (d *Debug) StartCPUProfile(file string) (interface{}, error) {
 				return nil, err
 			}
 
-			return nil, nil
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, nil
 		},
 	)
 }
@@ -244,7 +265,12 @@ func (d *Debug) StartGoTrace(file string) (interface{}, error) {
 				return nil, err
 			}
 
-			return nil, nil
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, nil
 		},
 	)
 }
@@ -282,7 +308,12 @@ func (d *Debug) WriteBlockProfile(file string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			return nil, writeProfile(blockString, file)
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, writeProfile(blockString, file)
 		},
 	)
 }
@@ -295,7 +326,12 @@ func (d *Debug) WriteMemProfile(file string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			return nil, writeProfile(heapString, file)
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, writeProfile(heapString, file)
 		},
 	)
 }
@@ -305,7 +341,12 @@ func (d *Debug) WriteMutexProfile(file string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			return nil, writeProfile(mutexString, file)
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				absPath = file
+			}
+
+			return absPath, writeProfile(mutexString, file)
 		},
 	)
 }
