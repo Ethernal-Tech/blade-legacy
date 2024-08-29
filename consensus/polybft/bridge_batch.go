@@ -19,7 +19,8 @@ type PendingBridgeBatch struct {
 }
 
 // NewPendingBridgeBatch creates a new commitment object
-func NewPendingBridgeBatch(epoch uint64, bridgeEvents []*contractsapi.BridgeMessageEventEvent) (*PendingBridgeBatch, error) {
+func NewPendingBridgeBatch(epoch uint64,
+	bridgeEvents []*contractsapi.BridgeMessageEventEvent) (*PendingBridgeBatch, error) {
 
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
@@ -34,8 +35,11 @@ func NewPendingBridgeBatch(epoch uint64, bridgeEvents []*contractsapi.BridgeMess
 	}
 
 	return &PendingBridgeBatch{
-		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{Messages: messages, DestinationChainID: bridgeEvents[0].DestinationChainID, SourceChainID: bridgeEvents[0].SourceChainID},
-		Epoch:              epoch,
+		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
+			Messages:           messages,
+			DestinationChainID: bridgeEvents[0].DestinationChainID,
+			SourceChainID:      bridgeEvents[0].SourceChainID},
+		Epoch: epoch,
 	}, nil
 }
 
@@ -74,7 +78,8 @@ func (cm *BridgeBatchSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool 
 	if length == 0 {
 		return false
 	}
-	return cm.MessageBatch.Messages[0].ID.Uint64() <= bridgeMessageID && cm.MessageBatch.Messages[length-1].ID.Uint64() >= bridgeMessageID
+	return cm.MessageBatch.Messages[0].ID.Uint64() <= bridgeMessageID &&
+		cm.MessageBatch.Messages[length-1].ID.Uint64() >= bridgeMessageID
 }
 
 // EncodeAbi contains logic for encoding arbitrary data into ABI format

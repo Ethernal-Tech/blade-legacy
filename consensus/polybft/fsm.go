@@ -285,7 +285,7 @@ func (f *fsm) applyBridgeBatchTx() error {
 	return nil
 }
 
-// createBridgeBatchTx builds bridge commitment registration transaction
+// createBridgeBatchTx builds bridge batch registration transaction
 func (f *fsm) createBridgeBatchTx(chainId uint64) (*types.Transaction, error) {
 	if proposerCommitmentToRegister, ok := f.proposerBridgeBatchToRegister[chainId]; ok {
 		inputData, err := proposerCommitmentToRegister.EncodeAbi()

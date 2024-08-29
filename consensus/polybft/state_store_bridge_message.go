@@ -256,7 +256,7 @@ func (s *BridgeMessageStore) getBridgeBatchSigned(toIndex uint64, chainId uint64
 	var commitment *BridgeBatchSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		raw := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Get(common.EncodeUint64ToBytes(toIndex)) //FIX
+		raw := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Get(common.EncodeUint64ToBytes(toIndex))
 		if raw == nil {
 			return nil
 		}
