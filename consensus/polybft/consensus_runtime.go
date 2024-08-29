@@ -526,8 +526,8 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		c.logger.Error("Could not clean previous epochs from db.", "error", err)
 	}
 
-	for chainId := range c.bridgeManagers {
-		if err := c.state.EpochStore.insertEpoch(epochNumber, dbTx, chainId); err != nil {
+	for chainID := range c.bridgeManagers {
+		if err := c.state.EpochStore.insertEpoch(epochNumber, dbTx, chainID); err != nil {
 			return nil, fmt.Errorf("an error occurred while inserting new epoch in db. Reason: %w", err)
 		}
 	}
@@ -1014,6 +1014,7 @@ func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.V
 // RoundStarts represents the round start callback
 func (c *consensusRuntime) RoundStarts(view *proto.View) error {
 	c.logger.Info("RoundStarts", "height", view.Height, "round", view.Round)
+
 	if view.Round > 0 {
 		c.config.txPool.ReinsertProposed()
 	} else {

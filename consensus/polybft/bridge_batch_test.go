@@ -84,13 +84,13 @@ func TestBridgeBatch_ToRegisterBridgeBatchInputData(t *testing.T) {
 	require.Equal(t, expectedSignedBridgeBatchMsg.AggSignature, actualSignedBridgeBatchMsg.AggSignature)
 }
 
-func newTestBridgeBatchSigned(t *testing.T, sourceChainId, destinationChainId uint64) *BridgeBatchSigned {
+func newTestBridgeBatchSigned(t *testing.T, sourceChainID, destinationChainID uint64) *BridgeBatchSigned {
 	t.Helper()
 
 	return &BridgeBatchSigned{
 		MessageBatch: &contractsapi.BridgeMessageBatch{
-			SourceChainID:      new(big.Int).SetUint64(sourceChainId),
-			DestinationChainID: new(big.Int).SetUint64(destinationChainId),
+			SourceChainID:      new(big.Int).SetUint64(sourceChainID),
+			DestinationChainID: new(big.Int).SetUint64(destinationChainID),
 		},
 		AggSignature: Signature{},
 		PublicKeys:   [][]byte{},

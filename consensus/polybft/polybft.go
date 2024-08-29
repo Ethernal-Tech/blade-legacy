@@ -304,7 +304,6 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 						"RootERC1155PredicateAccessList", transition); err != nil {
 						return err
 					}
-
 				}
 			} else {
 				for chainID := range bridgeCfg {
@@ -373,7 +372,6 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 						"RootERC1155Predicate", transition); err != nil {
 						return err
 					}
-
 				}
 			}
 		}
@@ -683,6 +681,7 @@ func (p *Polybft) startConsensusProtocol() {
 		case <-sequenceCh:
 		case <-p.closeCh:
 			p.logger.Debug("stoping sequence", "block number", latestHeader.Number+1)
+
 			if isValidator {
 				stopSequence()
 			}

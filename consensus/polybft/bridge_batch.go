@@ -21,7 +21,6 @@ type PendingBridgeBatch struct {
 // NewPendingBridgeBatch creates a new commitment object
 func NewPendingBridgeBatch(epoch uint64,
 	bridgeEvents []*contractsapi.BridgeMsgEvent) (*PendingBridgeBatch, error) {
-
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
 	for i, bridgeEvent := range bridgeEvents {
@@ -78,6 +77,7 @@ func (cm *BridgeBatchSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool 
 	if length == 0 {
 		return false
 	}
+
 	return cm.MessageBatch.Messages[0].ID.Uint64() <= bridgeMessageID &&
 		cm.MessageBatch.Messages[length-1].ID.Uint64() >= bridgeMessageID
 }

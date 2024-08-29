@@ -85,7 +85,7 @@ type bridgeEventManager struct {
 	pendingBridgeBatches   []*PendingBridgeBatch
 	validatorSet           validator.ValidatorSet
 	epoch                  uint64
-	nextBridgeEventIdIndex map[uint64]uint64
+	nextBridgeEventIDIndex map[uint64]uint64
 
 	runtime Runtime
 }
@@ -104,7 +104,7 @@ func newBridgeEventManager(logger hclog.Logger, state *State, config *stateSyncC
 		state:                  state,
 		config:                 config,
 		runtime:                runtime,
-		nextBridgeEventIdIndex: make(map[uint64]uint64),
+		nextBridgeEventIDIndex: make(map[uint64]uint64),
 	}
 }
 
@@ -372,7 +372,7 @@ func (s *bridgeEventManager) PostEpoch(req *PostEpochRequest, chainID uint64) er
 		return err
 	}
 
-	s.nextBridgeEventIdIndex[chainID] = nextCommittedIndex
+	s.nextBridgeEventIDIndex[chainID] = nextCommittedIndex
 
 	s.lock.Unlock()
 
@@ -401,7 +401,7 @@ func (s *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
 
 	length := len(bridgeBatch.MessageBatch.Messages)
 	// update the nextBridgeEventIdIndex since a bridge batch was submitted
-	s.nextBridgeEventIdIndex[bridgeBatch.MessageBatch.DestinationChainID.Uint64()] =
+	s.nextBridgeEventIDIndex[bridgeBatch.MessageBatch.DestinationChainID.Uint64()] =
 		bridgeBatch.MessageBatch.Messages[length-1].ID.Uint64() + 1
 	// commitment was submitted, so discard what we have in memory, so we can build a new one
 	s.pendingBridgeBatches = nil
@@ -410,7 +410,7 @@ func (s *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
 }
 
 // buildBridgeBatch builds a new bridge batch, signs it and gossips its vote for it
-func (s *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainId uint64) error {
+func (s *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainID uint64) error {
 	if !s.runtime.IsActiveValidator() {
 		// don't build commitment if not a validator
 		return nil
@@ -421,12 +421,14 @@ func (s *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainId uint64) err
 	// Since lock is reduced grab original values into local variables in order to keep them
 	epoch := s.epoch
 	bridgeMessageEvents, err := s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(
-		s.nextBridgeEventIdIndex[chainId],
-		s.nextBridgeEventIdIndex[chainId]+s.config.maxCommitmentSize-1,
+		s.nextBridgeEventIDIndex[chainID],
+		s.nextBridgeEventIDIndex[chainID]+s.config.maxCommitmentSize-1,
 		dbTx,
-		chainId)
+		chainID)
+
 	if err != nil && !errors.Is(err, errNotEnoughBridgeEvents) {
 		s.lock.RUnlock()
+
 		return fmt.Errorf("failed to get state sync events for commitment. Error: %w", err)
 	}
 
@@ -467,14 +469,14 @@ func (s *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainId uint64) err
 		Signature: signature,
 	}
 
-	destinationChainId := pendingBridgeBatch.BridgeMessageBatch.DestinationChainID.Uint64()
+	destinationChainID := pendingBridgeBatch.BridgeMessageBatch.DestinationChainID.Uint64()
 
 	if _, err = s.state.BridgeMessageStore.insertMessageVote(
 		epoch,
 		batchBytes,
 		sig,
 		dbTx,
-		destinationChainId); err != nil {
+		destinationChainID); err != nil {
 		return fmt.Errorf(
 			"failed to insert signature for message batch to the state. Error: %w",
 			err,
@@ -487,11 +489,10 @@ func (s *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainId uint64) err
 		Signature:          signature,
 		From:               s.config.key.String(),
 		EpochNumber:        epoch,
-		DestinationChainID: destinationChainId,
+		DestinationChainID: destinationChainID,
 	})
 
 	length := len(pendingBridgeBatch.BridgeMessageBatch.Messages)
-
 	if length > 0 {
 
 		s.logger.Debug(

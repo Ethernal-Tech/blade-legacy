@@ -269,9 +269,9 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 
 // applyBridgeBatchTx builds state transaction which contains data for bridge batch registration
 func (f *fsm) applyBridgeBatchTx() error {
-	for chainId, proposerCommitmentToRegister := range f.proposerBridgeBatchToRegister {
+	for chainID, proposerCommitmentToRegister := range f.proposerBridgeBatchToRegister {
 		if proposerCommitmentToRegister != nil {
-			bridgeCommitmentTx, err := f.createBridgeBatchTx(chainId)
+			bridgeCommitmentTx, err := f.createBridgeBatchTx(chainID)
 			if err != nil {
 				return fmt.Errorf("creation of bridge commitment transaction failed: %w", err)
 			}

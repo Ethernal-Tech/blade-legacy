@@ -334,11 +334,12 @@ func TestBridgeEventManager_BuildProofs(t *testing.T) {
 	length := len(mockMsg.MessageBatch.Messages)
 
 	require.NoError(t, s.PostBlock(req))
-	require.Equal(t, mockMsg.MessageBatch.Messages[length-1].ID.Uint64()+1, s.nextBridgeEventIdIndex[0])
+	require.Equal(t, mockMsg.MessageBatch.Messages[length-1].ID.Uint64()+1, s.nextBridgeEventIDIndex[0])
 }
 
 func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	t.Skip()
+
 	const stateSyncEventsCount = 5
 
 	vals := validator.NewTestValidators(t, 5)

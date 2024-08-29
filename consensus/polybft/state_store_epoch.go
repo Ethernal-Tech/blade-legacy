@@ -48,6 +48,7 @@ type EpochStore struct {
 // initialize creates necessary buckets in DB if they don't already exist
 func (s *EpochStore) initialize(tx *bolt.Tx) error {
 	var epochBucket *bolt.Bucket
+
 	var err error
 
 	if epochBucket, err = tx.CreateBucketIfNotExists(epochsBucket); err != nil {
@@ -139,9 +140,9 @@ func (s *EpochStore) getNearestOrEpochSnapshot(epoch uint64, dbTx *bolt.Tx) (*va
 }
 
 // insertEpoch inserts a new epoch to db with its meta data
-func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx, chainId uint64) error {
+func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx, chainID uint64) error {
 	insertFn := func(tx *bolt.Tx) error {
-		chainIdBucket, err := tx.Bucket(epochsBucket).CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainId))
+		chainIdBucket, err := tx.Bucket(epochsBucket).CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainID))
 		if err != nil {
 			return err
 		}
@@ -205,7 +206,6 @@ func (s *EpochStore) cleanEpochsFromDB(dbTx *bolt.Tx) error {
 			if _, err := epochBucket.CreateBucket(common.EncodeUint64ToBytes(chainId)); err != nil {
 				return err
 			}
-
 		}
 
 		return nil

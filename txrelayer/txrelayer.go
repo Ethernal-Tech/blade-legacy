@@ -364,7 +364,6 @@ func (t *TxRelayerImpl) waitForReceipt(hash types.Hash) (*ethgo.Receipt, error) 
 
 // ConvertTxnToCallMsg converts txn instance to call message
 func ConvertTxnToCallMsg(txn *types.Transaction) *jsonrpc.CallMsg {
-
 	var (
 		gasPrice  *big.Int
 		gasFeeCap *big.Int

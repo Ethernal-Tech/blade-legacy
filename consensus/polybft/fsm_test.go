@@ -1516,7 +1516,9 @@ func TestFSM_DecodeBridgeBatchStateTxs(t *testing.T) {
 
 	decodedCommitmentMsg, ok := decodedData.(*BridgeBatchSigned)
 	require.True(t, ok)
+
 	numberOfMessages := len(signedCommitment.MessageBatch.Messages)
+
 	require.Equal(t, signedCommitment.MessageBatch.Messages[numberOfMessages-1].ID, decodedCommitmentMsg.MessageBatch.Messages[numberOfMessages-1].ID)
 	require.Equal(t, signedCommitment.AggSignature, decodedCommitmentMsg.AggSignature)
 }

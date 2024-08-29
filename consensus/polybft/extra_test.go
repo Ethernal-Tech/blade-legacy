@@ -507,7 +507,7 @@ func TestExtra_InitGenesisValidatorsDelta(t *testing.T) {
 
 		for _, val := range vals.Validators {
 			delta.Added[i] = &validator.ValidatorMetadata{
-				Address:     types.Address(val.Account.Ecdsa.Address()),
+				Address:     val.Account.Ecdsa.Address(),
 				BlsKey:      val.Account.Bls.PublicKey(),
 				VotingPower: new(big.Int).SetUint64(val.VotingPower),
 			}

@@ -70,8 +70,8 @@ func (s *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(stateSyncRelayerEventsBucket), err)
 	}
 
-	for _, chainId := range s.chainIDs {
-		chainIdBytes := common.EncodeUint64ToBytes(chainId)
+	for _, chainID := range s.chainIDs {
+		chainIdBytes := common.EncodeUint64ToBytes(chainID)
 
 		if _, err := bridgeMessageBucket.CreateBucketIfNotExists(chainIdBytes); err != nil {
 			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(bridgeMessageEventsBucket), err)
@@ -108,7 +108,8 @@ func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Bridge
 }
 
 // removeBridgeEventsAndProofs remove bridge events and their proofs from the buckets in db
-func (s *BridgeMessageStore) removeBridgeEventsAndProofs(bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
+func (s *BridgeMessageStore) removeBridgeEventsAndProofs(
+	bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		eventsBucket := tx.Bucket(bridgeMessageEventsBucket)
 		proofsBucket := tx.Bucket(bridgeMessageProofsBucket)
@@ -135,7 +136,8 @@ func (s *BridgeMessageStore) list() ([]*contractsapi.BridgeMsgEvent, error) {
 
 	for _, chainID := range s.chainIDs {
 		err := s.db.View(func(tx *bolt.Tx) error {
-			return tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(chainID)).ForEach(func(k, v []byte) error {
+			return tx.Bucket(bridgeMessageEventsBucket).
+				Bucket(common.EncodeUint64ToBytes(chainID)).ForEach(func(k, v []byte) error {
 				var event *contractsapi.BridgeMsgEvent
 				if err := json.Unmarshal(v, &event); err != nil {
 					return err
@@ -193,7 +195,9 @@ func (s *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
 }
 
 // getBridgeBatchForBridgeEvents returns the bridgeBatch that contains given bridge event if it exists
-func (s *BridgeMessageStore) getBridgeBatchForBridgeEvents(bridgeMessageID, chainId uint64) (*BridgeBatchSigned, error) {
+func (s *BridgeMessageStore) getBridgeBatchForBridgeEvents(
+	bridgeMessageID,
+	chainId uint64) (*BridgeBatchSigned, error) {
 	var commitment *BridgeBatchSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -228,14 +232,15 @@ func (s *BridgeMessageStore) insertBridgeBatchMessage(commitment *BridgeBatchSig
 		}
 
 		length := len(commitment.MessageBatch.Messages)
-		var lastId = uint64(0)
+		var lastID = uint64(0)
 
 		if length > 0 {
-			lastId = commitment.MessageBatch.Messages[length-1].ID.Uint64()
+			lastID = commitment.MessageBatch.Messages[length-1].ID.Uint64()
 		}
 
-		if err := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(commitment.MessageBatch.DestinationChainID.Uint64())).Put(
-			common.EncodeUint64ToBytes(lastId), raw); err != nil {
+		if err := tx.Bucket(bridgeBatchBucket).
+			Bucket(common.EncodeUint64ToBytes(commitment.MessageBatch.DestinationChainID.Uint64())).Put(
+			common.EncodeUint64ToBytes(lastID), raw); err != nil {
 			return err
 		}
 
@@ -252,11 +257,12 @@ func (s *BridgeMessageStore) insertBridgeBatchMessage(commitment *BridgeBatchSig
 }
 
 // getBridgeBatchSigned queries the signed bridge batch from the db
-func (s *BridgeMessageStore) getBridgeBatchSigned(toIndex uint64, chainId uint64) (*BridgeBatchSigned, error) {
+func (s *BridgeMessageStore) getBridgeBatchSigned(toIndex uint64, chainID uint64) (*BridgeBatchSigned, error) {
 	var commitment *BridgeBatchSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		raw := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Get(common.EncodeUint64ToBytes(toIndex))
+		raw := tx.Bucket(bridgeBatchBucket).
+			Bucket(common.EncodeUint64ToBytes(chainID)).Get(common.EncodeUint64ToBytes(toIndex))
 		if raw == nil {
 			return nil
 		}
@@ -321,7 +327,10 @@ func (s *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
 }
 
 // getMessageVotes gets all signatures from db associated with given epoch and hash
-func (s *BridgeMessageStore) getMessageVotes(epoch uint64, hash []byte, destinationChainID uint64) ([]*MessageSignature, error) {
+func (s *BridgeMessageStore) getMessageVotes(
+	epoch uint64,
+	hash []byte,
+	destinationChainID uint64) ([]*MessageSignature, error) {
 	var signatures []*MessageSignature
 
 	err := s.db.View(func(tx *bolt.Tx) error {
@@ -388,7 +397,11 @@ func (s *BridgeMessageStore) GetAllAvailableRelayerEvents(limit int) (result []*
 }
 
 // getAvailableRelayerEvents retrieves all relayer that should be sent as a transactions
-func getAvailableRelayerEvents(limit int, bucket []byte, tx *bolt.Tx, chainId uint64) (result []*RelayerEventMetaData, err error) {
+func getAvailableRelayerEvents(
+	limit int,
+	bucket []byte,
+	tx *bolt.Tx,
+	chainId uint64) (result []*RelayerEventMetaData, err error) {
 	cursor := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor()
 
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
