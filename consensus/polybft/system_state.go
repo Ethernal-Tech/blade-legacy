@@ -37,7 +37,10 @@ type SystemStateImpl struct {
 }
 
 // NewSystemState initializes new instance of systemState which abstracts smart contracts functions
-func NewSystemState(valSetAddr types.Address, bridgeStorageAddr types.Address, provider contract.Provider) *SystemStateImpl {
+func NewSystemState(
+	valSetAddr types.Address,
+	bridgeStorageAddr types.Address,
+	provider contract.Provider) *SystemStateImpl {
 	s := &SystemStateImpl{}
 	s.validatorContract = contract.NewContract(
 		ethgo.Address(valSetAddr),
@@ -69,7 +72,10 @@ func (s *SystemStateImpl) GetEpoch() (uint64, error) {
 
 // GetNextCommittedIndex retrieves next committed bridge state sync index
 func (s *SystemStateImpl) GetNextCommittedIndex(destinationChainID uint64) (uint64, error) {
-	rawResult, err := s.sidechainBridgeContract.Call("lastCommitted", ethgo.Latest, new(big.Int).SetUint64(destinationChainID))
+	rawResult, err := s.sidechainBridgeContract.Call(
+		"lastCommitted",
+		ethgo.Latest,
+		new(big.Int).SetUint64(destinationChainID))
 	if err != nil {
 		return 0, err
 	}

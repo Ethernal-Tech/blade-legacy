@@ -852,10 +852,13 @@ func (p *Polybft) FilterExtra(extra []byte) ([]byte, error) {
 }
 
 func (p *Polybft) getChainIDs() []uint64 {
-	var chainIDs []uint64
+	chainIDs := make([]uint64, len(p.genesisClientConfig.Bridge))
+
+	i := 0
 
 	for chainID := range p.genesisClientConfig.Bridge {
-		chainIDs = append(chainIDs, chainID)
+		chainIDs[i] = chainID
+		i++
 	}
 
 	return chainIDs
