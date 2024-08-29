@@ -42,8 +42,14 @@ type debugBlockchainStore interface {
 	// GetHeaderByNumber gets a header using the provided number
 	GetHeaderByNumber(uint64) (*types.Header, bool)
 
+	// GetReceiptsByHash returns the receipts by block hash
+	GetReceiptsByHash(types.Hash) ([]*types.Receipt, error)
+
 	// ReadTxLookup returns a block hash in which a given txn was mined
 	ReadTxLookup(txnHash types.Hash) (uint64, bool)
+
+	// GetPendingTx returns the transaction by hash in the TxPool (pending txn) [Thread-safe]
+	GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
 
 	// GetBlockByHash gets a block using the provided hash
 	GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool)
@@ -535,6 +541,66 @@ func (d *Debug) GetRawBlock(filter BlockNumberOrHash) (interface{}, error) {
 			}
 
 			return block.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawHeader retrieves the RLP encoding for a single header.
+func (d *Debug) GetRawHeader(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			return header.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawTransaction returns the bytes of the transaction for the given hash.
+func (d *Debug) GetRawTransaction(txHash types.Hash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			tx, _ := GetTxAndBlockByTxHash(txHash, d.store)
+			if tx == nil {
+				tx, _ = d.store.GetPendingTx(txHash)
+			}
+
+			if tx == nil {
+				return nil, nil
+			}
+
+			return tx.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawReceipts retrieves the binary-encoded receipts of a single block.
+func (d *Debug) GetRawReceipts(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			receipts, err := d.store.GetReceiptsByHash(header.Hash)
+			if err != nil {
+				return nil, err
+			}
+
+			result := make([][]byte, len(receipts))
+
+			for i, receipt := range receipts {
+				result[i] = receipt.MarshalRLP()
+			}
+
+			return result, nil
 		},
 	)
 }
