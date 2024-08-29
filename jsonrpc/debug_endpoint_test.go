@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -303,6 +304,69 @@ func TestTraceBlockByNumber(t *testing.T) {
 
 			if test.err {
 				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestPrintBlock(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		number    uint64
+		store     *debugEndpointMockStore
+		returnErr string
+		result    interface{}
+		err       bool
+	}{
+		{
+			name:   "block not found",
+			number: testBlock10.Number(),
+			store: &debugEndpointMockStore{
+				getBlockByNumberFn: func(num uint64, full bool) (*types.Block, bool) {
+					require.Equal(t, testBlock10.Number(), num)
+					require.True(t, full)
+
+					return nil, false
+				},
+			},
+			returnErr: "not found",
+			result:    nil,
+			err:       true,
+		},
+		{
+			name:   "the block is written",
+			number: testBlock10.Number(),
+			store: &debugEndpointMockStore{
+				getBlockByNumberFn: func(num uint64, full bool) (*types.Block, bool) {
+					require.Equal(t, testHeader10.Number, num)
+					require.True(t, full)
+
+					return testBlock10, true
+				},
+			},
+			returnErr: "",
+			result:    spew.Sdump(testBlock10),
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+			res, err := endpoint.PrintBlock(test.number)
+
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
 			} else {
 				require.NoError(t, err)
 			}
