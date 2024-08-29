@@ -1651,8 +1651,8 @@ func createTestBridgeBatch(t *testing.T, accounts []*wallet.Account) *BridgeBatc
 	for i := 0; i < len(accounts); i++ {
 		bridgeMessageEvents[i] = &contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(i)),
-			Sender:             types.Address(accounts[i].Ecdsa.Address()),
-			Receiver:           types.Address(accounts[0].Ecdsa.Address()),
+			Sender:             accounts[i].Ecdsa.Address(),
+			Receiver:           accounts[0].Ecdsa.Address(),
 			Data:               []byte{},
 			SourceChainID:      bigZero,
 			DestinationChainID: big.NewInt(1),
