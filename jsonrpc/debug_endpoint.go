@@ -91,9 +91,9 @@ func NewDebug(store debugStore, requestsPerSecond uint64) *Debug {
 	}
 }
 
-// CPUProfile turns on CPU profiling for nsec seconds and writes
+// CpuProfile turns on CPU profiling for nsec seconds and writes
 // profile data to file.
-func (d *Debug) CPUProfile(file string, nsec int64) (interface{}, error) {
+func (d *Debug) CpuProfile(file string, nsec int64) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {

@@ -497,7 +497,7 @@ func (d *Dispatcher) registerService(serviceName string, service interface{}) er
 			continue
 		}
 
-		name := lowerCaseFirst(mv.Name)
+		name := lowerCaseFirstRune(mv.Name)
 		funcName := serviceName + "_" + name
 		fd := &funcData{
 			fv: mv.Func,
@@ -587,10 +587,11 @@ func getError(v reflect.Value) error {
 	return extractedErr
 }
 
-func lowerCaseFirst(str string) string {
-	for i, v := range str {
-		return string(unicode.ToLower(v)) + str[i+1:]
+// lowerCaseFirstRune converts the first character of the string to lowercase.
+func lowerCaseFirstRune(str string) string {
+	if len(str) == 0 {
+		return ""
 	}
 
-	return ""
+	return string(unicode.ToLower(rune(str[0]))) + str[1:]
 }
