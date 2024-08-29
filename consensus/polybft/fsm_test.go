@@ -647,24 +647,24 @@ func TestFSM_VerifyStateTransactions_DistributeRewards(t *testing.T) {
 	})
 }
 
-func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
+func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 	t.Parallel()
 
 	t.Run("submit commitments at end of sprint", func(t *testing.T) {
 		t.Parallel()
 
 		var (
-			commitments       [2]*PendingCommitment
-			stateSyncs        [2][]*contractsapi.BridgeMessageEventEvent
-			signedCommitments [2]*CommitmentMessageSigned
+			pendingBridgeBatches [2]*PendingBridgeBatch
+			bridgeMessageEvents  [2][]*contractsapi.BridgeMessageEventEvent
+			signedBridgeBatches  [2]*BridgeBatchSigned
 		)
 
 		validators := validator.NewTestValidatorsWithAliases(t, []string{"A", "B", "C", "D", "E"})
-		commitments[0], signedCommitments[0], stateSyncs[0] = buildCommitmentAndStateSyncs(t, 10, uint64(3), 2)
-		commitments[1], signedCommitments[1], stateSyncs[1] = buildCommitmentAndStateSyncs(t, 10, uint64(3), 12)
+		pendingBridgeBatches[0], signedBridgeBatches[0], bridgeMessageEvents[0] = buildBridgeBatchAndBridgeEvents(t, 10, uint64(3), 2)
+		pendingBridgeBatches[1], signedBridgeBatches[1], bridgeMessageEvents[1] = buildBridgeBatchAndBridgeEvents(t, 10, uint64(3), 12)
 
 		executeForValidators := func(aliases ...string) error {
-			for _, sc := range signedCommitments {
+			for _, sc := range signedBridgeBatches {
 				// add register commitment state transaction
 				hash, err := sc.Hash()
 				require.NoError(t, err)
@@ -681,7 +681,7 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 
 			var txns []*types.Transaction
 
-			for i, sc := range signedCommitments {
+			for i, sc := range signedBridgeBatches {
 				inputData, err := sc.EncodeAbi()
 				require.NoError(t, err)
 
@@ -702,7 +702,7 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 		t.Parallel()
 
 		validators := validator.NewTestValidators(t, 5)
-		commitment := createTestCommitment(t, validators.GetPrivateIdentities())
+		commitment := createTestBridgeBatch(t, validators.GetPrivateIdentities())
 		nonValidators := validator.NewTestValidators(t, 3)
 		aggregatedSigs := bls.Signatures{}
 
@@ -718,14 +718,14 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 		validatorSet := validator.NewValidatorSet(validators.GetPublicIdentities(), hclog.NewNullLogger())
 
 		fsm := &fsm{
-			isEndOfSprint:                true,
-			parent:                       &types.Header{Number: 9},
-			validators:                   validatorSet,
-			proposerCommitmentToRegister: map[uint64]*CommitmentMessageSigned{0: commitment},
-			logger:                       hclog.NewNullLogger(),
+			isEndOfSprint:                 true,
+			parent:                        &types.Header{Number: 9},
+			validators:                    validatorSet,
+			proposerBridgeBatchToRegister: map[uint64]*BridgeBatchSigned{0: commitment},
+			logger:                        hclog.NewNullLogger(),
 		}
 
-		bridgeCommitmentTx, err := fsm.createBridgeCommitmentTx(0)
+		bridgeCommitmentTx, err := fsm.createBridgeBatchTx(0)
 		require.NoError(t, err)
 
 		err = fsm.VerifyStateTransactions([]*types.Transaction{bridgeCommitmentTx})
@@ -749,7 +749,7 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 		require.NoError(t, err)
 
 		validators := validator.NewTestValidators(t, 5)
-		commitment := createTestCommitment(t, validators.GetPrivateIdentities())
+		commitment := createTestBridgeBatch(t, validators.GetPrivateIdentities())
 		commitment.AggSignature = Signature{
 			AggregatedSignature: aggSig,
 			Bitmap:              []byte{},
@@ -758,17 +758,17 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 		validatorSet := validator.NewValidatorSet(validators.GetPublicIdentities(), hclog.NewNullLogger())
 
 		fsm := &fsm{
-			isEndOfEpoch:                 true,
-			isEndOfSprint:                true,
-			parent:                       &types.Header{Number: 9},
-			validators:                   validatorSet,
-			proposerCommitmentToRegister: map[uint64]*CommitmentMessageSigned{0: commitment},
-			commitEpochInput:             createTestCommitEpochInput(t, 0, 10),
-			distributeRewardsInput:       createTestDistributeRewardsInput(t, 0, nil, 10),
-			logger:                       hclog.NewNullLogger(),
+			isEndOfEpoch:                  true,
+			isEndOfSprint:                 true,
+			parent:                        &types.Header{Number: 9},
+			validators:                    validatorSet,
+			proposerBridgeBatchToRegister: map[uint64]*BridgeBatchSigned{0: commitment},
+			commitEpochInput:              createTestCommitEpochInput(t, 0, 10),
+			distributeRewardsInput:        createTestDistributeRewardsInput(t, 0, nil, 10),
+			logger:                        hclog.NewNullLogger(),
 		}
 
-		bridgeCommitmentTx, err := fsm.createBridgeCommitmentTx(0)
+		bridgeCommitmentTx, err := fsm.createBridgeBatchTx(0)
 		require.NoError(t, err)
 
 		// add commit epoch commitEpochTx to the end of transactions list
@@ -786,7 +786,7 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 
 		fsm := &fsm{}
 
-		encodedCommitment, err := createTestCommitmentMessage(t, 0, 0).EncodeAbi()
+		encodedCommitment, err := createTestBridgeBatchMessage(t, 0, 0).EncodeAbi()
 		require.NoError(t, err)
 
 		tx := createStateTransactionWithData(contracts.BridgeStorageContract, encodedCommitment)
@@ -798,7 +798,7 @@ func TestFSM_VerifyStateTransaction_Commitments(t *testing.T) {
 		t.Parallel()
 
 		validators := validator.NewTestValidatorsWithAliases(t, []string{"A", "B", "C", "D", "E", "F"})
-		_, commitmentMessageSigned, _ := buildCommitmentAndStateSyncs(t, 10, uint64(3), 2)
+		_, commitmentMessageSigned, _ := buildBridgeBatchAndBridgeEvents(t, 10, uint64(3), 2)
 
 		validatorSet := validator.NewValidatorSet(validators.GetPublicIdentities(), hclog.NewNullLogger())
 
@@ -1489,7 +1489,7 @@ func TestFSM_Height(t *testing.T) {
 	assert.Equal(t, parentNumber+1, fsm.Height())
 }
 
-func TestFSM_DecodeCommitmentStateTxs(t *testing.T) {
+func TestFSM_DecodeBridgeBatchStateTxs(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -1498,23 +1498,23 @@ func TestFSM_DecodeCommitmentStateTxs(t *testing.T) {
 		eventsSize       = 40
 	)
 
-	_, signedCommitment, _ := buildCommitmentAndStateSyncs(t, eventsSize, uint64(3), from)
+	_, signedCommitment, _ := buildBridgeBatchAndBridgeEvents(t, eventsSize, uint64(3), from)
 
 	f := &fsm{
-		proposerCommitmentToRegister: map[uint64]*CommitmentMessageSigned{0: signedCommitment},
-		commitEpochInput:             createTestCommitEpochInput(t, 0, 10),
-		distributeRewardsInput:       createTestDistributeRewardsInput(t, 0, nil, 10),
-		logger:                       hclog.NewNullLogger(),
-		parent:                       &types.Header{},
+		proposerBridgeBatchToRegister: map[uint64]*BridgeBatchSigned{0: signedCommitment},
+		commitEpochInput:              createTestCommitEpochInput(t, 0, 10),
+		distributeRewardsInput:        createTestDistributeRewardsInput(t, 0, nil, 10),
+		logger:                        hclog.NewNullLogger(),
+		parent:                        &types.Header{},
 	}
 
-	bridgeCommitmentTx, err := f.createBridgeCommitmentTx(0)
+	bridgeCommitmentTx, err := f.createBridgeBatchTx(0)
 	require.NoError(t, err)
 
 	decodedData, err := decodeStateTransaction(bridgeCommitmentTx.Input())
 	require.NoError(t, err)
 
-	decodedCommitmentMsg, ok := decodedData.(*CommitmentMessageSigned)
+	decodedCommitmentMsg, ok := decodedData.(*BridgeBatchSigned)
 	require.True(t, ok)
 	numberOfMessages := len(signedCommitment.MessageBatch.Messages)
 	require.Equal(t, signedCommitment.MessageBatch.Messages[numberOfMessages-1].ID, decodedCommitmentMsg.MessageBatch.Messages[numberOfMessages-1].ID)
@@ -1642,7 +1642,7 @@ func createTestExtra(
 	return extraData.MarshalRLPTo(nil)
 }
 
-func createTestCommitment(t *testing.T, accounts []*wallet.Account) *CommitmentMessageSigned {
+func createTestBridgeBatch(t *testing.T, accounts []*wallet.Account) *BridgeBatchSigned {
 	t.Helper()
 
 	bitmap := bitmap.Bitmap{}
@@ -1661,7 +1661,7 @@ func createTestCommitment(t *testing.T, accounts []*wallet.Account) *CommitmentM
 		bitmap.Set(uint64(i))
 	}
 
-	commitment, err := NewPendingCommitment(1, bridgeMessageEvents)
+	commitment, err := NewPendingBridgeBatch(1, bridgeMessageEvents)
 	require.NoError(t, err)
 
 	hash, err := commitment.Hash()
@@ -1686,7 +1686,7 @@ func createTestCommitment(t *testing.T, accounts []*wallet.Account) *CommitmentM
 
 	assert.NoError(t, err)
 
-	return &CommitmentMessageSigned{
+	return &BridgeBatchSigned{
 		MessageBatch: commitment.BridgeMessageBatch,
 		AggSignature: signature,
 	}

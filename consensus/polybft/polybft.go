@@ -817,14 +817,14 @@ func (p *Polybft) PreCommitState(block *types.Block, _ *state.Transition) error 
 			return fmt.Errorf("unknown state transaction: tx=%v, error: %w", tx.Hash(), err)
 		}
 
-		if signedCommitment, ok := decodedStateTx.(*CommitmentMessageSigned); ok {
+		if signedCommitment, ok := decodedStateTx.(*BridgeBatchSigned); ok {
 			if commitmentTxExists {
 				return fmt.Errorf("only one commitment state tx is allowed per block: %v", tx.Hash())
 			}
 
 			commitmentTxExists = true
 
-			if err := verifyBridgeCommitmentTx(
+			if err := verifyBridgeBatchTx(
 				block.Number(),
 				tx.Hash(),
 				signedCommitment,

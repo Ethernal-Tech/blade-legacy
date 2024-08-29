@@ -12,9 +12,9 @@ import (
 
 var (
 	// bucket to store rootchain bridge events
-	bridgeMessageEventsBucket = []byte("stateSyncEvents")
-	// bucket to store commitments
-	commitmentsBucket = []byte("commitments")
+	bridgeMessageEventsBucket = []byte("bridgeMessageEvents")
+	// bucket to store bridge buckets
+	bridgeBatchBucket = []byte("bridgeBatches")
 	// bucket to store state sync proofs
 	bridgeMessageProofsBucket = []byte("stateSyncProofs")
 	// bucket to store message votes (signatures)
@@ -22,26 +22,26 @@ var (
 	// bucket to store all state sync relayer events
 	stateSyncRelayerEventsBucket = []byte("stateSyncRelayerEvents")
 
-	// errNotEnoughStateSyncs error message
-	errNotEnoughStateSyncs = errors.New("there is either a gap or not enough sync events")
-	// errNoCommitmentForStateSync error message
-	errNoCommitmentForStateSync = errors.New("no commitment found for given state sync event")
+	// errNotEnoughBridgeEvents error message
+	errNotEnoughBridgeEvents = errors.New("there is either a gap or not enough bridge events")
+	// errNoBridgeBatchForBridgeEvent error message
+	errNoBridgeBatchForBridgeEvent = errors.New("no bridge batch found for given bridge message events")
 )
 
 /*
 Bolt DB schema:
 
 state sync events/
-|--> stateSyncEvent.Id -> *StateSyncEvent (json marshalled)
+|--> chainId --> stateSyncEvent.Id -> *StateSyncEvent (json marshalled)
 
 commitments/
-|--> commitment.Message.ToIndex -> *CommitmentMessageSigned (json marshalled)
+|--> chainId --> commitment.Message.ToIndex -> *CommitmentMessageSigned (json marshalled)
 
 stateSyncProofs/
-|--> stateSyncProof.StateSync.Id -> *StateSyncProof (json marshalled)
+|--> chainId --> stateSyncProof.StateSync.Id -> *StateSyncProof (json marshalled)
 
 relayerEvents/
-|--> RelayerEventData.EventID -> *RelayerEventData (json marshalled)
+|--> chainId --> RelayerEventData.EventID -> *RelayerEventData (json marshalled)
 */
 
 type BridgeMessageStore struct {
@@ -52,14 +52,14 @@ type BridgeMessageStore struct {
 // initialize creates necessary buckets in DB if they don't already exist
 func (s *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 	var err error
-	var bridgeMessageBucket, commitmentBucket, bridgeMessageProofBucket, stateSyncRelayerBucket *bolt.Bucket
+	var bridgeMessageBucket, bridgeBatchesBucket, bridgeMessageProofBucket, stateSyncRelayerBucket *bolt.Bucket
 
 	if bridgeMessageBucket, err = tx.CreateBucketIfNotExists(bridgeMessageEventsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", bridgeMessageEventsBucket, err)
 	}
 
-	if commitmentBucket, err = tx.CreateBucketIfNotExists([]byte(commitmentsBucket)); err != nil {
-		return fmt.Errorf("failed to create bucket=%s: %w", string(commitmentsBucket), err)
+	if bridgeBatchesBucket, err = tx.CreateBucketIfNotExists([]byte(bridgeBatchBucket)); err != nil {
+		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeBatchBucket), err)
 	}
 
 	if bridgeMessageProofBucket, err = tx.CreateBucketIfNotExists([]byte(bridgeMessageProofsBucket)); err != nil {
@@ -77,8 +77,8 @@ func (s *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(bridgeMessageEventsBucket), err)
 		}
 
-		if _, err := commitmentBucket.CreateBucketIfNotExists(chainIdBytes); err != nil {
-			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(commitmentsBucket), err)
+		if _, err := bridgeBatchesBucket.CreateBucketIfNotExists(chainIdBytes); err != nil {
+			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(bridgeBatchBucket), err)
 		}
 
 		if _, err := bridgeMessageProofBucket.CreateBucketIfNotExists(chainIdBytes); err != nil {
@@ -93,7 +93,7 @@ func (s *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 	return nil
 }
 
-// insertStateSyncEvent inserts a new state sync event to state event bucket in db
+// insertBridgeMessageEvent inserts a new bridge message event to state event bucket in db
 func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.BridgeMessageEventEvent) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		raw, err := json.Marshal(event)
@@ -107,11 +107,11 @@ func (s *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Bridge
 	})
 }
 
-// removeStateSyncEventsAndProofs removes state sync events and their proofs from the buckets in db
-func (s *BridgeMessageStore) removeStateSyncEventsAndProofs(bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
+// removeBridgeEventsAndProofs remove bridge events and their proofs from the buckets in db
+func (s *BridgeMessageStore) removeBridgeEventsAndProofs(bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return s.db.Update(func(tx *bolt.Tx) error {
 		eventsBucket := tx.Bucket(bridgeMessageEventsBucket)
-		proofsBucket := tx.Bucket([]byte(bridgeMessageProofsBucket))
+		proofsBucket := tx.Bucket(bridgeMessageProofsBucket)
 
 		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
 
@@ -154,8 +154,8 @@ func (s *BridgeMessageStore) list() ([]*contractsapi.BridgeMessageEventEvent, er
 	return events, nil
 }
 
-// getStateSyncEventsForCommitment returns state sync events for commitment
-func (s *BridgeMessageStore) getBridgeMessageEventsForCommitment(
+// getBridgeMessageEventsForBridgeBatch returns bridge events for bridge batch
+func (s *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
 	fromIndex, toIndex uint64, dbTx *bolt.Tx, destinationChainID uint64) ([]*contractsapi.BridgeMessageEventEvent, error) {
 	var (
 		events []*contractsapi.BridgeMessageEventEvent
@@ -167,7 +167,7 @@ func (s *BridgeMessageStore) getBridgeMessageEventsForCommitment(
 		for i := fromIndex; i <= toIndex; i++ {
 			v := bucket.Get(common.EncodeUint64ToBytes(i))
 			if v == nil {
-				return errNotEnoughStateSyncs
+				return errNotEnoughBridgeEvents
 			}
 
 			var event *contractsapi.BridgeMessageEventEvent
@@ -192,16 +192,16 @@ func (s *BridgeMessageStore) getBridgeMessageEventsForCommitment(
 	return events, err
 }
 
-// getCommitmentForStateSync returns the commitment that contains given state sync event if it exists
-func (s *BridgeMessageStore) getCommitmentForBridgeEvents(bridgeMessageID, chainId uint64) (*CommitmentMessageSigned, error) {
-	var commitment *CommitmentMessageSigned
+// getBridgeBatchForBridgeEvents returns the bridgeBatch that contains given bridge event if it exists
+func (s *BridgeMessageStore) getBridgeBatchForBridgeEvents(bridgeMessageID, chainId uint64) (*BridgeBatchSigned, error) {
+	var commitment *BridgeBatchSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		c := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor()
+		c := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Cursor()
 
 		k, v := c.Seek(common.EncodeUint64ToBytes(bridgeMessageID))
 		if k == nil {
-			return errNoCommitmentForStateSync
+			return errNoBridgeBatchForBridgeEvent
 		}
 
 		if err := json.Unmarshal(v, &commitment); err != nil {
@@ -209,7 +209,7 @@ func (s *BridgeMessageStore) getCommitmentForBridgeEvents(bridgeMessageID, chain
 		}
 
 		if !commitment.ContainsBridgeMessage(bridgeMessageID) {
-			return errNoCommitmentForStateSync
+			return errNoBridgeBatchForBridgeEvent
 		}
 
 		return nil
@@ -218,8 +218,8 @@ func (s *BridgeMessageStore) getCommitmentForBridgeEvents(bridgeMessageID, chain
 	return commitment, err
 }
 
-// insertCommitmentMessage inserts signed commitment to db
-func (s *BridgeMessageStore) insertCommitmentMessage(commitment *CommitmentMessageSigned,
+// insertBridgeBatchMessage inserts signed commitment to db
+func (s *BridgeMessageStore) insertBridgeBatchMessage(commitment *BridgeBatchSigned,
 	dbTx *bolt.Tx) error {
 	insertFn := func(tx *bolt.Tx) error {
 		raw, err := json.Marshal(commitment)
@@ -234,7 +234,7 @@ func (s *BridgeMessageStore) insertCommitmentMessage(commitment *CommitmentMessa
 			lastId = commitment.MessageBatch.Messages[length-1].ID.Uint64()
 		}
 
-		if err := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(commitment.MessageBatch.DestinationChainID.Uint64())).Put(
+		if err := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(commitment.MessageBatch.DestinationChainID.Uint64())).Put(
 			common.EncodeUint64ToBytes(lastId), raw); err != nil {
 			return err
 		}
@@ -251,12 +251,12 @@ func (s *BridgeMessageStore) insertCommitmentMessage(commitment *CommitmentMessa
 	return insertFn(dbTx)
 }
 
-// getCommitmentMessage queries the signed commitment from the db
-func (s *BridgeMessageStore) getCommitmentMessage(toIndex uint64, chainId uint64) (*CommitmentMessageSigned, error) {
-	var commitment *CommitmentMessageSigned
+// getBridgeBatchSigned queries the signed bridge batch from the db
+func (s *BridgeMessageStore) getBridgeBatchSigned(toIndex uint64, chainId uint64) (*BridgeBatchSigned, error) {
+	var commitment *BridgeBatchSigned
 
 	err := s.db.View(func(tx *bolt.Tx) error {
-		raw := tx.Bucket(commitmentsBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Get(common.EncodeUint64ToBytes(toIndex)) //FIX
+		raw := tx.Bucket(bridgeBatchBucket).Bucket(common.EncodeUint64ToBytes(chainId)).Get(common.EncodeUint64ToBytes(toIndex)) //FIX
 		if raw == nil {
 			return nil
 		}

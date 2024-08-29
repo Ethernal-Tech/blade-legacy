@@ -12,14 +12,14 @@ import (
 	merkle "github.com/Ethernal-Tech/merkle-tree"
 )
 
-// PendingCommitment holds merkle trie of bridge transactions accompanied by epoch number
-type PendingCommitment struct {
+// PendingBridgeBatch holds merkle trie of bridge transactions accompanied by epoch number
+type PendingBridgeBatch struct {
 	*contractsapi.BridgeMessageBatch
 	Epoch uint64
 }
 
-// NewPendingCommitment creates a new commitment object
-func NewPendingCommitment(epoch uint64, bridgeEvents []*contractsapi.BridgeMessageEventEvent) (*PendingCommitment, error) {
+// NewPendingBridgeBatch creates a new commitment object
+func NewPendingBridgeBatch(epoch uint64, bridgeEvents []*contractsapi.BridgeMessageEventEvent) (*PendingBridgeBatch, error) {
 
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
@@ -33,14 +33,14 @@ func NewPendingCommitment(epoch uint64, bridgeEvents []*contractsapi.BridgeMessa
 			DestinationChainID: bridgeEvent.DestinationChainID}
 	}
 
-	return &PendingCommitment{
+	return &PendingBridgeBatch{
 		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{Messages: messages, DestinationChainID: bridgeEvents[0].DestinationChainID, SourceChainID: bridgeEvents[0].SourceChainID},
 		Epoch:              epoch,
 	}, nil
 }
 
 // Hash calculates hash value for commitment object.
-func (cm *PendingCommitment) Hash() (types.Hash, error) {
+func (cm *PendingBridgeBatch) Hash() (types.Hash, error) {
 	data, err := cm.BridgeMessageBatch.EncodeAbi()
 	if err != nil {
 		return types.Hash{}, err
@@ -49,17 +49,17 @@ func (cm *PendingCommitment) Hash() (types.Hash, error) {
 	return crypto.Keccak256Hash(data), nil
 }
 
-var _ contractsapi.StateTransactionInput = &CommitmentMessageSigned{}
+var _ contractsapi.StateTransactionInput = &BridgeBatchSigned{}
 
-// CommitmentMessageSigned encapsulates commitment message with aggregated signatures
-type CommitmentMessageSigned struct {
+// BridgeBatchSigned encapsulates commitment message with aggregated signatures
+type BridgeBatchSigned struct {
 	MessageBatch *contractsapi.BridgeMessageBatch
 	AggSignature Signature
 	PublicKeys   [][]byte
 }
 
 // Hash calculates hash value for commitment object.
-func (cm *CommitmentMessageSigned) Hash() (types.Hash, error) {
+func (cm *BridgeBatchSigned) Hash() (types.Hash, error) {
 	data, err := cm.MessageBatch.EncodeAbi()
 	if err != nil {
 		return types.Hash{}, err
@@ -69,7 +69,7 @@ func (cm *CommitmentMessageSigned) Hash() (types.Hash, error) {
 }
 
 // ContainsStateSync checks if commitment contains given state sync event
-func (cm *CommitmentMessageSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool {
+func (cm *BridgeBatchSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool {
 	length := len(cm.MessageBatch.Messages)
 	if length == 0 {
 		return false
@@ -78,7 +78,7 @@ func (cm *CommitmentMessageSigned) ContainsBridgeMessage(bridgeMessageID uint64)
 }
 
 // EncodeAbi contains logic for encoding arbitrary data into ABI format
-func (cm *CommitmentMessageSigned) EncodeAbi() ([]byte, error) {
+func (cm *BridgeBatchSigned) EncodeAbi() ([]byte, error) {
 	blsVerificationPart, err := precompiled.BlsVerificationABIType.Encode(
 		[2]interface{}{cm.PublicKeys, cm.AggSignature.Bitmap})
 	if err != nil {
@@ -105,7 +105,7 @@ func (cm *CommitmentMessageSigned) EncodeAbi() ([]byte, error) {
 }
 
 // DecodeAbi contains logic for decoding given ABI data
-func (cm *CommitmentMessageSigned) DecodeAbi(txData []byte) error {
+func (cm *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 	if len(txData) < abiMethodIDLength {
 		return fmt.Errorf("invalid commitment data, len = %d", len(txData))
 	}
@@ -142,7 +142,7 @@ func (cm *CommitmentMessageSigned) DecodeAbi(txData []byte) error {
 	signature = append(signature, commit.Signature[0].Bytes()...)
 	signature = append(signature, commit.Signature[1].Bytes()...)
 
-	*cm = CommitmentMessageSigned{
+	*cm = BridgeBatchSigned{
 		MessageBatch: commit.Batch,
 		AggSignature: Signature{
 			AggregatedSignature: signature,
@@ -154,8 +154,8 @@ func (cm *CommitmentMessageSigned) DecodeAbi(txData []byte) error {
 	return nil
 }
 
-// getCommitmentMessageSignedTx returns a CommitmentMessageSigned object from a commit state transaction
-func getCommitmentMessageSignedTx(txs []*types.Transaction) (*CommitmentMessageSigned, error) {
+// getBridgeBatchSignedTx returns a CommitmentMessageSigned object from a commit state transaction
+func getBridgeBatchSignedTx(txs []*types.Transaction) (*BridgeBatchSigned, error) {
 	var commitFn contractsapi.CommitBatchBridgeStorageFn
 	for _, tx := range txs {
 		// skip non state CommitmentMessageSigned transactions
@@ -165,7 +165,7 @@ func getCommitmentMessageSignedTx(txs []*types.Transaction) (*CommitmentMessageS
 			continue
 		}
 
-		obj := &CommitmentMessageSigned{}
+		obj := &BridgeBatchSigned{}
 
 		if err := obj.DecodeAbi(tx.Input()); err != nil {
 			return nil, fmt.Errorf("get commitment message signed tx error: %w", err)

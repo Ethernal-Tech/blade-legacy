@@ -36,7 +36,7 @@ const (
 )
 
 var (
-	stateSyncEventSig           = new(contractsapi.StateSyncedEvent).Sig()
+	bridgeMessageEventSig       = new(contractsapi.BridgeMessageEventEvent).Sig()
 	checkpointSubmittedEventSig = new(contractsapi.CheckpointSubmittedEvent).Sig()
 	exitProcessedEventSig       = new(contractsapi.ExitProcessedEvent).Sig()
 )
@@ -168,7 +168,7 @@ type BridgeManager interface {
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
 	BuildExitEventRoot(epoch uint64) (types.Hash, error)
-	Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error)
+	Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error)
 }
 
 var _ BridgeManager = (*dummyBridgeManager)(nil)
@@ -183,7 +183,7 @@ func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error { return nil
 func (d *dummyBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
-func (d *dummyBridgeManager) Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error) {
+func (d *dummyBridgeManager) Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
 func (d *dummyBridgeManager) GenerateProof(eventID uint64, pType proofType) (types.Proof, error) {
@@ -284,8 +284,8 @@ func (b *bridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 }
 
 // Commitment returns the pending signed state sync commitment
-func (b *bridgeManager) Commitment(pendingBlockNumber uint64) (*CommitmentMessageSigned, error) {
-	return b.stateSyncManager.Commitment(pendingBlockNumber)
+func (b *bridgeManager) Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
+	return b.stateSyncManager.GetVotedBridgeBatch(pendingBlockNumber)
 }
 
 // PostBlockAsync is called on finalization of each block (either from consensus or syncer)
@@ -308,7 +308,7 @@ func (b *bridgeManager) initStateSyncManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
-	stateSyncManager := newStateSyncManager(
+	stateSyncManager := newBridgeEventManager(
 		logger.Named("state-sync-manager"),
 		runtimeConfig.State,
 		&stateSyncConfig{
@@ -404,7 +404,7 @@ func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) error {
 			NumOfBlocksToReconcile: b.eventTrackerConfig.EventTracker.NumOfBlocksToReconcile,
 			PollInterval:           b.eventTrackerConfig.trackerPollInterval,
 			LogFilter: map[ethgo.Address][]ethgo.Hash{
-				ethgo.Address(b.eventTrackerConfig.stateSenderAddr):       {stateSyncEventSig},
+				ethgo.Address(b.eventTrackerConfig.stateSenderAddr):       {bridgeMessageEventSig},
 				ethgo.Address(b.eventTrackerConfig.checkpointManagerAddr): {checkpointSubmittedEventSig},
 				ethgo.Address(b.eventTrackerConfig.exitHelperAddr):        {exitProcessedEventSig},
 			},
@@ -422,7 +422,7 @@ func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) error {
 // AddLog saves the received log from event tracker if it matches a state sync event ABI
 func (b *bridgeManager) AddLog(eventLog *ethgo.Log) error {
 	switch eventLog.Topics[0] {
-	case stateSyncEventSig:
+	case bridgeMessageEventSig:
 		return b.stateSyncManager.AddLog(eventLog)
 	case checkpointSubmittedEventSig:
 		return b.exitEventRelayer.AddLog(eventLog)

@@ -427,20 +427,20 @@ func (c *consensusRuntime) FSM() error {
 	valSet := validator.NewValidatorSet(epoch.Validators, c.logger)
 
 	ff := &fsm{
-		config:                       epoch.CurrentClientConfig,
-		forks:                        c.config.Forks,
-		parent:                       parent,
-		backend:                      c.config.blockchain,
-		polybftBackend:               c.config.polybftBackend,
-		epochNumber:                  epoch.Number,
-		blockBuilder:                 blockBuilder,
-		validators:                   valSet,
-		isEndOfEpoch:                 isEndOfEpoch,
-		isEndOfSprint:                isEndOfSprint,
-		isFirstBlockOfEpoch:          isFirstBlockOfEpoch,
-		proposerSnapshot:             proposerSnapshot,
-		logger:                       c.logger.Named("fsm"),
-		proposerCommitmentToRegister: make(map[uint64]*CommitmentMessageSigned),
+		config:                        epoch.CurrentClientConfig,
+		forks:                         c.config.Forks,
+		parent:                        parent,
+		backend:                       c.config.blockchain,
+		polybftBackend:                c.config.polybftBackend,
+		epochNumber:                   epoch.Number,
+		blockBuilder:                  blockBuilder,
+		validators:                    valSet,
+		isEndOfEpoch:                  isEndOfEpoch,
+		isEndOfSprint:                 isEndOfSprint,
+		isFirstBlockOfEpoch:           isFirstBlockOfEpoch,
+		proposerSnapshot:              proposerSnapshot,
+		logger:                        c.logger.Named("fsm"),
+		proposerBridgeBatchToRegister: make(map[uint64]*BridgeBatchSigned),
 	}
 
 	if isEndOfSprint {
@@ -450,7 +450,7 @@ func (c *consensusRuntime) FSM() error {
 				return err
 			}
 
-			ff.proposerCommitmentToRegister[chainID] = commitment
+			ff.proposerBridgeBatchToRegister[chainID] = commitment
 		}
 	}
 

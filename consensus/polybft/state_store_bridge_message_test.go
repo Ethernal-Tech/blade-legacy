@@ -60,7 +60,7 @@ func TestState_Insert_And_Get_MessageVotes(t *testing.T) {
 	assert.True(t, bytes.Equal([]byte{1, 2}, votes[0].Signature))
 }
 
-func TestState_getStateSyncEventsForCommitment_NotEnoughEvents(t *testing.T) {
+func TestState_getBridgeEventsForBridgeBatch_NotEnoughEvents(t *testing.T) {
 	t.Parallel()
 
 	state := newTestState(t)
@@ -74,11 +74,11 @@ func TestState_getStateSyncEventsForCommitment_NotEnoughEvents(t *testing.T) {
 		}))
 	}
 
-	_, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize-1, nil, 0)
-	assert.ErrorIs(t, err, errNotEnoughStateSyncs)
+	_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize-1, nil, 0)
+	assert.ErrorIs(t, err, errNotEnoughBridgeEvents)
 }
 
-func TestState_getStateSyncEventsForCommitment(t *testing.T) {
+func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 	t.Parallel()
 
 	state := newTestState(t)
@@ -95,7 +95,7 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 	t.Run("Return all - forced. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize-1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize-1, nil, 0)
 		require.NoError(t, err)
 		require.Equal(t, maxCommitmentSize, len(events))
 	})
@@ -103,14 +103,14 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 	t.Run("Return all - forced. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize+1, nil, 0)
-		require.ErrorIs(t, err, errNotEnoughStateSyncs)
+		_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize+1, nil, 0)
+		require.ErrorIs(t, err, errNotEnoughBridgeEvents)
 	})
 
 	t.Run("Return all you can. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize-1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize-1, nil, 0)
 		assert.NoError(t, err)
 		assert.Equal(t, maxCommitmentSize, len(events))
 	})
@@ -118,35 +118,35 @@ func TestState_getStateSyncEventsForCommitment(t *testing.T) {
 	t.Run("Return all you can. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, maxCommitmentSize+1, nil, 0)
-		assert.ErrorIs(t, err, errNotEnoughStateSyncs)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize+1, nil, 0)
+		assert.ErrorIs(t, err, errNotEnoughBridgeEvents)
 		assert.Equal(t, maxCommitmentSize, len(events))
 	})
 }
 
-func TestState_insertCommitmentMessage(t *testing.T) {
+func TestState_insertBridgeBatchMessage(t *testing.T) {
 	t.Parallel()
 
-	commitment := createTestCommitmentMessage(t, 0, 0)
+	commitment := createTestBridgeBatchMessage(t, 0, 0)
 
 	state := newTestState(t)
-	assert.NoError(t, state.BridgeMessageStore.insertCommitmentMessage(commitment, nil))
+	assert.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(commitment, nil))
 
-	commitmentFromDB, err := state.BridgeMessageStore.getCommitmentMessage(0, 0)
+	commitmentFromDB, err := state.BridgeMessageStore.getBridgeBatchSigned(0, 0)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, commitmentFromDB)
 	assert.Equal(t, commitment, commitmentFromDB)
 }
 
-func TestState_getCommitmentForStateSync(t *testing.T) {
+func TestState_getBridgeBatchForBridgeEvents(t *testing.T) {
 	const (
 		numOfCommitments = 10
 	)
 
 	state := newTestState(t)
 
-	insertTestCommitments(t, state, numOfCommitments)
+	insertTestBridgeBatches(t, state, numOfCommitments)
 
 	var cases = []struct {
 		bridgeMessageID uint64
@@ -172,13 +172,13 @@ func TestState_getCommitmentForStateSync(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		commitment, err := state.BridgeMessageStore.getCommitmentForBridgeEvents(c.bridgeMessageID, 0)
+		commitment, err := state.BridgeMessageStore.getBridgeBatchForBridgeEvents(c.bridgeMessageID, 0)
 
 		if c.hasCommitment {
 			require.NoError(t, err, fmt.Sprintf("state sync %v", c.bridgeMessageID))
 			require.Equal(t, c.hasCommitment, commitment.ContainsBridgeMessage(c.bridgeMessageID))
 		} else {
-			require.ErrorIs(t, errNoCommitmentForStateSync, err)
+			require.ErrorIs(t, errNoBridgeBatchForBridgeEvent, err)
 		}
 	}
 }
@@ -235,7 +235,7 @@ func TestState_GetNestedBucketInEpoch(t *testing.T) {
 	}
 }
 
-func createTestCommitmentMessage(t *testing.T, numberOfMessages, firstIndex uint64) *CommitmentMessageSigned {
+func createTestBridgeBatchMessage(t *testing.T, numberOfMessages, firstIndex uint64) *BridgeBatchSigned {
 	t.Helper()
 
 	messages := make([]*contractsapi.BridgeMessage, numberOfMessages)
@@ -269,23 +269,23 @@ func createTestCommitmentMessage(t *testing.T, numberOfMessages, firstIndex uint
 	aggSig, err := signatures.Aggregate().Marshal()
 	require.NoError(t, err)
 
-	return &CommitmentMessageSigned{
+	return &BridgeBatchSigned{
 		MessageBatch: &msg,
 		AggSignature: Signature{AggregatedSignature: aggSig},
 		PublicKeys:   [][]byte{blsKey.PublicKey().Marshal()},
 	}
 }
 
-func insertTestCommitments(t *testing.T, state *State, numberOfCommitments uint64) {
+func insertTestBridgeBatches(t *testing.T, state *State, numberOfCommitments uint64) {
 	t.Helper()
 
 	for i := uint64(0); i <= numberOfCommitments; i++ {
-		commitment := createTestCommitmentMessage(t, 10, 10*i)
-		require.NoError(t, state.BridgeMessageStore.insertCommitmentMessage(commitment, nil))
+		commitment := createTestBridgeBatchMessage(t, 10, 10*i)
+		require.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(commitment, nil))
 	}
 }
 
-func createTestStateSync(index int64) *contractsapi.StateSyncedEvent {
+func createTestBridgeMessageEvent(index int64) *contractsapi.StateSyncedEvent {
 	return &contractsapi.StateSyncedEvent{
 		ID:       big.NewInt(index),
 		Sender:   types.ZeroAddress,

@@ -22,7 +22,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-func newTestStateSyncManager(t *testing.T, key *validator.TestValidator, runtime Runtime) *stateSyncManager {
+func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runtime Runtime) *bridgeEventManager {
 	t.Helper()
 
 	tmpDir, err := os.MkdirTemp("/tmp", "test-data-dir-state-sync")
@@ -33,7 +33,7 @@ func newTestStateSyncManager(t *testing.T, key *validator.TestValidator, runtime
 
 	topic := &mockTopic{}
 
-	s := newStateSyncManager(hclog.NewNullLogger(), state,
+	s := newBridgeEventManager(hclog.NewNullLogger(), state,
 		&stateSyncConfig{
 			dataDir:           tmpDir,
 			topic:             topic,
@@ -48,7 +48,7 @@ func newTestStateSyncManager(t *testing.T, key *validator.TestValidator, runtime
 	return s
 }
 
-func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
+func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 	t.Parallel()
 
 	vals := validator.NewTestValidators(t, 5)
@@ -56,11 +56,11 @@ func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
 	t.Run("When node is validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		// there are no state syncs
-		require.NoError(t, s.buildCommitment(nil, 0))
-		require.Nil(t, s.pendingCommitments)
+		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		require.Nil(t, s.pendingBridgeBatches)
 
 		bridgeMessages10 := generateBridgeMessageEvents(t, 10, 0)
 
@@ -69,24 +69,24 @@ func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
-		require.NoError(t, s.buildCommitment(nil, 0))
-		length := len(s.pendingCommitments[0].BridgeMessageBatch.Messages)
-		require.Len(t, s.pendingCommitments, 1)
-		require.Equal(t, uint64(0), s.pendingCommitments[0].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(4), s.pendingCommitments[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
-		require.Equal(t, uint64(0), s.pendingCommitments[0].Epoch)
+		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		length := len(s.pendingBridgeBatches[0].BridgeMessageBatch.Messages)
+		require.Len(t, s.pendingBridgeBatches, 1)
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(4), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].Epoch)
 
 		// add the next 5 state syncs, at that point, so that it generates a larger commitment
 		for i := 5; i < 10; i++ {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
-		require.NoError(t, s.buildCommitment(nil, 0))
-		length = len(s.pendingCommitments[1].BridgeMessageBatch.Messages)
-		require.Len(t, s.pendingCommitments, 2)
-		require.Equal(t, uint64(0), s.pendingCommitments[1].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(9), s.pendingCommitments[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
-		require.Equal(t, uint64(0), s.pendingCommitments[1].Epoch)
+		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		length = len(s.pendingBridgeBatches[1].BridgeMessageBatch.Messages)
+		require.Len(t, s.pendingBridgeBatches, 2)
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(9), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].Epoch)
 
 		// the message was sent
 		require.NotNil(t, s.config.topic.(*mockTopic).consume())
@@ -95,7 +95,7 @@ func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
 	t.Run("When node is not validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
 		stateSyncs10 := generateBridgeMessageEvents(t, 10, 0)
 
@@ -105,12 +105,12 @@ func TestStateSyncManager_PostEpoch_BuildCommitment(t *testing.T) {
 		}
 
 		// I am not a validator so no commitments should be built
-		require.NoError(t, s.buildCommitment(nil, 0))
-		require.Len(t, s.pendingCommitments, 0)
+		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		require.Len(t, s.pendingBridgeBatches, 0)
 	})
 }
 
-func TestStateSyncManager_MessagePool(t *testing.T) {
+func TestBridgeEventManager_MessagePool(t *testing.T) {
 	t.Parallel()
 
 	vals := validator.NewTestValidators(t, 5)
@@ -118,7 +118,7 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 	t.Run("Old epoch", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		s.epoch = 1
 		msg := &TransportMessage{
@@ -132,7 +132,7 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 	t.Run("Sender is not a validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		badVal := validator.NewTestValidator(t, "a", 0)
@@ -145,7 +145,7 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 	t.Run("Invalid epoch", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		val := newMockMsg()
@@ -170,7 +170,7 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 	t.Run("Sender and signature mismatch", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		// validator signs the msg in behalf of another validator
@@ -193,7 +193,7 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 	t.Run("Sender votes", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		msg := newMockMsg()
@@ -222,18 +222,18 @@ func TestStateSyncManager_MessagePool(t *testing.T) {
 	})
 }
 
-func TestStateSyncManager_BuildCommitment(t *testing.T) {
+func TestBridgeEventManager_BuildCommitment(t *testing.T) {
 	vals := validator.NewTestValidators(t, 5)
 
-	s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 	s.validatorSet = vals.ToValidatorSet()
 
 	// commitment is empty
-	commitment, err := s.Commitment(1)
+	commitment, err := s.GetVotedBridgeBatch(1)
 	require.NoError(t, err)
 	require.Nil(t, commitment)
 
-	s.pendingCommitments = []*PendingCommitment{
+	s.pendingBridgeBatches = []*PendingBridgeBatch{
 		{
 			BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
 				SourceChainID:      big.NewInt(1),
@@ -242,7 +242,7 @@ func TestStateSyncManager_BuildCommitment(t *testing.T) {
 		},
 	}
 
-	hash, err := s.pendingCommitments[0].Hash()
+	hash, err := s.pendingBridgeBatches[0].Hash()
 	require.NoError(t, err)
 
 	msg := newMockMsg().WithHash(hash.Bytes())
@@ -262,7 +262,7 @@ func TestStateSyncManager_BuildCommitment(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	commitment, err = s.Commitment(1)
+	commitment, err = s.GetVotedBridgeBatch(1)
 	require.NoError(t, err) // there is no error if quorum is not met, since its a valid case
 	require.Nil(t, commitment)
 
@@ -277,27 +277,27 @@ func TestStateSyncManager_BuildCommitment(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	commitment, err = s.Commitment(1)
+	commitment, err = s.GetVotedBridgeBatch(1)
 	require.NoError(t, err)
 	require.NotNil(t, commitment)
 }
 
-func TestStateSyncerManager_BuildProofs(t *testing.T) {
+func TestBridgeEventManager_BuildProofs(t *testing.T) {
 	vals := validator.NewTestValidators(t, 5)
 
-	s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 	for _, evnt := range generateBridgeMessageEvents(t, 20, 0) {
 		require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(evnt))
 	}
 
-	require.NoError(t, s.buildCommitment(nil, 0))
-	require.Len(t, s.pendingCommitments, 1)
+	require.NoError(t, s.buildBridgeBatch(nil, 0))
+	require.Len(t, s.pendingBridgeBatches, 1)
 
 	blsKey, err := bls.GenerateBlsKey()
 	require.NoError(t, err)
 
-	data, err := s.pendingCommitments[0].BridgeMessageBatch.EncodeAbi()
+	data, err := s.pendingBridgeBatches[0].BridgeMessageBatch.EncodeAbi()
 	require.NoError(t, err)
 
 	signature, err := blsKey.Sign(data, domain)
@@ -308,11 +308,11 @@ func TestStateSyncerManager_BuildProofs(t *testing.T) {
 	aggSig, err := signatures.Aggregate().Marshal()
 	require.NoError(t, err)
 
-	mockMsg := &CommitmentMessageSigned{
+	mockMsg := &BridgeBatchSigned{
 		MessageBatch: &contractsapi.BridgeMessageBatch{
-			Messages:           s.pendingCommitments[0].BridgeMessageBatch.Messages,
-			SourceChainID:      s.pendingCommitments[0].BridgeMessageBatch.SourceChainID,
-			DestinationChainID: s.pendingCommitments[0].BridgeMessageBatch.DestinationChainID,
+			Messages:           s.pendingBridgeBatches[0].BridgeMessageBatch.Messages,
+			SourceChainID:      s.pendingBridgeBatches[0].BridgeMessageBatch.SourceChainID,
+			DestinationChainID: s.pendingBridgeBatches[0].BridgeMessageBatch.DestinationChainID,
 		},
 		AggSignature: Signature{AggregatedSignature: aggSig},
 		PublicKeys:   [][]byte{blsKey.PublicKey().Marshal()},
@@ -334,16 +334,16 @@ func TestStateSyncerManager_BuildProofs(t *testing.T) {
 	length := len(mockMsg.MessageBatch.Messages)
 
 	require.NoError(t, s.PostBlock(req))
-	require.Equal(t, mockMsg.MessageBatch.Messages[length-1].ID.Uint64()+1, s.nextCommittedIndex[0])
+	require.Equal(t, mockMsg.MessageBatch.Messages[length-1].ID.Uint64()+1, s.nextBridgeEventIdIndex[0])
 }
 
-func TestStateSyncerManager_RemoveProcessedEventsAndProofs(t *testing.T) {
+func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	t.Skip()
 	const stateSyncEventsCount = 5
 
 	vals := validator.NewTestValidators(t, 5)
 
-	s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 	stateSyncEvents := generateBridgeMessageEvents(t, stateSyncEventsCount, 0)
 
 	for _, event := range stateSyncEvents {
@@ -365,7 +365,7 @@ func TestStateSyncerManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	require.Equal(t, 0, len(stateSyncEventsAfter))
 }
 
-func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
+func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 	t.Parallel()
 
 	vals := validator.NewTestValidators(t, 5)
@@ -373,14 +373,14 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 	t.Run("Node is a validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		// empty log which is not an state sync
 		require.NoError(t, s.AddLog(&ethgo.Log{}))
-		stateSyncs, err := s.state.BridgeMessageStore.list()
+		bridgeEvents, err := s.state.BridgeMessageStore.list()
 
 		require.NoError(t, err)
-		require.Len(t, stateSyncs, 0)
+		require.Len(t, bridgeEvents, 0)
 
 		var bridgeMessageEvent contractsapi.BridgeMessageEventEvent
 
@@ -388,10 +388,10 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 
 		// log with the state sync topic but incorrect content
 		require.Error(t, s.AddLog(&ethgo.Log{Topics: []ethgo.Hash{bridgeMessageEventID}}))
-		stateSyncs, err = s.state.BridgeMessageStore.list()
+		bridgeEvents, err = s.state.BridgeMessageStore.list()
 
 		require.NoError(t, err)
-		require.Len(t, stateSyncs, 0)
+		require.Len(t, bridgeEvents, 0)
 
 		// correct event log
 		data, err := abi.MustNewType("tuple(string a)").Encode([]string{"data"})
@@ -409,23 +409,23 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 
 		require.NoError(t, s.AddLog(goodLog))
 
-		stateSyncs, err = s.state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, 0, nil, 0)
+		bridgeEvents, err = s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 0)
 		require.NoError(t, err)
-		require.Len(t, stateSyncs, 1)
-		require.Len(t, s.pendingCommitments, 1)
-		length := len(s.pendingCommitments[0].BridgeMessageBatch.Messages)
-		require.Equal(t, uint64(0), s.pendingCommitments[0].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(0), s.pendingCommitments[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Len(t, bridgeEvents, 1)
+		require.Len(t, s.pendingBridgeBatches, 1)
+		length := len(s.pendingBridgeBatches[0].BridgeMessageBatch.Messages)
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 
 		// add one more log to have a minimum commitment
 		goodLog2 := goodLog.Copy()
 		goodLog2.Topics[1] = ethgo.BytesToHash([]byte{0x1}) // state sync index 1
 		require.NoError(t, s.AddLog(goodLog2))
 
-		require.Len(t, s.pendingCommitments, 2)
-		length = len(s.pendingCommitments[1].BridgeMessageBatch.Messages)
-		require.Equal(t, uint64(0), s.pendingCommitments[1].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(1), s.pendingCommitments[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Len(t, s.pendingBridgeBatches, 2)
+		length = len(s.pendingBridgeBatches[1].BridgeMessageBatch.Messages)
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(1), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 
 		// add two more logs to have larger commitments
 		goodLog3 := goodLog.Copy()
@@ -436,17 +436,17 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x3}) // state sync index 3
 		require.NoError(t, s.AddLog(goodLog4))
 
-		length = len(s.pendingCommitments[3].BridgeMessageBatch.Messages)
+		length = len(s.pendingBridgeBatches[3].BridgeMessageBatch.Messages)
 
-		require.Len(t, s.pendingCommitments, 4)
-		require.Equal(t, uint64(0), s.pendingCommitments[3].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(3), s.pendingCommitments[3].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Len(t, s.pendingBridgeBatches, 4)
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[3].BridgeMessageBatch.Messages[0].ID.Uint64())
+		require.Equal(t, uint64(3), s.pendingBridgeBatches[3].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 	})
 
 	t.Run("Node is not a validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestStateSyncManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
+		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
 		// correct event log
 		data, err := abi.MustNewType("tuple(string a)").Encode([]string{"data"})
@@ -467,11 +467,11 @@ func TestStateSyncerManager_AddLog_BuildCommitments(t *testing.T) {
 		require.NoError(t, s.AddLog(goodLog))
 
 		// node should have inserted given state sync event, but it shouldn't build any commitment
-		bridgeMessages, err := s.state.BridgeMessageStore.getBridgeMessageEventsForCommitment(0, 0, nil, 0)
+		bridgeMessages, err := s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 0)
 		require.NoError(t, err)
 		require.Len(t, bridgeMessages, 1)
 		require.Equal(t, uint64(0), bridgeMessages[0].ID.Uint64())
-		require.Len(t, s.pendingCommitments, 0)
+		require.Len(t, s.pendingBridgeBatches, 0)
 	})
 }
 

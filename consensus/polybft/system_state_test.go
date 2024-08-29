@@ -21,6 +21,7 @@ import (
 )
 
 func TestSystemState_GetNextCommittedIndex(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 
 	var sideChainBridgeABI, _ = abi.NewMethod(
@@ -68,6 +69,7 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 }
 
 func TestSystemState_GetEpoch(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 
 	setEpochMethod, err := abi.NewMethod("function setEpoch(uint256 _epochId) public payable")

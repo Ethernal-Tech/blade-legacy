@@ -25,7 +25,7 @@ func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, 
 
 	if bytes.Equal(sig, commitBridgeTxFn.Sig()) {
 		// bridge commitment
-		obj = &CommitmentMessageSigned{}
+		obj = &BridgeBatchSigned{}
 	} else if bytes.Equal(sig, commitEpochFn.Sig()) {
 		// commit epoch
 		obj = &contractsapi.CommitEpochEpochManagerFn{}
