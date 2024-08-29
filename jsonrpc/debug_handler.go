@@ -44,7 +44,7 @@ func (debug *DebugHandler) StartCPUProfile(file string) error {
 		return errCPUProfilingInProgress
 	}
 
-	f, err := os.Create(resolveHomeDirectory(file))
+	f, err := os.Create(expandHomeDirectory(file))
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (debug *DebugHandler) StartGoTrace(file string) error {
 		return errTraceAlreadyInProgress
 	}
 
-	f, err := os.Create(resolveHomeDirectory(file))
+	f, err := os.Create(expandHomeDirectory(file))
 
 	if err != nil {
 		return err
