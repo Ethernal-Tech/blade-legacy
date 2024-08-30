@@ -272,7 +272,6 @@ func createTestBridgeBatchMessage(t *testing.T, numberOfMessages, firstIndex uin
 	return &BridgeBatchSigned{
 		MessageBatch: &msg,
 		AggSignature: Signature{AggregatedSignature: aggSig},
-		PublicKeys:   [][]byte{blsKey.PublicKey().Marshal()},
 	}
 }
 

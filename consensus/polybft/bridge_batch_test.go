@@ -67,7 +67,6 @@ func TestBridgeBatch_ToRegisterBridgeBatchInputData(t *testing.T) {
 			Bitmap:              []byte{5, 1},
 			AggregatedSignature: aggSig,
 		},
-		PublicKeys: [][]byte{blsKey1.PublicKey().Marshal(), blsKey2.PublicKey().Marshal()},
 	}
 	inputData, err := expectedSignedBridgeBatchMsg.EncodeAbi()
 	require.NoError(t, err)
@@ -93,7 +92,6 @@ func newTestBridgeBatchSigned(t *testing.T, sourceChainID, destinationChainID ui
 			DestinationChainID: new(big.Int).SetUint64(destinationChainID),
 		},
 		AggSignature: Signature{},
-		PublicKeys:   [][]byte{},
 	}
 }
 
@@ -125,7 +123,6 @@ func buildBridgeBatchAndBridgeEvents(t *testing.T, bridgeMessageCount int,
 			AggregatedSignature: aggSig,
 			Bitmap:              []byte{},
 		},
-		PublicKeys: [][]byte{blsKey.PublicKey().Marshal()},
 	}
 
 	return commitment, commitmentSigned, bridgeMessageEvents

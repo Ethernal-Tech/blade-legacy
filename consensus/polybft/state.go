@@ -22,16 +22,16 @@ type MessageSignature struct {
 
 // TransportMessage represents the payload which is gossiped across the network
 type TransportMessage struct {
-	// BatchByte is encoded data
-	BatchByte []byte
+	// Hash is encoded data
+	Hash []byte
 	// Message signature
 	Signature []byte
 	// From is the address of the message signer
 	From string
 	// Number of epoch
 	EpochNumber uint64
-
-	DestinationChainID uint64
+	// SourceChainID from bridge batch
+	SourceChainID uint64
 }
 
 // State represents a persistence layer which persists consensus data off-chain

@@ -286,8 +286,8 @@ func (f *fsm) applyBridgeBatchTx() error {
 }
 
 // createBridgeBatchTx builds bridge batch registration transaction
-func (f *fsm) createBridgeBatchTx(chainId uint64) (*types.Transaction, error) {
-	if proposerCommitmentToRegister, ok := f.proposerBridgeBatchToRegister[chainId]; ok {
+func (f *fsm) createBridgeBatchTx(chainID uint64) (*types.Transaction, error) {
+	if proposerCommitmentToRegister, ok := f.proposerBridgeBatchToRegister[chainID]; ok {
 		inputData, err := proposerCommitmentToRegister.EncodeAbi()
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode input data for bridge commitment registration: %w", err)

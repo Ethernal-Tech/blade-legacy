@@ -2,6 +2,7 @@ package polybft
 
 import (
 	"fmt"
+	"math/big"
 	"path"
 	"time"
 
@@ -175,11 +176,11 @@ var _ BridgeManager = (*dummyBridgeManager)(nil)
 
 type dummyBridgeManager struct{}
 
-func (d *dummyBridgeManager) Close()                                {}
-func (d *dummyBridgeManager) PostBlockAsync(req *PostBlockRequest)  {}
-func (d *dummyBridgeManager) AddLog(log *ethgo.Log) error           { return nil }
-func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error { return nil }
-func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error { return nil }
+func (d *dummyBridgeManager) Close()                                        {}
+func (d *dummyBridgeManager) PostBlockAsync(req *PostBlockRequest)          {}
+func (d *dummyBridgeManager) AddLog(chainId *big.Int, log *ethgo.Log) error { return nil }
+func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error         { return nil }
+func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error         { return nil }
 func (d *dummyBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
@@ -195,10 +196,10 @@ var _ BridgeManager = (*bridgeManager)(nil)
 // bridgeManager is a struct that manages different bridge components
 // such as handling and executing bridge events
 type bridgeManager struct {
-	checkpointManager CheckpointManager
-	stateSyncManager  StateSyncManager
-	stateSyncRelayer  StateSyncRelayer
-	exitEventRelayer  ExitRelayer
+	checkpointManager  CheckpointManager
+	bridgeEventManager BridgeEventManager
+	stateSyncRelayer   StateSyncRelayer
+	exitEventRelayer   ExitRelayer
 
 	eventTrackerConfig *eventTrackerConfig
 	logger             hclog.Logger
@@ -252,7 +253,7 @@ func newBridgeManager(
 
 // PostBlock is a function executed on every block finalization (either by consensus or syncer)
 func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
-	if err := b.stateSyncManager.PostBlock(req); err != nil {
+	if err := b.bridgeEventManager.PostBlock(req); err != nil {
 		return fmt.Errorf("failed to execute post block in state sync manager. Err: %w", err)
 	}
 
@@ -271,7 +272,7 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 
 // PostEpoch is a function executed on epoch ending / start of new epoch
 func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
-	if err := b.stateSyncManager.PostEpoch(req, b.chainID); err != nil {
+	if err := b.bridgeEventManager.PostEpoch(req); err != nil {
 		return fmt.Errorf("failed to execute post epoch in state sync manager. Error: %w", err)
 	}
 
@@ -285,7 +286,7 @@ func (b *bridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 
 // Commitment returns the pending signed state sync commitment
 func (b *bridgeManager) Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
-	return b.stateSyncManager.GetVotedBridgeBatch(pendingBlockNumber)
+	return b.bridgeEventManager.BridgeBatch(pendingBlockNumber)
 }
 
 // PostBlockAsync is called on finalization of each block (either from consensus or syncer)
@@ -311,18 +312,19 @@ func (b *bridgeManager) initStateSyncManager(
 	stateSyncManager := newBridgeEventManager(
 		logger.Named("state-sync-manager"),
 		runtimeConfig.State,
-		&stateSyncConfig{
+		&bridgeEventManagerConfig{
 			key:               runtimeConfig.Key,
 			dataDir:           runtimeConfig.DataDir,
 			topic:             runtimeConfig.bridgeTopic,
 			maxCommitmentSize: maxCommitmentSize,
 		},
 		bridgeBackend,
+		1,
 	)
 
-	b.stateSyncManager = stateSyncManager
+	b.bridgeEventManager = stateSyncManager
 
-	return b.stateSyncManager.Init()
+	return b.bridgeEventManager.Init()
 }
 
 // initCheckpointManager initializes checkpoint manager
@@ -420,10 +422,10 @@ func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) error {
 }
 
 // AddLog saves the received log from event tracker if it matches a state sync event ABI
-func (b *bridgeManager) AddLog(eventLog *ethgo.Log) error {
+func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	switch eventLog.Topics[0] {
 	case bridgeMessageEventSig:
-		return b.stateSyncManager.AddLog(eventLog)
+		return b.bridgeEventManager.AddLog(big.NewInt(1), eventLog)
 	case checkpointSubmittedEventSig:
 		return b.exitEventRelayer.AddLog(eventLog)
 	case exitProcessedEventSig:
