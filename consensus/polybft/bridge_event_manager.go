@@ -29,7 +29,7 @@ type Runtime interface {
 	IsActiveValidator() bool
 }
 
-// BridgeEventManager is an interface that defines functions for state sync workflow
+// BridgeEventManager is an interface that defines functions bridge message event workflow
 type BridgeEventManager interface {
 	EventSubscriber
 	Init() error
@@ -68,13 +68,13 @@ type bridgeEventManagerConfig struct {
 	dataDir           string
 	topic             topic
 	key               *wallet.Key
-	maxCommitmentSize uint64
+	maxNumberOfEvents uint64
 }
 
 var _ BridgeEventManager = (*bridgeEventManager)(nil)
 
 // bridgeEventManager is a struct that manages the workflow of
-// saving and querying state sync events, and creating, and submitting new commitments
+// saving and querying bridge message events, and creating, and submitting new batches
 type bridgeEventManager struct {
 	logger hclog.Logger
 	state  *State
@@ -98,7 +98,7 @@ type topic interface {
 	Subscribe(handler func(obj interface{}, from peer.ID)) error
 }
 
-// newBridgeEventManager creates a new instance of state sync manager
+// newBridgeEventManager creates a new instance of bridge event manager
 func newBridgeEventManager(logger hclog.Logger, state *State, config *bridgeEventManagerConfig,
 	runtime Runtime, sourceChainID uint64) *bridgeEventManager {
 	return &bridgeEventManager{
@@ -113,13 +113,13 @@ func newBridgeEventManager(logger hclog.Logger, state *State, config *bridgeEven
 // Init subscribes to bridge topics (getting votes)
 func (b *bridgeEventManager) Init() error {
 	if err := b.initTransport(); err != nil {
-		return fmt.Errorf("failed to initialize state sync transport layer. Error: %w", err)
+		return fmt.Errorf("failed to initialize bridge event transport layer. Error: %w", err)
 	}
 
 	return nil
 }
 
-// initTransport subscribes to bridge topics (getting votes for commitments)
+// initTransport subscribes to bridge topics (getting votes for batches)
 func (b *bridgeEventManager) initTransport() error {
 	return b.config.topic.Subscribe(func(obj interface{}, _ peer.ID) {
 		if !b.runtime.IsActiveValidator() {
@@ -219,12 +219,12 @@ func (b *bridgeEventManager) verifyVoteSignature(valSet validator.ValidatorSet, 
 func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	event := &contractsapi.BridgeMsgEvent{}
 
-	doesMatch, err := event.ParseLog(eventLog)
-	if !doesMatch {
+	if b.sourceChainID != chainID.Uint64() {
 		return nil
 	}
 
-	if chainID.Cmp(event.SourceChainID) != 0 {
+	doesMatch, err := event.ParseLog(eventLog)
+	if !doesMatch {
 		return nil
 	}
 
@@ -247,36 +247,38 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 		return err
 	}
 
-	if err := b.buildBridgeBatch(nil, event.DestinationChainID.Uint64()); err != nil {
+	if err := b.buildBridgeBatch(nil); err != nil {
 		// we don't return an error here. If bridge message event is inserted in db,
 		// we will just try to build a batch on next block or next event arrival
-		b.logger.Error("could not build a batch on arrival of new state sync", "err", err, "bridgeMessageID", event.ID)
+		b.logger.Error("could not build a batch on arrival of new bridge message event",
+			"err", err, "bridgeMessageID", event.ID)
 	}
 
 	return nil
 }
 
-// BridgeBatch returns a commitment to be submitted if there is a pending commitment with quorum
+// BridgeBatch returns a batch to be submitted if there is a pending batch with quorum
 func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
 	var largestBridgeBatch *BridgeBatchSigned
 
-	// we start from the end, since last pending commitment is the largest one
+	// we start from the end, since last pending batch is the largest one
 	for i := len(b.pendingBridgeBatches) - 1; i >= 0; i-- {
-		commitment := b.pendingBridgeBatches[i]
-		aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, commitment)
-		numberOfMessages := len(commitment.Messages)
+		pendingBatch := b.pendingBridgeBatches[i]
+		aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, pendingBatch)
+		numberOfMessages := len(pendingBatch.Messages)
 
 		if err != nil {
 			if errors.Is(err, errQuorumNotReached) {
-				// a valid case, commitment has no quorum, we should not return an error
+				// a valid case, batch has no quorum, we should not return an error
 				if numberOfMessages > 0 {
-					b.logger.Debug("can not submit a commitment, quorum not reached",
-						"from", commitment.BridgeMessageBatch.Messages[numberOfMessages].ID.Uint64(),
-						"to", commitment.BridgeMessageBatch.Messages[numberOfMessages-1].ID.Uint64())
+					b.logger.Debug("can not submit a batch, quorum not reached",
+						"from", pendingBatch.BridgeMessageBatch.Messages[0].ID.Uint64(),
+						"to", pendingBatch.BridgeMessageBatch.Messages[numberOfMessages-1].ID.Uint64())
 				}
+
 				continue
 			}
 
@@ -284,7 +286,7 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 		}
 
 		largestBridgeBatch = &BridgeBatchSigned{
-			MessageBatch: commitment.BridgeMessageBatch,
+			MessageBatch: pendingBatch.BridgeMessageBatch,
 			AggSignature: aggregatedSignature,
 		}
 
@@ -312,7 +314,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 		return Signature{}, err
 	}
 
-	// get all the votes from the database for this commitment
+	// get all the votes from the database for batch
 	votes, err := b.state.BridgeMessageStore.getMessageVotes(
 		pendingBridgeBatch.Epoch,
 		bridgeBatchHash.Bytes(),
@@ -371,7 +373,7 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	b.validatorSet = req.ValidatorSet
 	b.epoch = req.NewEpochID
 
-	// build a new commitment at the end of the epoch
+	// build a new batch at the end of the epoch
 	nextBridgeEventIDIndex, err := req.SystemState.GetNextCommittedIndex(b.sourceChainID)
 	if err != nil {
 		b.lock.Unlock()
@@ -383,10 +385,10 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 
 	b.lock.Unlock()
 
-	return b.buildBridgeBatch(req.DBTx, b.sourceChainID)
+	return b.buildBridgeBatch(req.DBTx)
 }
 
-// PostBlock notifies state sync manager that a block was finalized,.
+// PostBlock notifies bridge event manager that a block was finalized,.
 // Additionally, it will remove any processed bridge message events.
 func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
 	bridgeBatch, err := getBridgeBatchSignedTx(req.FullBlock.Block.Transactions)
@@ -400,7 +402,7 @@ func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
 	}
 
 	if err := b.state.BridgeMessageStore.insertBridgeBatchMessage(bridgeBatch, req.DBTx); err != nil {
-		return fmt.Errorf("insert commitment message error: %w", err)
+		return fmt.Errorf("insert batch message error: %w", err)
 	}
 
 	b.lock.Lock()
@@ -410,16 +412,16 @@ func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
 	// update the nextBridgeEventIdIndex since a bridge batch was submitted
 	b.nextBridgeEventIDIndex =
 		bridgeBatch.MessageBatch.Messages[length-1].ID.Uint64() + 1
-	// commitment was submitted, so discard what we have in memory, so we can build a new one
+	// batch was submitted, so discard what we have in memory, so we can build a new one
 	b.pendingBridgeBatches = nil
 
 	return nil
 }
 
 // buildBridgeBatch builds a new bridge batch, signs it and gossips its vote for it
-func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainID uint64) error {
+func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
 	if !b.runtime.IsActiveValidator() {
-		// don't build commitment if not a validator
+		// don't build batch if not a validator
 		return nil
 	}
 
@@ -429,19 +431,20 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainID uint64) err
 	epoch := b.epoch
 	bridgeMessageEvents, err := b.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(
 		b.nextBridgeEventIDIndex,
-		b.nextBridgeEventIDIndex+b.config.maxCommitmentSize-1,
+		b.nextBridgeEventIDIndex+b.config.maxNumberOfEvents-1,
 		dbTx,
-		chainID)
+		b.sourceChainID)
 
 	if err != nil && !errors.Is(err, errNotEnoughBridgeEvents) {
 		b.lock.RUnlock()
 
-		return fmt.Errorf("failed to get state sync events for commitment. Error: %w", err)
+		return fmt.Errorf("failed to get bridge message event for batch. Error: %w", err)
 	}
 
 	if len(bridgeMessageEvents) == 0 {
 		// there are no bridge message events
 		b.lock.RUnlock()
+
 		return nil
 	}
 
@@ -451,6 +454,7 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainID uint64) err
 			Cmp(bridgeMessageEvents[len(bridgeMessageEvents)-1].ID) >= 0 {
 		// already built a bridge batch of this size which is pending to be submitted
 		b.lock.RUnlock()
+
 		return nil
 	}
 
@@ -470,7 +474,7 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainID uint64) err
 
 	signature, err := b.config.key.SignWithDomain(hashBytes, signer.DomainStateReceiver)
 	if err != nil {
-		return fmt.Errorf("failed to sign commitment message. Error: %w", err)
+		return fmt.Errorf("failed to sign batch message. Error: %w", err)
 	}
 
 	sig := &MessageSignature{
@@ -503,7 +507,6 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, chainID uint64) err
 
 	numberOfMessages := len(pendingBridgeBatch.BridgeMessageBatch.Messages)
 	if numberOfMessages > 0 {
-
 		b.logger.Debug(
 			"[buildBridgeBatch] build batch",
 			"from", pendingBridgeBatch.BridgeMessageBatch.Messages[0].ID.Uint64(),

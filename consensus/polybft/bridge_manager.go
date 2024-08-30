@@ -86,7 +86,7 @@ type RelayerState interface {
 	UpdateRelayerEvents(events []*RelayerEventMetaData, removedEvents []*RelayerEventMetaData, dbTx *bolt.Tx) error
 }
 
-// relayerEventsProcessor is a parent struct of both state sync and exit relayer
+// relayerEventsProcessor is a parent struct of both bridge event and exit relayer
 // that holds functions common to both relayers
 type relayerEventsProcessor struct {
 	logger     hclog.Logger
@@ -169,7 +169,7 @@ type BridgeManager interface {
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
 	BuildExitEventRoot(epoch uint64) (types.Hash, error)
-	Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error)
+	BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error)
 }
 
 var _ BridgeManager = (*dummyBridgeManager)(nil)
@@ -178,13 +178,13 @@ type dummyBridgeManager struct{}
 
 func (d *dummyBridgeManager) Close()                                        {}
 func (d *dummyBridgeManager) PostBlockAsync(req *PostBlockRequest)          {}
-func (d *dummyBridgeManager) AddLog(chainId *big.Int, log *ethgo.Log) error { return nil }
+func (d *dummyBridgeManager) AddLog(chainID *big.Int, log *ethgo.Log) error { return nil }
 func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error         { return nil }
 func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error         { return nil }
 func (d *dummyBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
-func (d *dummyBridgeManager) Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
+func (d *dummyBridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
 func (d *dummyBridgeManager) GenerateProof(eventID uint64, pType proofType) (types.Proof, error) {
@@ -254,11 +254,11 @@ func newBridgeManager(
 // PostBlock is a function executed on every block finalization (either by consensus or syncer)
 func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 	if err := b.bridgeEventManager.PostBlock(req); err != nil {
-		return fmt.Errorf("failed to execute post block in state sync manager. Err: %w", err)
+		return fmt.Errorf("failed to execute post block in bridge event manager. Err: %w", err)
 	}
 
 	if err := b.stateSyncRelayer.PostBlock(req); err != nil {
-		return fmt.Errorf("failed to execute post block in state sync relayer. Err: %w", err)
+		return fmt.Errorf("failed to execute post block in bridge event relayer. Err: %w", err)
 	}
 
 	if err := b.exitEventRelayer.PostBlock(req); err != nil {
@@ -273,7 +273,7 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 // PostEpoch is a function executed on epoch ending / start of new epoch
 func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
 	if err := b.bridgeEventManager.PostEpoch(req); err != nil {
-		return fmt.Errorf("failed to execute post epoch in state sync manager. Error: %w", err)
+		return fmt.Errorf("failed to execute post epoch in bridge event manager. Error: %w", err)
 	}
 
 	return nil
@@ -284,8 +284,8 @@ func (b *bridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return b.checkpointManager.BuildEventRoot(epoch)
 }
 
-// Commitment returns the pending signed state sync commitment
-func (b *bridgeManager) Commitment(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
+// BridgeBatch returns the pending signed bridge batch
+func (b *bridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
 	return b.bridgeEventManager.BridgeBatch(pendingBlockNumber)
 }
 
@@ -303,8 +303,8 @@ func (b *bridgeManager) Close() {
 	b.exitEventRelayer.Close()
 }
 
-// initStateSyncManager initializes state sync manager
-// if bridge is not enabled, then a dummy state sync manager will be used
+// initStateSyncManager initializes bridge event manager
+// if bridge is not enabled, then a dummy bridge event manager will be used
 func (b *bridgeManager) initStateSyncManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
@@ -316,7 +316,7 @@ func (b *bridgeManager) initStateSyncManager(
 			key:               runtimeConfig.Key,
 			dataDir:           runtimeConfig.DataDir,
 			topic:             runtimeConfig.bridgeTopic,
-			maxCommitmentSize: maxCommitmentSize,
+			maxNumberOfEvents: maxNumberOfEvents,
 		},
 		bridgeBackend,
 		1,
@@ -356,8 +356,8 @@ func (b *bridgeManager) initCheckpointManager(
 	return nil
 }
 
-// initStateSyncRelayer initializes state sync relayer
-// if not enabled, then a dummy state sync relayer will be used
+// initStateSyncRelayer initializes bridge event relayer
+// if not enabled, then a dummy bridge event relayer will be used
 func (b *bridgeManager) initStateSyncRelayer(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
@@ -421,7 +421,7 @@ func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) error {
 	return eventTracker.Start()
 }
 
-// AddLog saves the received log from event tracker if it matches a state sync event ABI
+// AddLog saves the received log from event tracker if it matches a bridge message event ABI
 func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	switch eventLog.Topics[0] {
 	case bridgeMessageEventSig:

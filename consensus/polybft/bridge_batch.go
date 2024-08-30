@@ -69,7 +69,7 @@ func (bbs *BridgeBatchSigned) Hash() (types.Hash, error) {
 	return crypto.Keccak256Hash(data), nil
 }
 
-// ContainsStateSync checks if BridgeBatchSigned contains given state sync event
+// ContainsStateSync checks if BridgeBatchSigned contains given bridge message event
 func (bbs *BridgeBatchSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool {
 	length := len(bbs.MessageBatch.Messages)
 	if length == 0 {
@@ -104,7 +104,7 @@ func (bbs *BridgeBatchSigned) EncodeAbi() ([]byte, error) {
 // DecodeAbi contains logic for decoding given ABI data
 func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 	if len(txData) < abiMethodIDLength {
-		return fmt.Errorf("invalid commitment data, len = %d", len(txData))
+		return fmt.Errorf("invalid batch data, len = %d", len(txData))
 	}
 
 	commit := contractsapi.CommitBatchBridgeStorageFn{}
@@ -144,7 +144,7 @@ func getBridgeBatchSignedTx(txs []*types.Transaction) (*BridgeBatchSigned, error
 		obj := &BridgeBatchSigned{}
 
 		if err := obj.DecodeAbi(tx.Input()); err != nil {
-			return nil, fmt.Errorf("get commitment message signed tx error: %w", err)
+			return nil, fmt.Errorf("get batch message signed tx error: %w", err)
 		}
 
 		return obj, nil
@@ -154,8 +154,8 @@ func getBridgeBatchSignedTx(txs []*types.Transaction) (*BridgeBatchSigned, error
 }
 
 // createMerkleTree creates a merkle tree from provided bridge message events
-// if only one state sync event is provided, a second, empty leaf will be added to merkle tree
-// so that we can have a commitment with a single bridge message event
+// if only one bridge message event is provided, a second, empty leaf will be added to merkle tree
+// so that we can have a batch with a single bridge message event
 func createMerkleTree(bridgeMessageEvent []*contractsapi.BridgeMsgEvent) (*merkle.MerkleTree, error) {
 	bridgeMessageData := make([][]byte, len(bridgeMessageEvent))
 

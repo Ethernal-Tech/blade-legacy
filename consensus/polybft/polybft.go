@@ -798,14 +798,14 @@ func (p *Polybft) GetBlockCreator(h *types.Header) (types.Address, error) {
 
 // PreCommitState a hook to be called before finalizing state transition on inserting block
 func (p *Polybft) PreCommitState(block *types.Block, _ *state.Transition) error {
-	commitmentTxExists := false
+	bridgeBatchTxExists := false
 
 	validators, err := p.GetValidators(block.Number()-1, nil)
 	if err != nil {
 		return err
 	}
 
-	// validate commitment state transactions
+	// validate bridge batch state transactions
 	for _, tx := range block.Transactions {
 		if tx.Type() != types.StateTxType {
 			continue
@@ -816,17 +816,17 @@ func (p *Polybft) PreCommitState(block *types.Block, _ *state.Transition) error 
 			return fmt.Errorf("unknown state transaction: tx=%v, error: %w", tx.Hash(), err)
 		}
 
-		if signedCommitment, ok := decodedStateTx.(*BridgeBatchSigned); ok {
-			if commitmentTxExists {
-				return fmt.Errorf("only one commitment state tx is allowed per block: %v", tx.Hash())
+		if signedBridgeBatch, ok := decodedStateTx.(*BridgeBatchSigned); ok {
+			if bridgeBatchTxExists {
+				return fmt.Errorf("only one bridge batch state tx is allowed per block: %v", tx.Hash())
 			}
 
-			commitmentTxExists = true
+			bridgeBatchTxExists = true
 
 			if err := verifyBridgeBatchTx(
 				block.Number(),
 				tx.Hash(),
-				signedCommitment,
+				signedBridgeBatch,
 				validator.NewValidatorSet(validators, p.logger)); err != nil {
 				return err
 			}

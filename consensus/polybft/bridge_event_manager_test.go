@@ -38,7 +38,7 @@ func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runti
 			dataDir:           tmpDir,
 			topic:             topic,
 			key:               key.Key(),
-			maxCommitmentSize: maxCommitmentSize,
+			maxNumberOfEvents: maxNumberOfEvents,
 		}, runtime, 1)
 
 	t.Cleanup(func() {
@@ -58,30 +58,30 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
-		// there are no state syncs
-		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		// there are no bridge messages
+		require.NoError(t, s.buildBridgeBatch(nil))
 		require.Nil(t, s.pendingBridgeBatches)
 
 		bridgeMessages10 := generateBridgeMessageEvents(t, 10, 0)
 
-		// add 5 state syncs starting in index 0, it will generate one smaller commitment
+		// add 5 bridge messages starting in index 0, it will generate one smaller batch
 		for i := 0; i < 5; i++ {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
-		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		require.NoError(t, s.buildBridgeBatch(nil))
 		length := len(s.pendingBridgeBatches[0].BridgeMessageBatch.Messages)
 		require.Len(t, s.pendingBridgeBatches, 1)
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
 		require.Equal(t, uint64(4), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].Epoch)
 
-		// add the next 5 state syncs, at that point, so that it generates a larger commitment
+		// add the next 5 bridge messages, at that point, so that it generates a larger batch
 		for i := 5; i < 10; i++ {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
-		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		require.NoError(t, s.buildBridgeBatch(nil))
 		length = len(s.pendingBridgeBatches[1].BridgeMessageBatch.Messages)
 		require.Len(t, s.pendingBridgeBatches, 2)
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
@@ -99,13 +99,13 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		stateSyncs10 := generateBridgeMessageEvents(t, 10, 0)
 
-		// add 5 state syncs starting in index 0, they will be saved to db
+		// add 5 bridge messages starting in index 0, they will be saved to db
 		for i := 0; i < 5; i++ {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(stateSyncs10[i]))
 		}
 
-		// I am not a validator so no commitments should be built
-		require.NoError(t, s.buildBridgeBatch(nil, 0))
+		// I am not a validator so no batches should be built
+		require.NoError(t, s.buildBridgeBatch(nil))
 		require.Len(t, s.pendingBridgeBatches, 0)
 	})
 }
@@ -222,16 +222,16 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 	})
 }
 
-func TestBridgeEventManager_BuildCommitment(t *testing.T) {
+func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	vals := validator.NewTestValidators(t, 5)
 
 	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 	s.validatorSet = vals.ToValidatorSet()
 
-	// commitment is empty
-	commitment, err := s.BridgeBatch(1)
+	// batch is empty
+	batch, err := s.BridgeBatch(1)
 	require.NoError(t, err)
-	require.Nil(t, commitment)
+	require.Nil(t, batch)
 
 	s.pendingBridgeBatches = []*PendingBridgeBatch{
 		{
@@ -262,9 +262,9 @@ func TestBridgeEventManager_BuildCommitment(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	commitment, err = s.BridgeBatch(0)
+	batch, err = s.BridgeBatch(0)
 	require.NoError(t, err) // there is no error if quorum is not met, since its a valid case
-	require.Nil(t, commitment)
+	require.Nil(t, batch)
 
 	// validator 2 and 3 vote for the proposal, there is enough voting power now
 
@@ -277,9 +277,9 @@ func TestBridgeEventManager_BuildCommitment(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	commitment, err = s.BridgeBatch(1)
+	batch, err = s.BridgeBatch(1)
 	require.NoError(t, err)
-	require.NotNil(t, commitment)
+	require.NotNil(t, batch)
 }
 
 func TestBridgeEventManager_BuildProofs(t *testing.T) {
@@ -291,7 +291,7 @@ func TestBridgeEventManager_BuildProofs(t *testing.T) {
 		require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(evnt))
 	}
 
-	require.NoError(t, s.buildBridgeBatch(nil, 0))
+	require.NoError(t, s.buildBridgeBatch(nil))
 	require.Len(t, s.pendingBridgeBatches, 1)
 
 	blsKey, err := bls.GenerateBlsKey()
@@ -359,7 +359,7 @@ func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 		require.NoError(t, s.ProcessLog(&types.Header{Number: 10}, convertLog(eventLog), nil))
 	}
 
-	// all state sync events and their proofs should be removed from the store
+	// all bridge message events and their proofs should be removed from the store
 	stateSyncEventsAfter, err := s.state.BridgeMessageStore.list()
 	require.NoError(t, err)
 	require.Equal(t, 0, len(stateSyncEventsAfter))
@@ -379,7 +379,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		bridgeMsgData, err := bridgeMsg.Encode()
 		require.NoError(t, err)
 
-		// empty log which is not an state sync
+		// empty log which is not an bridge message
 		require.NoError(t, s.AddLog(big.NewInt(1), &ethgo.Log{Data: bridgeMsgData}))
 		bridgeEvents, err := s.state.BridgeMessageStore.list()
 
@@ -390,7 +390,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 
 		bridgeMessageEventID := bridgeMessageEvent.Sig()
 
-		// log with the state sync topic but incorrect content
+		// log with the bridge message topic but incorrect content
 		require.Error(t, s.AddLog(big.NewInt(1), &ethgo.Log{Topics: []ethgo.Hash{bridgeMessageEventID}, Data: bridgeMsgData}))
 		bridgeEvents, err = s.state.BridgeMessageStore.list()
 
@@ -404,7 +404,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		goodLog := &ethgo.Log{
 			Topics: []ethgo.Hash{
 				bridgeMessageEventID,
-				ethgo.BytesToHash([]byte{0x0}), // state sync index 0
+				ethgo.BytesToHash([]byte{0x0}), // bridge message index 0
 				ethgo.ZeroHash,
 				ethgo.ZeroHash,
 			},
@@ -421,9 +421,9 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 
-		// add one more log to have a minimum commitment
+		// add one more log to have a minimum batch
 		goodLog2 := goodLog.Copy()
-		goodLog2.Topics[1] = ethgo.BytesToHash([]byte{0x1}) // state sync index 1
+		goodLog2.Topics[1] = ethgo.BytesToHash([]byte{0x1}) // bridgeMsg event index 1
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog2))
 
 		require.Len(t, s.pendingBridgeBatches, 2)
@@ -431,13 +431,13 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
 		require.Equal(t, uint64(1), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
 
-		// add two more logs to have larger commitments
+		// add two more logs to have larger batch
 		goodLog3 := goodLog.Copy()
-		goodLog3.Topics[1] = ethgo.BytesToHash([]byte{0x2}) // state sync index 2
+		goodLog3.Topics[1] = ethgo.BytesToHash([]byte{0x2}) // bridgeMsg event index 2
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog3))
 
 		goodLog4 := goodLog.Copy()
-		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x3}) // state sync index 3
+		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x3}) // bridgeMsg event index 3
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog4))
 
 		length = len(s.pendingBridgeBatches[3].BridgeMessageBatch.Messages)
@@ -461,7 +461,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		goodLog := &ethgo.Log{
 			Topics: []ethgo.Hash{
 				bridgeMessageEvent.Sig(),
-				ethgo.BytesToHash([]byte{0x0}), // state sync index 0
+				ethgo.BytesToHash([]byte{0x0}), // bridge message index 0
 				ethgo.ZeroHash,
 				ethgo.ZeroHash,
 			},
@@ -470,7 +470,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog))
 
-		// node should have inserted given state sync event, but it shouldn't build any commitment
+		// node should have inserted given bridgeMsg event, but it shouldn't build any batch
 		bridgeMessages, err := s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 0)
 		require.NoError(t, err)
 		require.Len(t, bridgeMessages, 1)
@@ -496,34 +496,6 @@ func createTestLogForStateSyncResultEvent(t *testing.T, stateSyncEventID uint64)
 		Address: contracts.StateReceiverContract,
 		Topics:  topics,
 		Data:    encodedData,
-	}
-}
-
-func createTestLogForBridgeMessageEvent(
-	t *testing.T,
-	EventID uint64,
-	sourceChainID uint64,
-	destinationCHainID uint64) *types.Log {
-	t.Helper()
-
-	var evnt contractsapi.BridgeMsgEvent
-
-	encodedData1, err := abi.MustNewType("uint256").Encode(new(big.Int).SetUint64(EventID))
-	require.NoError(t, err)
-
-	encodedData2, err := abi.MustNewType("uint256").Encode(new(big.Int).SetUint64(sourceChainID))
-	require.NoError(t, err)
-
-	encodedData3, err := abi.MustNewType("uint256").Encode(new(big.Int).SetUint64(destinationCHainID))
-	require.NoError(t, err)
-
-	return &types.Log{
-		Topics: []types.Hash{
-			types.Hash(evnt.Sig()),
-			types.BytesToHash(encodedData1),
-			types.BytesToHash(encodedData2),
-			types.BytesToHash(encodedData3),
-		},
 	}
 }
 

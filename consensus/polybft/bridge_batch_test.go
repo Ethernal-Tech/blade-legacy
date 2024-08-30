@@ -100,13 +100,13 @@ func buildBridgeBatchAndBridgeEvents(t *testing.T, bridgeMessageCount int,
 	t.Helper()
 
 	bridgeMessageEvents := generateBridgeMessageEvents(t, bridgeMessageCount, startIdx)
-	commitment, err := NewPendingBridgeBatch(epoch, bridgeMessageEvents)
+	pendingBridgeBatch, err := NewPendingBridgeBatch(epoch, bridgeMessageEvents)
 	require.NoError(t, err)
 
 	blsKey, err := bls.GenerateBlsKey()
 	require.NoError(t, err)
 
-	data, err := commitment.BridgeMessageBatch.EncodeAbi()
+	data, err := pendingBridgeBatch.BridgeMessageBatch.EncodeAbi()
 	require.NoError(t, err)
 
 	signature, err := blsKey.Sign(data, domain)
@@ -117,13 +117,13 @@ func buildBridgeBatchAndBridgeEvents(t *testing.T, bridgeMessageCount int,
 	aggSig, err := signatures.Aggregate().Marshal()
 	require.NoError(t, err)
 
-	commitmentSigned := &BridgeBatchSigned{
-		MessageBatch: commitment.BridgeMessageBatch,
+	bridgeBatchSigned := &BridgeBatchSigned{
+		MessageBatch: pendingBridgeBatch.BridgeMessageBatch,
 		AggSignature: Signature{
 			AggregatedSignature: aggSig,
 			Bitmap:              []byte{},
 		},
 	}
 
-	return commitment, commitmentSigned, bridgeMessageEvents
+	return pendingBridgeBatch, bridgeBatchSigned, bridgeMessageEvents
 }

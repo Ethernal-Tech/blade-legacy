@@ -65,7 +65,7 @@ func TestState_getBridgeEventsForBridgeBatch_NotEnoughEvents(t *testing.T) {
 
 	state := newTestState(t)
 
-	for i := 0; i < maxCommitmentSize-2; i++ {
+	for i := 0; i < maxNumberOfEvents-2; i++ {
 		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(i)),
 			Data:               []byte{1, 2},
@@ -74,7 +74,7 @@ func TestState_getBridgeEventsForBridgeBatch_NotEnoughEvents(t *testing.T) {
 		}))
 	}
 
-	_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize-1, nil, 0)
+	_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 0)
 	assert.ErrorIs(t, err, errNotEnoughBridgeEvents)
 }
 
@@ -83,7 +83,7 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 
 	state := newTestState(t)
 
-	for i := 0; i < maxCommitmentSize; i++ {
+	for i := 0; i < maxNumberOfEvents; i++ {
 		assert.NoError(t, state.BridgeMessageStore.insertBridgeMessageEvent(&contractsapi.BridgeMsgEvent{
 			ID:                 big.NewInt(int64(i)),
 			Data:               []byte{1, 2},
@@ -95,62 +95,62 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 	t.Run("Return all - forced. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize-1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 0)
 		require.NoError(t, err)
-		require.Equal(t, maxCommitmentSize, len(events))
+		require.Equal(t, maxNumberOfEvents, len(events))
 	})
 
 	t.Run("Return all - forced. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize+1, nil, 0)
+		_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents+1, nil, 0)
 		require.ErrorIs(t, err, errNotEnoughBridgeEvents)
 	})
 
 	t.Run("Return all you can. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize-1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 0)
 		assert.NoError(t, err)
-		assert.Equal(t, maxCommitmentSize, len(events))
+		assert.Equal(t, maxNumberOfEvents, len(events))
 	})
 
 	t.Run("Return all you can. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxCommitmentSize+1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents+1, nil, 0)
 		assert.ErrorIs(t, err, errNotEnoughBridgeEvents)
-		assert.Equal(t, maxCommitmentSize, len(events))
+		assert.Equal(t, maxNumberOfEvents, len(events))
 	})
 }
 
 func TestState_insertBridgeBatchMessage(t *testing.T) {
 	t.Parallel()
 
-	commitment := createTestBridgeBatchMessage(t, 0, 0)
+	signedBridgeBatch := createTestBridgeBatchMessage(t, 0, 0)
 
 	state := newTestState(t)
-	assert.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(commitment, nil))
+	assert.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(signedBridgeBatch, nil))
 
-	commitmentFromDB, err := state.BridgeMessageStore.getBridgeBatchSigned(0, 0)
+	batchFromDB, err := state.BridgeMessageStore.getBridgeBatchSigned(0, 0)
 
 	assert.NoError(t, err)
-	assert.NotNil(t, commitmentFromDB)
-	assert.Equal(t, commitment, commitmentFromDB)
+	assert.NotNil(t, batchFromDB)
+	assert.Equal(t, signedBridgeBatch, batchFromDB)
 }
 
 func TestState_getBridgeBatchForBridgeEvents(t *testing.T) {
 	const (
-		numOfCommitments = 10
+		numOfBridgeBatches = 10
 	)
 
 	state := newTestState(t)
 
-	insertTestBridgeBatches(t, state, numOfCommitments)
+	insertTestBridgeBatches(t, state, numOfBridgeBatches)
 
 	var cases = []struct {
 		bridgeMessageID uint64
-		hasCommitment   bool
+		hasBatch        bool
 	}{
 		{1, true},
 		{10, true},
@@ -172,11 +172,11 @@ func TestState_getBridgeBatchForBridgeEvents(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		commitment, err := state.BridgeMessageStore.getBridgeBatchForBridgeEvents(c.bridgeMessageID, 0)
+		signedBridgeBatch, err := state.BridgeMessageStore.getBridgeBatchForBridgeEvents(c.bridgeMessageID, 0)
 
-		if c.hasCommitment {
-			require.NoError(t, err, fmt.Sprintf("state sync %v", c.bridgeMessageID))
-			require.Equal(t, c.hasCommitment, commitment.ContainsBridgeMessage(c.bridgeMessageID))
+		if c.hasBatch {
+			require.NoError(t, err, fmt.Sprintf("bridge event %v", c.bridgeMessageID))
+			require.Equal(t, c.hasBatch, signedBridgeBatch.ContainsBridgeMessage(c.bridgeMessageID))
 		} else {
 			require.ErrorIs(t, errNoBridgeBatchForBridgeEvent, err)
 		}
@@ -275,12 +275,12 @@ func createTestBridgeBatchMessage(t *testing.T, numberOfMessages, firstIndex uin
 	}
 }
 
-func insertTestBridgeBatches(t *testing.T, state *State, numberOfCommitments uint64) {
+func insertTestBridgeBatches(t *testing.T, state *State, numberOfBatches uint64) {
 	t.Helper()
 
-	for i := uint64(0); i <= numberOfCommitments; i++ {
-		commitment := createTestBridgeBatchMessage(t, 10, 10*i)
-		require.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(commitment, nil))
+	for i := uint64(0); i <= numberOfBatches; i++ {
+		signedBridgeBatch := createTestBridgeBatchMessage(t, 10, 10*i)
+		require.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(signedBridgeBatch, nil))
 	}
 }
 

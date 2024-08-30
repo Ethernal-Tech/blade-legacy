@@ -59,7 +59,7 @@ func newState(path string, closeCh chan struct{}, chainIDs []uint64) (*State, er
 		close:                 closeCh,
 		BridgeMessageStore:    &BridgeMessageStore{db: db, chainIDs: chainIDs},
 		ExitStore:             &ExitStore{db: db},
-		EpochStore:            &EpochStore{db: db, chainIds: chainIDs},
+		EpochStore:            &EpochStore{db: db, chainIDs: chainIDs},
 		ProposerSnapshotStore: &ProposerSnapshotStore{db: db},
 		StakeStore:            &StakeStore{db: db},
 		GovernanceStore:       &GovernanceStore{db: db},

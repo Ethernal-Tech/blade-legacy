@@ -29,15 +29,15 @@ import (
 )
 
 const (
-	maxCommitmentSize = 10
+	maxNumberOfEvents = 10
 	stateFileName     = "consensusState.db"
 )
 
 var (
 	// errNotAValidator represents "node is not a validator" error message
 	errNotAValidator = errors.New("node is not a validator")
-	// errQuorumNotReached represents "quorum not reached for commitment message" error message
-	errQuorumNotReached = errors.New("quorum not reached for commitment message")
+	// errQuorumNotReached represents "quorum not reached for batch" error message
+	errQuorumNotReached = errors.New("quorum not reached for batch")
 )
 
 // txPoolInterface is an abstraction of transaction pool
@@ -445,12 +445,12 @@ func (c *consensusRuntime) FSM() error {
 
 	if isEndOfSprint {
 		for chainID, bridgeManager := range c.bridgeManagers {
-			commitment, err := bridgeManager.Commitment(pendingBlockNumber)
+			bridgeBatch, err := bridgeManager.BridgeBatch(pendingBlockNumber)
 			if err != nil {
 				return err
 			}
 
-			ff.proposerBridgeBatchToRegister[chainID] = commitment
+			ff.proposerBridgeBatchToRegister[chainID] = bridgeBatch
 		}
 	}
 

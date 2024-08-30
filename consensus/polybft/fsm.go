@@ -99,7 +99,7 @@ type fsm struct {
 	// isFirstBlockOfEpoch indicates if this is the start of new epoch
 	isFirstBlockOfEpoch bool
 
-	// proposerBridgeBatchToRegister is a commitment that is registered via state transaction by proposer
+	// proposerBridgeBatchToRegister is a batch that is registered via state transaction by proposer
 	proposerBridgeBatchToRegister map[uint64]*BridgeBatchSigned
 
 	// logger instance
@@ -269,15 +269,15 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 
 // applyBridgeBatchTx builds state transaction which contains data for bridge batch registration
 func (f *fsm) applyBridgeBatchTx() error {
-	for chainID, proposerCommitmentToRegister := range f.proposerBridgeBatchToRegister {
-		if proposerCommitmentToRegister != nil {
-			bridgeCommitmentTx, err := f.createBridgeBatchTx(chainID)
+	for chainID, proposerBridgeBatchToRegister := range f.proposerBridgeBatchToRegister {
+		if proposerBridgeBatchToRegister != nil {
+			bridgeBatchTx, err := f.createBridgeBatchTx(chainID)
 			if err != nil {
-				return fmt.Errorf("creation of bridge commitment transaction failed: %w", err)
+				return fmt.Errorf("creation of bridge batch transaction failed: %w", err)
 			}
 
-			if err := f.blockBuilder.WriteTx(bridgeCommitmentTx); err != nil {
-				return fmt.Errorf("failed to apply bridge commitment state transaction. Error: %w", err)
+			if err := f.blockBuilder.WriteTx(bridgeBatchTx); err != nil {
+				return fmt.Errorf("failed to apply bridge batch state transaction. Error: %w", err)
 			}
 		}
 	}
@@ -287,10 +287,10 @@ func (f *fsm) applyBridgeBatchTx() error {
 
 // createBridgeBatchTx builds bridge batch registration transaction
 func (f *fsm) createBridgeBatchTx(chainID uint64) (*types.Transaction, error) {
-	if proposerCommitmentToRegister, ok := f.proposerBridgeBatchToRegister[chainID]; ok {
-		inputData, err := proposerCommitmentToRegister.EncodeAbi()
+	if proposerBridgeBatchToRegister, ok := f.proposerBridgeBatchToRegister[chainID]; ok {
+		inputData, err := proposerBridgeBatchToRegister.EncodeAbi()
 		if err != nil {
-			return nil, fmt.Errorf("failed to encode input data for bridge commitment registration: %w", err)
+			return nil, fmt.Errorf("failed to encode input data for bridge batch registration: %w", err)
 		}
 
 		return createStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
@@ -497,7 +497,7 @@ func (f *fsm) ValidateSender(msg *proto.IbftMessage) error {
 
 func (f *fsm) VerifyStateTransactions(transactions []*types.Transaction) error {
 	var (
-		commitmentTxExists        bool
+		bridgeBatchTxExists       bool
 		commitEpochTxExists       bool
 		distributeRewardsTxExists bool
 	)
@@ -515,14 +515,14 @@ func (f *fsm) VerifyStateTransactions(transactions []*types.Transaction) error {
 		switch stateTxData := decodedStateTx.(type) {
 		case *BridgeBatchSigned:
 			if !f.isEndOfSprint {
-				return fmt.Errorf("found commitment tx in block which should not contain it (tx hash=%s)", tx.Hash())
+				return fmt.Errorf("found bridge batch tx in block which should not contain it (tx hash=%s)", tx.Hash())
 			}
 
-			if commitmentTxExists {
-				return fmt.Errorf("only one commitment tx is allowed per block (tx hash=%s)", tx.Hash())
+			if bridgeBatchTxExists {
+				return fmt.Errorf("only one bridge batch tx is allowed per block (tx hash=%s)", tx.Hash())
 			}
 
-			commitmentTxExists = true
+			bridgeBatchTxExists = true
 
 			if err = verifyBridgeBatchTx(f.Height(), tx.Hash(), stateTxData, f.validators); err != nil {
 				return err
@@ -706,11 +706,11 @@ func (f *fsm) verifyDistributeRewardsTx(distributeRewardsTx *types.Transaction) 
 	return errDistributeRewardsTxNotExpected
 }
 
-// verifyBridgeBatchTx validates bridge commitment transaction
+// verifyBridgeBatchTx validates bridge batch transaction
 func verifyBridgeBatchTx(blockNumber uint64, txHash types.Hash,
-	commitment *BridgeBatchSigned,
+	signedBridgeBatch *BridgeBatchSigned,
 	validators validator.ValidatorSet) error {
-	signers, err := validators.Accounts().GetFilteredValidators(commitment.AggSignature.Bitmap)
+	signers, err := validators.Accounts().GetFilteredValidators(signedBridgeBatch.AggSignature.Bitmap)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve signers for state tx (%s): %w", txHash, err)
 	}
@@ -719,17 +719,17 @@ func verifyBridgeBatchTx(blockNumber uint64, txHash types.Hash,
 		return fmt.Errorf("quorum size not reached for state tx (%s)", txHash)
 	}
 
-	commitmentHash, err := commitment.Hash()
+	batchHash, err := signedBridgeBatch.Hash()
 	if err != nil {
 		return err
 	}
 
-	signature, err := bls.UnmarshalSignature(commitment.AggSignature.AggregatedSignature)
+	signature, err := bls.UnmarshalSignature(signedBridgeBatch.AggSignature.AggregatedSignature)
 	if err != nil {
 		return fmt.Errorf("error for state tx (%s) while unmarshaling signature: %w", txHash, err)
 	}
 
-	verified := signature.VerifyAggregated(signers.GetBlsKeys(), commitmentHash.Bytes(), signer.DomainStateReceiver)
+	verified := signature.VerifyAggregated(signers.GetBlsKeys(), batchHash.Bytes(), signer.DomainStateReceiver)
 	if !verified {
 		return fmt.Errorf("invalid signature for state tx (%s)", txHash)
 	}

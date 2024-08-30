@@ -42,7 +42,7 @@ validatorSnapshots/
 
 type EpochStore struct {
 	db       *bolt.DB
-	chainIds []uint64
+	chainIDs []uint64
 }
 
 // initialize creates necessary buckets in DB if they don't already exist
@@ -59,8 +59,8 @@ func (s *EpochStore) initialize(tx *bolt.Tx) error {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(validatorSnapshotsBucket), err)
 	}
 
-	for _, chainId := range s.chainIds {
-		if _, err := epochBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainId)); err != nil {
+	for _, chainID := range s.chainIDs {
+		if _, err := epochBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainID)); err != nil {
 			return fmt.Errorf("failed to create bucket=%s: %w", string(epochsBucket), err)
 		}
 	}
@@ -142,12 +142,12 @@ func (s *EpochStore) getNearestOrEpochSnapshot(epoch uint64, dbTx *bolt.Tx) (*va
 // insertEpoch inserts a new epoch to db with its meta data
 func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx, chainID uint64) error {
 	insertFn := func(tx *bolt.Tx) error {
-		chainIdBucket, err := tx.Bucket(epochsBucket).CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainID))
+		chainIDBucket, err := tx.Bucket(epochsBucket).CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainID))
 		if err != nil {
 			return err
 		}
 
-		epochBucket, err := chainIdBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(epoch))
+		epochBucket, err := chainIDBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(epoch))
 		if err != nil {
 			return err
 		}
@@ -170,18 +170,18 @@ func (s *EpochStore) insertEpoch(epoch uint64, dbTx *bolt.Tx, chainID uint64) er
 }
 
 // isEpochInserted checks if given epoch is present in db
-func (s *EpochStore) isEpochInserted(epoch uint64, chainId uint64) bool {
+func (s *EpochStore) isEpochInserted(epoch uint64, chainID uint64) bool {
 	return s.db.View(func(tx *bolt.Tx) error {
-		_, err := getEpochBucket(tx, epoch, chainId)
+		_, err := getEpochBucket(tx, epoch, chainID)
 
 		return err
 	}) == nil
 }
 
 // getEpochBucket returns bucket from db associated with given epoch
-func getEpochBucket(tx *bolt.Tx, epoch uint64, chainId uint64) (*bolt.Bucket, error) {
+func getEpochBucket(tx *bolt.Tx, epoch uint64, chainID uint64) (*bolt.Bucket, error) {
 	epochBucket := tx.Bucket(epochsBucket).
-		Bucket(common.EncodeUint64ToBytes(chainId)).
+		Bucket(common.EncodeUint64ToBytes(chainID)).
 		Bucket(common.EncodeUint64ToBytes(epoch))
 	if epochBucket == nil {
 		return nil, fmt.Errorf("could not find bucket for epoch: %v", epoch)
@@ -202,8 +202,8 @@ func (s *EpochStore) cleanEpochsFromDB(dbTx *bolt.Tx) error {
 			return err
 		}
 
-		for _, chainId := range s.chainIds {
-			if _, err := epochBucket.CreateBucket(common.EncodeUint64ToBytes(chainId)); err != nil {
+		for _, chainID := range s.chainIDs {
+			if _, err := epochBucket.CreateBucket(common.EncodeUint64ToBytes(chainID)); err != nil {
 				return err
 			}
 		}
