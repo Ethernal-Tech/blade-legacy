@@ -725,7 +725,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 			logger:                        hclog.NewNullLogger(),
 		}
 
-		bridgeBatchTx, err := fsm.createBridgeBatchTx(0)
+		bridgeBatchTx, err := fsm.createBridgeBatchTx(bridgeBatch)
 		require.NoError(t, err)
 
 		err = fsm.VerifyStateTransactions([]*types.Transaction{bridgeBatchTx})
@@ -768,7 +768,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 			logger:                        hclog.NewNullLogger(),
 		}
 
-		bridgeBatchTx, err := fsm.createBridgeBatchTx(0)
+		bridgeBatchTx, err := fsm.createBridgeBatchTx(bridgeBatch)
 		require.NoError(t, err)
 
 		// add commit epoch commitEpochTx to the end of transactions list
@@ -1507,7 +1507,7 @@ func TestFSM_DecodeBridgeBatchStateTxs(t *testing.T) {
 		parent:                        &types.Header{},
 	}
 
-	bridgeBatchTx, err := f.createBridgeBatchTx(0)
+	bridgeBatchTx, err := f.createBridgeBatchTx(signedBridgeBatch)
 	require.NoError(t, err)
 
 	decodedData, err := decodeStateTransaction(bridgeBatchTx.Input())

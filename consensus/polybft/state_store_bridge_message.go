@@ -159,14 +159,14 @@ func (bms *BridgeMessageStore) list() ([]*contractsapi.BridgeMsgEvent, error) {
 
 // getBridgeMessageEventsForBridgeBatch returns bridge events for bridge batch
 func (bms *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
-	fromIndex, toIndex uint64, dbTx *bolt.Tx, destinationChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
+	fromIndex, toIndex uint64, dbTx *bolt.Tx, chainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
 	var (
 		events []*contractsapi.BridgeMsgEvent
 		err    error
 	)
 
 	getFn := func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(destinationChainID))
+		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(chainID))
 		for i := fromIndex; i <= toIndex; i++ {
 			v := bucket.Get(common.EncodeUint64ToBytes(i))
 			if v == nil {

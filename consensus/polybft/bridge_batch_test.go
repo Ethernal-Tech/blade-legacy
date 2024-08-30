@@ -36,7 +36,7 @@ func TestBridgeBatchSigned_Hash(t *testing.T) {
 	require.NotEqual(t, hash3, hash4)
 }
 
-func TestBridgeBatch_ToRegisterBridgeBatchInputData(t *testing.T) {
+func TestBridgeBatch_BridgeBatchEncodeDecode(t *testing.T) {
 	t.Parallel()
 
 	const epoch, eventsCount = uint64(100), 11
@@ -77,7 +77,6 @@ func TestBridgeBatch_ToRegisterBridgeBatchInputData(t *testing.T) {
 	numberOfMessages := len(expectedSignedBridgeBatchMsg.MessageBatch.Messages)
 
 	require.NoError(t, actualSignedBridgeBatchMsg.DecodeAbi(inputData))
-	require.NoError(t, err)
 	require.Equal(t, *expectedSignedBridgeBatchMsg.MessageBatch.Messages[0].ID, *actualSignedBridgeBatchMsg.MessageBatch.Messages[0].ID)
 	require.Equal(t, *expectedSignedBridgeBatchMsg.MessageBatch.Messages[numberOfMessages-1].ID, *actualSignedBridgeBatchMsg.MessageBatch.Messages[numberOfMessages-1].ID)
 	require.Equal(t, expectedSignedBridgeBatchMsg.AggSignature, actualSignedBridgeBatchMsg.AggSignature)

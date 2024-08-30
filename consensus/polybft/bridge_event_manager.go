@@ -39,33 +39,32 @@ type BridgeEventManager interface {
 	PostEpoch(req *PostEpochRequest) error
 }
 
-var _ BridgeEventManager = (*dummyStateSyncManager)(nil)
+var _ BridgeEventManager = (*dummyBridgeEventManager)(nil)
 
-// dummyStateSyncManager is used when bridge is not enabled
-type dummyStateSyncManager struct{}
+// dummyBridgeEventManager is used when bridge is not enabled
+type dummyBridgeEventManager struct{}
 
-func (d *dummyStateSyncManager) Init() error                                        { return nil }
-func (d *dummyStateSyncManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
-func (d *dummyStateSyncManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
+func (d *dummyBridgeEventManager) Init() error                                        { return nil }
+func (d *dummyBridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
+func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
-func (d *dummyStateSyncManager) PostBlock(req *PostBlockRequest) error { return nil }
-func (d *dummyStateSyncManager) PostEpoch(req *PostEpochRequest) error {
+func (d *dummyBridgeEventManager) PostBlock(req *PostBlockRequest) error { return nil }
+func (d *dummyBridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	return nil
 }
 
 // EventSubscriber implementation
-func (d *dummyStateSyncManager) GetLogFilters() map[types.Address][]types.Hash {
+func (d *dummyBridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 	return make(map[types.Address][]types.Hash)
 }
-func (d *dummyStateSyncManager) ProcessLog(header *types.Header,
+func (d *dummyBridgeEventManager) ProcessLog(header *types.Header,
 	log *ethgo.Log, dbTx *bolt.Tx) error {
 	return nil
 }
 
 // bridgeEventManagerConfig holds the configuration data of bridge event manager
 type bridgeEventManagerConfig struct {
-	dataDir           string
 	topic             topic
 	key               *wallet.Key
 	maxNumberOfEvents uint64
@@ -217,11 +216,11 @@ func (b *bridgeEventManager) verifyVoteSignature(valSet validator.ValidatorSet, 
 
 // AddLog saves the received log from event tracker if it matches a bridge message event ABI
 func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
-	event := &contractsapi.BridgeMsgEvent{}
-
 	if b.sourceChainID != chainID.Uint64() {
 		return nil
 	}
+
+	event := &contractsapi.BridgeMsgEvent{}
 
 	doesMatch, err := event.ParseLog(eventLog)
 	if !doesMatch {
@@ -318,7 +317,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 	votes, err := b.state.BridgeMessageStore.getMessageVotes(
 		pendingBridgeBatch.Epoch,
 		bridgeBatchHash.Bytes(),
-		pendingBridgeBatch.BridgeMessageBatch.DestinationChainID.Uint64())
+		b.sourceChainID)
 	if err != nil {
 		return Signature{}, err
 	}
@@ -482,14 +481,12 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
 		Signature: signature,
 	}
 
-	sourceChainID := pendingBridgeBatch.BridgeMessageBatch.SourceChainID.Uint64()
-
 	if _, err = b.state.BridgeMessageStore.insertMessageVote(
 		epoch,
 		hashBytes,
 		sig,
 		dbTx,
-		sourceChainID); err != nil {
+		b.sourceChainID); err != nil {
 		return fmt.Errorf(
 			"failed to insert signature for message batch to the state. Error: %w",
 			err,
@@ -502,7 +499,7 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
 		Signature:     signature,
 		From:          b.config.key.String(),
 		EpochNumber:   epoch,
-		SourceChainID: sourceChainID,
+		SourceChainID: b.sourceChainID,
 	})
 
 	numberOfMessages := len(pendingBridgeBatch.BridgeMessageBatch.Messages)
@@ -544,10 +541,10 @@ func (b *bridgeEventManager) multicast(msg interface{}) {
 // and the value is a slice of signatures of events we want to get.
 // This function is the implementation of EventSubscriber interface
 func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
-	var stateSyncResultEvent contractsapi.StateSyncResultEvent
+	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 	return map[types.Address][]types.Hash{
-		contracts.StateReceiverContract: {types.Hash(stateSyncResultEvent.Sig())},
+		contracts.GatewayContract: {types.Hash(bridgeMessageResult.Sig())},
 	}
 }
 
@@ -562,6 +559,10 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 	}
 
 	if !doesMatch {
+		return nil
+	}
+
+	if b.sourceChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
 		return nil
 	}
 

@@ -195,9 +195,9 @@ func (s *ExitStore) getExitEvents(epoch uint64, filter func(exitEvent *ExitEvent
 // getAllAvailableRelayerEvents retrieves all Exit RelayerEventData that should be sent as a transactions
 func (s *ExitStore) GetAllAvailableRelayerEvents(
 	limit int,
-	chainId uint64) (result []*RelayerEventMetaData, err error) {
+	chainID uint64) (result []*RelayerEventMetaData, err error) {
 	if err = s.db.View(func(tx *bolt.Tx) error {
-		result, err = getAvailableRelayerEvents(limit, exitRelayerEventsBucket, tx, chainId)
+		result, err = getAvailableRelayerEvents(limit, exitRelayerEventsBucket, tx, chainID)
 		if err != nil {
 			return err
 		}

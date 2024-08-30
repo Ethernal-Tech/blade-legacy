@@ -284,8 +284,8 @@ func insertTestBridgeBatches(t *testing.T, state *State, numberOfBatches uint64)
 	}
 }
 
-func createTestBridgeMessageEvent(index int64) *contractsapi.StateSyncedEvent {
-	return &contractsapi.StateSyncedEvent{
+func createTestBridgeMessageEvent(index int64) *contractsapi.BridgeMsgEvent {
+	return &contractsapi.BridgeMsgEvent{
 		ID:       big.NewInt(index),
 		Sender:   types.ZeroAddress,
 		Receiver: types.ZeroAddress,

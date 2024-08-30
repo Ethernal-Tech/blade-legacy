@@ -227,7 +227,7 @@ type systemStateMock struct {
 	mock.Mock
 }
 
-func (m *systemStateMock) GetNextCommittedIndex(chainId uint64) (uint64, error) {
+func (m *systemStateMock) GetNextCommittedIndex(sourceChainId uint64) (uint64, error) {
 	args := m.Called()
 
 	if len(args) == 1 {

@@ -53,6 +53,7 @@ type RelayerEventMetaData struct {
 	CountTries         uint64 `json:"countTries"`
 	BlockNumber        uint64 `json:"blockNumber"` // block when event is sent
 	SentStatus         bool   `json:"sentStatus"`
+	SourceChainID      uint64 `json:"sourceChainId"`
 	DestinationChainID uint64 `json:"destinationChainId"`
 }
 
@@ -232,7 +233,7 @@ func newBridgeManager(
 		},
 	}
 
-	if err := bridgeManager.initStateSyncManager(bridgeBackend, runtimeConfig, logger); err != nil {
+	if err := bridgeManager.initBridgeEventManager(bridgeBackend, runtimeConfig, logger); err != nil {
 		return nil, err
 	}
 
@@ -258,7 +259,7 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 	}
 
 	if err := b.stateSyncRelayer.PostBlock(req); err != nil {
-		return fmt.Errorf("failed to execute post block in bridge event relayer. Err: %w", err)
+		return fmt.Errorf("failed to execute post block in state sync relayer. Err: %w", err)
 	}
 
 	if err := b.exitEventRelayer.PostBlock(req); err != nil {
@@ -303,18 +304,17 @@ func (b *bridgeManager) Close() {
 	b.exitEventRelayer.Close()
 }
 
-// initStateSyncManager initializes bridge event manager
+// initBridgeEventManager initializes bridge event manager
 // if bridge is not enabled, then a dummy bridge event manager will be used
-func (b *bridgeManager) initStateSyncManager(
+func (b *bridgeManager) initBridgeEventManager(
 	bridgeBackend BridgeBackend,
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
-	stateSyncManager := newBridgeEventManager(
+	bridgeEventManager := newBridgeEventManager(
 		logger.Named("state-sync-manager"),
 		runtimeConfig.State,
 		&bridgeEventManagerConfig{
 			key:               runtimeConfig.Key,
-			dataDir:           runtimeConfig.DataDir,
 			topic:             runtimeConfig.bridgeTopic,
 			maxNumberOfEvents: maxNumberOfEvents,
 		},
@@ -322,7 +322,7 @@ func (b *bridgeManager) initStateSyncManager(
 		1,
 	)
 
-	b.bridgeEventManager = stateSyncManager
+	b.bridgeEventManager = bridgeEventManager
 
 	return b.bridgeEventManager.Init()
 }
@@ -425,7 +425,7 @@ func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) error {
 func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	switch eventLog.Topics[0] {
 	case bridgeMessageEventSig:
-		return b.bridgeEventManager.AddLog(big.NewInt(1), eventLog)
+		return b.bridgeEventManager.AddLog(chainID, eventLog)
 	case checkpointSubmittedEventSig:
 		return b.exitEventRelayer.AddLog(eventLog)
 	case exitProcessedEventSig:

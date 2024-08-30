@@ -450,7 +450,9 @@ func (c *consensusRuntime) FSM() error {
 				return err
 			}
 
-			ff.proposerBridgeBatchToRegister[chainID] = bridgeBatch
+			if bridgeBatch != nil {
+				ff.proposerBridgeBatchToRegister[chainID] = bridgeBatch
+			}
 		}
 	}
 

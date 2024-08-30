@@ -47,9 +47,10 @@ type EpochStore struct {
 
 // initialize creates necessary buckets in DB if they don't already exist
 func (s *EpochStore) initialize(tx *bolt.Tx) error {
-	var epochBucket *bolt.Bucket
-
-	var err error
+	var (
+		epochBucket *bolt.Bucket
+		err         error
+	)
 
 	if epochBucket, err = tx.CreateBucketIfNotExists(epochsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(epochsBucket), err)

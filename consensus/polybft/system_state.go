@@ -24,8 +24,8 @@ type ValidatorInfo struct {
 type SystemState interface {
 	// GetEpoch retrieves current epoch number from the smart contract
 	GetEpoch() (uint64, error)
-	// GetNextCommittedIndex retrieves next committed bridge state sync index
-	GetNextCommittedIndex(destinationChainID uint64) (uint64, error)
+	// GetNextCommittedIndex retrieves next committed bridge message index
+	GetNextCommittedIndex(sourceChainID uint64) (uint64, error)
 }
 
 var _ SystemState = &SystemStateImpl{}
@@ -70,12 +70,12 @@ func (s *SystemStateImpl) GetEpoch() (uint64, error) {
 	return epochNumber.Uint64(), nil
 }
 
-// GetNextCommittedIndex retrieves next committed bridge state sync index
-func (s *SystemStateImpl) GetNextCommittedIndex(destinationChainID uint64) (uint64, error) {
+// GetNextCommittedIndex retrieves next committed bridge message index
+func (s *SystemStateImpl) GetNextCommittedIndex(sourceChainID uint64) (uint64, error) {
 	rawResult, err := s.sidechainBridgeContract.Call(
 		"lastCommitted",
 		ethgo.Latest,
-		new(big.Int).SetUint64(destinationChainID))
+		new(big.Int).SetUint64(sourceChainID))
 	if err != nil {
 		return 0, err
 	}

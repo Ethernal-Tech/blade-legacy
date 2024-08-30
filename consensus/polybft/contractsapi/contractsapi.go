@@ -2461,9 +2461,11 @@ func (i *InitializeGatewayFn) DecodeAbi(buf []byte) error {
 }
 
 type BridgeMessageResultEvent struct {
-	Counter *big.Int `abi:"counter"`
-	Status  bool     `abi:"status"`
-	Message []byte   `abi:"message"`
+	Counter            *big.Int `abi:"counter"`
+	Status             bool     `abi:"status"`
+	SourceChainID      *big.Int `abi:"sourceChainID"`
+	DestinationChainID *big.Int `abi:"destinationChainID"`
+	Message            []byte   `abi:"message"`
 }
 
 func (*BridgeMessageResultEvent) Sig() ethgo.Hash {
@@ -2490,9 +2492,9 @@ type BridgeMsgEvent struct {
 	ID                 *big.Int      `abi:"id"`
 	Sender             types.Address `abi:"sender"`
 	Receiver           types.Address `abi:"receiver"`
-	Data               []byte        `abi:"data"`
 	SourceChainID      *big.Int      `abi:"sourceChainId"`
 	DestinationChainID *big.Int      `abi:"destinationChainId"`
+	Data               []byte        `abi:"data"`
 }
 
 func (*BridgeMsgEvent) Sig() ethgo.Hash {

@@ -158,7 +158,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		}
 	}
 
-	if f.config.IsBridgeEnabled() {
+	if f.config.IsBridgeEnabled() && f.isEndOfSprint {
 		if f.isEndOfSprint {
 			if err := f.applyBridgeBatchTx(); err != nil {
 				return nil, err
@@ -177,23 +177,18 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 
 		extra.Validators = f.newValidatorsDelta
 
-		if f.config.IsBridgeEnabled() {
-			signature, err := bls.UnmarshalSignature(extra.Committed.AggregatedSignature)
+		if f.config.IsBridgeEnabled() && !f.newValidatorsDelta.IsEmpty() {
+			commitValidatorSetInput, err := createCommitValidatorSetInput(nextValidators, extra)
 			if err != nil {
 				return nil, err
 			}
 
-			signatureBig, err := signature.ToBigInt()
+			input, err := commitValidatorSetInput.EncodeAbi()
 			if err != nil {
 				return nil, err
 			}
 
-			f.commitValidatorSetInput = createCommitValidatorSetInput(nextValidators, signatureBig, extra.Committed.Bitmap)
-
-			tx, err := f.createValidatorSetCommit()
-			if err != nil {
-				return nil, err
-			}
+			tx := createStateTransactionWithData(contracts.BridgeStorageContract, input)
 
 			if err := f.blockBuilder.WriteTx(tx); err != nil {
 				return nil, err
@@ -269,16 +264,14 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 
 // applyBridgeBatchTx builds state transaction which contains data for bridge batch registration
 func (f *fsm) applyBridgeBatchTx() error {
-	for chainID, proposerBridgeBatchToRegister := range f.proposerBridgeBatchToRegister {
-		if proposerBridgeBatchToRegister != nil {
-			bridgeBatchTx, err := f.createBridgeBatchTx(chainID)
-			if err != nil {
-				return fmt.Errorf("creation of bridge batch transaction failed: %w", err)
-			}
+	for _, proposerBridgeBatchToRegister := range f.proposerBridgeBatchToRegister {
+		bridgeBatchTx, err := f.createBridgeBatchTx(proposerBridgeBatchToRegister)
+		if err != nil {
+			return fmt.Errorf("creation of bridge batch transaction failed: %w", err)
+		}
 
-			if err := f.blockBuilder.WriteTx(bridgeBatchTx); err != nil {
-				return fmt.Errorf("failed to apply bridge batch state transaction. Error: %w", err)
-			}
+		if err := f.blockBuilder.WriteTx(bridgeBatchTx); err != nil {
+			return fmt.Errorf("failed to apply bridge batch state transaction. Error: %w", err)
 		}
 	}
 
@@ -286,17 +279,13 @@ func (f *fsm) applyBridgeBatchTx() error {
 }
 
 // createBridgeBatchTx builds bridge batch registration transaction
-func (f *fsm) createBridgeBatchTx(chainID uint64) (*types.Transaction, error) {
-	if proposerBridgeBatchToRegister, ok := f.proposerBridgeBatchToRegister[chainID]; ok {
-		inputData, err := proposerBridgeBatchToRegister.EncodeAbi()
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode input data for bridge batch registration: %w", err)
-		}
-
-		return createStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
+func (f *fsm) createBridgeBatchTx(signedBridgeBatch *BridgeBatchSigned) (*types.Transaction, error) {
+	inputData, err := signedBridgeBatch.EncodeAbi()
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode input data for bridge batch registration: %w", err)
 	}
 
-	return nil, fmt.Errorf("map without that chainId")
+	return createStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
 }
 
 // getValidatorsTransition applies delta to the current validators,
@@ -320,15 +309,6 @@ func (f *fsm) createCommitEpochTx() (*types.Transaction, error) {
 	}
 
 	return createStateTransactionWithData(contracts.EpochManagerContract, input), nil
-}
-
-func (f *fsm) createValidatorSetCommit() (*types.Transaction, error) {
-	input, err := f.commitValidatorSetInput.EncodeAbi()
-	if err != nil {
-		return nil, err
-	}
-
-	return createStateTransactionWithData(contracts.BridgeStorageContract, input), nil
 }
 
 // createDistributeRewardsTx create a StateTransaction, which invokes RewardPool smart contract
@@ -785,13 +765,22 @@ func validateHeaderFields(parent *types.Header, header *types.Header, blockTimeD
 
 func createCommitValidatorSetInput(
 	validators validator.AccountSet,
-	signature [2]*big.Int,
-	bitmap []byte) *contractsapi.CommitValidatorSetBridgeStorageFn {
+	extra *Extra) (*contractsapi.CommitValidatorSetBridgeStorageFn, error) {
+	signature, err := bls.UnmarshalSignature(extra.Committed.AggregatedSignature)
+	if err != nil {
+		return nil, err
+	}
+
+	signatureBig, err := signature.ToBigInt()
+	if err != nil {
+		return nil, err
+	}
+
 	return &contractsapi.CommitValidatorSetBridgeStorageFn{
 		NewValidatorSet: validators.ToAPIBinding(),
-		Signature:       signature,
-		Bitmap:          bitmap,
-	}
+		Signature:       signatureBig,
+		Bitmap:          extra.Committed.Bitmap,
+	}, nil
 }
 
 // createStateTransactionWithData creates a state transaction

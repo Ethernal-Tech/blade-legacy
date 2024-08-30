@@ -35,7 +35,6 @@ func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runti
 
 	s := newBridgeEventManager(hclog.NewNullLogger(), state,
 		&bridgeEventManagerConfig{
-			dataDir:           tmpDir,
 			topic:             topic,
 			key:               key.Key(),
 			maxNumberOfEvents: maxNumberOfEvents,
@@ -97,11 +96,11 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
-		stateSyncs10 := generateBridgeMessageEvents(t, 10, 0)
+		bridgeMessages10 := generateBridgeMessageEvents(t, 10, 0)
 
 		// add 5 bridge messages starting in index 0, they will be saved to db
 		for i := 0; i < 5; i++ {
-			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(stateSyncs10[i]))
+			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
 		// I am not a validator so no batches should be built
@@ -339,22 +338,22 @@ func TestBridgeEventManager_BuildProofs(t *testing.T) {
 func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	t.Skip()
 
-	const stateSyncEventsCount = 5
+	const bridgeMessageEventsCount = 5
 
 	vals := validator.NewTestValidators(t, 5)
 
 	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
-	stateSyncEvents := generateBridgeMessageEvents(t, stateSyncEventsCount, 0)
+	bridgeMessageEvents := generateBridgeMessageEvents(t, bridgeMessageEventsCount, 0)
 
-	for _, event := range stateSyncEvents {
+	for _, event := range bridgeMessageEvents {
 		require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(event))
 	}
 
-	stateSyncEventsBefore, err := s.state.BridgeMessageStore.list()
+	bridgeMessageEventsBefore, err := s.state.BridgeMessageStore.list()
 	require.NoError(t, err)
-	require.Equal(t, stateSyncEventsCount, len(stateSyncEventsBefore))
+	require.Equal(t, bridgeMessageEventsCount, len(bridgeMessageEventsBefore))
 
-	for _, event := range stateSyncEvents {
+	for _, event := range bridgeMessageEvents {
 		eventLog := createTestLogForStateSyncResultEvent(t, event.ID.Uint64())
 		require.NoError(t, s.ProcessLog(&types.Header{Number: 10}, convertLog(eventLog), nil))
 	}

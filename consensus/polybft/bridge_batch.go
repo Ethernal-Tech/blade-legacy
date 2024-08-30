@@ -69,7 +69,7 @@ func (bbs *BridgeBatchSigned) Hash() (types.Hash, error) {
 	return crypto.Keccak256Hash(data), nil
 }
 
-// ContainsStateSync checks if BridgeBatchSigned contains given bridge message event
+// ContainsBridgeMessage checks if BridgeBatchSigned contains given bridge message event
 func (bbs *BridgeBatchSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool {
 	length := len(bbs.MessageBatch.Messages)
 	if length == 0 {
