@@ -137,6 +137,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		badVal := validator.NewTestValidator(t, "a", 0)
 		msg, err := newMockMsg().sign(badVal, signer.DomainStateReceiver)
 		require.NoError(t, err)
+		msg.SourceChainID = 1
 
 		require.Error(t, s.saveVote(msg))
 	})
@@ -157,7 +158,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		require.NoError(t, s.saveVote(msg))
 
 		// no votes for the current epoch
-		votes, err := s.state.BridgeMessageStore.getMessageVotes(0, msg.Hash, 0)
+		votes, err := s.state.BridgeMessageStore.getMessageVotes(0, msg.Hash, 1)
 		require.NoError(t, err)
 		require.Len(t, votes, 0)
 
@@ -176,6 +177,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		val := newMockMsg()
 		msg, err := val.sign(vals.GetValidator("0"), signer.DomainStateReceiver)
 		require.NoError(t, err)
+		msg.SourceChainID = 1
 
 		msg.From = vals.GetValidator("1").Address().String()
 		require.Error(t, s.saveVote(msg))
@@ -184,6 +186,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		badVal := validator.NewTestValidator(t, "a", 0)
 		msg, err = newMockMsg().sign(badVal, signer.DomainStateReceiver)
 		require.NoError(t, err)
+		msg.SourceChainID = 1
 
 		msg.From = vals.GetValidator("1").Address().String()
 		require.Error(t, s.saveVote(msg))
@@ -199,8 +202,12 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		val1signed, err := msg.sign(vals.GetValidator("1"), signer.DomainStateReceiver)
 		require.NoError(t, err)
 
+		val1signed.SourceChainID = 1
+
 		val2signed, err := msg.sign(vals.GetValidator("2"), signer.DomainStateReceiver)
 		require.NoError(t, err)
+
+		val2signed.SourceChainID = 1
 
 		// vote with validator 1
 		require.NoError(t, s.saveVote(val1signed))
@@ -211,12 +218,12 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 
 		// vote with validator 1 again (the votes do not increase)
 		require.NoError(t, s.saveVote(val1signed))
-		votes, _ = s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 0)
+		votes, _ = s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 1)
 		require.Len(t, votes, 1)
 
 		// vote with validator 2
 		require.NoError(t, s.saveVote(val2signed))
-		votes, _ = s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 0)
+		votes, _ = s.state.BridgeMessageStore.getMessageVotes(0, msg.hash, 1)
 		require.Len(t, votes, 2)
 	})
 }
@@ -269,9 +276,11 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 
 	signedMsg1, err = msg.sign(vals.GetValidator("2"), signer.DomainStateReceiver)
 	require.NoError(t, err)
+	signedMsg1.SourceChainID = 1
 
 	signedMsg2, err = msg.sign(vals.GetValidator("3"), signer.DomainStateReceiver)
 	require.NoError(t, err)
+	signedMsg2.SourceChainID = 1
 
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))

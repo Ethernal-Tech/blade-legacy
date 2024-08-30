@@ -157,7 +157,7 @@ func newTestState(tb testing.TB) *State {
 		tb.Fatal(err)
 	}
 
-	state, err := newState(path.Join(dir, "my.db"), make(chan struct{}), []uint64{0})
+	state, err := newState(path.Join(dir, "my.db"), make(chan struct{}), []uint64{0, 1})
 	if err != nil {
 		tb.Fatal(err)
 	}

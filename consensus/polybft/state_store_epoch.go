@@ -305,8 +305,8 @@ func (s *EpochStore) validatorSnapshotsDBStats() (*bolt.BucketStats, error) {
 }
 
 // getNestedBucketInEpoch returns a nested (child) bucket from db associated with given epoch
-func getNestedBucketInEpoch(tx *bolt.Tx, epoch uint64, bucketKey []byte, chainId uint64) (*bolt.Bucket, error) {
-	epochBucket, err := getEpochBucket(tx, epoch, chainId)
+func getNestedBucketInEpoch(tx *bolt.Tx, epoch uint64, bucketKey []byte, chainID uint64) (*bolt.Bucket, error) {
+	epochBucket, err := getEpochBucket(tx, epoch, chainID)
 	if err != nil {
 		return nil, err
 	}

@@ -102,7 +102,7 @@ func (bms *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Brid
 			return err
 		}
 
-		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(event.DestinationChainID.Uint64()))
+		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(event.SourceChainID.Uint64()))
 
 		return bucket.Put(common.EncodeUint64ToBytes(event.ID.Uint64()), raw)
 	})
@@ -112,8 +112,8 @@ func (bms *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Brid
 func (bms *BridgeMessageStore) removeBridgeEventsAndProofs(
 	bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return bms.db.Update(func(tx *bolt.Tx) error {
-		eventsBucket := tx.Bucket(bridgeMessageEventsBucket)
-		proofsBucket := tx.Bucket(bridgeMessageProofsBucket)
+		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
+		proofsBucket := tx.Bucket(bridgeMessageProofsBucket).Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
 
 		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
 
@@ -159,14 +159,14 @@ func (bms *BridgeMessageStore) list() ([]*contractsapi.BridgeMsgEvent, error) {
 
 // getBridgeMessageEventsForBridgeBatch returns bridge events for bridge batch
 func (bms *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
-	fromIndex, toIndex uint64, dbTx *bolt.Tx, chainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
+	fromIndex, toIndex uint64, dbTx *bolt.Tx, sourceChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
 	var (
 		events []*contractsapi.BridgeMsgEvent
 		err    error
 	)
 
 	getFn := func(tx *bolt.Tx) error {
-		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(chainID))
+		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(sourceChainID))
 		for i := fromIndex; i <= toIndex; i++ {
 			v := bucket.Get(common.EncodeUint64ToBytes(i))
 			if v == nil {
@@ -332,11 +332,11 @@ func (bms *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
 func (bms *BridgeMessageStore) getMessageVotes(
 	epoch uint64,
 	hash []byte,
-	destinationChainID uint64) ([]*MessageSignature, error) {
+	sourceChainID uint64) ([]*MessageSignature, error) {
 	var signatures []*MessageSignature
 
 	err := bms.db.View(func(tx *bolt.Tx) error {
-		res, err := bms.getMessageVotesLocked(tx, epoch, hash, destinationChainID)
+		res, err := bms.getMessageVotesLocked(tx, epoch, hash, sourceChainID)
 		if err != nil {
 			return err
 		}

@@ -53,8 +53,8 @@ type RelayerEventMetaData struct {
 	CountTries         uint64 `json:"countTries"`
 	BlockNumber        uint64 `json:"blockNumber"` // block when event is sent
 	SentStatus         bool   `json:"sentStatus"`
-	SourceChainID      uint64 `json:"sourceChainId"`
-	DestinationChainID uint64 `json:"destinationChainId"`
+	SourceChainID      uint64 `json:"sourceChainID"`
+	DestinationChainID uint64 `json:"destinationChainID"`
 }
 
 func (ed RelayerEventMetaData) String() string {
