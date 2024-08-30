@@ -119,7 +119,7 @@ func (d *Debug) CpuProfile(file string, nsec int64) (interface{}, error) {
 
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, nil
@@ -178,7 +178,7 @@ func (d *Debug) MutexProfile(file string, nsec int64) (interface{}, error) {
 
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, writeProfile(mutexString, file)
@@ -200,7 +200,7 @@ func (d *Debug) BlockProfile(file string, nsec int64) (interface{}, error) {
 
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, writeProfile(blockString, file)
@@ -255,7 +255,7 @@ func (d *Debug) StartCPUProfile(file string) (interface{}, error) {
 
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, nil
@@ -280,7 +280,7 @@ func (d *Debug) GoTrace(file string, nsec int64) (interface{}, error) {
 
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, nil
@@ -314,7 +314,7 @@ func (d *Debug) StartGoTrace(file string) (interface{}, error) {
 
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, nil
@@ -357,7 +357,7 @@ func (d *Debug) WriteBlockProfile(file string) (interface{}, error) {
 		func() (interface{}, error) {
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, writeProfile(blockString, file)
@@ -375,7 +375,7 @@ func (d *Debug) WriteMemProfile(file string) (interface{}, error) {
 		func() (interface{}, error) {
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, writeProfile(heapString, file)
@@ -390,7 +390,7 @@ func (d *Debug) WriteMutexProfile(file string) (interface{}, error) {
 		func() (interface{}, error) {
 			absPath, err := filepath.Abs(file)
 			if err != nil {
-				absPath = file
+				return nil, err
 			}
 
 			return absPath, writeProfile(mutexString, file)
