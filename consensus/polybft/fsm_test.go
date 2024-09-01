@@ -791,7 +791,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 
 		tx := createStateTransactionWithData(contracts.BridgeStorageContract, encodedBatch)
 		assert.ErrorContains(t, fsm.VerifyStateTransactions([]*types.Transaction{tx}),
-			"found batch tx in block which should not contain it")
+			"found bridge batch tx in block which should not contain it")
 	})
 
 	t.Run("two batch transactions", func(t *testing.T) {
@@ -827,7 +827,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 		txns = append(txns,
 			createStateTransactionWithData(contracts.StateReceiverContract, inputData))
 		err = f.VerifyStateTransactions(txns)
-		require.ErrorContains(t, err, "only one batch tx is allowed per block")
+		require.ErrorContains(t, err, "only one bridge batch tx is allowed per block")
 	})
 }
 

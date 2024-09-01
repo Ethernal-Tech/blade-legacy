@@ -434,7 +434,7 @@ func updateRelayerEvents(
 	openedTx *bolt.Tx) error {
 	updateFn := func(tx *bolt.Tx) error {
 		for _, event := range events {
-			relayerEventsBucket := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(event.DestinationChainID))
+			relayerEventsBucket := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(event.SourceChainID))
 
 			raw, err := json.Marshal(event)
 			if err != nil {
@@ -449,7 +449,7 @@ func updateRelayerEvents(
 		}
 
 		for _, event := range removeIDs {
-			relayerEventsBucket := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(event.DestinationChainID))
+			relayerEventsBucket := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(event.SourceChainID))
 			eventIDKey := common.EncodeUint64ToBytes(event.EventID)
 
 			if err := relayerEventsBucket.Delete(eventIDKey); err != nil {

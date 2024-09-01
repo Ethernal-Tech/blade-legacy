@@ -169,7 +169,8 @@ var (
 				NewChildERC20Predicate:      contracts.ChildERC20PredicateContract,
 				NewDestinationTokenTemplate: contracts.ChildERC20Contract,
 				// root native token address should be non-zero only if native token is non-mintable on a childchain
-				NewNativeTokenRoot: config.RootNativeERC20Address,
+				NewNativeTokenRoot:    config.RootNativeERC20Address,
+				NewDestinationChainID: big.NewInt(chainID),
 			}
 
 			return initContract(fmt, relayer, inputParams,
@@ -185,6 +186,7 @@ var (
 				NewGateway:                  config.Gateway,
 				NewRootERC20Predicate:       contracts.RootERC20PredicateContract,
 				NewDestinationTokenTemplate: config.ChildERC20Address,
+				NewDestinationChainID:       big.NewInt(chainID),
 			}
 
 			return initContract(fmt, relayer, initParams,
@@ -200,6 +202,7 @@ var (
 				NewGateway:                  config.Gateway,
 				NewChildERC721Predicate:     contracts.ChildERC721PredicateContract,
 				NewDestinationTokenTemplate: contracts.ChildERC721Contract,
+				NewDestinationChainID:       big.NewInt(chainID),
 			}
 
 			return initContract(fmt, relayer, initParams,
@@ -215,6 +218,7 @@ var (
 				NewGateway:                  config.Gateway,
 				NewRootERC721Predicate:      contracts.RootERC721PredicateContract,
 				NewDestinationTokenTemplate: config.ChildERC721Address,
+				NewDestinationChainID:       big.NewInt(chainID),
 			}
 
 			return initContract(fmt, relayer, initParams,
@@ -230,6 +234,7 @@ var (
 				NewGateway:                  config.Gateway,
 				NewChildERC1155Predicate:    contracts.ChildERC1155PredicateContract,
 				NewDestinationTokenTemplate: contracts.ChildERC1155Contract,
+				NewDestinationChainID:       big.NewInt(chainID),
 			}
 
 			return initContract(fmt, relayer, initParams,
@@ -245,6 +250,7 @@ var (
 				NewGateway:                  config.Gateway,
 				NewRootERC1155Predicate:     contracts.RootERC1155PredicateContract,
 				NewDestinationTokenTemplate: config.ChildERC1155Address,
+				NewDestinationChainID:       big.NewInt(chainID),
 			}
 
 			return initContract(fmt, relayer, initParams,

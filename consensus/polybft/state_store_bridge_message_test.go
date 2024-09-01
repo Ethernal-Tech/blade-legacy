@@ -95,7 +95,7 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 	t.Run("Return all - forced. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 1)
 		require.NoError(t, err)
 		require.Equal(t, maxNumberOfEvents, len(events))
 	})
@@ -103,14 +103,14 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 	t.Run("Return all - forced. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents+1, nil, 0)
+		_, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents+1, nil, 1)
 		require.ErrorIs(t, err, errNotEnoughBridgeEvents)
 	})
 
 	t.Run("Return all you can. Enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents-1, nil, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, maxNumberOfEvents, len(events))
 	})
@@ -118,7 +118,7 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 	t.Run("Return all you can. Not enough events", func(t *testing.T) {
 		t.Parallel()
 
-		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents+1, nil, 0)
+		events, err := state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfEvents+1, nil, 1)
 		assert.ErrorIs(t, err, errNotEnoughBridgeEvents)
 		assert.Equal(t, maxNumberOfEvents, len(events))
 	})
@@ -286,10 +286,12 @@ func insertTestBridgeBatches(t *testing.T, state *State, numberOfBatches uint64)
 
 func createTestBridgeMessageEvent(index int64) *contractsapi.BridgeMsgEvent {
 	return &contractsapi.BridgeMsgEvent{
-		ID:       big.NewInt(index),
-		Sender:   types.ZeroAddress,
-		Receiver: types.ZeroAddress,
-		Data:     []byte{0, 1},
+		ID:                 big.NewInt(index),
+		Sender:             types.ZeroAddress,
+		Receiver:           types.ZeroAddress,
+		Data:               []byte{0, 1},
+		SourceChainID:      big.NewInt(1),
+		DestinationChainID: bigZero,
 	}
 }
 
@@ -300,9 +302,9 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 
 	// update
 	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents([]*RelayerEventMetaData{
-		{EventID: 2, DestinationChainID: 0},
-		{EventID: 4, DestinationChainID: 0},
-		{EventID: 7, SentStatus: true, BlockNumber: 100, DestinationChainID: 0},
+		{EventID: 2, SourceChainID: 1, DestinationChainID: 0},
+		{EventID: 4, SourceChainID: 1, DestinationChainID: 0},
+		{EventID: 7, SentStatus: true, BlockNumber: 100, SourceChainID: 1, DestinationChainID: 0},
 	}, []*RelayerEventMetaData{}, nil))
 
 	// get available events
@@ -317,11 +319,11 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	// update again
 	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents(
 		[]*RelayerEventMetaData{
-			{EventID: 10, DestinationChainID: 0},
-			{EventID: 12, DestinationChainID: 0},
-			{EventID: 11, DestinationChainID: 0},
+			{EventID: 10, SourceChainID: 1, DestinationChainID: 0},
+			{EventID: 12, SourceChainID: 1, DestinationChainID: 0},
+			{EventID: 11, SourceChainID: 1, DestinationChainID: 0},
 		},
-		[]*RelayerEventMetaData{{EventID: 4, DestinationChainID: 0}, {EventID: 7, DestinationChainID: 0}},
+		[]*RelayerEventMetaData{{EventID: 4, SourceChainID: 1, DestinationChainID: 0}, {EventID: 7, SourceChainID: 1, DestinationChainID: 0}},
 		nil,
 	))
 
@@ -337,7 +339,7 @@ func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	require.Equal(t, uint64(12), events[3].EventID)
 
 	events[1].SentStatus = true
-	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents(events[1:2], []*RelayerEventMetaData{{EventID: 2, DestinationChainID: 0}}, nil))
+	require.NoError(t, state.BridgeMessageStore.UpdateRelayerEvents(events[1:2], []*RelayerEventMetaData{{EventID: 2, SourceChainID: 1, DestinationChainID: 0}}, nil))
 
 	// get available events with limit
 	events, err = state.BridgeMessageStore.GetAllAvailableRelayerEvents(2)
