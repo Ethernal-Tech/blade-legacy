@@ -177,6 +177,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		val := newMockMsg()
 		msg, err := val.sign(vals.GetValidator("0"), signer.DomainStateReceiver)
 		require.NoError(t, err)
+
 		msg.SourceChainID = 1
 
 		msg.From = vals.GetValidator("1").Address().String()
@@ -186,6 +187,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		badVal := validator.NewTestValidator(t, "a", 0)
 		msg, err = newMockMsg().sign(badVal, signer.DomainStateReceiver)
 		require.NoError(t, err)
+
 		msg.SourceChainID = 1
 
 		msg.From = vals.GetValidator("1").Address().String()
