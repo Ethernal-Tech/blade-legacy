@@ -17,7 +17,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
-	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -345,8 +344,6 @@ func TestBridgeEventManager_BuildProofs(t *testing.T) {
 }
 
 func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
-	t.Skip()
-
 	const bridgeMessageEventsCount = 5
 
 	vals := validator.NewTestValidators(t, 5)
@@ -363,8 +360,8 @@ func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	require.Equal(t, bridgeMessageEventsCount, len(bridgeMessageEventsBefore))
 
 	for _, event := range bridgeMessageEvents {
-		eventLog := createTestLogForStateSyncResultEvent(t, event.ID.Uint64())
-		require.NoError(t, s.ProcessLog(&types.Header{Number: 10}, convertLog(eventLog), nil))
+		eventLog := createTestLogForBridgeMessageResultEvent(t, event.ID.Uint64())
+		require.NoError(t, s.ProcessLog(&types.Header{Number: 10}, eventLog, nil))
 	}
 
 	// all bridge message events and their proofs should be removed from the store
@@ -406,7 +403,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.Len(t, bridgeEvents, 0)
 
 		// correct event log
-		data, err := abi.MustNewType("tuple(string a)").Encode([]string{"data"})
+		data, err := abi.MustNewType("tuple(uint256 a, string b, string c)").Encode([]string{"1", "data2", "data3"})
 		require.NoError(t, err)
 
 		goodLog := &ethgo.Log{
@@ -421,7 +418,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog))
 
-		bridgeEvents, err = s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 0)
+		bridgeEvents, err = s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 1)
 		require.NoError(t, err)
 		require.Len(t, bridgeEvents, 1)
 		require.Len(t, s.pendingBridgeBatches, 1)
@@ -461,7 +458,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
 		// correct event log
-		data, err := abi.MustNewType("tuple(string a)").Encode([]string{"data"})
+		data, err := abi.MustNewType("tuple(uint256 a, string b, string c)").Encode([]string{"1", "data2", "data3"})
 		require.NoError(t, err)
 
 		var bridgeMessageEvent contractsapi.BridgeMsgEvent
@@ -479,7 +476,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog))
 
 		// node should have inserted given bridgeMsg event, but it shouldn't build any batch
-		bridgeMessages, err := s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 0)
+		bridgeMessages, err := s.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(0, 0, nil, 1)
 		require.NoError(t, err)
 		require.Len(t, bridgeMessages, 1)
 		require.Equal(t, uint64(0), bridgeMessages[0].ID.Uint64())
@@ -487,23 +484,17 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 	})
 }
 
-func createTestLogForStateSyncResultEvent(t *testing.T, stateSyncEventID uint64) *types.Log {
+func createTestLogForBridgeMessageResultEvent(t *testing.T, bridgeMessageEventID uint64) *ethgo.Log {
 	t.Helper()
 
-	var stateSyncResultEvent contractsapi.BridgeMessageResultEvent
+	var bridgeMessageResultEvent *contractsapi.BridgeMessageResultEvent
 
-	topics := make([]types.Hash, 3)
-	topics[0] = types.Hash(stateSyncResultEvent.Sig())
-	topics[1] = types.BytesToHash(common.EncodeUint64ToBytes(stateSyncEventID))
-	topics[2] = types.BytesToHash(common.EncodeUint64ToBytes(1)) // Status = true
-	someType := abi.MustNewType("tuple(string field1, string field2)")
-	encodedData, err := someType.Encode(map[string]string{"field1": "value1", "field2": "value2"})
+	data, err := abi.MustNewType("tuple(uint256 a, string b, string c)").Encode([]string{"1", "data2", "data3"})
 	require.NoError(t, err)
 
-	return &types.Log{
-		Address: contracts.StateReceiverContract,
-		Topics:  topics,
-		Data:    encodedData,
+	return &ethgo.Log{
+		Topics: []ethgo.Hash{bridgeMessageResultEvent.Sig(), ethgo.BytesToHash(common.EncodeUint64ToBytes(bridgeMessageEventID)), ethgo.BytesToHash(common.EncodeUint64ToBytes(1))},
+		Data:   data,
 	}
 }
 

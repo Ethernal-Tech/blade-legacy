@@ -551,7 +551,7 @@ func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
-	var bridgeMessageResultEvent *contractsapi.BridgeMessageResultEvent
+	bridgeMessageResultEvent := &contractsapi.BridgeMessageResultEvent{}
 
 	doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
 	if err != nil {
