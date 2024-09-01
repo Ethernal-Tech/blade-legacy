@@ -112,8 +112,10 @@ func (bms *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Brid
 func (bms *BridgeMessageStore) removeBridgeEventsAndProofs(
 	bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return bms.db.Update(func(tx *bolt.Tx) error {
-		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
-		proofsBucket := tx.Bucket(bridgeMessageProofsBucket).Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
+		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).
+			Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
+		proofsBucket := tx.
+			Bucket(bridgeMessageProofsBucket).Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
 
 		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
 

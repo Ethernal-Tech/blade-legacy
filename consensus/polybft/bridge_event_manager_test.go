@@ -136,6 +136,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		badVal := validator.NewTestValidator(t, "a", 0)
 		msg, err := newMockMsg().sign(badVal, signer.DomainStateReceiver)
 		require.NoError(t, err)
+
 		msg.SourceChainID = 1
 
 		require.Error(t, s.saveVote(msg))
@@ -275,10 +276,12 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 
 	signedMsg1, err = msg.sign(vals.GetValidator("2"), signer.DomainStateReceiver)
 	require.NoError(t, err)
+
 	signedMsg1.SourceChainID = 1
 
 	signedMsg2, err = msg.sign(vals.GetValidator("3"), signer.DomainStateReceiver)
 	require.NoError(t, err)
+
 	signedMsg2.SourceChainID = 1
 
 	require.NoError(t, s.saveVote(signedMsg1))

@@ -513,7 +513,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	// assert.Equal(t, "0x1300000000000000000000000000000000000000", runtime.config.GenesisConfig.Bridge[0].StateSenderAddr.String())
 	// assert.Equal(t, "0x1000000000000000000000000000000000000000", runtime.config.GenesisConfig.Bridge[0].CheckpointManagerAddr.String())
 	// assert.True(t, runtime.IsBridgeEnabled())
-	//systemStateMock.AssertExpectations(t)
+	// systemStateMock.AssertExpectations(t)
 	blockchainMock.AssertExpectations(t)
 	polybftBackendMock.AssertExpectations(t)
 }
