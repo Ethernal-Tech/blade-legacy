@@ -160,7 +160,6 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		if err := f.applyBridgeBatchTx(); err != nil {
 			return nil, err
 		}
-
 	}
 
 	// fill the block with transactions
