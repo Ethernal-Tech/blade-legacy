@@ -497,7 +497,7 @@ func (p *Polybft) Initialize() error {
 		return fmt.Errorf("failed to create data directory. Error: %w", err)
 	}
 
-	stt, err := newState(filepath.Join(p.dataDir, stateFileName), p.closeCh, p.getChainIDs())
+	stt, err := newState(filepath.Join(p.dataDir, stateFileName), p.closeCh, p.getSupportedBridgeChainIDs())
 	if err != nil {
 		return fmt.Errorf("failed to create state instance. Error: %w", err)
 	}
@@ -850,7 +850,8 @@ func (p *Polybft) FilterExtra(extra []byte) ([]byte, error) {
 	return GetIbftExtraClean(extra)
 }
 
-func (p *Polybft) getChainIDs() []uint64 {
+// getSupportedBridgeChainIDs return list of all chainIDs
+func (p *Polybft) getSupportedBridgeChainIDs() []uint64 {
 	chainIDs := make([]uint64, 0, len(p.genesisClientConfig.Bridge))
 
 	for chainID := range p.genesisClientConfig.Bridge {

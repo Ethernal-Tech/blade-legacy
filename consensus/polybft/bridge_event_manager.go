@@ -558,11 +558,7 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 		return err
 	}
 
-	if !doesMatch {
-		return nil
-	}
-
-	if b.sourceChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
+	if !doesMatch || b.sourceChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
 		return nil
 	}
 

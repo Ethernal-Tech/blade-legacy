@@ -15,8 +15,6 @@ var (
 	bridgeMessageEventsBucket = []byte("bridgeMessageEvents")
 	// bucket to store bridge buckets
 	bridgeBatchBucket = []byte("bridgeBatches")
-	// bucket to store state sync proofs
-	bridgeMessageProofsBucket = []byte("stateSyncProofs")
 	// bucket to store message votes (signatures)
 	messageVotesBucket = []byte("votes")
 	// bucket to store all bridge event relayer events
@@ -37,9 +35,6 @@ bridge message events/
 bridge batches/
 |--> chainId --> bridgeBatches.Message[last].Id -> *BridgeBatchSigned (json marshalled)
 
-stateSyncProofs/
-|--> chainId --> stateSyncProof.StateSync.Id -> *StateSyncProof (json marshalled)
-
 relayerEvents/
 |--> chainId --> RelayerEventData.EventID -> *RelayerEventData (json marshalled)
 */
@@ -53,7 +48,7 @@ type BridgeMessageStore struct {
 func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 	var err error
 
-	var bridgeMessageBucket, bridgeBatchesBucket, bridgeMessageProofBucket, stateSyncRelayerBucket *bolt.Bucket
+	var bridgeMessageBucket, bridgeBatchesBucket, stateSyncRelayerBucket *bolt.Bucket
 
 	if bridgeMessageBucket, err = tx.CreateBucketIfNotExists(bridgeMessageEventsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeMessageEventsBucket), err)
@@ -61,10 +56,6 @@ func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 
 	if bridgeBatchesBucket, err = tx.CreateBucketIfNotExists(bridgeBatchBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeBatchBucket), err)
-	}
-
-	if bridgeMessageProofBucket, err = tx.CreateBucketIfNotExists(bridgeMessageProofsBucket); err != nil {
-		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeMessageProofsBucket), err)
 	}
 
 	if stateSyncRelayerBucket, err = tx.CreateBucketIfNotExists(stateSyncRelayerEventsBucket); err != nil {
@@ -80,10 +71,6 @@ func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 
 		if _, err := bridgeBatchesBucket.CreateBucketIfNotExists(chainIDBytes); err != nil {
 			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(bridgeBatchBucket), err)
-		}
-
-		if _, err := bridgeMessageProofBucket.CreateBucketIfNotExists(chainIDBytes); err != nil {
-			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(bridgeMessageProofsBucket), err)
 		}
 
 		if _, err := stateSyncRelayerBucket.CreateBucketIfNotExists(chainIDBytes); err != nil {
@@ -114,8 +101,6 @@ func (bms *BridgeMessageStore) removeBridgeEventsAndProofs(
 	return bms.db.Update(func(tx *bolt.Tx) error {
 		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).
 			Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
-		proofsBucket := tx.
-			Bucket(bridgeMessageProofsBucket).Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
 
 		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
 
@@ -123,10 +108,6 @@ func (bms *BridgeMessageStore) removeBridgeEventsAndProofs(
 
 		if err := eventsBucket.Delete(bridgeMessageEventIDKey); err != nil {
 			return fmt.Errorf("failed to remove bridge message event (ID=%d): %w", bridgeMessageID, err)
-		}
-
-		if err := proofsBucket.Delete(bridgeMessageEventIDKey); err != nil {
-			return fmt.Errorf("failed to remove bridge message event proof (ID=%d): %w", bridgeMessageID, err)
 		}
 
 		return nil

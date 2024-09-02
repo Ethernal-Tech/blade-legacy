@@ -3,6 +3,7 @@ package polybft
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -11,7 +12,7 @@ import (
 	merkle "github.com/Ethernal-Tech/merkle-tree"
 )
 
-// PendingBridgeBatch holds merkle trie of bridge transactions accompanied by epoch number
+// PendingBridgeBatch holds pending bridge batch for epoch
 type PendingBridgeBatch struct {
 	*contractsapi.BridgeMessageBatch
 	Epoch uint64
@@ -20,9 +21,22 @@ type PendingBridgeBatch struct {
 // NewPendingBridgeBatch creates a new PendingBridgeBatch object
 func NewPendingBridgeBatch(epoch uint64,
 	bridgeEvents []*contractsapi.BridgeMsgEvent) (*PendingBridgeBatch, error) {
+	if len(bridgeEvents) == 0 {
+		return nil, fmt.Errorf("empty bridgeEvents, it should be more than zero")
+	}
+
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
+	var (
+		sourceChainID, destinationChainID *big.Int
+	)
+
 	for i, bridgeEvent := range bridgeEvents {
+		if i == 0 {
+			sourceChainID = bridgeEvent.SourceChainID
+			destinationChainID = bridgeEvent.DestinationChainID
+		}
+
 		messages[i] = &contractsapi.BridgeMessage{
 			ID:                 bridgeEvent.ID,
 			Sender:             bridgeEvent.Sender,
@@ -35,8 +49,8 @@ func NewPendingBridgeBatch(epoch uint64,
 	return &PendingBridgeBatch{
 		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
 			Messages:           messages,
-			DestinationChainID: bridgeEvents[0].DestinationChainID,
-			SourceChainID:      bridgeEvents[0].SourceChainID},
+			DestinationChainID: destinationChainID,
+			SourceChainID:      sourceChainID},
 		Epoch: epoch,
 	}, nil
 }
@@ -45,7 +59,7 @@ func NewPendingBridgeBatch(epoch uint64,
 func (pbb *PendingBridgeBatch) Hash() (types.Hash, error) {
 	data, err := pbb.BridgeMessageBatch.EncodeAbi()
 	if err != nil {
-		return types.Hash{}, err
+		return types.ZeroHash, err
 	}
 
 	return crypto.Keccak256Hash(data), nil
@@ -63,7 +77,7 @@ type BridgeBatchSigned struct {
 func (bbs *BridgeBatchSigned) Hash() (types.Hash, error) {
 	data, err := bbs.MessageBatch.EncodeAbi()
 	if err != nil {
-		return types.Hash{}, err
+		return types.ZeroHash, err
 	}
 
 	return crypto.Keccak256Hash(data), nil

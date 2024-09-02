@@ -166,7 +166,6 @@ type BridgeManager interface {
 	tracker.EventSubscriber
 
 	Close()
-	PostBlockAsync(req *PostBlockRequest)
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
 	BuildExitEventRoot(epoch uint64) (types.Hash, error)
@@ -178,7 +177,6 @@ var _ BridgeManager = (*dummyBridgeManager)(nil)
 type dummyBridgeManager struct{}
 
 func (d *dummyBridgeManager) Close()                                        {}
-func (d *dummyBridgeManager) PostBlockAsync(req *PostBlockRequest)          {}
 func (d *dummyBridgeManager) AddLog(chainID *big.Int, log *ethgo.Log) error { return nil }
 func (d *dummyBridgeManager) PostBlock(req *PostBlockRequest) error         { return nil }
 func (d *dummyBridgeManager) PostEpoch(req *PostEpochRequest) error         { return nil }
@@ -290,14 +288,6 @@ func (b *bridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSign
 	return b.bridgeEventManager.BridgeBatch(pendingBlockNumber)
 }
 
-// PostBlockAsync is called on finalization of each block (either from consensus or syncer)
-// but it doesn't require return of any kind, and is done asynchronously
-func (b *bridgeManager) PostBlockAsync(req *PostBlockRequest) {
-	// we will do PostBlock on checkpoint manager at the end, because it only
-	// sends a checkpoint in a separate routine. It doesn't do any db operations
-	b.checkpointManager.PostBlock(req)
-}
-
 // close stops ongoing go routines in the manager
 func (b *bridgeManager) Close() {
 	b.stateSyncRelayer.Close()
@@ -319,7 +309,7 @@ func (b *bridgeManager) initBridgeEventManager(
 			maxNumberOfEvents: maxNumberOfEvents,
 		},
 		bridgeBackend,
-		1,
+		b.chainID,
 	)
 
 	b.bridgeEventManager = bridgeEventManager

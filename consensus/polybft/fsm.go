@@ -157,11 +157,10 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 	}
 
 	if f.config.IsBridgeEnabled() && f.isEndOfSprint {
-		if f.isEndOfSprint {
-			if err := f.applyBridgeBatchTx(); err != nil {
-				return nil, err
-			}
+		if err := f.applyBridgeBatchTx(); err != nil {
+			return nil, err
 		}
+
 	}
 
 	// fill the block with transactions
@@ -498,7 +497,7 @@ func (f *fsm) VerifyStateTransactions(transactions []*types.Transaction) error {
 		switch stateTxData := decodedStateTx.(type) {
 		case *BridgeBatchSigned:
 			if !f.isEndOfSprint {
-				return fmt.Errorf("found bridge batch tx in block which should not contain it (tx hash=%s)", tx.Hash())
+				return fmt.Errorf("found bridge batch tx in a non-sprint block (tx hash=%s)", tx.Hash())
 			}
 
 			if bridgeBatchTxExists {
@@ -766,6 +765,7 @@ func validateHeaderFields(parent *types.Header, header *types.Header, blockTimeD
 	return nil
 }
 
+// createCommitValidatorSetInput creates input for valdidatoeSetCommit
 func createCommitValidatorSetInput(
 	validators validator.AccountSet,
 	extra *Extra) (*contractsapi.CommitValidatorSetBridgeStorageFn, error) {
