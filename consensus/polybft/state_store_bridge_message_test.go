@@ -132,7 +132,7 @@ func TestState_insertBridgeBatchMessage(t *testing.T) {
 	state := newTestState(t)
 	assert.NoError(t, state.BridgeMessageStore.insertBridgeBatchMessage(signedBridgeBatch, nil))
 
-	batchFromDB, err := state.BridgeMessageStore.getBridgeBatchSigned(0, 0)
+	batchFromDB, err := state.BridgeMessageStore.getBridgeBatchSigned(0, 1)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, batchFromDB)
@@ -172,7 +172,7 @@ func TestState_getBridgeBatchForBridgeEvents(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		signedBridgeBatch, err := state.BridgeMessageStore.getBridgeBatchForBridgeEvents(c.bridgeMessageID, 0)
+		signedBridgeBatch, err := state.BridgeMessageStore.getBridgeBatchForBridgeEvents(c.bridgeMessageID, 1)
 
 		if c.hasBatch {
 			require.NoError(t, err, fmt.Sprintf("bridge event %v", c.bridgeMessageID))
