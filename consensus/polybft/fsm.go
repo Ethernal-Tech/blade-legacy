@@ -176,7 +176,9 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		extra.Validators = f.newValidatorsDelta
 
 		if f.config.IsBridgeEnabled() && !f.newValidatorsDelta.IsEmpty() {
-			f.applyValidatorSetCommitTx(nextValidators, extra)
+			if err := f.applyValidatorSetCommitTx(nextValidators, extra); err != nil {
+				return nil, err
+			}
 		}
 	}
 
