@@ -3,7 +3,6 @@ package polybft
 import (
 	"bytes"
 	"fmt"
-	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -22,20 +21,12 @@ type PendingBridgeBatch struct {
 func NewPendingBridgeBatch(epoch uint64,
 	bridgeEvents []*contractsapi.BridgeMsgEvent) (*PendingBridgeBatch, error) {
 	if len(bridgeEvents) == 0 {
-		return nil, fmt.Errorf("empty bridgeEvents, it should be more than zero")
+		return nil, nil
 	}
 
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
-	var (
-		sourceChainID, destinationChainID *big.Int
-	)
-
 	for i, bridgeEvent := range bridgeEvents {
-		if i == 0 {
-			sourceChainID = bridgeEvent.SourceChainID
-			destinationChainID = bridgeEvent.DestinationChainID
-		}
 
 		messages[i] = &contractsapi.BridgeMessage{
 			ID:                 bridgeEvent.ID,
@@ -46,11 +37,13 @@ func NewPendingBridgeBatch(epoch uint64,
 			DestinationChainID: bridgeEvent.DestinationChainID}
 	}
 
+	firstBridgeEvent := bridgeEvents[0]
+
 	return &PendingBridgeBatch{
 		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
 			Messages:           messages,
-			DestinationChainID: destinationChainID,
-			SourceChainID:      sourceChainID},
+			DestinationChainID: firstBridgeEvent.DestinationChainID,
+			SourceChainID:      firstBridgeEvent.SourceChainID},
 		Epoch: epoch,
 	}, nil
 }
