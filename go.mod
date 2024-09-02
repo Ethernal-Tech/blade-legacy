@@ -52,7 +52,7 @@ require (
 	github.com/valyala/fastjson v1.6.4
 	go.etcd.io/bbolt v1.3.10
 	golang.org/x/crypto v0.25.0
-	golang.org/x/sync v0.7.0
+	golang.org/x/sync v0.8.0
 	golang.org/x/tools v0.23.0
 	google.golang.org/genproto v0.0.0-20240722135656-d784300faade
 	google.golang.org/grpc v1.66.0
