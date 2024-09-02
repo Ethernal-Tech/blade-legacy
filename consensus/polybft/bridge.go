@@ -99,7 +99,7 @@ func (b *bridge) PostEpoch(req *PostEpochRequest) error {
 
 // BridgeBatch returns the pending signed bridge batches as a list of signed bridge batches
 func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error) {
-	var bridgeBatches []*BridgeBatchSigned
+	bridgeBatches := make([]*BridgeBatchSigned, 0, len(b.bridgeManagers))
 
 	for chainID, bridgeManager := range b.bridgeManagers {
 		bridgeBatch, err := bridgeManager.BridgeBatch(pendingBlockNumber)

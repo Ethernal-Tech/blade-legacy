@@ -162,7 +162,9 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 	}
 
 	if runtime.IsBridgeEnabled() {
-		runtime.bridge, err = newBridge(runtime, runtime.config, runtime.eventProvider, runtime.logger)
+		if runtime.bridge, err = newBridge(runtime, runtime.config, runtime.eventProvider, runtime.logger); err != nil {
+			return nil, err
+		}
 
 	} else {
 		runtime.bridge = &dummyBridge{}
@@ -337,7 +339,9 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	}
 
 	// handle bridge events
-	c.bridge.PostBlock(postBlock)
+	if err := c.bridge.PostBlock(postBlock); err != nil {
+		c.logger.Error("failed to post bloc in bridge", "err", err)
+	}
 
 	// handle governance events that happened in block
 	if err := c.governanceManager.PostBlock(postBlock); err != nil {
