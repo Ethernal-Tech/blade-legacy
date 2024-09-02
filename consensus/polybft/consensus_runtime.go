@@ -127,8 +127,8 @@ type consensusRuntime struct {
 
 	eventProvider *EventProvider
 
-	// bridgeManagers handles storing, processing and executing bridge events
-	bridgeManagers map[uint64]BridgeManager
+	// bridge handle different bridges
+	bridge Bridge
 
 	// governanceManager is used for handling governance events gotten from proposals execution
 	// also handles updating client configuration based on governance proposals
@@ -159,22 +159,13 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 		proposerCalculator: proposerCalculator,
 		logger:             log.Named("consensus_runtime"),
 		eventProvider:      NewEventProvider(config.blockchain),
-		bridgeManagers:     make(map[uint64]BridgeManager),
 	}
 
 	if runtime.IsBridgeEnabled() {
-		for chainID := range config.GenesisConfig.Bridge {
-			var bridgeManager BridgeManager
+		runtime.bridge, err = newBridge(runtime, runtime.config, runtime.eventProvider, runtime.logger)
 
-			bridgeManager, err = newBridgeManager(runtime, config, runtime.eventProvider, log, chainID)
-			if err != nil {
-				return nil, err
-			}
-
-			runtime.bridgeManagers[chainID] = bridgeManager
-		}
 	} else {
-		runtime.bridgeManagers[0] = &dummyBridgeManager{}
+		runtime.bridge = &dummyBridge{}
 	}
 
 	if err := runtime.initStakeManager(log, dbTx); err != nil {
@@ -200,9 +191,7 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 
 // close is used to tear down allocated resources
 func (c *consensusRuntime) close() {
-	for _, bridgeManager := range c.bridgeManagers {
-		bridgeManager.Close()
-	}
+	c.bridge.Close()
 }
 
 // initStakeManager initializes stake manager
@@ -348,13 +337,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 	}
 
 	// handle bridge events
-	for _, bridgeManager := range c.bridgeManagers {
-		if err := bridgeManager.PostBlock(postBlock); err != nil {
-			c.logger.Error("failed to post block in bridge manager", "err", err)
-
-			return
-		}
-	}
+	c.bridge.PostBlock(postBlock)
 
 	// handle governance events that happened in block
 	if err := c.governanceManager.PostBlock(postBlock); err != nil {
@@ -427,32 +410,25 @@ func (c *consensusRuntime) FSM() error {
 	valSet := validator.NewValidatorSet(epoch.Validators, c.logger)
 
 	ff := &fsm{
-		config:                        epoch.CurrentClientConfig,
-		forks:                         c.config.Forks,
-		parent:                        parent,
-		backend:                       c.config.blockchain,
-		polybftBackend:                c.config.polybftBackend,
-		epochNumber:                   epoch.Number,
-		blockBuilder:                  blockBuilder,
-		validators:                    valSet,
-		isEndOfEpoch:                  isEndOfEpoch,
-		isEndOfSprint:                 isEndOfSprint,
-		isFirstBlockOfEpoch:           isFirstBlockOfEpoch,
-		proposerSnapshot:              proposerSnapshot,
-		logger:                        c.logger.Named("fsm"),
-		proposerBridgeBatchToRegister: make(map[uint64]*BridgeBatchSigned),
+		config:              epoch.CurrentClientConfig,
+		forks:               c.config.Forks,
+		parent:              parent,
+		backend:             c.config.blockchain,
+		polybftBackend:      c.config.polybftBackend,
+		epochNumber:         epoch.Number,
+		blockBuilder:        blockBuilder,
+		validators:          valSet,
+		isEndOfEpoch:        isEndOfEpoch,
+		isEndOfSprint:       isEndOfSprint,
+		isFirstBlockOfEpoch: isFirstBlockOfEpoch,
+		proposerSnapshot:    proposerSnapshot,
+		logger:              c.logger.Named("fsm"),
 	}
 
 	if isEndOfSprint {
-		for chainID, bridgeManager := range c.bridgeManagers {
-			bridgeBatch, err := bridgeManager.BridgeBatch(pendingBlockNumber)
-			if err != nil {
-				return err
-			}
-
-			if bridgeBatch != nil {
-				ff.proposerBridgeBatchToRegister[chainID] = bridgeBatch
-			}
+		ff.proposerBridgeBatchToRegister, err = c.bridge.BridgeBatch(pendingBlockNumber)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -528,10 +504,8 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		c.logger.Error("Could not clean previous epochs from db.", "error", err)
 	}
 
-	for chainID := range c.bridgeManagers {
-		if err := c.state.EpochStore.insertEpoch(epochNumber, dbTx, chainID); err != nil {
-			return nil, fmt.Errorf("an error occurred while inserting new epoch in db. Reason: %w", err)
-		}
+	if err := c.bridge.InsertEpoch(epochNumber, dbTx); err != nil {
+		return nil, err
 	}
 
 	c.logger.Info(
@@ -551,10 +525,8 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		Forks:             c.config.Forks,
 	}
 
-	for _, bridgeManager := range c.bridgeManagers {
-		if err := bridgeManager.PostEpoch(reqObj); err != nil {
-			return nil, err
-		}
+	if err := c.bridge.PostEpoch(reqObj); err != nil {
+		return nil, err
 	}
 
 	if err := c.governanceManager.PostEpoch(reqObj); err != nil {

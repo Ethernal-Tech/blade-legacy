@@ -721,7 +721,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 			isEndOfSprint:                 true,
 			parent:                        &types.Header{Number: 9},
 			validators:                    validatorSet,
-			proposerBridgeBatchToRegister: map[uint64]*BridgeBatchSigned{0: bridgeBatch},
+			proposerBridgeBatchToRegister: []*BridgeBatchSigned{bridgeBatch},
 			logger:                        hclog.NewNullLogger(),
 		}
 
@@ -758,14 +758,13 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 		validatorSet := validator.NewValidatorSet(validators.GetPublicIdentities(), hclog.NewNullLogger())
 
 		fsm := &fsm{
-			isEndOfEpoch:                  true,
-			isEndOfSprint:                 true,
-			parent:                        &types.Header{Number: 9},
-			validators:                    validatorSet,
-			proposerBridgeBatchToRegister: map[uint64]*BridgeBatchSigned{0: bridgeBatch},
-			commitEpochInput:              createTestCommitEpochInput(t, 0, 10),
-			distributeRewardsInput:        createTestDistributeRewardsInput(t, 0, nil, 10),
-			logger:                        hclog.NewNullLogger(),
+			isEndOfEpoch:           true,
+			isEndOfSprint:          true,
+			parent:                 &types.Header{Number: 9},
+			validators:             validatorSet,
+			commitEpochInput:       createTestCommitEpochInput(t, 0, 10),
+			distributeRewardsInput: createTestDistributeRewardsInput(t, 0, nil, 10),
+			logger:                 hclog.NewNullLogger(),
 		}
 
 		bridgeBatchTx, err := fsm.createBridgeBatchTx(bridgeBatch)
@@ -1500,7 +1499,7 @@ func TestFSM_DecodeBridgeBatchStateTxs(t *testing.T) {
 	_, signedBridgeBatch, _ := buildBridgeBatchAndBridgeEvents(t, eventsSize, uint64(3), from)
 
 	f := &fsm{
-		proposerBridgeBatchToRegister: map[uint64]*BridgeBatchSigned{0: signedBridgeBatch},
+		proposerBridgeBatchToRegister: []*BridgeBatchSigned{signedBridgeBatch},
 		commitEpochInput:              createTestCommitEpochInput(t, 0, 10),
 		distributeRewardsInput:        createTestDistributeRewardsInput(t, 0, nil, 10),
 		logger:                        hclog.NewNullLogger(),

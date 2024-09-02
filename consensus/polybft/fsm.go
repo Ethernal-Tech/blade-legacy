@@ -98,7 +98,7 @@ type fsm struct {
 	isFirstBlockOfEpoch bool
 
 	// proposerBridgeBatchToRegister is a batch that is registered via state transaction by proposer
-	proposerBridgeBatchToRegister map[uint64]*BridgeBatchSigned
+	proposerBridgeBatchToRegister []*BridgeBatchSigned
 
 	// logger instance
 	logger hclog.Logger

@@ -275,7 +275,8 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 				if numberOfMessages > 0 {
 					b.logger.Debug("can not submit a batch, quorum not reached",
 						"from", pendingBatch.BridgeMessageBatch.Messages[0].ID.Uint64(),
-						"to", pendingBatch.BridgeMessageBatch.Messages[numberOfMessages-1].ID.Uint64())
+						"to", pendingBatch.BridgeMessageBatch.Messages[numberOfMessages-1].ID.Uint64(),
+						"sourceChainID", b.sourceChainID)
 				}
 
 				continue

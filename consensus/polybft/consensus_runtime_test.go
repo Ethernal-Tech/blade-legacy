@@ -236,7 +236,7 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 			CurrentClientConfig: config.GenesisConfig,
 		},
 		lastBuiltBlock: &types.Header{Number: header.Number - 1},
-		bridgeManagers: map[uint64]BridgeManager{0: &dummyBridgeManager{}},
+		bridge:         &dummyBridge{},
 		stakeManager:   &dummyStakeManager{},
 		eventProvider:  NewEventProvider(blockchainMock),
 		governanceManager: &dummyGovernanceManager{
@@ -367,7 +367,7 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 		},
 		lastBuiltBlock: lastBlock,
 		state:          newTestState(t),
-		bridgeManagers: map[uint64]BridgeManager{0: &dummyBridgeManager{}},
+		bridge:         &dummyBridge{},
 	}
 	runtime.setIsActiveValidator(true)
 
@@ -435,7 +435,7 @@ func TestConsensusRuntime_FSM_EndOfEpoch_BuildCommitEpoch(t *testing.T) {
 		config:             config,
 		lastBuiltBlock:     &types.Header{Number: 9},
 		stakeManager:       &dummyStakeManager{},
-		bridgeManagers:     map[uint64]BridgeManager{0: &dummyBridgeManager{}},
+		bridge:             &dummyBridge{},
 	}
 
 	err := runtime.FSM()

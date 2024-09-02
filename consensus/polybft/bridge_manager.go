@@ -170,6 +170,7 @@ type BridgeManager interface {
 	PostEpoch(req *PostEpochRequest) error
 	BuildExitEventRoot(epoch uint64) (types.Hash, error)
 	BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error)
+	InsertEpoch(epoch uint64, tx *bolt.Tx) error
 }
 
 var _ BridgeManager = (*dummyBridgeManager)(nil)
@@ -189,6 +190,7 @@ func (d *dummyBridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatc
 func (d *dummyBridgeManager) GenerateProof(eventID uint64, pType proofType) (types.Proof, error) {
 	return types.Proof{}, nil
 }
+func (d *dummyBridgeManager) InsertEpoch(epoch uint64, tx *bolt.Tx) error { return nil }
 
 var _ BridgeManager = (*bridgeManager)(nil)
 
@@ -203,6 +205,7 @@ type bridgeManager struct {
 	eventTrackerConfig *eventTrackerConfig
 	logger             hclog.Logger
 	chainID            uint64
+	state              State
 }
 
 // newBridgeManager creates a new instance of bridgeManager
@@ -425,4 +428,13 @@ func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 
 		return nil
 	}
+}
+
+// InsertEpoch inserts a new epoch to db with its meta data
+func (b *bridgeManager) InsertEpoch(epochNumber uint64, dbTx *bolt.Tx) error {
+	if err := b.state.EpochStore.insertEpoch(epochNumber, dbTx, b.chainID); err != nil {
+		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w", b.chainID, err)
+	}
+
+	return nil
 }
