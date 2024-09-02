@@ -236,7 +236,6 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 			CurrentClientConfig: config.GenesisConfig,
 		},
 		lastBuiltBlock: &types.Header{Number: header.Number - 1},
-		bridge:         &dummyBridge{},
 		stakeManager:   &dummyStakeManager{},
 		eventProvider:  NewEventProvider(blockchainMock),
 		governanceManager: &dummyGovernanceManager{
@@ -244,9 +243,12 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 				return config.genesisParams, nil
 			}},
 	}
+
+	runtime.bridge = createTestBridge(t, runtime.state)
+
 	runtime.OnBlockInserted(&types.FullBlock{Block: builtBlock})
 
-	require.True(t, runtime.state.EpochStore.isEpochInserted(currentEpochNumber+1, 0))
+	require.True(t, runtime.state.EpochStore.isEpochInserted(currentEpochNumber+1, 1))
 	require.Equal(t, newEpochNumber, runtime.epoch.Number)
 
 	blockchainMock.AssertExpectations(t)
@@ -1156,4 +1158,14 @@ func encodeExitEvents(t *testing.T, exitEvents []*ExitEvent) [][]byte {
 	}
 
 	return encodedEvents
+}
+
+func createTestBridge(t *testing.T, state *State) Bridge {
+	t.Helper()
+
+	manager := &mockBridgeManager{state: state, chainID: 1}
+
+	return &bridge{
+		bridgeManagers: map[uint64]BridgeManager{1: manager},
+	}
 }
