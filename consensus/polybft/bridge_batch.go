@@ -27,7 +27,6 @@ func NewPendingBridgeBatch(epoch uint64,
 	messages := make([]*contractsapi.BridgeMessage, len(bridgeEvents))
 
 	for i, bridgeEvent := range bridgeEvents {
-
 		messages[i] = &contractsapi.BridgeMessage{
 			ID:                 bridgeEvent.ID,
 			Sender:             bridgeEvent.Sender,
