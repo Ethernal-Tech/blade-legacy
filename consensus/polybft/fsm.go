@@ -83,8 +83,6 @@ type fsm struct {
 	// It is populated only for epoch-ending blocks.
 	commitEpochInput *contractsapi.CommitEpochEpochManagerFn
 
-	commitValidatorSetInput *contractsapi.CommitValidatorSetBridgeStorageFn
-
 	// distributeRewardsInput holds info about validators work in a single epoch
 	// mainly, how many blocks they signed during given epoch
 	// It is populated only for epoch-ending blocks.
@@ -178,21 +176,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		extra.Validators = f.newValidatorsDelta
 
 		if f.config.IsBridgeEnabled() && !f.newValidatorsDelta.IsEmpty() {
-			commitValidatorSetInput, err := createCommitValidatorSetInput(nextValidators, extra)
-			if err != nil {
-				return nil, err
-			}
-
-			input, err := commitValidatorSetInput.EncodeAbi()
-			if err != nil {
-				return nil, err
-			}
-
-			tx := createStateTransactionWithData(contracts.BridgeStorageContract, input)
-
-			if err := f.blockBuilder.WriteTx(tx); err != nil {
-				return nil, err
-			}
+			f.applyValidatorSetCommitTx(nextValidators, extra)
 		}
 	}
 
@@ -286,6 +270,23 @@ func (f *fsm) createBridgeBatchTx(signedBridgeBatch *BridgeBatchSigned) (*types.
 	}
 
 	return createStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
+}
+
+// applyValidatorSetCommitTx build validator set commit transaction and apply it
+func (f *fsm) applyValidatorSetCommitTx(nextValidators validator.AccountSet, extra *Extra) error {
+	commitValidatorSetInput, err := createCommitValidatorSetInput(nextValidators, extra)
+	if err != nil {
+		return err
+	}
+
+	input, err := commitValidatorSetInput.EncodeAbi()
+	if err != nil {
+		return err
+	}
+
+	tx := createStateTransactionWithData(contracts.BridgeStorageContract, input)
+
+	return f.blockBuilder.WriteTx(tx)
 }
 
 // getValidatorsTransition applies delta to the current validators,
