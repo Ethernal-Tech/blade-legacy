@@ -30,11 +30,7 @@ var (
 Bolt DB schema:
 
 epochs/
-|--> epochNumber
-	|--> hash -> []*MessageSignatures (json marshalled)
-
-epochs/
-|--> epochNumber -> []*TransferEvent (json marshalled)
+|--> chainID --> epochNumber --> messageVote
 
 validatorSnapshots/
 |--> epochNumber -> *AccountSet (json marshalled)
@@ -62,7 +58,7 @@ func (s *EpochStore) initialize(tx *bolt.Tx) error {
 
 	for _, chainID := range s.chainIDs {
 		if _, err := epochBucket.CreateBucketIfNotExists(common.EncodeUint64ToBytes(chainID)); err != nil {
-			return fmt.Errorf("failed to create bucket=%s: %w", string(epochsBucket), err)
+			return fmt.Errorf("failed to create epoch bucket for chainID=%d err: %w", chainID, err)
 		}
 	}
 

@@ -243,7 +243,7 @@ func (bms *BridgeMessageStore) insertBridgeBatchMessage(signedBridgeBatch *Bridg
 		}
 
 		if err := tx.Bucket(bridgeBatchBucket).
-			Bucket(common.EncodeUint64ToBytes(signedBridgeBatch.MessageBatch.DestinationChainID.Uint64())).Put(
+			Bucket(common.EncodeUint64ToBytes(signedBridgeBatch.MessageBatch.SourceChainID.Uint64())).Put(
 			common.EncodeUint64ToBytes(lastID), raw); err != nil {
 			return err
 		}
@@ -279,14 +279,14 @@ func (bms *BridgeMessageStore) getBridgeBatchSigned(toIndex uint64, chainID uint
 
 // insertMessageVote inserts given vote to signatures bucket of given epoch
 func (bms *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
-	vote *MessageSignature, dbTx *bolt.Tx, destinationChainID uint64) (int, error) {
+	vote *MessageSignature, dbTx *bolt.Tx, sourceChainID uint64) (int, error) {
 	var (
 		numOfSignatures int
 		err             error
 	)
 
 	insertFn := func(tx *bolt.Tx) error {
-		signatures, err := bms.getMessageVotesLocked(tx, epoch, key, destinationChainID)
+		signatures, err := bms.getMessageVotesLocked(tx, epoch, key, sourceChainID)
 		if err != nil {
 			return err
 		}
@@ -309,7 +309,7 @@ func (bms *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
 			return err
 		}
 
-		bucket, err := getNestedBucketInEpoch(tx, epoch, messageVotesBucket, destinationChainID)
+		bucket, err := getNestedBucketInEpoch(tx, epoch, messageVotesBucket, sourceChainID)
 		if err != nil {
 			return err
 		}
@@ -357,8 +357,8 @@ func (bms *BridgeMessageStore) getMessageVotes(
 
 // getMessageVotesLocked gets all signatures from db associated with given epoch and hash
 func (bms *BridgeMessageStore) getMessageVotesLocked(tx *bolt.Tx, epoch uint64,
-	hash []byte, destinationChainID uint64) ([]*MessageSignature, error) {
-	bucket, err := getNestedBucketInEpoch(tx, epoch, messageVotesBucket, destinationChainID)
+	hash []byte, sourceChainID uint64) ([]*MessageSignature, error) {
+	bucket, err := getNestedBucketInEpoch(tx, epoch, messageVotesBucket, sourceChainID)
 	if err != nil {
 		return nil, err
 	}
@@ -405,8 +405,8 @@ func getAvailableRelayerEvents(
 	limit int,
 	bucket []byte,
 	tx *bolt.Tx,
-	chainID uint64) (result []*RelayerEventMetaData, err error) {
-	cursor := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(chainID)).Cursor()
+	sourceChainID uint64) (result []*RelayerEventMetaData, err error) {
+	cursor := tx.Bucket(bucket).Bucket(common.EncodeUint64ToBytes(sourceChainID)).Cursor()
 
 	for k, v := cursor.First(); k != nil; k, v = cursor.Next() {
 		var event *RelayerEventMetaData
