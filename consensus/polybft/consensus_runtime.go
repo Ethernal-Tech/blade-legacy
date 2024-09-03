@@ -166,8 +166,7 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 			runtime,
 			runtime.config,
 			runtime.eventProvider,
-			runtime.logger,
-			config.State); err != nil {
+			runtime.logger); err != nil {
 			return nil, err
 		}
 	} else {
