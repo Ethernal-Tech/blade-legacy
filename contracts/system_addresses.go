@@ -19,6 +19,10 @@ var (
 	RewardTokenContract = types.StringToAddress("0x104")
 	// RewardTokenContractV1 is an address of reward token on child chain
 	RewardTokenContractV1 = types.StringToAddress("0x1041")
+	// BLS256Contract is an address of BLS256 proxy contract on the child chain
+	BLS256Contract = types.StringToAddress("0x105")
+	// BLS256ContractV1 is an address of BLS256 contract on the child chain
+	BLS256ContractV1 = types.StringToAddress("0x1051")
 	// DefaultBurnContract is an address of eip1559 default proxy contract
 	DefaultBurnContract = types.StringToAddress("0x106")
 	// StateReceiverContract is an address of bridge proxy contract on the child chain
@@ -140,5 +144,8 @@ func GetProxyImplementationMapping() map[types.Address]types.Address {
 		ForkParamsContract:            ForkParamsContractV1,
 		ChildTimelockContract:         ChildTimelockContractV1,
 		ChildGovernorContract:         ChildGovernorContractV1,
+		GatewayContract:               GatewayContractV1,
+		BridgeStorageContract:         BridgeStorageContractV1,
+		BLS256Contract:                BLS256ContractV1,
 	}
 }

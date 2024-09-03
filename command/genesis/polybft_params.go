@@ -408,6 +408,11 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			address:  contracts.BLSContractV1,
 		},
 		{
+			// BLS256 contract
+			artifact: contractsapi.BLS256,
+			address:  contracts.BLS256ContractV1,
+		},
+		{
 			// Merkle contract
 			artifact: contractsapi.Merkle,
 			address:  contracts.MerkleContractV1,

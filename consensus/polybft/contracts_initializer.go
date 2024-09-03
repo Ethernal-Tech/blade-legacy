@@ -7,6 +7,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/state"
@@ -339,6 +340,50 @@ func initChildGovernor(cfg PolyBFTConfig, transition *state.Transition) error {
 		cfg.GovernanceConfig.ChildGovernorAddr, input, "ChildGovernor.initialize", transition)
 }
 
+// initBridgeStorageContract initializes BridgeStorage contract on blade chain
+func initBridgeStorageContract(cfg PolyBFTConfig, transition *state.Transition) error {
+	validators, err := getValidatorStorageValidators(cfg.InitialValidatorSet)
+	if err != nil {
+		return fmt.Errorf("error while converting validators for bridge storage contract: %w", err)
+	}
+
+	initFn := &contractsapi.InitializeBridgeStorageFn{
+		NewBls:     contracts.BLSContract,
+		NewBn256G2: contracts.BLS256Contract,
+		Validators: validators,
+	}
+
+	input, err := initFn.EncodeAbi()
+	if err != nil {
+		return fmt.Errorf("BridgeStorage.initialize params encoding failed: %w", err)
+	}
+
+	return callContract(contracts.SystemCaller, contracts.BridgeStorageContract, input,
+		"BridgeStorage.initialize", transition)
+}
+
+// initGatewayContract initializes Gateway contract on blade chain
+func initGatewayContract(cfg PolyBFTConfig, transition *state.Transition) error {
+	validators, err := getValidatorStorageValidators(cfg.InitialValidatorSet)
+	if err != nil {
+		return fmt.Errorf("error while converting validators for gateway contract: %w", err)
+	}
+
+	initFn := &contractsapi.InitializeGatewayFn{
+		NewBls:     contracts.BLSContract,
+		NewBn256G2: contracts.BLS256Contract,
+		Validators: validators,
+	}
+
+	input, err := initFn.EncodeAbi()
+	if err != nil {
+		return fmt.Errorf("gateway.initialize params encoding failed: %w", err)
+	}
+
+	return callContract(contracts.SystemCaller, contracts.GatewayContract, input,
+		"Gateway.initialize", transition)
+}
+
 // mintRewardTokensToWallet mints configured amount of reward tokens to reward wallet address
 func mintRewardTokensToWallet(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
 	if isNativeRewardToken(polyBFTConfig) {
@@ -418,6 +463,30 @@ func callContract(from, to types.Address, input []byte, contractName string, tra
 	}
 
 	return nil
+}
+
+// getValidatorStorageValidators converts initial validators to Validator struct from ValidatorStorage contract for Bridge
+func getValidatorStorageValidators(initialValidators []*validator.GenesisValidator) ([]*contractsapi.Validator, error) {
+	validators := make([]*contractsapi.Validator, len(initialValidators))
+	for i, validator := range initialValidators {
+		blsRaw, err := hex.DecodeHex(validator.BlsKey)
+		if err != nil {
+			return nil, err
+		}
+
+		key, err := bls.UnmarshalPublicKey(blsRaw)
+		if err != nil {
+			return nil, err
+		}
+
+		validators[i] = &contractsapi.Validator{
+			Address:     validator.Address,
+			BlsKey:      key.ToBigInt(),
+			VotingPower: validator.Stake,
+		}
+	}
+
+	return validators, nil
 }
 
 // isNativeRewardToken returns true in case a native token is used as a reward token as well
