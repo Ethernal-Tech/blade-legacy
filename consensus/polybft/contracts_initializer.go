@@ -465,9 +465,11 @@ func callContract(from, to types.Address, input []byte, contractName string, tra
 	return nil
 }
 
-// getValidatorStorageValidators converts initial validators to Validator struct from ValidatorStorage contract for Bridge
+// getValidatorStorageValidators converts initial validators to Validator struct
+// from ValidatorStorage contract for Bridge
 func getValidatorStorageValidators(initialValidators []*validator.GenesisValidator) ([]*contractsapi.Validator, error) {
 	validators := make([]*contractsapi.Validator, len(initialValidators))
+
 	for i, validator := range initialValidators {
 		blsRaw, err := hex.DecodeHex(validator.BlsKey)
 		if err != nil {
