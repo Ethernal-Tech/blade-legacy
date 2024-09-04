@@ -383,11 +383,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			address:  contracts.BridgeStorageContractV1,
 		},
 		{
-			// State receiver contract
-			artifact: contractsapi.StateReceiver,
-			address:  contracts.StateReceiverContractV1,
-		},
-		{
 			// ChildERC20 token contract
 			artifact: contractsapi.ChildERC20,
 			address:  contracts.ChildERC20Contract,

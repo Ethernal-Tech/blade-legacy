@@ -201,7 +201,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.NoError(t, err)
 
 		// check that we submitted the minimal commitment to smart contract
-		commitmentIDRaw, err := txRelayer.Call(types.ZeroAddress, contracts.StateReceiverContract, lastCommittedIDInput)
+		commitmentIDRaw, err := txRelayer.Call(types.ZeroAddress, contracts.GatewayContract, lastCommittedIDInput)
 		require.NoError(t, err)
 
 		initialCommittedID, err := helperCommon.ParseUint64orHex(&commitmentIDRaw)
@@ -235,7 +235,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 		// check that we submitted the minimal commitment to smart contract
 		commitmentIDRaw, err = txRelayer.Call(types.ZeroAddress,
-			contracts.StateReceiverContract, lastCommittedIDInput)
+			contracts.GatewayContract, lastCommittedIDInput)
 		require.NoError(t, err)
 
 		lastCommittedID, err := helperCommon.ParseUint64orHex(&commitmentIDRaw)
@@ -261,7 +261,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.NoError(t, cluster.WaitForBlock(midBlockNumber+5*sprintSize, 3*time.Minute))
 
 		// check that we submitted the minimal commitment to smart contract
-		commitmentIDRaw, err = txRelayer.Call(types.ZeroAddress, contracts.StateReceiverContract, lastCommittedIDInput)
+		commitmentIDRaw, err = txRelayer.Call(types.ZeroAddress, contracts.GatewayContract, lastCommittedIDInput)
 		require.NoError(t, err)
 
 		// check that the second (larger commitment) was also submitted in epoch
@@ -798,9 +798,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	})
 
 	t.Run("bridge ERC 721 tokens", func(t *testing.T) {
-		// get initial exit id
-		initiaBridgeMsgEventID := getLastBridgeMsgEventID(t, childchainTxRelayer)
-
 		erc721DeployTxn := cluster.Deploy(t, admin, contractsapi.RootERC721.Bytecode)
 		require.True(t, erc721DeployTxn.Succeed())
 		rootERC721Token := types.Address(erc721DeployTxn.Receipt().ContractAddress)
@@ -850,10 +847,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 				true)
 			require.NoError(t, err)
 		}
-
-		// first exit event is mapping child token on a rootchain
-		// remaining ones are the deposits
-		initiaBridgeMsgEventID++
 
 		// retrieve child token addresses on both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC721Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC721PredicateAddr,

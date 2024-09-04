@@ -304,7 +304,7 @@ func (b *bridgeManager) initStateSyncRelayer(
 				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
 				maxAttemptsToSend:        defaultMaxAttemptsToSend,
 				maxEventsPerBatch:        defaultMaxEventsPerBatch,
-				eventExecutionAddr:       contracts.StateReceiverContract,
+				eventExecutionAddr:       contracts.GatewayContract,
 			},
 			logger.Named("state_sync_relayer"))
 	} else {

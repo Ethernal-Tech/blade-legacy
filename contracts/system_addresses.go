@@ -11,10 +11,6 @@ var (
 	BLSContract = types.StringToAddress("0x102")
 	// BLSContractV1 is an address of BLS contract on the child chain
 	BLSContractV1 = types.StringToAddress("0x1021")
-	// MerkleContract is an address of Merkle proxy contract on the child chain
-	MerkleContract = types.StringToAddress("0x103")
-	// MerkleContractV1 is an address of Merkle contract on the child chain
-	MerkleContractV1 = types.StringToAddress("0x1031")
 	// RewardTokenContract is an address of reward token proxy on child chain
 	RewardTokenContract = types.StringToAddress("0x104")
 	// RewardTokenContractV1 is an address of reward token on child chain
@@ -25,20 +21,12 @@ var (
 	BLS256ContractV1 = types.StringToAddress("0x1051")
 	// DefaultBurnContract is an address of eip1559 default proxy contract
 	DefaultBurnContract = types.StringToAddress("0x106")
-	// StateReceiverContract is an address of bridge proxy contract on the child chain
-	StateReceiverContract = types.StringToAddress("0x1001")
-	// StateReceiverContractV1 is an address of bridge implementation contract on the child chain
-	StateReceiverContractV1 = types.StringToAddress("0x10011")
 	// NativeERC20TokenContract is an address of bridge proxy contract
 	// (used for transferring ERC20 native tokens on child chain)
 	NativeERC20TokenContract = types.StringToAddress("0x1010")
 	// NativeERC20TokenContractV1 is an address of bridge contract
 	// (used for transferring ERC20 native tokens on child chain)
 	NativeERC20TokenContractV1 = types.StringToAddress("0x10101")
-	// L2StateSenderContract is an address of bridge proxy contract to the rootchain
-	L2StateSenderContract = types.StringToAddress("0x1002")
-	// L2StateSenderContractV1 is an address of bridge contract to the rootchain
-	L2StateSenderContractV1 = types.StringToAddress("0x10021")
 	// StakeManagerContract is an address of stake manager proxy contract on child chain
 	StakeManagerContract = types.StringToAddress("0x10022")
 	// StakeManagerContract is an address of stake manager contract on child chain
@@ -130,10 +118,7 @@ func GetProxyImplementationMapping() map[types.Address]types.Address {
 	return map[types.Address]types.Address{
 		GatewayContract:               GatewayContractV1,
 		BridgeStorageContract:         BridgeStorageContractV1,
-		StateReceiverContract:         StateReceiverContractV1,
 		BLSContract:                   BLSContractV1,
-		MerkleContract:                MerkleContractV1,
-		L2StateSenderContract:         L2StateSenderContractV1,
 		EpochManagerContract:          EpochManagerContractV1,
 		StakeManagerContract:          StakeManagerContractV1,
 		NativeERC20TokenContract:      NativeERC20TokenContractV1,

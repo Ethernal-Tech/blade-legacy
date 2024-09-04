@@ -102,7 +102,7 @@ func TestSystemState_GetEpoch(t *testing.T) {
 		transition: transition,
 	}
 
-	systemState := NewSystemState(result.Address, contracts.StateReceiverContract, provider)
+	systemState := NewSystemState(result.Address, contracts.BridgeStorageContract, provider)
 
 	expectedEpoch := uint64(50)
 	input, err := setEpochMethod.Encode([1]interface{}{expectedEpoch})

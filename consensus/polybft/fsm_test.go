@@ -686,7 +686,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 				require.NoError(t, err)
 
 				if i == 0 {
-					tx := createStateTransactionWithData(contracts.StateReceiverContract, inputData)
+					tx := createStateTransactionWithData(contracts.GatewayContract, inputData)
 					txns = append(txns, tx)
 				}
 			}
@@ -820,12 +820,12 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 		require.NoError(t, err)
 
 		txns = append(txns,
-			createStateTransactionWithData(contracts.StateReceiverContract, inputData))
+			createStateTransactionWithData(contracts.GatewayContract, inputData))
 		inputData, err = bridgeBatchSigned.EncodeAbi()
 		require.NoError(t, err)
 
 		txns = append(txns,
-			createStateTransactionWithData(contracts.StateReceiverContract, inputData))
+			createStateTransactionWithData(contracts.GatewayContract, inputData))
 		err = f.VerifyStateTransactions(txns)
 		require.ErrorContains(t, err, "only one bridge batch tx is allowed per block")
 	})
@@ -1551,7 +1551,7 @@ func TestFSM_VerifyStateTransaction_InvalidTypeOfStateTransactions(t *testing.T)
 
 	var txns []*types.Transaction
 	txns = append(txns,
-		createStateTransactionWithData(contracts.StateReceiverContract, []byte{9, 3, 1, 1}))
+		createStateTransactionWithData(contracts.GatewayContract, []byte{9, 3, 1, 1}))
 
 	require.ErrorContains(t, f.VerifyStateTransactions(txns), "unknown state transaction")
 }

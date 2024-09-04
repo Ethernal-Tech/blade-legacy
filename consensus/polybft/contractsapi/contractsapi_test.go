@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
@@ -93,9 +92,8 @@ func TestEncodingAndParsingEvent(t *testing.T) {
 	require.NoError(t, err)
 
 	log := &ethgo.Log{
-		Address: ethgo.Address(contracts.L2StateSenderContract),
-		Topics:  topics,
-		Data:    encodedData,
+		Topics: topics,
+		Data:   encodedData,
 	}
 
 	var exitEvent BridgeMsgEvent
