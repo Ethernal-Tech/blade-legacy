@@ -1,10 +1,8 @@
 package e2e
 
 import (
-	"errors"
 	"math/big"
 	"testing"
-	"time"
 
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/Ethernal-Tech/ethgo"
@@ -96,55 +94,6 @@ func assertStateSyncResultSuccess(
 
 			require.True(t, ssre.Status)
 		})
-}
-
-// getCheckpointBlockNumber gets current checkpoint block number from checkpoint manager smart contract
-func getCheckpointBlockNumber(l1Relayer txrelayer.TxRelayer, checkpointManagerAddr types.Address) (uint64, error) {
-	checkpointBlockNumRaw, err := ABICall(l1Relayer, contractsapi.CheckpointManager,
-		checkpointManagerAddr, types.ZeroAddress, "currentCheckpointBlockNumber")
-	if err != nil {
-		return 0, err
-	}
-
-	actualCheckpointBlock, err := common.ParseUint64orHex(&checkpointBlockNumRaw)
-	if err != nil {
-		return 0, err
-	}
-
-	return actualCheckpointBlock, nil
-}
-
-// waitForRootchainEpoch blocks for some predefined timeout to reach target epoch
-func waitForRootchainEpoch(targetEpoch uint64, timeout time.Duration,
-	rootchainTxRelayer txrelayer.TxRelayer, checkpointManager types.Address) error {
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-timer.C:
-			return errors.New("root chain hasn't progressed to the desired epoch")
-		case <-ticker.C:
-		}
-
-		rootchainEpochRaw, err := ABICall(rootchainTxRelayer, contractsapi.CheckpointManager,
-			checkpointManager, types.ZeroAddress, "currentEpoch")
-		if err != nil {
-			return err
-		}
-
-		rootchainEpoch, err := common.ParseUint64orHex(&rootchainEpochRaw)
-		if err != nil {
-			return err
-		}
-
-		if rootchainEpoch >= targetEpoch {
-			return nil
-		}
-	}
 }
 
 // setAccessListRole sets access list role to appropriate access list precompile
@@ -262,37 +211,19 @@ func getChildToken(t *testing.T, predicateABI *abi.ABI, predicateAddr types.Addr
 	return types.StringToAddress(childTokenRaw)
 }
 
-func getLastExitEventID(t *testing.T, relayer txrelayer.TxRelayer) uint64 {
+func getLastBridgeMsgEventID(t *testing.T, relayer txrelayer.TxRelayer) uint64 {
 	t.Helper()
 
-	exitEventsCounterFn := contractsapi.L2StateSender.Abi.Methods["counter"]
+	bridgeMsgEventsCounterFn := contractsapi.Gateway.Abi.Methods["counter"]
 
-	input, err := exitEventsCounterFn.Encode([]interface{}{})
+	input, err := bridgeMsgEventsCounterFn.Encode([]interface{}{})
 	require.NoError(t, err)
 
-	exitEventIDRaw, err := relayer.Call(types.ZeroAddress, contracts.L2StateSenderContract, input)
+	bridgeMsgEventIDRaw, err := relayer.Call(types.ZeroAddress, contracts.GatewayContract, input)
 	require.NoError(t, err)
 
-	exitEventID, err := common.ParseUint64orHex(&exitEventIDRaw)
+	exitEventID, err := common.ParseUint64orHex(&bridgeMsgEventIDRaw)
 	require.NoError(t, err)
 
 	return exitEventID
-}
-
-func isExitEventProcessed(t *testing.T, exitHelperAddr types.Address,
-	relayer txrelayer.TxRelayer, exitEventID uint64) bool {
-	t.Helper()
-
-	processedExitsFn := contractsapi.ExitHelper.Abi.Methods["processedExits"]
-
-	input, err := processedExitsFn.Encode([]interface{}{exitEventID})
-	require.NoError(t, err)
-
-	isProcessedRaw, err := relayer.Call(types.ZeroAddress, exitHelperAddr, input)
-	require.NoError(t, err)
-
-	isProcessedAsNumber, err := common.ParseUint64orHex(&isProcessedRaw)
-	require.NoError(t, err)
-
-	return isProcessedAsNumber == 1
 }

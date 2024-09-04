@@ -82,17 +82,16 @@ func TestEncodingAndParsingEvent(t *testing.T) {
 	t.Parallel()
 
 	var (
-		exitEventAPI      L2StateSyncedEvent
-		stateSyncEventAPI StateSyncedEvent
+		bridgeMsgEventAPI BridgeMsgEvent
 	)
 
 	topics := make([]ethgo.Hash, 4)
-	topics[0] = exitEventAPI.Sig()
+	topics[0] = bridgeMsgEventAPI.Sig()
 	topics[1] = ethgo.BytesToHash(common.EncodeUint64ToBytes(11))
 	topics[2] = ethgo.BytesToHash(types.StringToAddress("0x1111").Bytes())
 	topics[3] = ethgo.BytesToHash(types.StringToAddress("0x2222").Bytes())
-	someType := abi.MustNewType("tuple(string firstName, string lastName)")
-	encodedData, err := someType.Encode(map[string]string{"firstName": "John", "lastName": "Doe"})
+	someType := abi.MustNewType("tuple(string firstName,string secondName ,string lastName)")
+	encodedData, err := someType.Encode(map[string]string{"firstName": "John", "secondName": "data", "lastName": "Doe"})
 	require.NoError(t, err)
 
 	log := &ethgo.Log{
@@ -101,7 +100,7 @@ func TestEncodingAndParsingEvent(t *testing.T) {
 		Data:    encodedData,
 	}
 
-	var exitEvent L2StateSyncedEvent
+	var exitEvent BridgeMsgEvent
 
 	// log matches event
 	doesMatch, err := exitEvent.ParseLog(log)
@@ -116,14 +115,8 @@ func TestEncodingAndParsingEvent(t *testing.T) {
 	require.True(t, doesMatch)
 	require.Equal(t, uint64(22), exitEvent.ID.Uint64())
 
-	// log does not match event
-	log.Topics[0] = stateSyncEventAPI.Sig()
-	doesMatch, err = exitEvent.ParseLog(log)
-	require.NoError(t, err)
-	require.False(t, doesMatch)
-
 	// error on parsing log
-	log.Topics[0] = exitEventAPI.Sig()
+	log.Topics[0] = bridgeMsgEventAPI.Sig()
 	log.Topics = log.Topics[:3]
 	doesMatch, err = exitEvent.ParseLog(log)
 	require.Error(t, err)

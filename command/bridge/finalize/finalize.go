@@ -15,7 +15,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
-	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -208,12 +207,6 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to save chain configuration bridge data: %w", err)
 	}
 
-	// initialize CheckpointManager contract since it needs to have a valid VotingPowers of validators
-	if err := initializeCheckpointManager(outputter, txRelayer,
-		consensusConfig, chainConfig.Params.ChainID, ownerKey, chainID.Uint64()); err != nil {
-		return fmt.Errorf("could not initialize CheckpointManager with finalized genesis validator set: %w", err)
-	}
-
 	return nil
 }
 
@@ -320,40 +313,4 @@ func validatorSetToABISlice(o command.OutputFormatter,
 	}
 
 	return accSet.ToAPIBinding(), nil
-}
-
-// initializeCheckpointManager initializes CheckpointManager contract on rootchain
-// based on finalized stake (voting power) of genesis validators on root
-func initializeCheckpointManager(outputter command.OutputFormatter,
-	txRelayer txrelayer.TxRelayer,
-	consensusConfig polybft.PolyBFTConfig, chainID int64,
-	deployerKey crypto.Key, rootchainChainID uint64) error {
-	validatorSet, err := validatorSetToABISlice(outputter, consensusConfig.InitialValidatorSet)
-	if err != nil {
-		return fmt.Errorf("failed to convert validators to map: %w", err)
-	}
-
-	initParams := &contractsapi.InitializeCheckpointManagerFn{
-		ChainID_:        big.NewInt(chainID),
-		NewBls:          consensusConfig.Bridge[rootchainChainID].BLSAddress,
-		NewBn256G2:      consensusConfig.Bridge[rootchainChainID].BN256G2Address,
-		NewValidatorSet: validatorSet,
-	}
-
-	input, err := initParams.EncodeAbi()
-	if err != nil {
-		return fmt.Errorf("failed to encode initialization params for CheckpointManager.initialize. error: %w", err)
-	}
-
-	if _, err := bridgeHelper.SendTransaction(txRelayer, consensusConfig.Bridge[rootchainChainID].CheckpointManagerAddr,
-		input, "CheckpointManager", deployerKey); err != nil {
-		return err
-	}
-
-	outputter.WriteCommandResult(
-		&bridgeHelper.MessageResult{
-			Message: fmt.Sprintf("CheckpointManager contract is initialized"),
-		})
-
-	return nil
 }

@@ -133,9 +133,6 @@ func GetPolyBFTConfig(chainParams *chain.Params) (PolyBFTConfig, error) {
 
 // BridgeConfig is the rootchain configuration, needed for bridging
 type BridgeConfig struct {
-	StateSenderAddr           types.Address `json:"stateSenderAddress"`
-	CheckpointManagerAddr     types.Address `json:"checkpointManagerAddress"`
-	ExitHelperAddr            types.Address `json:"exitHelperAddress"`
 	GatewayAddr               types.Address `json:"gatewayAddress"`
 	RootERC20PredicateAddr    types.Address `json:"erc20PredicateAddress"`
 	ChildERC20PredicateAddr   types.Address `json:"erc20ChildPredicateAddress"`
@@ -165,11 +162,8 @@ type RootchainConfig struct {
 	JSONRPCAddr string
 
 	Gateway                      types.Address
-	StateSenderAddress           types.Address
-	CheckpointManagerAddress     types.Address
 	BLSAddress                   types.Address
 	BN256G2Address               types.Address
-	ExitHelperAddress            types.Address
 	RootERC20PredicateAddress    types.Address
 	ChildERC20PredicateAddress   types.Address
 	RootNativeERC20Address       types.Address
@@ -189,9 +183,6 @@ func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
 		JSONRPCEndpoint: r.JSONRPCAddr,
 
 		GatewayAddr:               r.Gateway,
-		StateSenderAddr:           r.StateSenderAddress,
-		CheckpointManagerAddr:     r.CheckpointManagerAddress,
-		ExitHelperAddr:            r.ExitHelperAddress,
 		RootERC20PredicateAddr:    r.RootERC20PredicateAddress,
 		ChildERC20PredicateAddr:   r.ChildERC20PredicateAddress,
 		RootNativeERC20Addr:       r.RootNativeERC20Address,

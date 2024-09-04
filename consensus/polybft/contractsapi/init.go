@@ -16,9 +16,6 @@ const (
 var (
 
 	// Blade smart contracts
-	CheckpointManager               *contracts.Artifact
-	ExitHelper                      *contracts.Artifact
-	StateSender                     *contracts.Artifact
 	Gateway                         *contracts.Artifact
 	BridgeStorage                   *contracts.Artifact
 	RootERC20Predicate              *contracts.Artifact
@@ -27,7 +24,6 @@ var (
 	BLS                             *contracts.Artifact
 	BLS256                          *contracts.Artifact
 	System                          *contracts.Artifact
-	Merkle                          *contracts.Artifact
 	ChildValidatorSet               *contracts.Artifact
 	NativeERC20                     *contracts.Artifact
 	NativeERC20Mintable             *contracts.Artifact
@@ -44,7 +40,6 @@ var (
 	ChildERC1155Predicate           *contracts.Artifact
 	ChildERC1155PredicateACL        *contracts.Artifact
 	RootMintableERC1155PredicateACL *contracts.Artifact
-	L2StateSender                   *contracts.Artifact
 	CustomSupernetManager           *contracts.Artifact
 	StakeManager                    *contracts.Artifact
 	EpochManager                    *contracts.Artifact
@@ -79,21 +74,6 @@ var (
 func init() {
 	var err error
 
-	CheckpointManager, err = contracts.DecodeArtifact([]byte(CheckpointManagerArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	ExitHelper, err = contracts.DecodeArtifact([]byte(ExitHelperArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	L2StateSender, err = contracts.DecodeArtifact([]byte(L2StateSenderArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	Gateway, err = contracts.DecodeArtifact([]byte(GatewayArtifact))
 	if err != nil {
 		log.Fatal(err)
@@ -110,16 +90,6 @@ func init() {
 	}
 
 	BLS256, err = contracts.DecodeArtifact([]byte(BN256G2Artifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	Merkle, err = contracts.DecodeArtifact([]byte(MerkleArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	StateSender, err = contracts.DecodeArtifact([]byte(StateSenderArtifact))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -320,9 +290,6 @@ func init() {
 	}
 
 	contractArtifacts = map[string]*contracts.Artifact{
-		"CheckpointManager":               CheckpointManager,
-		"ExitHelper":                      ExitHelper,
-		"StateSender":                     StateSender,
 		"Gateway":                         Gateway,
 		"BridgeStorage":                   BridgeStorage,
 		"RootERC20Predicate":              RootERC20Predicate,
@@ -331,7 +298,6 @@ func init() {
 		"BLS":                             BLS,
 		"BLS256":                          BLS256,
 		"System":                          System,
-		"Merkle":                          Merkle,
 		"ChildValidatorSet":               ChildValidatorSet,
 		"NativeERC20":                     NativeERC20,
 		"NativeERC20Mintable":             NativeERC20Mintable,
@@ -348,7 +314,6 @@ func init() {
 		"ChildERC1155Predicate":           ChildERC1155Predicate,
 		"ChildERC1155PredicateACL":        ChildERC1155PredicateACL,
 		"RootMintableERC1155PredicateACL": RootMintableERC1155PredicateACL,
-		"L2StateSender":                   L2StateSender,
 		"CustomSupernetManager":           CustomSupernetManager,
 		"StakeManager":                    StakeManager,
 		"EpochManager":                    EpochManager,

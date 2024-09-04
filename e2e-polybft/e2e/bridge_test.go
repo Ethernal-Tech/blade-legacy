@@ -181,16 +181,6 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-			for i := range receivers {
-				if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, uint64(i+1)) {
-					return false
-				}
-			}
-
-			return true
-		}))
-
 		for _, receiver := range receivers {
 			// assert that receiver's balance on RootERC20 smart contract is as expected
 			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, rootchainTxRelayer)
@@ -442,19 +432,6 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 
 	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
 
-	currentEpoch := currentExtra.Checkpoint.EpochNumber
-	require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute, rootchainTxRelayer, polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr))
-
-	require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-		for i := 1; i <= transfersCount; i++ {
-			if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, uint64(i)) {
-				return false
-			}
-		}
-
-		return true
-	}))
-
 	// assert that owners of given token ids are the accounts on the root chain ERC 721 token
 	for i, receiver := range receiversAddrs {
 		owner := erc721OwnerOf(t, big.NewInt(int64(i)), rootERC721Addr, rootchainTxRelayer)
@@ -629,28 +606,6 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	currentBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
-	require.NoError(t, err)
-
-	currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
-	require.NoError(t, err)
-
-	currentEpoch := currentExtra.Checkpoint.EpochNumber
-	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
-
-	require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute,
-		rootchainTxRelayer, polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr))
-
-	require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-		for i := 1; i <= transfersCount; i++ {
-			if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, uint64(i)) {
-				return false
-			}
-		}
-
-		return true
-	}))
-
 	// assert that receiver's balances on RootERC1155 smart contract are expected
 	for i, receiver := range receivers {
 		balanceOfFn := &contractsapi.BalanceOfRootERC1155Fn{
@@ -778,27 +733,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		latestBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
-		require.NoError(t, err)
-
-		extra, err := polybft.GetIbftExtra(latestBlock.Header.ExtraData)
-		require.NoError(t, err)
-
-		// wait for checkpoint to get submitted before invoking exit transactions
-		require.NoError(t,
-			waitForRootchainEpoch(extra.Checkpoint.EpochNumber, 2*time.Minute, rootchainTxRelayer, polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr))
-
-		// first exit event is mapping child token on a rootchain
-		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-			for i := uint64(1); i <= transfersCount+1; i++ {
-				if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, i) {
-					return false
-				}
-			}
-
-			return true
-		}))
-
 		// retrieve child mintable token address from both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC20Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC20PredicateAddr,
 			rootToken, rootchainTxRelayer)
@@ -865,7 +799,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 	t.Run("bridge ERC 721 tokens", func(t *testing.T) {
 		// get initial exit id
-		initialExitEventID := getLastExitEventID(t, childchainTxRelayer)
+		initiaBridgeMsgEventID := getLastBridgeMsgEventID(t, childchainTxRelayer)
 
 		erc721DeployTxn := cluster.Deploy(t, admin, contractsapi.RootERC721.Bytecode)
 		require.True(t, erc721DeployTxn.Succeed())
@@ -917,29 +851,9 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		childChainBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
-		require.NoError(t, err)
-
-		childChainBlockExtra, err := polybft.GetIbftExtra(childChainBlock.Header.ExtraData)
-		require.NoError(t, err)
-
-		// wait for checkpoint to be submitted
-		require.NoError(t,
-			waitForRootchainEpoch(childChainBlockExtra.Checkpoint.EpochNumber, 2*time.Minute, rootchainTxRelayer, polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr))
-
 		// first exit event is mapping child token on a rootchain
 		// remaining ones are the deposits
-		initialExitEventID++
-
-		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-			for i := initialExitEventID; i <= initialExitEventID+transfersCount; i++ {
-				if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, i) {
-					return false
-				}
-			}
-
-			return true
-		}))
+		initiaBridgeMsgEventID++
 
 		// retrieve child token addresses on both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC721Predicate.Abi, polybftCfg.Bridge[chainID.Uint64()].ChildERC721PredicateAddr,
@@ -998,62 +912,6 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 		require.True(t, allSuccessful)
 	})
-}
-
-func TestE2E_CheckpointSubmission(t *testing.T) {
-	// spin up a cluster with epoch size set to 5 blocks
-	cluster := framework.NewTestCluster(t, 5,
-		framework.WithEpochSize(5),
-		framework.WithTestRewardToken(),
-		framework.WithBridge())
-	defer cluster.Stop()
-
-	// initialize tx relayer used to query CheckpointManager smart contract
-	rootChainRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
-	require.NoError(t, err)
-
-	chainID, err := rootChainRelayer.Client().ChainID()
-	require.NoError(t, err)
-
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
-	require.NoError(t, err)
-
-	checkpointManagerAddr := polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr
-
-	testCheckpointBlockNumber := func(expectedCheckpointBlock uint64) (bool, error) {
-		actualCheckpointBlock, err := getCheckpointBlockNumber(rootChainRelayer, checkpointManagerAddr)
-		if err != nil {
-			return false, err
-		}
-
-		t.Logf("Checkpoint block: %d\n", actualCheckpointBlock)
-
-		return actualCheckpointBlock == expectedCheckpointBlock, nil
-	}
-
-	// wait for a single epoch to be checkpointed
-	require.NoError(t, cluster.WaitForBlock(7, 30*time.Second))
-
-	// checking last checkpoint block before rootchain server stop
-	err = cluster.Bridge.WaitUntil(2*time.Second, 30*time.Second, func() (bool, error) {
-		return testCheckpointBlockNumber(5)
-	})
-	require.NoError(t, err)
-
-	// stop rootchain server
-	cluster.Bridge.Stop()
-
-	// wait for a couple of epochs so that there are pending checkpoint (epoch-ending) blocks
-	require.NoError(t, cluster.WaitForBlock(21, 2*time.Minute))
-
-	// restart rootchain server
-	require.NoError(t, cluster.Bridge.Start())
-
-	// check if pending checkpoint blocks were submitted (namely the last checkpointed block must be block 20)
-	err = cluster.Bridge.WaitUntil(2*time.Second, 50*time.Second, func() (bool, error) {
-		return testCheckpointBlockNumber(20)
-	})
-	require.NoError(t, err)
 }
 
 func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
@@ -1235,27 +1093,12 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
 
-		currentEpoch := currentExtra.Checkpoint.EpochNumber
-
-		require.NoError(t, waitForRootchainEpoch(currentEpoch, 3*time.Minute,
-			rootchainTxRelayer, polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr))
-
 		oldBalances := map[types.Address]*big.Int{}
 
 		for _, receiver := range receivers {
 			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, rootchainTxRelayer)
 			oldBalances[types.StringToAddress(receiver)] = balance
 		}
-
-		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-			for i := uint64(1); i <= uint64(transfersCount); i++ {
-				if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, i) {
-					return false
-				}
-			}
-
-			return true
-		}))
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		for _, receiver := range receivers {
@@ -1272,7 +1115,6 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		epochSize             = uint64(10)
 		numberOfAttempts      = uint64(4)
 		numBlockConfirmations = uint64(2)
-		exitEventsCount       = uint64(2)
 		tokensToTransfer      = ethgo.Gwei(10)
 		tenMilionTokens       = ethgo.Ether(10000000)
 		bigZero               = big.NewInt(0)
@@ -1434,21 +1276,6 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
-
-		currentEpoch := currentExtra.Checkpoint.EpochNumber
-
-		require.NoError(t, waitForRootchainEpoch(currentEpoch+1, 3*time.Minute,
-			rootchainTxRelayer, polybftCfg.Bridge[chainID.Uint64()].CheckpointManagerAddr))
-
-		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
-			for exitEventID := uint64(1); exitEventID <= exitEventsCount; exitEventID++ {
-				if !isExitEventProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExitHelperAddr, rootchainTxRelayer, exitEventID) {
-					return false
-				}
-			}
-
-			return true
-		}))
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw, true)

@@ -413,16 +413,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			address:  contracts.BLS256ContractV1,
 		},
 		{
-			// Merkle contract
-			artifact: contractsapi.Merkle,
-			address:  contracts.MerkleContractV1,
-		},
-		{
-			// L2StateSender contract
-			artifact: contractsapi.L2StateSender,
-			address:  contracts.L2StateSenderContractV1,
-		},
-		{
 			artifact: contractsapi.EpochManager,
 			address:  contracts.EpochManagerContractV1,
 		},

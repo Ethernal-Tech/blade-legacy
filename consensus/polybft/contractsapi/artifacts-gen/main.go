@@ -29,10 +29,6 @@ func main() {
 		Name string
 	}{
 		{
-			"blade/L2StateSender.sol",
-			"L2StateSender",
-		},
-		{
 			"blade/StateReceiver.sol",
 			"StateReceiver",
 		},
@@ -111,22 +107,6 @@ func main() {
 		{
 			"common/BN256G2.sol",
 			"BN256G2",
-		},
-		{
-			"common/Merkle.sol",
-			"Merkle",
-		},
-		{
-			"bridge/CheckpointManager.sol",
-			"CheckpointManager",
-		},
-		{
-			"bridge/ExitHelper.sol",
-			"ExitHelper",
-		},
-		{
-			"bridge/StateSender.sol",
-			"StateSender",
 		},
 		{
 			"mocks/MockERC20.sol",

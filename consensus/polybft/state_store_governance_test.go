@@ -154,9 +154,7 @@ func createTestPolybftConfig() *PolyBFTConfig {
 			},
 		},
 		Bridge: map[uint64]*BridgeConfig{0: {
-			StateSenderAddr:           types.StringToAddress("0xStateSenderAddr"),
-			CheckpointManagerAddr:     types.StringToAddress("0xCheckpointManagerAddr"),
-			ExitHelperAddr:            types.StringToAddress("0xExitHelperAddr"),
+			GatewayAddr:               types.StringToAddress("0xGatewayAddr"),
 			RootERC20PredicateAddr:    types.StringToAddress("0xRootERC20PredicateAddr"),
 			ChildERC20PredicateAddr:   types.StringToAddress("0xChildMintableERC20PredicateAddr"),
 			RootERC721PredicateAddr:   types.StringToAddress("0xRootERC721PredicateAddr"),

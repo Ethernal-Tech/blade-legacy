@@ -28,12 +28,9 @@ const (
 	contractsDeploymentTitle = "[BRIDGE - CONTRACTS DEPLOYMENT]"
 	ProxySufix               = "Proxy"
 
-	stateSenderName                   = "StateSender"
-	checkpointManagerName             = "CheckpointManager"
 	gatewayName                       = "Gateway"
 	blsName                           = "BLS"
 	bn256G2Name                       = "BN256G2"
-	exitHelperName                    = "ExitHelper"
 	rootERC20PredicateName            = "RootERC20Predicate"
 	childERC20MintablePredicateName   = "ChildERC20MintablePredicate"
 	rootERC20Name                     = "RootERC20"
@@ -57,23 +54,14 @@ var (
 	// metadataPopulatorMap maps rootchain contract names to callback
 	// which populates appropriate field in the RootchainMetadata
 	metadataPopulatorMap = map[string]func(*polybft.RootchainConfig, types.Address){
-		stateSenderName: func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
-			rootchainConfig.StateSenderAddress = addr
-		},
 		getProxyNameForImpl(bladeManagerName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.BladeManagerAddress = addr
-		},
-		getProxyNameForImpl(checkpointManagerName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
-			rootchainConfig.CheckpointManagerAddress = addr
 		},
 		getProxyNameForImpl(blsName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.BLSAddress = addr
 		},
 		getProxyNameForImpl(bn256G2Name): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.BN256G2Address = addr
-		},
-		getProxyNameForImpl(exitHelperName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
-			rootchainConfig.ExitHelperAddress = addr
 		},
 		getProxyNameForImpl(gatewayName): func(rootchainConfig *polybft.RootchainConfig, addr types.Address) {
 			rootchainConfig.Gateway = addr
@@ -117,47 +105,6 @@ var (
 	initializersMap = map[string]func(command.OutputFormatter, txrelayer.TxRelayer,
 		[]*validator.GenesisValidator,
 		*polybft.RootchainConfig, crypto.Key, int64) error{
-		getProxyNameForImpl(checkpointManagerName): func(fmt command.OutputFormatter,
-			relayer txrelayer.TxRelayer,
-			genesisValidators []*validator.GenesisValidator,
-			config *polybft.RootchainConfig,
-			key crypto.Key,
-			chainID int64) error {
-			if !consensusCfg.NativeTokenConfig.IsMintable {
-				// we can not initialize checkpoint manager at this moment if native token is not mintable
-				// we will do that on finalize command when validators do premine and stake on BladeManager
-				// this is done like this because checkpoint manager needs to have correct
-				// voting powers in order to correctly validate checkpoints
-				return nil
-			}
-
-			validatorSet, err := getValidatorSet(fmt, genesisValidators)
-			if err != nil {
-				return err
-			}
-
-			inputParams := &contractsapi.InitializeCheckpointManagerFn{
-				NewBls:          config.BLSAddress,
-				NewBn256G2:      config.BN256G2Address,
-				ChainID_:        big.NewInt(chainID),
-				NewValidatorSet: validatorSet,
-			}
-
-			return initContract(fmt, relayer, inputParams, config.CheckpointManagerAddress,
-				checkpointManagerName, key)
-		},
-		getProxyNameForImpl(exitHelperName): func(fmt command.OutputFormatter,
-			relayer txrelayer.TxRelayer,
-			genesisValidators []*validator.GenesisValidator,
-			config *polybft.RootchainConfig,
-			key crypto.Key,
-			chainID int64) error {
-			inputParams := &contractsapi.InitializeExitHelperFn{
-				NewCheckpointManager: config.CheckpointManagerAddress,
-			}
-
-			return initContract(fmt, relayer, inputParams, config.ExitHelperAddress, exitHelperName, key)
-		},
 		getProxyNameForImpl(rootERC20PredicateName): func(fmt command.OutputFormatter,
 			relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
@@ -516,27 +463,6 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClien
 
 	allContracts := []*contractInfo{
 		{
-			name:     stateSenderName,
-			artifact: contractsapi.StateSender,
-		},
-		{
-			name:     checkpointManagerName,
-			artifact: contractsapi.CheckpointManager,
-			hasProxy: true,
-			byteCodeBuilder: func() ([]byte, error) {
-				constructorFn := &contractsapi.CheckpointManagerConstructorFn{
-					Initiator: types.Address(deployerKey.Address()),
-				}
-
-				input, err := constructorFn.EncodeAbi()
-				if err != nil {
-					return nil, err
-				}
-
-				return append(contractsapi.CheckpointManager.Bytecode, input...), nil
-			},
-		},
-		{
 			name:     gatewayName,
 			artifact: contractsapi.Gateway,
 			hasProxy: true,
@@ -549,11 +475,6 @@ func deployContracts(outputter command.OutputFormatter, client *jsonrpc.EthClien
 		{
 			name:     bn256G2Name,
 			artifact: contractsapi.BLS256,
-			hasProxy: true,
-		},
-		{
-			name:     exitHelperName,
-			artifact: contractsapi.ExitHelper,
 			hasProxy: true,
 		},
 		{

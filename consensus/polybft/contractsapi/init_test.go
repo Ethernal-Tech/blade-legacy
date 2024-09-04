@@ -7,17 +7,13 @@ import (
 )
 
 func TestArtifactNotEmpty(t *testing.T) {
-	require.NotEmpty(t, CheckpointManager.Bytecode)
-	require.NotEmpty(t, CheckpointManager.DeployedBytecode)
-	require.NotEmpty(t, CheckpointManager.Abi)
+	require.NotEmpty(t, Gateway.Bytecode)
+	require.NotEmpty(t, Gateway.DeployedBytecode)
+	require.NotEmpty(t, Gateway.Abi)
 
-	require.NotEmpty(t, ExitHelper.Bytecode)
-	require.NotEmpty(t, ExitHelper.DeployedBytecode)
-	require.NotEmpty(t, ExitHelper.Abi)
-
-	require.NotEmpty(t, L2StateSender.Bytecode)
-	require.NotEmpty(t, L2StateSender.DeployedBytecode)
-	require.NotEmpty(t, L2StateSender.Abi)
+	require.NotEmpty(t, BridgeStorage.Bytecode)
+	require.NotEmpty(t, BridgeStorage.DeployedBytecode)
+	require.NotEmpty(t, BridgeStorage.Abi)
 
 	require.NotEmpty(t, BLS.Bytecode)
 	require.NotEmpty(t, BLS.DeployedBytecode)

@@ -29,9 +29,7 @@ const (
 )
 
 var (
-	bridgeMessageEventSig       = new(contractsapi.BridgeMsgEvent).Sig()
-	checkpointSubmittedEventSig = new(contractsapi.CheckpointSubmittedEvent).Sig()
-	exitProcessedEventSig       = new(contractsapi.ExitProcessedEvent).Sig()
+	bridgeMessageEventSig = new(contractsapi.BridgeMsgEvent).Sig()
 )
 
 // RelayerEventMetaData keeps information about a relayer event
@@ -60,12 +58,10 @@ type relayerConfig struct {
 type eventTrackerConfig struct {
 	consensus.EventTracker
 
-	jsonrpcAddr           string
-	startBlock            uint64
-	stateSenderAddr       types.Address
-	checkpointManagerAddr types.Address
-	exitHelperAddr        types.Address
-	trackerPollInterval   time.Duration
+	gatewayAddr         types.Address
+	jsonrpcAddr         string
+	startBlock          uint64
+	trackerPollInterval time.Duration
 }
 
 // RelayerState is an interface that defines functions that a relayer store has to implement
@@ -203,18 +199,15 @@ func newBridgeManager(
 
 	var err error
 
-	stateSenderAddr := runtimeConfig.GenesisConfig.Bridge[chainID].StateSenderAddr
+	gatewayAddr := runtimeConfig.GenesisConfig.Bridge[chainID].GatewayAddr
 	bridgeManager := &bridgeManager{
 		chainID: chainID,
 		logger:  logger.Named("bridge-manager"),
 		eventTrackerConfig: &eventTrackerConfig{
-			EventTracker:          *runtimeConfig.eventTracker,
-			stateSenderAddr:       stateSenderAddr,
-			exitHelperAddr:        runtimeConfig.GenesisConfig.Bridge[chainID].ExitHelperAddr,
-			checkpointManagerAddr: runtimeConfig.GenesisConfig.Bridge[chainID].CheckpointManagerAddr,
-			jsonrpcAddr:           runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint,
-			startBlock:            runtimeConfig.GenesisConfig.Bridge[chainID].EventTrackerStartBlocks[stateSenderAddr],
-			trackerPollInterval:   runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
+			EventTracker:        *runtimeConfig.eventTracker,
+			jsonrpcAddr:         runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint,
+			startBlock:          runtimeConfig.GenesisConfig.Bridge[chainID].EventTrackerStartBlocks[gatewayAddr],
+			trackerPollInterval: runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
 		},
 		state: runtimeConfig.State,
 	}
@@ -340,9 +333,7 @@ func (b *bridgeManager) initTracker(runtimeConfig *runtimeConfig) (*tracker.Even
 			NumOfBlocksToReconcile: b.eventTrackerConfig.EventTracker.NumOfBlocksToReconcile,
 			PollInterval:           b.eventTrackerConfig.trackerPollInterval,
 			LogFilter: map[ethgo.Address][]ethgo.Hash{
-				ethgo.Address(b.eventTrackerConfig.stateSenderAddr):       {bridgeMessageEventSig},
-				ethgo.Address(b.eventTrackerConfig.checkpointManagerAddr): {checkpointSubmittedEventSig},
-				ethgo.Address(b.eventTrackerConfig.exitHelperAddr):        {exitProcessedEventSig},
+				ethgo.Address(b.eventTrackerConfig.gatewayAddr): {bridgeMessageEventSig},
 			},
 		},
 		store, b.eventTrackerConfig.startBlock,
