@@ -23,7 +23,7 @@ import (
 const nativeTokenNonMintableConfig = "Blade:BLD:18:false:1337"
 
 var (
-	stateSyncResultEvent contractsapi.StateSyncResultEvent
+	bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
 )
 
 func ABICall(relayer txrelayer.TxRelayer, artifact *contracts.Artifact, contractAddress types.Address, senderAddr types.Address, method string, params ...interface{}) (string, error) {
@@ -57,24 +57,24 @@ func ABITransaction(
 
 // checkStateSyncResultLogs is helper function which parses given StateSyncResultEvent event's logs,
 // extracts status topic value and makes assertions against it.
-func checkStateSyncResultLogs(
+func checkBridgeMessageResultLogs(
 	t *testing.T,
 	logs []*ethgo.Log,
 	expectedCount int,
-	handler func(*testing.T, contractsapi.StateSyncResultEvent),
+	handler func(*testing.T, contractsapi.BridgeMessageResultEvent),
 ) {
 	t.Helper()
 	require.Equal(t, expectedCount, len(logs))
 
 	for _, log := range logs {
-		doesMatch, err := stateSyncResultEvent.ParseLog(log)
+		doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
 		require.NoError(t, err)
 		require.True(t, doesMatch)
 
-		t.Logf("Block Number=%d, Decoded Log=%+v\n", log.BlockNumber, stateSyncResultEvent)
+		t.Logf("Block Number=%d, Decoded Log=%+v\n", log.BlockNumber, bridgeMessageResultEvent)
 
 		if handler != nil {
-			handler(t, stateSyncResultEvent)
+			handler(t, bridgeMessageResultEvent)
 		}
 	}
 }
@@ -88,8 +88,8 @@ func assertStateSyncResultSuccess(
 	logs []*ethgo.Log,
 	expectedCount int) {
 	t.Helper()
-	checkStateSyncResultLogs(t, logs, expectedCount,
-		func(t *testing.T, ssre contractsapi.StateSyncResultEvent) {
+	checkBridgeMessageResultLogs(t, logs, expectedCount,
+		func(t *testing.T, ssre contractsapi.BridgeMessageResultEvent) {
 			t.Helper()
 
 			require.True(t, ssre.Status)

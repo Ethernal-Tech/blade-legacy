@@ -42,20 +42,6 @@ func main() {
 		events              []string
 	}{
 		{
-			"StateReceiver",
-			gensc.StateReceiver,
-			false,
-			[]string{
-				"commit",
-				"execute",
-				"batchExecute",
-			},
-			[]string{
-				"StateSyncResult",
-				"NewCommitment",
-			},
-		},
-		{
 			"ChildERC20Predicate",
 			gensc.ChildERC20Predicate,
 			false,
@@ -399,6 +385,7 @@ func main() {
 			false,
 			[]string{
 				"initialize",
+				"receiveBatch",
 			},
 			[]string{
 				"BridgeMessageResult",

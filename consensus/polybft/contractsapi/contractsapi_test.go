@@ -23,13 +23,12 @@ func TestEncoding_Method(t *testing.T) {
 
 	cases := []method{
 		// empty commit
-		&CommitStateReceiverFn{
-			Commitment: &StateSyncCommitment{
-				StartID: big.NewInt(1),
-				EndID:   big.NewInt(1),
-				Root:    types.EmptyRootHash,
+		&ReceiveBatchGatewayFn{
+			Batch: &BridgeMessageBatch{
+				SourceChainID:      big.NewInt(1),
+				DestinationChainID: big.NewInt(0),
 			},
-			Signature: []byte{},
+			Signature: [2]*big.Int{big.NewInt(0), big.NewInt(0)},
 			Bitmap:    []byte{},
 		},
 		// empty commit epoch
@@ -61,21 +60,20 @@ func TestEncoding_Method(t *testing.T) {
 func TestEncoding_Struct(t *testing.T) {
 	t.Parallel()
 
-	commitment := &StateSyncCommitment{
-		StartID: big.NewInt(1),
-		EndID:   big.NewInt(10),
-		Root:    types.StringToHash("hash"),
+	bridgeBatch := BridgeMessageBatch{
+		Messages:           []*BridgeMessage{},
+		SourceChainID:      big.NewInt(1),
+		DestinationChainID: big.NewInt(0),
 	}
 
-	encoding, err := commitment.EncodeAbi()
+	encoding, err := bridgeBatch.EncodeAbi()
 	require.NoError(t, err)
 
-	var commitmentDecoded StateSyncCommitment
+	var bridgeBatchDecoded BridgeMessageBatch
 
-	require.NoError(t, commitmentDecoded.DecodeAbi(encoding))
-	require.Equal(t, commitment.StartID, commitmentDecoded.StartID)
-	require.Equal(t, commitment.EndID, commitmentDecoded.EndID)
-	require.Equal(t, commitment.Root, commitmentDecoded.Root)
+	require.NoError(t, bridgeBatchDecoded.DecodeAbi(encoding))
+	require.Equal(t, bridgeBatch.SourceChainID, bridgeBatchDecoded.SourceChainID)
+	require.Equal(t, bridgeBatch.DestinationChainID, bridgeBatchDecoded.DestinationChainID)
 }
 
 func TestEncodingAndParsingEvent(t *testing.T) {

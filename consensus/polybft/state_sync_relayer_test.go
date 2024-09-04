@@ -2,14 +2,11 @@ package polybft
 
 import (
 	"errors"
-	"math/big"
 	"testing"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
-	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/hashicorp/go-hclog"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -21,12 +18,6 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	testKey := createTestKey(t)
 	bridgeMessageAddr := types.StringToAddress("0x56563")
-
-	commitmentLogs := []*types.Log{
-		createTestLogForNewCommitmentEvent(t, bridgeMessageAddr, 1, 1, types.StringToHash("0x2")),
-		createTestLogForNewCommitmentEvent(t, bridgeMessageAddr, 2, 3, types.StringToHash("0x2")),
-		createTestLogForNewCommitmentEvent(t, bridgeMessageAddr, 4, 5, types.StringToHash("0x2")),
-	}
 
 	headers := []*types.Header{
 		{Number: 2}, {Number: 3}, {Number: 4}, {Number: 5},
@@ -65,8 +56,6 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	require.NoError(t, stateSyncRelayer.Init())
 
 	// post 1st block
-	require.NoError(t, stateSyncRelayer.ProcessLog(headers[0], convertLog(commitmentLogs[0]), nil))
-	require.NoError(t, stateSyncRelayer.ProcessLog(headers[0], convertLog(commitmentLogs[1]), nil))
 	require.NoError(t, stateSyncRelayer.PostBlock(&PostBlockRequest{}))
 
 	time.Sleep(time.Second * 2) // wait for some time
@@ -80,8 +69,6 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	require.False(t, events[1].SentStatus)
 	require.False(t, events[2].SentStatus)
 
-	// post 2nd block
-	require.NoError(t, stateSyncRelayer.ProcessLog(headers[1], convertLog(commitmentLogs[2]), nil))
 	require.NoError(t, stateSyncRelayer.PostBlock(&PostBlockRequest{}))
 
 	time.Sleep(time.Second * 2) // wait for some time
@@ -130,43 +117,4 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 
 	blockhainMock.AssertExpectations(t)
 	dummyTxRelayer.AssertExpectations(t)
-}
-
-type mockStateSyncProofRetriever struct {
-	fn func(uint64) (types.Proof, error)
-}
-
-func (m *mockStateSyncProofRetriever) GetStateSyncProof(stateSyncID uint64) (types.Proof, error) {
-	if m.fn != nil {
-		return m.fn(stateSyncID)
-	}
-
-	return types.Proof{}, nil
-}
-
-func createTestLogForNewCommitmentEvent(
-	t *testing.T,
-	stateSyncAddr types.Address,
-	startEventID uint64,
-	endEventID uint64,
-	rootHash types.Hash) *types.Log {
-	t.Helper()
-
-	var evnt contractsapi.NewCommitmentEvent
-
-	encodedData1, err := abi.MustNewType("uint256").Encode(new(big.Int).SetUint64(startEventID))
-	require.NoError(t, err)
-
-	encodedData2, err := abi.MustNewType("uint256").Encode(new(big.Int).SetUint64(endEventID))
-	require.NoError(t, err)
-
-	return &types.Log{
-		Address: stateSyncAddr,
-		Topics: []types.Hash{
-			types.Hash(evnt.Sig()),
-			types.BytesToHash(encodedData1),
-			types.BytesToHash(encodedData2),
-		},
-		Data: rootHash[:],
-	}
 }

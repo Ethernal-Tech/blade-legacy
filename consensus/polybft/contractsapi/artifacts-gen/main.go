@@ -29,10 +29,6 @@ func main() {
 		Name string
 	}{
 		{
-			"blade/StateReceiver.sol",
-			"StateReceiver",
-		},
-		{
 			"blade/NativeERC20.sol",
 			"NativeERC20",
 		},

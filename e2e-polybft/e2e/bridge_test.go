@@ -44,8 +44,8 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	)
 
 	var (
-		bridgeAmount      = ethgo.Ether(2)
-		stateSyncedResult contractsapi.StateSyncResultEvent
+		bridgeAmount        = ethgo.Ether(2)
+		bridgeMessageResult contractsapi.BridgeMessageResultEvent
 	)
 
 	receiversAddrs := make([]types.Address, transfersCount)
@@ -144,7 +144,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
 		// the bridge transactions are processed and there should be a success state sync events
-		logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum, childEthEndpoint)
+		logs, err := getFilteredLogs(bridgeMessageResult.Sig(), 0, finalBlockNum, childEthEndpoint)
 		require.NoError(t, err)
 
 		// assert that all deposits are executed successfully
@@ -271,7 +271,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 		// the transactions are mined and state syncs should be executed by the relayer
 		// and there should be a success events
-		logs, err := getFilteredLogs(stateSyncedResult.Sig(), initialBlockNum, finalBlockNum, childEthEndpoint)
+		logs, err := getFilteredLogs(bridgeMessageResult.Sig(), initialBlockNum, finalBlockNum, childEthEndpoint)
 		require.NoError(t, err)
 
 		// assert that all state syncs are executed successfully
@@ -370,10 +370,10 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	childEthEndpoint := validatorSrv.JSONRPC()
 
 	// the transactions are processed and there should be a success events
-	var stateSyncedResult contractsapi.StateSyncResultEvent
+	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 	for i := 0; i < numberOfAttempts; i++ {
-		logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, uint64(50+i*epochSize), childEthEndpoint)
+		logs, err := getFilteredLogs(bridgeMessageResult.Sig(), 0, uint64(50+i*epochSize), childEthEndpoint)
 		require.NoError(t, err)
 
 		if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
@@ -534,10 +534,10 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	childEthEndpoint := validatorSrv.JSONRPC()
 
 	// the transactions are processed and there should be a success events
-	var stateSyncedResult contractsapi.StateSyncResultEvent
+	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 	for i := 0; i < numberOfAttempts; i++ {
-		logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, uint64(50+i*epochSize), childEthEndpoint)
+		logs, err := getFilteredLogs(bridgeMessageResult.Sig(), 0, uint64(50+i*epochSize), childEthEndpoint)
 		require.NoError(t, err)
 
 		if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
@@ -1014,10 +1014,10 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		// wait for a couple of sprints
 		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
-		var stateSyncedResult contractsapi.StateSyncResultEvent
+		var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 		// the transactions are processed and there should be a success events
-		logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum, childEthEndpoint)
+		logs, err := getFilteredLogs(bridgeMessageResult.Sig(), 0, finalBlockNum, childEthEndpoint)
 		require.NoError(t, err)
 
 		// assert that all deposits are executed successfully
@@ -1308,10 +1308,10 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
 		// the transaction is processed and there should be a success event
-		var stateSyncedResult contractsapi.StateSyncResultEvent
+		var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 		for i := uint64(0); i < numberOfAttempts; i++ {
-			logs, err := getFilteredLogs(stateSyncedResult.Sig(), 0, finalBlockNum+i*epochSize, childEthEndpoint)
+			logs, err := getFilteredLogs(bridgeMessageResult.Sig(), 0, finalBlockNum+i*epochSize, childEthEndpoint)
 			require.NoError(t, err)
 
 			if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
@@ -1352,16 +1352,16 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
 		// the transaction is processed and there should be a success event
-		var stateSyncedResult contractsapi.StateSyncResultEvent
+		var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 		for i := uint64(0); i < numberOfAttempts; i++ {
-			logs, err := getFilteredLogs(stateSyncedResult.Sig(), currentBlock.Number()+1, finalBlockNum+i*epochSize, childEthEndpoint)
+			logs, err := getFilteredLogs(bridgeMessageResult.Sig(), currentBlock.Number()+1, finalBlockNum+i*epochSize, childEthEndpoint)
 			require.NoError(t, err)
 
 			if len(logs) == expectedStateSyncsCount || i == numberOfAttempts-1 {
 				// assert that sent deposit has failed
-				checkStateSyncResultLogs(t, logs, expectedStateSyncsCount,
-					func(t *testing.T, ssre contractsapi.StateSyncResultEvent) {
+				checkBridgeMessageResultLogs(t, logs, expectedStateSyncsCount,
+					func(t *testing.T, ssre contractsapi.BridgeMessageResultEvent) {
 						t.Helper()
 
 						require.False(t, ssre.Status)

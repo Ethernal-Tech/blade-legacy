@@ -109,11 +109,6 @@ func init() {
 		log.Fatal(err)
 	}
 
-	StateReceiver, err = contracts.DecodeArtifact([]byte(StateReceiverArtifact))
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	System, err = contracts.DecodeArtifact([]byte(SystemArtifact))
 	if err != nil {
 		log.Fatal(err)
