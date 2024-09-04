@@ -130,7 +130,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 
 		if !wp.ChildChainMintable {
-			extractedExitEventIDs, err := common.ExtractExitEventIDs(receipt)
+			extractedExitEventIDs, err := common.ExtractBridgeMessageIDs(receipt)
 			if err != nil {
 				outputter.SetError(fmt.Errorf("failed to extract exit event: %w", err))
 
@@ -145,12 +145,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	outputter.SetCommandResult(
 		&common.BridgeTxResult{
-			Sender:       senderAccount.Address().String(),
-			Receivers:    wp.Receivers,
-			Amounts:      wp.Amounts,
-			ExitEventIDs: exitEventIDs,
-			BlockNumbers: blockNumbers,
-			Title:        "WITHDRAW ERC 20",
+			Sender:            senderAccount.Address().String(),
+			Receivers:         wp.Receivers,
+			Amounts:           wp.Amounts,
+			BridgeMsgEventIDs: exitEventIDs,
+			BlockNumbers:      blockNumbers,
+			Title:             "WITHDRAW ERC 20",
 		})
 }
 

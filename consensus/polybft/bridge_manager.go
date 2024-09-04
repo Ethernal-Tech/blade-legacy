@@ -10,7 +10,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/contracts"
-	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
@@ -156,7 +155,6 @@ type BridgeManager interface {
 	Close()
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
-	BuildExitEventRoot(epoch uint64) (types.Hash, error)
 	BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error)
 	InsertEpoch(epoch uint64, tx *bolt.Tx) error
 }
@@ -182,10 +180,8 @@ var _ BridgeManager = (*bridgeManager)(nil)
 // bridgeManager is a struct that manages different bridge components
 // such as handling and executing bridge events
 type bridgeManager struct {
-	checkpointManager  CheckpointManager
 	bridgeEventManager BridgeEventManager
 	stateSyncRelayer   StateSyncRelayer
-	exitEventRelayer   ExitRelayer
 
 	eventTracker       *tracker.EventTracker
 	eventTrackerConfig *eventTrackerConfig
@@ -227,10 +223,6 @@ func newBridgeManager(
 		return nil, err
 	}
 
-	if err := bridgeManager.initCheckpointManager(eventProvider, runtimeConfig, logger, chainID); err != nil {
-		return nil, err
-	}
-
 	if err := bridgeManager.initStateSyncRelayer(eventProvider, runtimeConfig, logger); err != nil {
 		return nil, err
 	}
@@ -252,12 +244,6 @@ func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 		return fmt.Errorf("failed to execute post block in state sync relayer. Err: %w", err)
 	}
 
-	if err := b.exitEventRelayer.PostBlock(req); err != nil {
-		return fmt.Errorf("failed to execute post block in exit event relayer. Err: %w", err)
-	}
-
-	b.checkpointManager.PostBlock(req)
-
 	return nil
 }
 
@@ -270,11 +256,6 @@ func (b *bridgeManager) PostEpoch(req *PostEpochRequest) error {
 	return nil
 }
 
-// BuildExitEventRoot builds exit event root for given epoch
-func (b *bridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
-	return b.checkpointManager.BuildEventRoot(epoch)
-}
-
 // BridgeBatch returns the pending signed bridge batch
 func (b *bridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
 	return b.bridgeEventManager.BridgeBatch(pendingBlockNumber)
@@ -283,7 +264,6 @@ func (b *bridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSign
 // close stops ongoing go routines in the manager
 func (b *bridgeManager) Close() {
 	b.stateSyncRelayer.Close()
-	b.exitEventRelayer.Close()
 	b.eventTracker.Close()
 }
 
@@ -308,35 +288,6 @@ func (b *bridgeManager) initBridgeEventManager(
 	b.bridgeEventManager = bridgeEventManager
 
 	return b.bridgeEventManager.Init()
-}
-
-// initCheckpointManager initializes checkpoint manager
-// if bridge is not enabled, then a dummy checkpoint manager will be used
-func (b *bridgeManager) initCheckpointManager(
-	eventProvider *EventProvider,
-	runtimeConfig *runtimeConfig,
-	logger hclog.Logger, chainID uint64) error {
-	log := logger.Named("checkpoint_manager")
-
-	txRelayer, err := txrelayer.NewTxRelayer(
-		txrelayer.WithIPAddress(runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint),
-		txrelayer.WithWriter(log.StandardWriter(&hclog.StandardLoggerOptions{})))
-	if err != nil {
-		return err
-	}
-
-	b.checkpointManager = newCheckpointManager(
-		wallet.NewEcdsaSigner(runtimeConfig.Key),
-		runtimeConfig.GenesisConfig.Bridge[chainID].CheckpointManagerAddr,
-		txRelayer,
-		runtimeConfig.blockchain,
-		runtimeConfig.polybftBackend,
-		log,
-		runtimeConfig.State)
-
-	eventProvider.Subscribe(b.checkpointManager)
-
-	return nil
 }
 
 // initStateSyncRelayer initializes bridge event relayer
@@ -409,10 +360,6 @@ func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	switch eventLog.Topics[0] {
 	case bridgeMessageEventSig:
 		return b.bridgeEventManager.AddLog(chainID, eventLog)
-	case checkpointSubmittedEventSig:
-		return b.exitEventRelayer.AddLog(eventLog)
-	case exitProcessedEventSig:
-		return b.exitEventRelayer.AddLog(eventLog)
 	default:
 		b.logger.Error("Unknown event log receiver from event tracker")
 

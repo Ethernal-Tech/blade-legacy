@@ -1145,21 +1145,6 @@ func createTestExtraForAccounts(t *testing.T, epoch uint64, validators validator
 	return extraData.MarshalRLPTo(nil)
 }
 
-func encodeExitEvents(t *testing.T, exitEvents []*ExitEvent) [][]byte {
-	t.Helper()
-
-	encodedEvents := make([][]byte, len(exitEvents))
-
-	for i, e := range exitEvents {
-		encodedEvent, err := e.L2StateSyncedEvent.Encode()
-		require.NoError(t, err)
-
-		encodedEvents[i] = encodedEvent
-	}
-
-	return encodedEvents
-}
-
 func createTestBridge(t *testing.T, state *State) Bridge {
 	t.Helper()
 

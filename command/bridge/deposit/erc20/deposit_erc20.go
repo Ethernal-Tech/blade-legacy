@@ -210,7 +210,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 				var exitEventIDs []*big.Int
 
 				if dp.ChildChainMintable {
-					if exitEventIDs, err = common.ExtractExitEventIDs(receipt); err != nil {
+					if exitEventIDs, err = common.ExtractBridgeMessageIDs(receipt); err != nil {
 						return fmt.Errorf("failed to extract exit event: %w", err)
 					}
 				}
@@ -257,13 +257,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	outputter.SetCommandResult(
 		&common.BridgeTxResult{
-			Sender:         depositorAddr.String(),
-			Receivers:      dp.Receivers,
-			Amounts:        dp.Amounts,
-			ExitEventIDs:   exitEventIDs,
-			ChildTokenAddr: childToken,
-			BlockNumbers:   blockNumbers,
-			Title:          "DEPOSIT ERC 20",
+			Sender:            depositorAddr.String(),
+			Receivers:         dp.Receivers,
+			Amounts:           dp.Amounts,
+			BridgeMsgEventIDs: exitEventIDs,
+			ChildTokenAddr:    childToken,
+			BlockNumbers:      blockNumbers,
+			Title:             "DEPOSIT ERC 20",
 		})
 }
 

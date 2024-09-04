@@ -32,11 +32,6 @@ var (
 	GetCheckpointBlockABIResponse = abi.MustNewType("tuple(bool isFound, uint256 checkpointBlock)")
 )
 
-// ToABI converts StateSyncEvent to ABI
-func (sse *StateSyncedEvent) EncodeAbi() ([]byte, error) {
-	return stateSyncABIType.Encode([]interface{}{sse})
-}
-
 var (
 	_ StateTransactionInput = &CommitEpochEpochManagerFn{}
 	_ StateTransactionInput = &DistributeRewardForEpochManagerFn{}

@@ -19,8 +19,8 @@ import (
 var (
 	errUnknownStateSyncRelayerEvent = errors.New("unknown event from state receiver contract")
 
-	commitmentEventSignature      = new(contractsapi.NewCommitmentEvent).Sig()
-	stateSyncResultEventSignature = new(contractsapi.StateSyncResultEvent).Sig()
+	commitmentEventSignature          = new(contractsapi.NewCommitmentEvent).Sig()
+	bridgeMessageResultEventSignature = new(contractsapi.BridgeMessageResultEvent).Sig()
 )
 
 // StateSyncRelayer is an interface that defines functions for state sync relayer
@@ -161,8 +161,8 @@ func (ssr *stateSyncRelayerImpl) GetLogFilters() map[types.Address][]types.Hash 
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
 	var (
-		commitEvent          contractsapi.NewCommitmentEvent
-		stateSyncResultEvent contractsapi.StateSyncResultEvent
+		commitEvent              contractsapi.NewCommitmentEvent
+		bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
 	)
 
 	switch log.Topics[0] {
@@ -187,22 +187,22 @@ func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log
 
 		return ssr.state.UpdateRelayerEvents(newEvents, nil, dbTx)
 
-	case stateSyncResultEventSignature:
-		_, err := stateSyncResultEvent.ParseLog(log)
+	case bridgeMessageResultEventSignature:
+		_, err := bridgeMessageResultEvent.ParseLog(log)
 		if err != nil {
 			return err
 		}
 
-		eventID := stateSyncResultEvent.Counter.Uint64()
+		eventID := bridgeMessageResultEvent.Counter.Uint64()
 
-		if stateSyncResultEvent.Status {
-			ssr.logger.Debug("state sync result event has been processed", "block", header.Number, "stateSyncID", eventID)
+		if bridgeMessageResultEvent.Status {
+			ssr.logger.Debug("bridge message result event has been processed", "block", header.Number, "bridgeMsgID", eventID)
 
 			return ssr.state.UpdateRelayerEvents(nil, []*RelayerEventMetaData{{EventID: eventID}}, dbTx)
 		}
 
-		ssr.logger.Debug("state sync result event failed to process", "block", header.Number,
-			"stateSyncID", eventID, "reason", string(stateSyncResultEvent.Message))
+		ssr.logger.Debug("bridge message result event failed to process", "block", header.Number,
+			"bridgeMsgID", eventID, "reason", string(bridgeMessageResultEvent.Message))
 
 		return nil
 
@@ -224,4 +224,21 @@ func getBridgeTxRelayer(rpcEndpoint string, logger hclog.Logger) (txrelayer.TxRe
 	return txrelayer.NewTxRelayer(
 		txrelayer.WithIPAddress(rpcEndpoint), txrelayer.WithNoWaiting(),
 		txrelayer.WithWriter(logger.StandardWriter(&hclog.StandardLoggerOptions{})))
+}
+
+// convertLog converts types.Log to ethgo.Log
+func convertLog(log *types.Log) *ethgo.Log {
+	l := &ethgo.Log{
+		Address: ethgo.Address(log.Address),
+		Data:    make([]byte, len(log.Data)),
+		Topics:  make([]ethgo.Hash, len(log.Topics)),
+	}
+
+	copy(l.Data, log.Data)
+
+	for i, topic := range log.Topics {
+		l.Topics[i] = ethgo.Hash(topic)
+	}
+
+	return l
 }

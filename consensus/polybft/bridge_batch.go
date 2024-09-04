@@ -176,3 +176,29 @@ func createMerkleTree(bridgeMessageEvent []*contractsapi.BridgeMsgEvent) (*merkl
 
 	return merkle.NewMerkleTree(bridgeMessageData)
 }
+
+// BridgeMessage is an event emitted by Exit contract
+type BridgeMessage struct {
+	*contractsapi.BridgeMsgEvent
+	// EpochNumber is the epoch number in which bridgeMsg event was added
+	EpochNumber uint64 `abi:"-"`
+	// BlockNumber is the block in which bridgeMsg event was added
+	BlockNumber uint64 `abi:"-"`
+}
+
+// createExitTree creates an exit event merkle tree from provided exit events
+func createExitTree(bridgeMessages []*BridgeMessage) (*merkle.MerkleTree, error) {
+	numOfEvents := len(bridgeMessages)
+	data := make([][]byte, numOfEvents)
+
+	for i := 0; i < numOfEvents; i++ {
+		b, err := bridgeMessages[i].BridgeMsgEvent.Encode()
+		if err != nil {
+			return nil, err
+		}
+
+		data[i] = b
+	}
+
+	return merkle.NewMerkleTree(data)
+}

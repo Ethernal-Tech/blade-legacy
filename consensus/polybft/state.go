@@ -40,7 +40,6 @@ type State struct {
 	close chan struct{}
 
 	BridgeMessageStore    *BridgeMessageStore
-	ExitStore             *ExitStore
 	EpochStore            *EpochStore
 	ProposerSnapshotStore *ProposerSnapshotStore
 	StakeStore            *StakeStore
@@ -58,7 +57,6 @@ func newState(path string, closeCh chan struct{}, chainIDs []uint64) (*State, er
 		db:                    db,
 		close:                 closeCh,
 		BridgeMessageStore:    &BridgeMessageStore{db: db, chainIDs: chainIDs},
-		ExitStore:             &ExitStore{db: db},
 		EpochStore:            &EpochStore{db: db, chainIDs: chainIDs},
 		ProposerSnapshotStore: &ProposerSnapshotStore{db: db},
 		StakeStore:            &StakeStore{db: db},
@@ -77,10 +75,6 @@ func (s *State) initStorages() error {
 	// init the buckets
 	return s.db.Update(func(tx *bolt.Tx) error {
 		if err := s.BridgeMessageStore.initialize(tx); err != nil {
-			return err
-		}
-
-		if err := s.ExitStore.initialize(tx); err != nil {
 			return err
 		}
 
