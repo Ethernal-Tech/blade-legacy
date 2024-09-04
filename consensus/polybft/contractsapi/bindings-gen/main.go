@@ -612,11 +612,13 @@ func generateType(generatedData *generatedData, name string, obj *abi.Type, res 
 
 // generateNestedType generates code for nested types found in smart contracts structs
 func generateNestedType(generatedData *generatedData, name string, obj *abi.Type, res *[]string) (string, error) {
+	internalType := getInternalType(name, obj)
+
 	for _, s := range generatedData.structs {
-		if s == name {
+		if s == internalType {
 			// do not generate the same type again if it's already generated
 			// this happens when two functions use the same struct type as one of its parameters
-			return "*" + name, nil
+			return "*" + internalType, nil
 		}
 	}
 
