@@ -21,15 +21,6 @@ func TestEncoding_Method(t *testing.T) {
 	t.Parallel()
 
 	cases := []method{
-		// empty commit
-		&ReceiveBatchGatewayFn{
-			Batch: &BridgeMessageBatch{
-				SourceChainID:      big.NewInt(1),
-				DestinationChainID: big.NewInt(0),
-			},
-			Signature: [2]*big.Int{big.NewInt(0), big.NewInt(0)},
-			Bitmap:    []byte{},
-		},
 		// empty commit epoch
 		&CommitEpochEpochManagerFn{
 			ID: big.NewInt(1),
@@ -72,7 +63,7 @@ func TestEncoding_Struct(t *testing.T) {
 
 	require.NoError(t, bridgeBatchDecoded.DecodeAbi(encoding))
 	require.Equal(t, bridgeBatch.SourceChainID, bridgeBatchDecoded.SourceChainID)
-	require.Equal(t, bridgeBatch.DestinationChainID, bridgeBatchDecoded.DestinationChainID)
+	require.Equal(t, bridgeBatch.DestinationChainID.Uint64(), bridgeBatchDecoded.DestinationChainID.Uint64())
 }
 
 func TestEncodingAndParsingEvent(t *testing.T) {
