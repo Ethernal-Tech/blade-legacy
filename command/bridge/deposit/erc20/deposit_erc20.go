@@ -171,14 +171,14 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	type bridgeTxData struct {
-		exitEventIDs   []*big.Int
-		blockNumber    uint64
-		childTokenAddr *types.Address
+		bridgeMsgEventIDs []*big.Int
+		blockNumber       uint64
+		childTokenAddr    *types.Address
 	}
 
 	g, ctx := errgroup.WithContext(cmd.Context())
 	bridgeTxCh := make(chan bridgeTxData, len(dp.Receivers))
-	exitEventIDs := make([]*big.Int, 0, len(dp.Receivers))
+	bridgeMsgEventIDs := make([]*big.Int, 0, len(dp.Receivers))
 	blockNumbers := make([]uint64, 0, len(dp.Receivers))
 
 	for i := range dp.Receivers {
@@ -207,10 +207,10 @@ func runCommand(cmd *cobra.Command, _ []string) {
 					return fmt.Errorf("receiver: %s, amount: %s", receiver, amount)
 				}
 
-				var exitEventIDs []*big.Int
+				var bridgeMsgEventIDs []*big.Int
 
 				if dp.ChildChainMintable {
-					if exitEventIDs, err = common.ExtractBridgeMessageIDs(receipt); err != nil {
+					if bridgeMsgEventIDs, err = common.ExtractBridgeMessageIDs(receipt); err != nil {
 						return fmt.Errorf("failed to extract exit event: %w", err)
 					}
 				}
@@ -223,9 +223,9 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 				// send aggregated data to channel if everything went ok
 				bridgeTxCh <- bridgeTxData{
-					blockNumber:    receipt.BlockNumber,
-					exitEventIDs:   exitEventIDs,
-					childTokenAddr: childToken,
+					blockNumber:       receipt.BlockNumber,
+					bridgeMsgEventIDs: bridgeMsgEventIDs,
+					childTokenAddr:    childToken,
 				}
 
 				return nil
@@ -244,8 +244,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	var childToken *types.Address
 
 	for x := range bridgeTxCh {
-		if x.exitEventIDs != nil {
-			exitEventIDs = append(exitEventIDs, x.exitEventIDs...)
+		if x.bridgeMsgEventIDs != nil {
+			bridgeMsgEventIDs = append(bridgeMsgEventIDs, x.bridgeMsgEventIDs...)
 		}
 
 		blockNumbers = append(blockNumbers, x.blockNumber)
@@ -260,7 +260,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 			Sender:            depositorAddr.String(),
 			Receivers:         dp.Receivers,
 			Amounts:           dp.Amounts,
-			BridgeMsgEventIDs: exitEventIDs,
+			BridgeMsgEventIDs: bridgeMsgEventIDs,
 			ChildTokenAddr:    childToken,
 			BlockNumbers:      blockNumbers,
 			Title:             "DEPOSIT ERC 20",

@@ -27,7 +27,6 @@ var (
 	ChildValidatorSet               *contracts.Artifact
 	NativeERC20                     *contracts.Artifact
 	NativeERC20Mintable             *contracts.Artifact
-	StateReceiver                   *contracts.Artifact
 	ChildERC20                      *contracts.Artifact
 	ChildERC20Predicate             *contracts.Artifact
 	ChildERC20PredicateACL          *contracts.Artifact
@@ -296,7 +295,6 @@ func init() {
 		"ChildValidatorSet":               ChildValidatorSet,
 		"NativeERC20":                     NativeERC20,
 		"NativeERC20Mintable":             NativeERC20Mintable,
-		"StateReceiver":                   StateReceiver,
 		"ChildERC20":                      ChildERC20,
 		"ChildERC20Predicate":             ChildERC20Predicate,
 		"ChildERC20PredicateACL":          ChildERC20PredicateACL,

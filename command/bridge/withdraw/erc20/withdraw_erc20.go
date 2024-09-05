@@ -93,7 +93,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	exitEventIDs := make([]*big.Int, 0, len(wp.Receivers))
+	bridgeMsgEventIDs := make([]*big.Int, 0, len(wp.Receivers))
 	blockNumbers := make([]uint64, len(wp.Receivers))
 
 	for i := range wp.Receivers {
@@ -130,14 +130,14 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 
 		if !wp.ChildChainMintable {
-			extractedExitEventIDs, err := common.ExtractBridgeMessageIDs(receipt)
+			extractedBridgeMsgEventIDs, err := common.ExtractBridgeMessageIDs(receipt)
 			if err != nil {
-				outputter.SetError(fmt.Errorf("failed to extract exit event: %w", err))
+				outputter.SetError(fmt.Errorf("failed to extract bridge message event: %w", err))
 
 				return
 			}
 
-			exitEventIDs = append(exitEventIDs, extractedExitEventIDs...)
+			bridgeMsgEventIDs = append(bridgeMsgEventIDs, extractedBridgeMsgEventIDs...)
 		}
 
 		blockNumbers[i] = receipt.BlockNumber
@@ -148,7 +148,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 			Sender:            senderAccount.Address().String(),
 			Receivers:         wp.Receivers,
 			Amounts:           wp.Amounts,
-			BridgeMsgEventIDs: exitEventIDs,
+			BridgeMsgEventIDs: bridgeMsgEventIDs,
 			BlockNumbers:      blockNumbers,
 			Title:             "WITHDRAW ERC 20",
 		})
