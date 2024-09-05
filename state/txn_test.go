@@ -47,6 +47,10 @@ func (m *mockSnapshot) GetCode(hash types.Hash) ([]byte, bool) {
 	return nil, false
 }
 
+func (m *mockSnapshot) GetTreeHash() types.Hash {
+	return emptyStateHash
+}
+
 func (m *mockSnapshot) Commit(objs []*Object) (Snapshot, []byte, error) {
 	return nil, nil, nil
 }

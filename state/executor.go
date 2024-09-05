@@ -130,6 +130,22 @@ type BlockResult struct {
 	TotalGas uint64
 }
 
+// GetDumpTree function returns accounts based on the selected criteria.
+func (e *Executor) GetDumpTree(dump *Dump, parentHash types.Hash,
+	block *types.Block, opts *DumpInfo) ([]byte, error) {
+	txn, err := e.ProcessBlock(parentHash, block, types.BytesToAddress(block.Header.Miner))
+	if err != nil {
+		return nil, err
+	}
+
+	next, err := txn.state.GetDumpTree(dump, opts, false)
+	if err != nil {
+		return nil, err
+	}
+
+	return next, nil
+}
+
 // ProcessBlock already does all the handling of the whole process
 func (e *Executor) ProcessBlock(
 	parentRoot types.Hash,

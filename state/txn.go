@@ -1,6 +1,8 @@
 package state
 
 import (
+	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -28,6 +30,7 @@ type readSnapshot interface {
 	GetStorage(addr types.Address, root types.Hash, key types.Hash) types.Hash
 	GetAccount(addr types.Address) (*Account, error)
 	GetCode(hash types.Hash) ([]byte, bool)
+	GetTreeHash() types.Hash
 }
 
 var (
@@ -65,6 +68,86 @@ func newTxn(snapshot readSnapshot) *Txn {
 		txn:       i.Txn(),
 		codeCache: codeCache,
 	}
+}
+
+// GetDumpTree function returns accounts based on the selected criteria.
+func (txn *Txn) GetDumpTree(dumpObject *Dump, opts *DumpInfo, deleteEmptyObjects bool) ([]byte, error) {
+	if err := txn.CleanDeleteObjects(deleteEmptyObjects); err != nil {
+		return nil, err
+	}
+
+	var (
+		nextKey         []byte
+		startValid      = opts.Start == nil || len(opts.Start) == 0 || bytes.Equal(opts.Start, types.EmptyRootHash.Bytes())
+		committedIradix = txn.GetRadix().Commit()
+	)
+
+	dumpObject.Accounts = make(map[types.Address]DumpAccount)
+	dumpObject.Root = txn.snapshot.GetTreeHash().String()
+
+	committedIradix.Root().Walk(func(k []byte, v interface{}) bool {
+		a, ok := v.(*StateObject)
+		if !ok {
+			return false
+		}
+
+		if !startValid {
+			if !bytes.Equal(opts.Start, k) {
+				return false
+			}
+
+			startValid = true
+		}
+
+		if opts.Max > 0 && len(dumpObject.Accounts) >= opts.Max {
+			nextKey = k
+
+			return true
+		}
+
+		if k == nil && opts.OnlyWithAddresses {
+			return false
+		}
+
+		addrBytes := types.BytesToAddress(k)
+		dumpAccount := DumpAccount{
+			Nonce:     a.Account.Nonce,
+			Address:   addrBytes,
+			Balance:   a.Account.Balance.String(),
+			Root:      a.Account.Root.Bytes(),
+			CodeHash:  a.Account.CodeHash,
+			SecureKey: k,
+		}
+
+		if !opts.SkipCode {
+			dumpAccount.Code = a.Code
+		}
+
+		if !a.Deleted && !opts.SkipStorage && a.Txn != nil {
+			dumpAccount.Storage = make(map[types.Hash]string)
+
+			a.Txn.Root().Walk(func(k []byte, v interface{}) bool {
+				if k == nil || v == nil {
+					return false
+				}
+
+				bytesValue, ok := v.([]byte)
+				if !ok {
+					return false
+				}
+
+				dumpAccount.Storage[types.BytesToHash(k)] = hex.EncodeToString(bytesValue)
+
+				return false
+			})
+		}
+
+		dumpObject.Accounts[addrBytes] = dumpAccount
+
+		return false
+	})
+
+	return nextKey, nil
 }
 
 // Snapshot takes a snapshot at this point in time

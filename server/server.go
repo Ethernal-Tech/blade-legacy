@@ -721,6 +721,38 @@ func (j *jsonRPCHub) GetCode(root types.Hash, addr types.Address) ([]byte, error
 	return code, nil
 }
 
+// DumpTree retrieves accounts based on the specified criteria for the given block.
+func (j *jsonRPCHub) DumpTree(block *types.Block, opts *state.DumpInfo) (*state.Dump, error) {
+	parentHeader, ok := j.GetHeaderByHash(block.ParentHash())
+	if !ok {
+		return nil, fmt.Errorf("parent header not found for hash: %s", block.ParentHash().String())
+	}
+
+	dump := &state.Dump{}
+	if _, err := j.Executor.GetDumpTree(dump, parentHeader.StateRoot, block, opts); err != nil {
+		return nil, fmt.Errorf("failed to get dump tree: %w", err)
+	}
+
+	return dump, nil
+}
+
+// GetIteratorDumpTree returns a set of accounts based on the given criteria and depends on the starting element.
+func (j *jsonRPCHub) GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error) {
+	parentHeader, ok := j.GetHeaderByHash(block.ParentHash())
+	if !ok {
+		return nil, fmt.Errorf("parent header not found for hash: %s", block.ParentHash().String())
+	}
+
+	itDump := &state.IteratorDump{}
+	if nextKey, err := j.Executor.GetDumpTree(&itDump.Dump, parentHeader.StateRoot, block, opts); err != nil {
+		return nil, err
+	} else {
+		itDump.Next = nextKey
+	}
+
+	return itDump, nil
+}
+
 func (j *jsonRPCHub) ApplyTxn(
 	header *types.Header,
 	txn *types.Transaction,

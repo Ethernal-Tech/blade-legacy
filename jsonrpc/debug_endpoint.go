@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
+	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer/calltracer"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer/structtracer"
@@ -23,6 +24,8 @@ const (
 	blockString    = "block"
 	mutexString    = "mutex"
 	heapString     = "heap"
+	// AccountRangeMaxResults is the maximum number of results to be returned per call
+	AccountRangeMaxResults = 256
 )
 
 var (
@@ -51,6 +54,12 @@ type debugBlockchainStore interface {
 
 	// GetPendingTx returns the transaction by hash in the TxPool (pending txn) [Thread-safe]
 	GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
+
+	// GetIteratorDumpTree returns a set of accounts based on the given criteria and depends on the starting element.
+	GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error)
+
+	// DumpTree retrieves accounts based on the specified criteria for the given block.
+	DumpTree(block *types.Block, opts *state.DumpInfo) (*state.Dump, error)
 
 	// GetBlockByHash gets a block using the provided hash
 	GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool)
@@ -642,6 +651,74 @@ func (d *Debug) GetRawReceipts(filter BlockNumberOrHash) (interface{}, error) {
 			}
 
 			return result, nil
+		},
+	)
+}
+
+// AccountRange enumerates all accounts in the given block and start point in paging request
+func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults int, nocode,
+	nostorage, incompletes bool) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return state.IteratorDump{}, fmt.Errorf("failed to get header: %w", err)
+			}
+
+			block, ok := d.store.GetBlockByHash(header.Hash, true)
+			if !ok {
+				return nil, fmt.Errorf("block not found for hash %s", header.Hash.String())
+			}
+
+			if maxResults <= 0 || maxResults > AccountRangeMaxResults {
+				maxResults = AccountRangeMaxResults
+			}
+
+			opts := &state.DumpInfo{
+				SkipCode:          nocode,
+				SkipStorage:       nostorage,
+				OnlyWithAddresses: !incompletes,
+				Start:             start,
+				Max:               maxResults,
+			}
+
+			iDump, err := d.store.GetIteratorDumpTree(block, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get iterator dump tree: %w", err)
+			}
+
+			return iDump, nil
+		},
+	)
+}
+
+// AccountRange enumerates all accounts in the given block and start point in paging request
+func (d *Debug) DumpBlock(blockNumber BlockNumber) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			num, err := GetNumericBlockNumber(blockNumber, d.store)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get block number: %w", err)
+			}
+
+			block, ok := d.store.GetBlockByNumber(num, true)
+			if !ok {
+				return nil, fmt.Errorf("block not found for number %d", num)
+			}
+
+			opts := &state.DumpInfo{
+				OnlyWithAddresses: true,
+				Max:               AccountRangeMaxResults,
+			}
+
+			iDump, err := d.store.GetIteratorDumpTree(block, opts)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get iterator dump tree: %w", err)
+			}
+
+			return iDump, nil
 		},
 	)
 }

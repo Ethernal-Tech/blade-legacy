@@ -23,6 +23,41 @@ type Snapshot interface {
 	Commit(objs []*Object) (Snapshot, []byte, error)
 }
 
+// DumpAccount represents an account in the state.
+type DumpAccount struct {
+	Balance   string                `json:"balance"`
+	Nonce     uint64                `json:"nonce"`
+	Root      []byte                `json:"root"`
+	CodeHash  []byte                `json:"codeHash"`
+	Code      []byte                `json:"code,omitempty"`
+	Storage   map[types.Hash]string `json:"storage,omitempty"`
+	Address   types.Address         `json:"address,omitempty"` // Address only present in iterative (line-by-line) mode
+	SecureKey []byte                `json:"key,omitempty"`     // If we don't have address, we can output the key
+
+}
+
+// Dump represents the full dump in a collected format, as one large map.
+type Dump struct {
+	Root     string                        `json:"root"`
+	Accounts map[types.Address]DumpAccount `json:"accounts"`
+}
+
+// DumpConfig is a set of options to control what portions of the statewill be
+// iterated and collected.
+type DumpInfo struct {
+	SkipCode          bool
+	SkipStorage       bool
+	OnlyWithAddresses bool
+	Start             []byte
+	Max               int
+}
+
+// IteratorDump is an implementation for iterating over data.
+type IteratorDump struct {
+	Dump
+	Next []byte `json:"next,omitempty"` // nil if no more accounts
+}
+
 // Account is the account reference in the ethereum state
 type Account struct {
 	Nonce    uint64

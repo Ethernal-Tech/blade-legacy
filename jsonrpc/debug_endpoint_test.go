@@ -11,24 +11,27 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
+	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer/structtracer"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
 type debugEndpointMockStore struct {
-	headerFn            func() *types.Header
-	getHeaderByNumberFn func(uint64) (*types.Header, bool)
-	getReceiptsByHashFn func(types.Hash) ([]*types.Receipt, error)
-	readTxLookupFn      func(types.Hash) (uint64, bool)
-	getPendingTxFn      func(types.Hash) (*types.Transaction, bool)
-	getBlockByHashFn    func(types.Hash, bool) (*types.Block, bool)
-	getBlockByNumberFn  func(uint64, bool) (*types.Block, bool)
-	traceBlockFn        func(*types.Block, tracer.Tracer) ([]interface{}, error)
-	traceTxnFn          func(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
-	traceCallFn         func(*types.Transaction, *types.Header, tracer.Tracer) (interface{}, error)
-	getNonceFn          func(types.Address) uint64
-	getAccountFn        func(types.Hash, types.Address) (*Account, error)
+	headerFn              func() *types.Header
+	getHeaderByNumberFn   func(uint64) (*types.Header, bool)
+	getReceiptsByHashFn   func(types.Hash) ([]*types.Receipt, error)
+	readTxLookupFn        func(types.Hash) (uint64, bool)
+	getPendingTxFn        func(types.Hash) (*types.Transaction, bool)
+	getIteratorDumpTreeFn func(*types.Block, *state.DumpInfo) (*state.IteratorDump, error)
+	dumpTreeFn            func(*types.Block, *state.DumpInfo) (*state.Dump, error)
+	getBlockByHashFn      func(types.Hash, bool) (*types.Block, bool)
+	getBlockByNumberFn    func(uint64, bool) (*types.Block, bool)
+	traceBlockFn          func(*types.Block, tracer.Tracer) ([]interface{}, error)
+	traceTxnFn            func(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
+	traceCallFn           func(*types.Transaction, *types.Header, tracer.Tracer) (interface{}, error)
+	getNonceFn            func(types.Address) uint64
+	getAccountFn          func(types.Hash, types.Address) (*Account, error)
 }
 
 func (s *debugEndpointMockStore) Header() *types.Header {
@@ -49,6 +52,14 @@ func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (uint64, bool)
 
 func (s *debugEndpointMockStore) GetPendingTx(txHash types.Hash) (*types.Transaction, bool) {
 	return s.getPendingTxFn(txHash)
+}
+
+func (s *debugEndpointMockStore) GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error) {
+	return s.getIteratorDumpTreeFn(block, opts)
+}
+
+func (s *debugEndpointMockStore) DumpTree(block *types.Block, opts *state.DumpInfo) (*state.Dump, error) {
+	return s.dumpTreeFn(block, opts)
 }
 
 func (s *debugEndpointMockStore) GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool) {
