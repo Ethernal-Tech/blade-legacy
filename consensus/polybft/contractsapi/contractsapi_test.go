@@ -70,11 +70,11 @@ func TestEncodingAndParsingEvent(t *testing.T) {
 	t.Parallel()
 
 	var (
-		bridgeMsgEventAPI BridgeMsgEvent
+		bridgeMsgEvent BridgeMsgEvent
 	)
 
 	topics := make([]ethgo.Hash, 4)
-	topics[0] = bridgeMsgEventAPI.Sig()
+	topics[0] = bridgeMsgEvent.Sig()
 	topics[1] = ethgo.BytesToHash(common.EncodeUint64ToBytes(11))
 	topics[2] = ethgo.BytesToHash(types.StringToAddress("0x1111").Bytes())
 	topics[3] = ethgo.BytesToHash(types.StringToAddress("0x2222").Bytes())
@@ -87,25 +87,23 @@ func TestEncodingAndParsingEvent(t *testing.T) {
 		Data:   encodedData,
 	}
 
-	var exitEvent BridgeMsgEvent
-
 	// log matches event
-	doesMatch, err := exitEvent.ParseLog(log)
+	doesMatch, err := bridgeMsgEvent.ParseLog(log)
 	require.NoError(t, err)
 	require.True(t, doesMatch)
-	require.Equal(t, uint64(11), exitEvent.ID.Uint64())
+	require.Equal(t, uint64(11), bridgeMsgEvent.ID.Uint64())
 
 	// change exit event id
 	log.Topics[1] = ethgo.BytesToHash(common.EncodeUint64ToBytes(22))
-	doesMatch, err = exitEvent.ParseLog(log)
+	doesMatch, err = bridgeMsgEvent.ParseLog(log)
 	require.NoError(t, err)
 	require.True(t, doesMatch)
-	require.Equal(t, uint64(22), exitEvent.ID.Uint64())
+	require.Equal(t, uint64(22), bridgeMsgEvent.ID.Uint64())
 
 	// error on parsing log
-	log.Topics[0] = bridgeMsgEventAPI.Sig()
+	log.Topics[0] = bridgeMsgEvent.Sig()
 	log.Topics = log.Topics[:3]
-	doesMatch, err = exitEvent.ParseLog(log)
+	doesMatch, err = bridgeMsgEvent.ParseLog(log)
 	require.Error(t, err)
 	require.True(t, doesMatch)
 }

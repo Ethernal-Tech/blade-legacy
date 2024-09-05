@@ -28,9 +28,7 @@ const (
 	defaultMaxEventsPerBatch = uint64(10)
 )
 
-var (
-	bridgeMessageEventSig = new(contractsapi.BridgeMsgEvent).Sig()
-)
+var bridgeMessageEventSig = new(contractsapi.BridgeMsgEvent).Sig()
 
 // RelayerEventMetaData keeps information about a relayer event
 type RelayerEventMetaData struct {
