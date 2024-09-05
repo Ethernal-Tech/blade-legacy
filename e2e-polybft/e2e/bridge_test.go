@@ -196,12 +196,12 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(childEthEndpoint))
 		require.NoError(t, err)
 
-		lastCommittedIDMethod := contractsapi.StateReceiver.Abi.GetMethod("lastCommittedId")
+		lastCommittedIDMethod := contractsapi.BridgeStorage.Abi.GetMethod("lastCommitted")
 		lastCommittedIDInput, err := lastCommittedIDMethod.Encode([]interface{}{})
 		require.NoError(t, err)
 
 		// check that we submitted the minimal commitment to smart contract
-		commitmentIDRaw, err := txRelayer.Call(types.ZeroAddress, contracts.GatewayContract, lastCommittedIDInput)
+		commitmentIDRaw, err := txRelayer.Call(types.ZeroAddress, contracts.BridgeStorageContract, lastCommittedIDInput)
 		require.NoError(t, err)
 
 		initialCommittedID, err := helperCommon.ParseUint64orHex(&commitmentIDRaw)

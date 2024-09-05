@@ -8,7 +8,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
-	merkle "github.com/Ethernal-Tech/merkle-tree"
 )
 
 // PendingBridgeBatch holds pending bridge batch for epoch
@@ -157,48 +156,4 @@ func getBridgeBatchSignedTx(txs []*types.Transaction) (*BridgeBatchSigned, error
 	}
 
 	return nil, nil
-}
-
-// createMerkleTree creates a merkle tree from provided bridge message events
-// if only one bridge message event is provided, a second, empty leaf will be added to merkle tree
-// so that we can have a batch with a single bridge message event
-func createMerkleTree(bridgeMessageEvent []*contractsapi.BridgeMsgEvent) (*merkle.MerkleTree, error) {
-	bridgeMessageData := make([][]byte, len(bridgeMessageEvent))
-
-	for i, event := range bridgeMessageEvent {
-		data, err := event.Encode()
-		if err != nil {
-			return nil, err
-		}
-
-		bridgeMessageData[i] = data
-	}
-
-	return merkle.NewMerkleTree(bridgeMessageData)
-}
-
-// BridgeMessage is an event emitted by Exit contract
-type BridgeMessage struct {
-	*contractsapi.BridgeMsgEvent
-	// EpochNumber is the epoch number in which bridgeMsg event was added
-	EpochNumber uint64 `abi:"-"`
-	// BlockNumber is the block in which bridgeMsg event was added
-	BlockNumber uint64 `abi:"-"`
-}
-
-// createExitTree creates an exit event merkle tree from provided exit events
-func createExitTree(bridgeMessages []*BridgeMessage) (*merkle.MerkleTree, error) {
-	numOfEvents := len(bridgeMessages)
-	data := make([][]byte, numOfEvents)
-
-	for i := 0; i < numOfEvents; i++ {
-		b, err := bridgeMessages[i].BridgeMsgEvent.Encode()
-		if err != nil {
-			return nil, err
-		}
-
-		data[i] = b
-	}
-
-	return merkle.NewMerkleTree(data)
 }
