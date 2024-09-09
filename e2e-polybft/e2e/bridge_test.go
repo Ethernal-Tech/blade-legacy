@@ -430,7 +430,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
 	require.NoError(t, err)
 
-	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
+	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockData.EpochNumber)
 
 	// assert that owners of given token ids are the accounts on the root chain ERC 721 token
 	for i, receiver := range receiversAddrs {
@@ -1084,7 +1084,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
 		require.NoError(t, err)
 
-		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
+		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockData.EpochNumber)
 
 		oldBalances := map[types.Address]*big.Int{}
 
@@ -1268,7 +1268,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
 		require.NoError(t, err)
 
-		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.Checkpoint.EpochNumber)
+		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockData.EpochNumber)
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw, true)

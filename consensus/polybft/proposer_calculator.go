@@ -268,7 +268,7 @@ func (pc *ProposerCalculator) updatePerBlock(blockNumber uint64, dbTx *bolt.Tx) 
 	}
 
 	// if round = 0 then we need one iteration
-	_, err = incrementProposerPriorityNTimes(pc.snapshot, extra.Checkpoint.BlockRound+1)
+	_, err = incrementProposerPriorityNTimes(pc.snapshot, extra.BlockData.BlockRound+1)
 	if err != nil {
 		return fmt.Errorf("failed to update proposers snapshot for block %d: %w", blockNumber, err)
 	}

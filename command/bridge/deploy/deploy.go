@@ -721,12 +721,12 @@ func getProxyNameForImpl(input string) string {
 }
 
 // getValidatorSet converts given validators to generic map
-// which is used for ABI encoding validator set being sent to the CheckpointManager contract
+// which is used for ABI encoding validator set being sent to the Gateway contract
 func getValidatorSet(o command.OutputFormatter,
 	validators []*validator.GenesisValidator) ([]*contractsapi.Validator, error) {
 	accSet := make(validator.AccountSet, len(validators))
 
-	if _, err := o.Write([]byte("[VALIDATORS - CHECKPOINT MANAGER] \n")); err != nil {
+	if _, err := o.Write([]byte("[VALIDATORS - GATEWAY] \n")); err != nil {
 		return nil, err
 	}
 
@@ -753,7 +753,7 @@ func getValidatorSet(o command.OutputFormatter,
 	}
 
 	if _, err := o.Write([]byte(
-		fmt.Sprintf("[VALIDATORS - CHECKPOINT MANAGER] Validators hash: %s\n", hash))); err != nil {
+		fmt.Sprintf("[VALIDATORS - GATEWAY] Validators hash: %s\n", hash))); err != nil {
 		return nil, err
 	}
 

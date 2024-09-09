@@ -24,7 +24,7 @@ func TestHelpers_isEpochEndingBlock_DeltaNotEmpty(t *testing.T) {
 		Removed: bitmap,
 	}
 
-	extra := &Extra{Validators: delta, Checkpoint: &CheckpointData{EpochNumber: 2}}
+	extra := &Extra{Validators: delta}
 	blockNumber := uint64(20)
 
 	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, new(blockchainMock))
@@ -38,7 +38,7 @@ func TestHelpers_isEpochEndingBlock_NoBlock(t *testing.T) {
 	blockchainMock := new(blockchainMock)
 	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(&types.Header{}, false)
 
-	extra := &Extra{Checkpoint: &CheckpointData{EpochNumber: 2}, Validators: &validator.ValidatorSetDelta{}}
+	extra := &Extra{Validators: &validator.ValidatorSetDelta{}}
 	blockNumber := uint64(20)
 
 	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, blockchainMock)
@@ -51,7 +51,7 @@ func TestHelpers_isEpochEndingBlock_EpochsNotTheSame(t *testing.T) {
 
 	blockchainMock := new(blockchainMock)
 
-	nextBlockExtra := &Extra{Checkpoint: &CheckpointData{EpochNumber: 3}, Validators: &validator.ValidatorSetDelta{}}
+	nextBlockExtra := &Extra{Validators: &validator.ValidatorSetDelta{}}
 	nextBlock := &types.Header{
 		Number:    21,
 		ExtraData: nextBlockExtra.MarshalRLPTo(nil),
@@ -59,7 +59,7 @@ func TestHelpers_isEpochEndingBlock_EpochsNotTheSame(t *testing.T) {
 
 	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(nextBlock, true)
 
-	extra := &Extra{Checkpoint: &CheckpointData{EpochNumber: 2}, Validators: &validator.ValidatorSetDelta{}}
+	extra := &Extra{Validators: &validator.ValidatorSetDelta{}}
 	blockNumber := uint64(20)
 
 	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, blockchainMock)
@@ -72,7 +72,7 @@ func TestHelpers_isEpochEndingBlock_EpochsAreTheSame(t *testing.T) {
 
 	blockchainMock := new(blockchainMock)
 
-	nextBlockExtra := &Extra{Checkpoint: &CheckpointData{EpochNumber: 2}, Validators: &validator.ValidatorSetDelta{}}
+	nextBlockExtra := &Extra{Validators: &validator.ValidatorSetDelta{}}
 	nextBlock := &types.Header{
 		Number:    16,
 		ExtraData: nextBlockExtra.MarshalRLPTo(nil),
@@ -80,7 +80,7 @@ func TestHelpers_isEpochEndingBlock_EpochsAreTheSame(t *testing.T) {
 
 	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(nextBlock, true)
 
-	extra := &Extra{Checkpoint: &CheckpointData{EpochNumber: 2}, Validators: &validator.ValidatorSetDelta{}}
+	extra := &Extra{Validators: &validator.ValidatorSetDelta{}}
 	blockNumber := uint64(15)
 
 	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, blockchainMock)

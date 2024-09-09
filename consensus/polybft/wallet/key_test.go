@@ -40,14 +40,14 @@ func Test_Sign(t *testing.T) {
 
 	for _, account := range []*Account{generateTestAccount(t), generateTestAccount(t)} {
 		key := NewKey(account)
-		ser, err := key.SignWithDomain(msg, signer.DomainCheckpointManager)
+		ser, err := key.SignWithDomain(msg, signer.DomainBlockData)
 
 		require.NoError(t, err)
 
 		sig, err := bls.UnmarshalSignature(ser)
 		require.NoError(t, err)
 
-		require.True(t, sig.Verify(key.raw.Bls.PublicKey(), msg, signer.DomainCheckpointManager))
+		require.True(t, sig.Verify(key.raw.Bls.PublicKey(), msg, signer.DomainBlockData))
 	}
 }
 

@@ -46,5 +46,5 @@ func isEpochEndingBlock(blockNumber uint64, extra *Extra, blockchain blockchainB
 
 	// validator set delta can be empty (no change in validator set happened)
 	// so we need to check if their epoch numbers are different
-	return extra.Checkpoint.EpochNumber != nextBlockExtra.Checkpoint.EpochNumber, nil
+	return extra.BlockData.EpochNumber != nextBlockExtra.BlockData.EpochNumber, nil
 }
