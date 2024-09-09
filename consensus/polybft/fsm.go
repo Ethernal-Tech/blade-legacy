@@ -205,7 +205,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 	}
 
 	if f.logger.GetLevel() <= hclog.Debug {
-		blockMetaHash, err := extra.BlockMetaData.Hash(f.backend.GetChainID(), f.Height(), stateBlock.Block.Hash())
+		blockMetaHash, err := extra.BlockMetaData.Hash(stateBlock.Block.Hash())
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}
@@ -417,7 +417,7 @@ func (f *fsm) Validate(proposal []byte) error {
 	}
 
 	if f.logger.IsDebug() {
-		blockMetaHash, err := extra.BlockMetaData.Hash(f.backend.GetChainID(), block.Number(), block.Hash())
+		blockMetaHash, err := extra.BlockMetaData.Hash(block.Hash())
 		if err != nil {
 			return fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}

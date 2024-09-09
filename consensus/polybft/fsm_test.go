@@ -171,7 +171,7 @@ func TestFSM_BuildProposal_WithoutCommitEpochTxGood(t *testing.T) {
 		EpochNumber: fsm.epochNumber,
 	}
 
-	blockMetaHash, err := blockMeta.Hash(fsm.backend.GetChainID(), block.Number(), block.Hash())
+	blockMetaHash, err := blockMeta.Hash(block.Hash())
 	require.NoError(t, err)
 
 	msg := runtime.BuildPrePrepareMessage(proposal, nil, &proto.View{})
@@ -234,7 +234,7 @@ func TestFSM_BuildProposal_WithCommitEpochTxGood(t *testing.T) {
 		EpochNumber: fsm.epochNumber,
 	}
 
-	blockMetaHash, err := blockMeta.Hash(fsm.backend.GetChainID(), block.Number(), block.Hash())
+	blockMetaHash, err := blockMeta.Hash(block.Hash())
 	require.NoError(t, err)
 
 	msg := runtime.BuildPrePrepareMessage(proposal, nil, &proto.View{})
@@ -940,7 +940,7 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 	polybftBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Once()
 
 	extra := createTestExtraObject(validators.GetPublicIdentities(), validator.AccountSet{}, 4, signaturesCount, signaturesCount)
-	parentBlockMetaHash, err := extra.BlockMetaData.Hash(0, parentBlockNumber, parent.Hash)
+	parentBlockMetaHash, err := extra.BlockMetaData.Hash(parent.Hash)
 	require.NoError(t, err)
 
 	extra.Validators = &validator.ValidatorSetDelta{} // this will cause test to fail
@@ -948,7 +948,7 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, extra.MarshalRLPTo(nil))
 
-	proposalHash, err := new(BlockMetaData).Hash(0, stateBlock.Block.Number(), stateBlock.Block.Hash())
+	proposalHash, err := new(BlockMetaData).Hash(stateBlock.Block.Hash())
 	require.NoError(t, err)
 
 	commitEpoch := createTestCommitEpochInput(t, 1, 10)
@@ -1038,7 +1038,7 @@ func TestFSM_Validate_EpochEndingBlock_UpdatingValidatorSetInNonEpochEndingBlock
 	}
 
 	extra := createTestExtraObject(validators.GetPublicIdentities(), validator.AccountSet{}, 4, signaturesCount, signaturesCount)
-	parentBlockMetaHash, err := extra.BlockMetaData.Hash(0, parentBlockNumber, parent.Hash)
+	parentBlockMetaHash, err := extra.BlockMetaData.Hash(parent.Hash)
 	require.NoError(t, err)
 
 	extra.Validators = newValidatorDelta // this will cause test to fail
@@ -1046,7 +1046,7 @@ func TestFSM_Validate_EpochEndingBlock_UpdatingValidatorSetInNonEpochEndingBlock
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, extra.MarshalRLPTo(nil))
 
-	proposalHash, err := new(BlockMetaData).Hash(0, stateBlock.Block.Number(), stateBlock.Block.Hash())
+	proposalHash, err := new(BlockMetaData).Hash(stateBlock.Block.Hash())
 	require.NoError(t, err)
 
 	stateBlock.Block.Header.Hash = proposalHash
@@ -1105,7 +1105,7 @@ func TestFSM_Validate_IncorrectHeaderParentHash(t *testing.T) {
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, parent.ExtraData)
 
-	hash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), stateBlock.Block.Number(), stateBlock.Block.Hash())
+	hash, err := new(BlockMetaData).Hash(stateBlock.Block.Hash())
 	require.NoError(t, err)
 
 	stateBlock.Block.Header.Hash = hash
@@ -1144,7 +1144,7 @@ func TestFSM_Validate_InvalidNumber(t *testing.T) {
 			config:       &PolyBFTConfig{BlockTimeDrift: 1},
 		}
 
-		proposalHash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), stateBlock.Block.Number(), stateBlock.Block.Hash())
+		proposalHash, err := new(BlockMetaData).Hash(stateBlock.Block.Hash())
 		require.NoError(t, err)
 
 		stateBlock.Block.Header.Hash = proposalHash
@@ -1186,7 +1186,7 @@ func TestFSM_Validate_TimestampOlder(t *testing.T) {
 				BlockTimeDrift: 1,
 			}}
 
-		blocMetaHash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), header.Number, header.Hash)
+		blocMetaHash, err := new(BlockMetaData).Hash(header.Hash)
 		require.NoError(t, err)
 
 		stateBlock.Block.Header.Hash = blocMetaHash
@@ -1231,7 +1231,7 @@ func TestFSM_Validate_IncorrectMixHash(t *testing.T) {
 	}
 	rlpBlock := buildBlock.Block.MarshalRLP()
 
-	_, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), header.Number, header.Hash)
+	_, err := new(BlockMetaData).Hash(header.Hash)
 	require.NoError(t, err)
 
 	err = fsm.Validate(rlpBlock)
@@ -1512,7 +1512,7 @@ func TestFSM_Validate_FailToVerifySignatures(t *testing.T) {
 		},
 	})
 
-	blockMetaHash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), finalBlock.Number(), finalBlock.Hash())
+	blockMetaHash, err := new(BlockMetaData).Hash(finalBlock.Hash())
 	require.NoError(t, err)
 
 	finalBlock.Header.Hash = blockMetaHash

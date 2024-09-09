@@ -764,7 +764,7 @@ func TestConsensusRuntime_IsValidProposalHash(t *testing.T) {
 	}
 	block.Header.ComputeHash()
 
-	proposalHash, err := extra.BlockMetaData.Hash(0, block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(block.Hash())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
@@ -792,7 +792,7 @@ func TestConsensusRuntime_IsValidProposalHash_InvalidProposalHash(t *testing.T) 
 		},
 	}
 
-	proposalHash, err := extra.BlockMetaData.Hash(0, block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(block.Hash())
 	require.NoError(t, err)
 
 	extra.BlockMetaData.BlockRound = 2 // change it so it is not the same as in proposal hash
@@ -825,7 +825,7 @@ func TestConsensusRuntime_IsValidProposalHash_InvalidExtra(t *testing.T) {
 	}
 	block.Header.ComputeHash()
 
-	proposalHash, err := extra.BlockMetaData.Hash(0, block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(block.Hash())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{

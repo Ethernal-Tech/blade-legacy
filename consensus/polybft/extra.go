@@ -141,7 +141,7 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 	}
 
 	// validate current block signatures
-	blockMetaHash, err := i.BlockMetaData.Hash(chainID, blockNumber, header.Hash)
+	blockMetaHash, err := i.BlockMetaData.Hash(header.Hash)
 	if err != nil {
 		return fmt.Errorf("failed to calculate proposal hash: %w", err)
 	}
@@ -192,7 +192,7 @@ func (i *Extra) ValidateParentSignatures(blockNumber uint64, consensusBackend po
 		)
 	}
 
-	parentBlockMetaHash, err := parentExtra.BlockMetaData.Hash(chainID, parent.Number, parent.Hash)
+	parentBlockMetaHash, err := parentExtra.BlockMetaData.Hash(parent.Hash)
 	if err != nil {
 		return fmt.Errorf("failed to calculate parent proposal hash: %w", err)
 	}
@@ -287,8 +287,6 @@ func (s *Signature) Verify(blockNumber uint64, validators validator.AccountSet,
 }
 
 var blockMetaDataABIType = abi.MustNewType(`tuple(
-	uint256 chainId,
-	uint256 blockNumber,
 	bytes32 blockHash,
 	uint256 blockRound, 
 	uint256 epochNumber)`)
@@ -348,10 +346,8 @@ func (c *BlockMetaData) Copy() *BlockMetaData {
 
 // Hash calculates keccak256 hash of the BlockMetaData.
 // BlockMetaData is ABI encoded and then hashed.
-func (c *BlockMetaData) Hash(chainID uint64, blockNumber uint64, blockHash types.Hash) (types.Hash, error) {
+func (c *BlockMetaData) Hash(blockHash types.Hash) (types.Hash, error) {
 	blockMetaDataMap := map[string]interface{}{
-		"chainId":     new(big.Int).SetUint64(chainID),
-		"blockNumber": new(big.Int).SetUint64(blockNumber),
 		"blockHash":   blockHash,
 		"blockRound":  new(big.Int).SetUint64(c.BlockRound),
 		"epochNumber": new(big.Int).SetUint64(c.EpochNumber),

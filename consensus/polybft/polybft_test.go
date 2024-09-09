@@ -55,7 +55,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 		header.ComputeHash()
 
 		if len(committedAccounts) > 0 {
-			blockMetaHash, err := extra.BlockMetaData.Hash(0, header.Number, header.Hash)
+			blockMetaHash, err := extra.BlockMetaData.Hash(header.Hash)
 			require.NoError(t, err)
 
 			extra.Committed = createSignature(t, committedAccounts, blockMetaHash, signer.DomainBlockMeta)

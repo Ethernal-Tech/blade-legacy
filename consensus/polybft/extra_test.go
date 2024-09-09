@@ -285,7 +285,7 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 
 	noQuorumSignature := createSignature(t, validators.GetPrivateIdentities("0", "1"), types.BytesToHash([]byte("FooBar")), signer.DomainBlockMeta)
 	extra = &Extra{Committed: noQuorumSignature, BlockMetaData: blockMeta}
-	blockMetaHash, err := blockMeta.Hash(chainID, headerNum, header.Hash)
+	blockMetaHash, err := blockMeta.Hash(header.Hash)
 	require.NoError(t, err)
 
 	err = extra.ValidateFinalizedData(
@@ -342,7 +342,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	parentBlockMeta := &BlockMetaData{EpochNumber: 3, BlockRound: 5}
 	parentExtra := &Extra{BlockMetaData: parentBlockMeta}
 
-	parentBlockMetaHash, err := parentBlockMeta.Hash(chainID, parent.Number, parent.Hash)
+	parentBlockMetaHash, err := parentBlockMeta.Hash(parent.Hash)
 	require.NoError(t, err)
 
 	err = extra.ValidateParentSignatures(
@@ -601,10 +601,10 @@ func TestBlockMetaData_Hash(t *testing.T) {
 	copyBlockMeta := &BlockMetaData{}
 	*copyBlockMeta = *origBlockMeta
 
-	origHash, err := origBlockMeta.Hash(chainID, blockNumber, blockHash)
+	origHash, err := origBlockMeta.Hash(blockHash)
 	require.NoError(t, err)
 
-	copyHash, err := copyBlockMeta.Hash(chainID, blockNumber, blockHash)
+	copyHash, err := copyBlockMeta.Hash(blockHash)
 	require.NoError(t, err)
 
 	require.Equal(t, origHash, copyHash)

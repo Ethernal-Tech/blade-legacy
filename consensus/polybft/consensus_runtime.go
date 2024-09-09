@@ -795,7 +795,7 @@ func (c *consensusRuntime) IsValidProposalHash(proposal *proto.Proposal, hash []
 		return false
 	}
 
-	proposalHash, err := extra.BlockMetaData.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(block.Hash())
 	if err != nil {
 		c.logger.Error("failed to calculate proposal hash", "block number", block.Number(), "error", err)
 
@@ -901,7 +901,7 @@ func (c *consensusRuntime) BuildPrePrepareMessage(
 		return nil
 	}
 
-	proposalHash, err := extra.BlockMetaData.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(block.Hash())
 	if err != nil {
 		c.logger.Error("failed to calculate proposal hash", "block number", block.Number(), "error", err)
 
