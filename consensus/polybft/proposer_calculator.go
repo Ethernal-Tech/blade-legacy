@@ -253,7 +253,7 @@ func (pc *ProposerCalculator) updatePerBlock(blockNumber uint64, dbTx *bolt.Tx) 
 			blockNumber, pc.snapshot.Height)
 	}
 
-	_, extra, err := getBlockData(blockNumber, pc.config.blockchain)
+	_, extra, err := getBlockMetaData(blockNumber, pc.config.blockchain)
 	if err != nil {
 		return fmt.Errorf("cannot get block header and extra while updating proposers snapshot %d: %w", blockNumber, err)
 	}
@@ -268,7 +268,7 @@ func (pc *ProposerCalculator) updatePerBlock(blockNumber uint64, dbTx *bolt.Tx) 
 	}
 
 	// if round = 0 then we need one iteration
-	_, err = incrementProposerPriorityNTimes(pc.snapshot, extra.BlockData.BlockRound+1)
+	_, err = incrementProposerPriorityNTimes(pc.snapshot, extra.BlockMetaData.BlockRound+1)
 	if err != nil {
 		return fmt.Errorf("failed to update proposers snapshot for block %d: %w", blockNumber, err)
 	}

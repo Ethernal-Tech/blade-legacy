@@ -11,8 +11,8 @@ func isEndOfPeriod(blockNumber, periodSize uint64) bool {
 	return blockNumber%periodSize == 0
 }
 
-// getBlockData returns block header and extra
-func getBlockData(blockNumber uint64, blockchainBackend blockchainBackend) (*types.Header, *Extra, error) {
+// getBlockMetaData returns block header and extra
+func getBlockMetaData(blockNumber uint64, blockchainBackend blockchainBackend) (*types.Header, *Extra, error) {
 	blockHeader, found := blockchainBackend.GetHeaderByNumber(blockNumber)
 	if !found {
 		return nil, nil, blockchain.ErrNoBlock
@@ -39,12 +39,12 @@ func isEpochEndingBlock(blockNumber uint64, extra *Extra, blockchain blockchainB
 		return true, nil
 	}
 
-	_, nextBlockExtra, err := getBlockData(blockNumber+1, blockchain)
+	_, nextBlockExtra, err := getBlockMetaData(blockNumber+1, blockchain)
 	if err != nil {
 		return false, err
 	}
 
 	// validator set delta can be empty (no change in validator set happened)
 	// so we need to check if their epoch numbers are different
-	return extra.BlockData.EpochNumber != nextBlockExtra.BlockData.EpochNumber, nil
+	return extra.BlockMetaData.EpochNumber != nextBlockExtra.BlockMetaData.EpochNumber, nil
 }

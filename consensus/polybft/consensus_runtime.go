@@ -620,13 +620,13 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 		return nil, err
 	}
 
-	previousBlockHeader, previousBlockExtra, err := getBlockData(blockHeader.Number-1, c.config.blockchain)
+	previousBlockHeader, previousBlockExtra, err := getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
 	if err != nil {
 		return nil, err
 	}
 
 	// calculate uptime starting from last block - 1 in epoch until first block in given epoch
-	for previousBlockExtra.BlockData.EpochNumber == blockExtra.BlockData.EpochNumber {
+	for previousBlockExtra.BlockMetaData.EpochNumber == blockExtra.BlockMetaData.EpochNumber {
 		validators, err := c.config.polybftBackend.GetValidators(blockHeader.Number-1, nil)
 		if err != nil {
 			return nil, err
@@ -636,12 +636,12 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 			return nil, err
 		}
 
-		blockHeader, blockExtra, err = getBlockData(blockHeader.Number-1, c.config.blockchain)
+		blockHeader, blockExtra, err = getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
 		if err != nil {
 			return nil, err
 		}
 
-		previousBlockHeader, previousBlockExtra, err = getBlockData(previousBlockHeader.Number-1, c.config.blockchain)
+		previousBlockHeader, previousBlockExtra, err = getBlockMetaData(previousBlockHeader.Number-1, c.config.blockchain)
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +662,7 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 				return nil, err
 			}
 
-			blockHeader, blockExtra, err = getBlockData(blockHeader.Number-1, c.config.blockchain)
+			blockHeader, blockExtra, err = getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
 			if err != nil {
 				return nil, err
 			}
@@ -795,7 +795,7 @@ func (c *consensusRuntime) IsValidProposalHash(proposal *proto.Proposal, hash []
 		return false
 	}
 
-	proposalHash, err := extra.BlockData.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
 	if err != nil {
 		c.logger.Error("failed to calculate proposal hash", "block number", block.Number(), "error", err)
 
@@ -901,7 +901,7 @@ func (c *consensusRuntime) BuildPrePrepareMessage(
 		return nil
 	}
 
-	proposalHash, err := extra.BlockData.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
 	if err != nil {
 		c.logger.Error("failed to calculate proposal hash", "block number", block.Number(), "error", err)
 
@@ -963,7 +963,7 @@ func (c *consensusRuntime) BuildPrepareMessage(proposalHash []byte, view *proto.
 
 // BuildCommitMessage builds a COMMIT message based on the passed in proposal
 func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.View) *proto.IbftMessage {
-	committedSeal, err := c.config.Key.SignWithDomain(proposalHash, signer.DomainBlockData)
+	committedSeal, err := c.config.Key.SignWithDomain(proposalHash, signer.DomainBlockMeta)
 	if err != nil {
 		c.logger.Error("Cannot create committed seal message.", "error", err)
 
@@ -1056,19 +1056,19 @@ func (c *consensusRuntime) getFirstBlockOfEpoch(epochNumber uint64, latestHeader
 		return 0, err
 	}
 
-	if epochNumber != blockExtra.BlockData.EpochNumber {
+	if epochNumber != blockExtra.BlockMetaData.EpochNumber {
 		// its a regular epoch ending. No out of sync happened
 		return latestHeader.Number + 1, nil
 	}
 
 	// node was out of sync, so we need to figure out what was the first block of the given epoch
-	epoch := blockExtra.BlockData.EpochNumber
+	epoch := blockExtra.BlockMetaData.EpochNumber
 
 	var firstBlockInEpoch uint64
 
-	for blockExtra.BlockData.EpochNumber == epoch {
+	for blockExtra.BlockMetaData.EpochNumber == epoch {
 		firstBlockInEpoch = blockHeader.Number
-		blockHeader, blockExtra, err = getBlockData(blockHeader.Number-1, c.config.blockchain)
+		blockHeader, blockExtra, err = getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
 
 		if err != nil {
 			return 0, err

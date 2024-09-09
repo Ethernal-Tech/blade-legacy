@@ -26,10 +26,10 @@ var PolyBFTMixDigest = types.StringToHash("adce6e5230abe012342a44e4e9b6d05997d6f
 
 // Extra defines the structure of the extra field for Istanbul
 type Extra struct {
-	Validators *validator.ValidatorSetDelta
-	Parent     *Signature
-	Committed  *Signature
-	BlockData  *BlockData
+	Validators    *validator.ValidatorSetDelta
+	Parent        *Signature
+	Committed     *Signature
+	BlockMetaData *BlockMetaData
 }
 
 // MarshalRLPTo defines the marshal function wrapper for Extra
@@ -64,11 +64,11 @@ func (i *Extra) MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value {
 		vv.Set(i.Committed.MarshalRLPWith(ar))
 	}
 
-	// BlockData
-	if i.BlockData == nil {
+	// BlockMeta
+	if i.BlockMetaData == nil {
 		vv.Set(ar.NewNullArray())
 	} else {
-		vv.Set(i.BlockData.MarshalRLPWith(ar))
+		vv.Set(i.BlockMetaData.MarshalRLPWith(ar))
 	}
 
 	return vv
@@ -116,10 +116,10 @@ func (i *Extra) UnmarshalRLPWith(v *fastrlp.Value) error {
 		}
 	}
 
-	// BlockData
+	// BlockMeta
 	if elems[3].Elems() > 0 {
-		i.BlockData = &BlockData{}
-		if err := i.BlockData.UnmarshalRLPWith(elems[3]); err != nil {
+		i.BlockMetaData = &BlockMetaData{}
+		if err := i.BlockMetaData.UnmarshalRLPWith(elems[3]); err != nil {
 			return err
 		}
 	}
@@ -136,12 +136,12 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 		return fmt.Errorf("failed to verify signatures for block %d, because signatures are not present", blockNumber)
 	}
 
-	if i.BlockData == nil {
-		return fmt.Errorf("failed to verify signatures for block %d, because block data are not present", blockNumber)
+	if i.BlockMetaData == nil {
+		return fmt.Errorf("failed to verify signatures for block %d, because block meta data are not present", blockNumber)
 	}
 
 	// validate current block signatures
-	blockDataHash, err := i.BlockData.Hash(chainID, blockNumber, header.Hash)
+	blockMetaHash, err := i.BlockMetaData.Hash(chainID, blockNumber, header.Hash)
 	if err != nil {
 		return fmt.Errorf("failed to calculate proposal hash: %w", err)
 	}
@@ -151,9 +151,9 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 		return fmt.Errorf("failed to validate header for block %d. could not retrieve block validators:%w", blockNumber, err)
 	}
 
-	if err := i.Committed.Verify(blockNumber, validators, blockDataHash, domain, logger); err != nil {
+	if err := i.Committed.Verify(blockNumber, validators, blockMetaHash, domain, logger); err != nil {
 		return fmt.Errorf("failed to verify signatures for block %d (proposal hash %s): %w",
-			blockNumber, blockDataHash, err)
+			blockNumber, blockMetaHash, err)
 	}
 
 	parentExtra, err := GetIbftExtra(parent.ExtraData)
@@ -167,7 +167,7 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 		return err
 	}
 
-	return i.BlockData.ValidateBasic(parentExtra.BlockData)
+	return i.BlockMetaData.ValidateBasic(parentExtra.BlockMetaData)
 }
 
 // ValidateParentSignatures validates signatures for parent block
@@ -192,15 +192,15 @@ func (i *Extra) ValidateParentSignatures(blockNumber uint64, consensusBackend po
 		)
 	}
 
-	parentBlockDataHash, err := parentExtra.BlockData.Hash(chainID, parent.Number, parent.Hash)
+	parentBlockMetaHash, err := parentExtra.BlockMetaData.Hash(chainID, parent.Number, parent.Hash)
 	if err != nil {
 		return fmt.Errorf("failed to calculate parent proposal hash: %w", err)
 	}
 
 	parentBlockNumber := blockNumber - 1
-	if err := i.Parent.Verify(parentBlockNumber, parentValidators, parentBlockDataHash, domain, logger); err != nil {
+	if err := i.Parent.Verify(parentBlockNumber, parentValidators, parentBlockMetaHash, domain, logger); err != nil {
 		return fmt.Errorf("failed to verify signatures for parent of block %d (proposal hash: %s): %w",
-			blockNumber, parentBlockDataHash, err)
+			blockNumber, parentBlockMetaHash, err)
 	}
 
 	return nil
@@ -286,21 +286,21 @@ func (s *Signature) Verify(blockNumber uint64, validators validator.AccountSet,
 	return nil
 }
 
-var blockDataABIType = abi.MustNewType(`tuple(
+var blockMetaDataABIType = abi.MustNewType(`tuple(
 	uint256 chainId,
 	uint256 blockNumber,
 	bytes32 blockHash,
 	uint256 blockRound, 
 	uint256 epochNumber)`)
 
-// BlockData represents block data
-type BlockData struct {
+// BlockMetaData represents block meta data
+type BlockMetaData struct {
 	BlockRound  uint64
 	EpochNumber uint64
 }
 
-// MarshalRLPWith defines the marshal function implementation for BlockData
-func (c *BlockData) MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value {
+// MarshalRLPWith defines the marshal function implementation for BlockMeta
+func (c *BlockMetaData) MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value {
 	vv := ar.NewArray()
 	// BlockRound
 	vv.Set(ar.NewUint(c.BlockRound))
@@ -310,17 +310,17 @@ func (c *BlockData) MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value {
 	return vv
 }
 
-// UnmarshalRLPWith unmarshals BlockData object from the RLP format
-func (c *BlockData) UnmarshalRLPWith(v *fastrlp.Value) error {
+// UnmarshalRLPWith unmarshals BlockMetaData object from the RLP format
+func (c *BlockMetaData) UnmarshalRLPWith(v *fastrlp.Value) error {
 	vals, err := v.GetElems()
 	if err != nil {
-		return fmt.Errorf("array type expected for BlockData struct")
+		return fmt.Errorf("array type expected for BlockMetaData struct")
 	}
 
 	// there should be exactly 2 elements:
 	// BlockRound, EpochNumber
 	if num := len(vals); num != 2 {
-		return fmt.Errorf("incorrect elements count to decode BlockData, expected 5 but found %d", num)
+		return fmt.Errorf("incorrect elements count to decode BlockMetaData, expected 5 but found %d", num)
 	}
 
 	// BlockRound
@@ -338,18 +338,18 @@ func (c *BlockData) UnmarshalRLPWith(v *fastrlp.Value) error {
 	return nil
 }
 
-// Copy returns deep copy of BlockData instance
-func (c *BlockData) Copy() *BlockData {
-	newBlockData := new(BlockData)
-	*newBlockData = *c
+// Copy returns deep copy of BlockMetaData instance
+func (c *BlockMetaData) Copy() *BlockMetaData {
+	newBlockMetaData := new(BlockMetaData)
+	*newBlockMetaData = *c
 
-	return newBlockData
+	return newBlockMetaData
 }
 
-// Hash calculates keccak256 hash of the BlockData.
-// BlockData is ABI encoded and then hashed.
-func (c *BlockData) Hash(chainID uint64, blockNumber uint64, blockHash types.Hash) (types.Hash, error) {
-	blockDataMap := map[string]interface{}{
+// Hash calculates keccak256 hash of the BlockMetaData.
+// BlockMetaData is ABI encoded and then hashed.
+func (c *BlockMetaData) Hash(chainID uint64, blockNumber uint64, blockHash types.Hash) (types.Hash, error) {
+	blockMetaDataMap := map[string]interface{}{
 		"chainId":     new(big.Int).SetUint64(chainID),
 		"blockNumber": new(big.Int).SetUint64(blockNumber),
 		"blockHash":   blockHash,
@@ -357,7 +357,7 @@ func (c *BlockData) Hash(chainID uint64, blockNumber uint64, blockHash types.Has
 		"epochNumber": new(big.Int).SetUint64(c.EpochNumber),
 	}
 
-	abiEncoded, err := blockDataABIType.Encode(blockDataMap)
+	abiEncoded, err := blockMetaDataABIType.Encode(blockMetaDataMap)
 	if err != nil {
 		return types.ZeroHash, err
 	}
@@ -365,11 +365,11 @@ func (c *BlockData) Hash(chainID uint64, blockNumber uint64, blockHash types.Has
 	return types.BytesToHash(crypto.Keccak256(abiEncoded)), nil
 }
 
-// ValidateBasic encapsulates basic validation logic for block data.
+// ValidateBasic encapsulates basic validation logic for block meta data.
 // It only checks epoch numbers validity and whether validators hashes are non-empty.
-func (c *BlockData) ValidateBasic(parentBlockData *BlockData) error {
-	if c.EpochNumber != parentBlockData.EpochNumber &&
-		c.EpochNumber != parentBlockData.EpochNumber+1 {
+func (c *BlockMetaData) ValidateBasic(parentBlockMetaData *BlockMetaData) error {
+	if c.EpochNumber != parentBlockMetaData.EpochNumber &&
+		c.EpochNumber != parentBlockMetaData.EpochNumber+1 {
 		// epoch-beginning block
 		// epoch number must be incremented by one compared to parent block's block
 		return fmt.Errorf("invalid epoch number for epoch-beginning block")
@@ -378,10 +378,10 @@ func (c *BlockData) ValidateBasic(parentBlockData *BlockData) error {
 	return nil
 }
 
-// Validate encapsulates validation logic for block data
+// Validate encapsulates validation logic for block meta data
 // (with regards to current and next epoch validators)
-func (c *BlockData) Validate(parentBlockData *BlockData) error {
-	if err := c.ValidateBasic(parentBlockData); err != nil {
+func (c *BlockMetaData) Validate(parentBlockMetaData *BlockMetaData) error {
+	if err := c.ValidateBasic(parentBlockMetaData); err != nil {
 		return err
 	}
 
@@ -397,10 +397,10 @@ func GetIbftExtraClean(extraRaw []byte) ([]byte, error) {
 	}
 
 	ibftExtra := &Extra{
-		Parent:     extra.Parent,
-		Validators: extra.Validators,
-		BlockData:  extra.BlockData,
-		Committed:  &Signature{},
+		Parent:        extra.Parent,
+		Validators:    extra.Validators,
+		BlockMetaData: extra.BlockMetaData,
+		Committed:     &Signature{},
 	}
 
 	return ibftExtra.MarshalRLPTo(nil), nil

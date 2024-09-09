@@ -268,7 +268,7 @@ func GenerateExtraDataPolyBft(validators []*validator.ValidatorMetadata) ([]byte
 		Removed: bitmap.Bitmap{},
 	}
 
-	extra := polybft.Extra{Validators: delta, BlockData: &polybft.BlockData{}}
+	extra := polybft.Extra{Validators: delta, BlockMetaData: &polybft.BlockMetaData{}}
 
 	return extra.MarshalRLPTo(nil), nil
 }

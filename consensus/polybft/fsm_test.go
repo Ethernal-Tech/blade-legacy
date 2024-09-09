@@ -166,16 +166,16 @@ func TestFSM_BuildProposal_WithoutCommitEpochTxGood(t *testing.T) {
 	block := types.Block{}
 	require.NoError(t, block.UnmarshalRLP(proposal))
 
-	blockData := &BlockData{
+	blockMeta := &BlockMetaData{
 		BlockRound:  currentRound,
 		EpochNumber: fsm.epochNumber,
 	}
 
-	blockDataHash, err := blockData.Hash(fsm.backend.GetChainID(), block.Number(), block.Hash())
+	blockMetaHash, err := blockMeta.Hash(fsm.backend.GetChainID(), block.Number(), block.Hash())
 	require.NoError(t, err)
 
 	msg := runtime.BuildPrePrepareMessage(proposal, nil, &proto.View{})
-	require.Equal(t, blockDataHash.Bytes(), msg.GetPreprepareData().ProposalHash)
+	require.Equal(t, blockMetaHash.Bytes(), msg.GetPreprepareData().ProposalHash)
 
 	mBlockBuilder.AssertExpectations(t)
 }
@@ -229,16 +229,16 @@ func TestFSM_BuildProposal_WithCommitEpochTxGood(t *testing.T) {
 
 	assert.Equal(t, stateBlock.Block.MarshalRLP(), proposal)
 
-	blockData := &BlockData{
+	blockMeta := &BlockMetaData{
 		BlockRound:  currentRound,
 		EpochNumber: fsm.epochNumber,
 	}
 
-	blockDataHash, err := blockData.Hash(fsm.backend.GetChainID(), block.Number(), block.Hash())
+	blockMetaHash, err := blockMeta.Hash(fsm.backend.GetChainID(), block.Number(), block.Hash())
 	require.NoError(t, err)
 
 	msg := runtime.BuildPrePrepareMessage(proposal, nil, &proto.View{})
-	require.Equal(t, blockDataHash.Bytes(), msg.GetPreprepareData().ProposalHash)
+	require.Equal(t, blockMetaHash.Bytes(), msg.GetPreprepareData().ProposalHash)
 
 	mBlockBuilder.AssertExpectations(t)
 }
@@ -872,7 +872,7 @@ func TestFSM_ValidateCommit_InvalidHash(t *testing.T) {
 	require.NoError(t, err)
 
 	nonValidatorAcc := validator.NewTestValidator(t, "non_validator", 1)
-	wrongSignature, err := nonValidatorAcc.MustSign([]byte("Foo"), signer.DomainBlockData).Marshal()
+	wrongSignature, err := nonValidatorAcc.MustSign([]byte("Foo"), signer.DomainBlockMeta).Marshal()
 	require.NoError(t, err)
 
 	err = fsm.ValidateCommit(validators.GetValidator("0").Address().Bytes(), wrongSignature, []byte{})
@@ -911,7 +911,7 @@ func TestFSM_ValidateCommit_Good(t *testing.T) {
 	require.NoError(t, block.UnmarshalRLP(proposal))
 
 	validator := validators.GetValidator("A")
-	seal, err := validator.MustSign(block.Hash().Bytes(), signer.DomainBlockData).Marshal()
+	seal, err := validator.MustSign(block.Hash().Bytes(), signer.DomainBlockMeta).Marshal()
 	require.NoError(t, err)
 	err = fsm.ValidateCommit(validator.Key().Address().Bytes(), seal, block.Hash().Bytes())
 	require.NoError(t, err)
@@ -940,15 +940,15 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 	polybftBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Once()
 
 	extra := createTestExtraObject(validators.GetPublicIdentities(), validator.AccountSet{}, 4, signaturesCount, signaturesCount)
-	parentBlockDataHash, err := extra.BlockData.Hash(0, parentBlockNumber, parent.Hash)
+	parentBlockMetaHash, err := extra.BlockMetaData.Hash(0, parentBlockNumber, parent.Hash)
 	require.NoError(t, err)
 
 	extra.Validators = &validator.ValidatorSetDelta{} // this will cause test to fail
-	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockDataHash, signer.DomainBlockData)
+	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBlockMeta)
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, extra.MarshalRLPTo(nil))
 
-	proposalHash, err := new(BlockData).Hash(0, stateBlock.Block.Number(), stateBlock.Block.Hash())
+	proposalHash, err := new(BlockMetaData).Hash(0, stateBlock.Block.Number(), stateBlock.Block.Hash())
 	require.NoError(t, err)
 
 	commitEpoch := createTestCommitEpochInput(t, 1, 10)
@@ -1038,15 +1038,15 @@ func TestFSM_Validate_EpochEndingBlock_UpdatingValidatorSetInNonEpochEndingBlock
 	}
 
 	extra := createTestExtraObject(validators.GetPublicIdentities(), validator.AccountSet{}, 4, signaturesCount, signaturesCount)
-	parentBlockDataHash, err := extra.BlockData.Hash(0, parentBlockNumber, parent.Hash)
+	parentBlockMetaHash, err := extra.BlockMetaData.Hash(0, parentBlockNumber, parent.Hash)
 	require.NoError(t, err)
 
 	extra.Validators = newValidatorDelta // this will cause test to fail
-	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockDataHash, signer.DomainBlockData)
+	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBlockMeta)
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, extra.MarshalRLPTo(nil))
 
-	proposalHash, err := new(BlockData).Hash(0, stateBlock.Block.Number(), stateBlock.Block.Hash())
+	proposalHash, err := new(BlockMetaData).Hash(0, stateBlock.Block.Number(), stateBlock.Block.Hash())
 	require.NoError(t, err)
 
 	stateBlock.Block.Header.Hash = proposalHash
@@ -1105,7 +1105,7 @@ func TestFSM_Validate_IncorrectHeaderParentHash(t *testing.T) {
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, parent.ExtraData)
 
-	hash, err := new(BlockData).Hash(fsm.backend.GetChainID(), stateBlock.Block.Number(), stateBlock.Block.Hash())
+	hash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), stateBlock.Block.Number(), stateBlock.Block.Hash())
 	require.NoError(t, err)
 
 	stateBlock.Block.Header.Hash = hash
@@ -1144,7 +1144,7 @@ func TestFSM_Validate_InvalidNumber(t *testing.T) {
 			config:       &PolyBFTConfig{BlockTimeDrift: 1},
 		}
 
-		proposalHash, err := new(BlockData).Hash(fsm.backend.GetChainID(), stateBlock.Block.Number(), stateBlock.Block.Hash())
+		proposalHash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), stateBlock.Block.Number(), stateBlock.Block.Hash())
 		require.NoError(t, err)
 
 		stateBlock.Block.Header.Hash = proposalHash
@@ -1186,10 +1186,10 @@ func TestFSM_Validate_TimestampOlder(t *testing.T) {
 				BlockTimeDrift: 1,
 			}}
 
-		blockDataHash, err := new(BlockData).Hash(fsm.backend.GetChainID(), header.Number, header.Hash)
+		blocMetaHash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), header.Number, header.Hash)
 		require.NoError(t, err)
 
-		stateBlock.Block.Header.Hash = blockDataHash
+		stateBlock.Block.Header.Hash = blocMetaHash
 		proposal := stateBlock.Block.MarshalRLP()
 
 		err = fsm.Validate(proposal)
@@ -1231,7 +1231,7 @@ func TestFSM_Validate_IncorrectMixHash(t *testing.T) {
 	}
 	rlpBlock := buildBlock.Block.MarshalRLP()
 
-	_, err := new(BlockData).Hash(fsm.backend.GetChainID(), header.Number, header.Hash)
+	_, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), header.Number, header.Hash)
 	require.NoError(t, err)
 
 	err = fsm.Validate(rlpBlock)
@@ -1281,7 +1281,7 @@ func TestFSM_Insert_Good(t *testing.T) {
 		seals := make([]*messages.CommittedSeal, signaturesCount)
 
 		for i := 0; i < signaturesCount; i++ {
-			sign, err := allAccounts[i].Bls.Sign(builtBlock.Block.Hash().Bytes(), signer.DomainBlockData)
+			sign, err := allAccounts[i].Bls.Sign(builtBlock.Block.Hash().Bytes(), signer.DomainBlockMeta)
 			require.NoError(t, err)
 			sigRaw, err := sign.Marshal()
 			require.NoError(t, err)
@@ -1365,15 +1365,15 @@ func TestFSM_Insert_InvalidNode(t *testing.T) {
 	validatorA := validators.GetValidator("A")
 	validatorB := validators.GetValidator("B")
 	proposalHash := buildBlock.Block.Hash().Bytes()
-	sigA, err := validatorA.MustSign(proposalHash, signer.DomainBlockData).Marshal()
+	sigA, err := validatorA.MustSign(proposalHash, signer.DomainBlockMeta).Marshal()
 	require.NoError(t, err)
 
-	sigB, err := validatorB.MustSign(proposalHash, signer.DomainBlockData).Marshal()
+	sigB, err := validatorB.MustSign(proposalHash, signer.DomainBlockMeta).Marshal()
 	require.NoError(t, err)
 
 	// create test account outside of validator set
 	nonValidatorAccount := validator.NewTestValidator(t, "non_validator", 1)
-	nonValidatorSignature, err := nonValidatorAccount.MustSign(proposalHash, signer.DomainBlockData).Marshal()
+	nonValidatorSignature, err := nonValidatorAccount.MustSign(proposalHash, signer.DomainBlockMeta).Marshal()
 	require.NoError(t, err)
 
 	commitedSeals := []*messages.CommittedSeal{
@@ -1478,7 +1478,7 @@ func TestFSM_Validate_FailToVerifySignatures(t *testing.T) {
 
 	extra := createTestExtraObject(validatorsMetadata, validator.AccountSet{}, 4, signaturesCount, signaturesCount)
 
-	extra.BlockData = &BlockData{}
+	extra.BlockMetaData = &BlockMetaData{}
 	parent := &types.Header{
 		Number:    parentBlockNumber,
 		ExtraData: extra.MarshalRLPTo(nil),
@@ -1512,10 +1512,10 @@ func TestFSM_Validate_FailToVerifySignatures(t *testing.T) {
 		},
 	})
 
-	blockDataHash, err := new(BlockData).Hash(fsm.backend.GetChainID(), finalBlock.Number(), finalBlock.Hash())
+	blockMetaHash, err := new(BlockMetaData).Hash(fsm.backend.GetChainID(), finalBlock.Number(), finalBlock.Hash())
 	require.NoError(t, err)
 
-	finalBlock.Header.Hash = blockDataHash
+	finalBlock.Header.Hash = blockMetaHash
 	proposal := finalBlock.MarshalRLP()
 
 	assert.ErrorContains(t, fsm.Validate(proposal), "failed to verify signatures")
@@ -1629,7 +1629,7 @@ func createTestExtraObject(allAccounts,
 
 	extraData.Parent = &Signature{Bitmap: bitmapCommitted, AggregatedSignature: dummySignature[:]}
 	extraData.Committed = &Signature{Bitmap: bitmapParent, AggregatedSignature: dummySignature[:]}
-	extraData.BlockData = &BlockData{}
+	extraData.BlockMetaData = &BlockMetaData{}
 
 	return extraData
 }

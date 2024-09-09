@@ -336,7 +336,7 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 	t.Parallel()
 
 	extra := &Extra{
-		BlockData: &BlockData{},
+		BlockMetaData: &BlockMetaData{},
 	}
 	lastBlock := &types.Header{
 		Number:    1,
@@ -716,7 +716,7 @@ func TestConsensusRuntime_TamperMessageContent(t *testing.T) {
 	}
 	sender := validatorAccounts.GetValidator("A")
 	proposalHash := []byte{2, 4, 6, 8, 10}
-	proposalSignature, err := sender.Key().SignWithDomain(proposalHash, signer.DomainBlockData)
+	proposalSignature, err := sender.Key().SignWithDomain(proposalHash, signer.DomainBlockMeta)
 	require.NoError(t, err)
 
 	msg := &proto.IbftMessage{
@@ -751,7 +751,7 @@ func TestConsensusRuntime_IsValidProposalHash(t *testing.T) {
 	t.Parallel()
 
 	extra := &Extra{
-		BlockData: &BlockData{
+		BlockMetaData: &BlockMetaData{
 			EpochNumber: 1,
 			BlockRound:  1,
 		},
@@ -764,7 +764,7 @@ func TestConsensusRuntime_IsValidProposalHash(t *testing.T) {
 	}
 	block.Header.ComputeHash()
 
-	proposalHash, err := extra.BlockData.Hash(0, block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(0, block.Number(), block.Hash())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
@@ -779,7 +779,7 @@ func TestConsensusRuntime_IsValidProposalHash_InvalidProposalHash(t *testing.T) 
 	t.Parallel()
 
 	extra := &Extra{
-		BlockData: &BlockData{
+		BlockMetaData: &BlockMetaData{
 			EpochNumber: 1,
 			BlockRound:  1,
 		},
@@ -792,10 +792,10 @@ func TestConsensusRuntime_IsValidProposalHash_InvalidProposalHash(t *testing.T) 
 		},
 	}
 
-	proposalHash, err := extra.BlockData.Hash(0, block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(0, block.Number(), block.Hash())
 	require.NoError(t, err)
 
-	extra.BlockData.BlockRound = 2 // change it so it is not the same as in proposal hash
+	extra.BlockMetaData.BlockRound = 2 // change it so it is not the same as in proposal hash
 	block.Header.ExtraData = extra.MarshalRLPTo(nil)
 	block.Header.ComputeHash()
 
@@ -811,7 +811,7 @@ func TestConsensusRuntime_IsValidProposalHash_InvalidExtra(t *testing.T) {
 	t.Parallel()
 
 	extra := &Extra{
-		BlockData: &BlockData{
+		BlockMetaData: &BlockMetaData{
 			EpochNumber: 1,
 			BlockRound:  1,
 		},
@@ -825,7 +825,7 @@ func TestConsensusRuntime_IsValidProposalHash_InvalidExtra(t *testing.T) {
 	}
 	block.Header.ComputeHash()
 
-	proposalHash, err := extra.BlockData.Hash(0, block.Number(), block.Hash())
+	proposalHash, err := extra.BlockMetaData.Hash(0, block.Number(), block.Hash())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
@@ -939,7 +939,7 @@ func TestConsensusRuntime_BuildCommitMessage(t *testing.T) {
 		},
 	}
 
-	committedSeal, err := key.SignWithDomain(proposalHash, signer.DomainBlockData)
+	committedSeal, err := key.SignWithDomain(proposalHash, signer.DomainBlockMeta)
 	require.NoError(t, err)
 
 	expected := proto.IbftMessage{
@@ -1065,7 +1065,7 @@ func createTestBlocks(t *testing.T, numberOfBlocks, defaultEpochSize uint64,
 	bitmaps := createTestBitmaps(t, validatorSet, numberOfBlocks)
 
 	extra := &Extra{
-		BlockData: &BlockData{EpochNumber: 0},
+		BlockMetaData: &BlockMetaData{EpochNumber: 0},
 	}
 
 	genesisBlock := &types.Header{
@@ -1137,9 +1137,9 @@ func createTestExtraForAccounts(t *testing.T, epoch uint64, validators validator
 			Added:   validators,
 			Removed: bitmap.Bitmap{},
 		},
-		Parent:    &Signature{Bitmap: b, AggregatedSignature: dummySignature[:]},
-		Committed: &Signature{Bitmap: b, AggregatedSignature: dummySignature[:]},
-		BlockData: &BlockData{EpochNumber: epoch},
+		Parent:        &Signature{Bitmap: b, AggregatedSignature: dummySignature[:]},
+		Committed:     &Signature{Bitmap: b, AggregatedSignature: dummySignature[:]},
+		BlockMetaData: &BlockMetaData{EpochNumber: epoch},
 	}
 
 	return extraData.MarshalRLPTo(nil)

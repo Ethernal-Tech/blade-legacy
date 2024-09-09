@@ -187,7 +187,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 		return nil, err
 	}
 
-	extra.BlockData = &BlockData{
+	extra.BlockMetaData = &BlockMetaData{
 		BlockRound:  currentRound,
 		EpochNumber: f.epochNumber,
 	}
@@ -205,7 +205,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 	}
 
 	if f.logger.GetLevel() <= hclog.Debug {
-		blockDataHash, err := extra.BlockData.Hash(f.backend.GetChainID(), f.Height(), stateBlock.Block.Hash())
+		blockMetaHash, err := extra.BlockMetaData.Hash(f.backend.GetChainID(), f.Height(), stateBlock.Block.Hash())
 		if err != nil {
 			return nil, fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}
@@ -228,7 +228,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 			"block num", stateBlock.Block.Number(),
 			"round", currentRound,
 			"state root", stateBlock.Block.Header.StateRoot,
-			"proposal hash", blockDataHash.String(),
+			"proposal hash", blockMetaHash.String(),
 			"txs count", len(stateBlock.Block.Transactions),
 			"txs", buf.String(),
 			"finsihedIn", time.Since(start),
@@ -331,7 +331,7 @@ func (f *fsm) ValidateCommit(signerAddr []byte, seal []byte, proposalHash []byte
 		return fmt.Errorf("failed to unmarshall signature: %w", err)
 	}
 
-	if !signature.Verify(validator.BlsKey, proposalHash, signer.DomainBlockData) {
+	if !signature.Verify(validator.BlsKey, proposalHash, signer.DomainBlockMeta) {
 		return fmt.Errorf("incorrect commit signature from %s", from)
 	}
 
@@ -344,7 +344,7 @@ func (f *fsm) Validate(proposal []byte) error {
 
 	var block types.Block
 	if err := block.UnmarshalRLP(proposal); err != nil {
-		return fmt.Errorf("failed to validate, cannot decode block data. Error: %w", err)
+		return fmt.Errorf("failed to validate, cannot decode block meta data. Error: %w", err)
 	}
 
 	// validate header fields
@@ -367,16 +367,16 @@ func (f *fsm) Validate(proposal []byte) error {
 		return err
 	}
 
-	if extra.BlockData == nil {
-		return fmt.Errorf("block data for block %d is missing", block.Number())
+	if extra.BlockMetaData == nil {
+		return fmt.Errorf("block meta data for block %d is missing", block.Number())
 	}
 
-	if parentExtra.BlockData == nil {
-		return fmt.Errorf("block data for parent block %d is missing", f.parent.Number)
+	if parentExtra.BlockMetaData == nil {
+		return fmt.Errorf("block meta data for parent block %d is missing", f.parent.Number)
 	}
 
 	if err := extra.ValidateParentSignatures(block.Number(), f.polybftBackend, nil, f.parent, parentExtra,
-		f.backend.GetChainID(), signer.DomainBlockData, f.logger); err != nil {
+		f.backend.GetChainID(), signer.DomainBlockMeta, f.logger); err != nil {
 		return err
 	}
 
@@ -397,8 +397,8 @@ func (f *fsm) Validate(proposal []byte) error {
 		// delta should be nil in non epoch ending blocks
 		return errValidatorsUpdateInNonEpochEnding
 	}
-	// validate block data
-	if err := extra.BlockData.Validate(parentExtra.BlockData); err != nil {
+	// validate block meta data
+	if err := extra.BlockMetaData.Validate(parentExtra.BlockMetaData); err != nil {
 		return err
 	}
 
@@ -417,7 +417,7 @@ func (f *fsm) Validate(proposal []byte) error {
 	}
 
 	if f.logger.IsDebug() {
-		blockDataHash, err := extra.BlockData.Hash(f.backend.GetChainID(), block.Number(), block.Hash())
+		blockMetaHash, err := extra.BlockMetaData.Hash(f.backend.GetChainID(), block.Number(), block.Hash())
 		if err != nil {
 			return fmt.Errorf("failed to calculate proposal hash: %w", err)
 		}
@@ -426,7 +426,7 @@ func (f *fsm) Validate(proposal []byte) error {
 			"block num", block.Number(),
 			"state root", block.Header.StateRoot,
 			"proposer", types.BytesToHash(block.Header.Miner),
-			"proposal hash", blockDataHash,
+			"proposal hash", blockMetaHash,
 			"finishedIn", time.Since(start),
 		)
 	}

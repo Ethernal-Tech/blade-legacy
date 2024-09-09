@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	ErrNoBlock              = errors.New("no block data passed in")
+	ErrNoBlock              = errors.New("no block meta data passed in")
 	ErrParentNotFound       = errors.New("parent block not found")
 	ErrInvalidParentHash    = errors.New("parent block hash is invalid")
 	ErrParentHashMismatch   = errors.New("invalid parent block hash")
@@ -739,7 +739,7 @@ func (b *Blockchain) verifyBlockBody(block *types.Block) ([]*types.Receipt, erro
 		return nil, fmt.Errorf("unable to execute block transactions, %w", executeErr)
 	}
 
-	// Verify the local execution result with the proposed block data
+	// Verify the local execution result with the proposed block meta data
 	if err := blockResult.verifyBlockResult(block); err != nil {
 		return nil, fmt.Errorf("unable to verify block execution result, %w", err)
 	}

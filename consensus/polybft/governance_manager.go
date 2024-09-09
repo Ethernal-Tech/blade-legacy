@@ -561,13 +561,13 @@ func (g *governanceManager) ProcessLog(header *types.Header, log *ethgo.Log, dbT
 	}
 
 	g.logger.Debug("Post Block - Gotten governance event",
-		"epoch", extra.BlockData.EpochNumber,
+		"epoch", extra.BlockMetaData.EpochNumber,
 		"block", header.Number,
 		"event", event,
 	)
 
 	return g.state.GovernanceStore.insertGovernanceEvent(
-		extra.BlockData.EpochNumber, event, dbTx)
+		extra.BlockMetaData.EpochNumber, event, dbTx)
 }
 
 // unmarshalGovernanceEvent unmarshals given raw event to desired type

@@ -18,7 +18,7 @@ var (
 
 const (
 	DomainValidatorSetString  = "DOMAIN_CHILD_VALIDATOR_SET"
-	DomainBlockDataString     = "DOMAIN_BRIDGE_DATA"
+	DomainBlockMetaDataString = "DOMAIN_BRIDGE_META"
 	DomainCommonSigningString = "DOMAIN_COMMON_SIGNING"
 	DomainStateReceiverString = "DOMAIN_STATE_RECEIVER"
 )
@@ -28,7 +28,7 @@ var (
 	DomainValidatorSet = crypto.Keccak256([]byte(DomainValidatorSetString))
 
 	// domain used to map hash to G1 used by child checkpoint manager
-	DomainBlockData = crypto.Keccak256([]byte(DomainBlockDataString))
+	DomainBlockMeta = crypto.Keccak256([]byte(DomainBlockMetaDataString))
 
 	DomainCommonSigning = crypto.Keccak256([]byte(DomainCommonSigningString))
 	DomainStateReceiver = crypto.Keccak256([]byte(DomainStateReceiverString))

@@ -404,7 +404,7 @@ func createValidatorDeltaHeader(t *testing.T, blockNumber, epoch uint64, oldVali
 	t.Helper()
 
 	delta, _ := validator.CreateValidatorSetDelta(oldValidatorSet, newValidatorSet)
-	extra := &Extra{Validators: delta, BlockData: &BlockData{EpochNumber: epoch}}
+	extra := &Extra{Validators: delta, BlockMetaData: &BlockMetaData{EpochNumber: epoch}}
 
 	return &types.Header{
 		Number:    blockNumber,

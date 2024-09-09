@@ -164,7 +164,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 		extra, err := polybft.GetIbftExtra(block.Header.ExtraData)
 		require.NoError(t, err)
 
-		oldEpoch := extra.BlockData.EpochNumber
+		oldEpoch := extra.BlockMetaData.EpochNumber
 
 		block, err = relayer.Client().GetBlockByNumber(
 			jsonrpc.BlockNumber(endOfNewEpoch), false)
@@ -173,7 +173,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 		extra, err = polybft.GetIbftExtra(block.Header.ExtraData)
 		require.NoError(t, err)
 
-		newEpoch := extra.BlockData.EpochNumber
+		newEpoch := extra.BlockMetaData.EpochNumber
 
 		// check that epochs are sequential
 		require.Equal(t, newEpoch, oldEpoch+1)
