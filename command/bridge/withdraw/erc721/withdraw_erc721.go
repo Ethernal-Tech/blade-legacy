@@ -42,7 +42,7 @@ func GetCommand() *cobra.Command {
 	withdrawCmd.Flags().StringVar(
 		&wp.PredicateAddr,
 		common.ChildPredicateFlag,
-		contracts.ChildERC721PredicateContract.String(),
+		"",
 		"ERC 721 child chain predicate address",
 	)
 

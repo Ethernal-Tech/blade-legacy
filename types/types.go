@@ -192,6 +192,36 @@ func IsValidAddress(address string, zeroAddressAllowed bool) (Address, error) {
 	return addr, nil
 }
 
+// IncrementAddressBy increments the provided address by the given number.
+func IncrementAddressBy(addr Address, increment uint64) Address {
+	// Convert Address to big.Int
+	addrBigInt := new(big.Int).SetBytes(addr[:])
+
+	// Increment by the provided number
+	addrBigInt.Add(addrBigInt, big.NewInt(0).SetUint64(increment))
+
+	// Convert back to Address
+	var newAddr Address
+	addrBytes := addrBigInt.Bytes()
+
+	// Handle overflow by truncating to 20 bytes
+	if len(addrBytes) > 20 {
+		copy(newAddr[:], addrBytes[len(addrBytes)-20:])
+	} else {
+		copy(newAddr[20-len(addrBytes):], addrBytes)
+	}
+
+	return newAddr
+}
+
+// Compare returns 1 if addr1 is higher, -1 if addr2 is higher, and 0 if they are equal.
+func (a Address) Compare(to Address) int {
+	addr1BigInt := new(big.Int).SetBytes(a[:])
+	addr2BigInt := new(big.Int).SetBytes(to[:])
+
+	return addr1BigInt.Cmp(addr2BigInt)
+}
+
 // UnmarshalText parses a hash in hex syntax.
 func (h *Hash) UnmarshalText(input []byte) error {
 	*h = BytesToHash(StringToBytes(string(input)))

@@ -133,70 +133,69 @@ func GetPolyBFTConfig(chainParams *chain.Params) (PolyBFTConfig, error) {
 
 // BridgeConfig is the rootchain configuration, needed for bridging
 type BridgeConfig struct {
-	GatewayAddr               types.Address `json:"gatewayAddress"`
-	RootERC20PredicateAddr    types.Address `json:"erc20PredicateAddress"`
-	ChildERC20PredicateAddr   types.Address `json:"erc20ChildPredicateAddress"`
-	RootNativeERC20Addr       types.Address `json:"nativeERC20Address"`
-	RootERC721PredicateAddr   types.Address `json:"erc721PredicateAddress"`
-	ChildERC721PredicateAddr  types.Address `json:"erc721ChildMintablePredicateAddress"`
-	RootERC1155PredicateAddr  types.Address `json:"erc1155PredicateAddress"`
-	ChildERC1155PredicateAddr types.Address `json:"erc1155ChildMintablePredicateAddress"`
-	ChildERC20Addr            types.Address `json:"childERC20Address"`
-	ChildERC721Addr           types.Address `json:"childERC721Address"`
-	ChildERC1155Addr          types.Address `json:"childERC1155Address"`
-	BladeManagerAddr          types.Address `json:"bladeManagerAddress"`
+	// External chain bridge contracts
+	ExternalGatewayAddr                  types.Address `json:"externalGatewayAddress"`
+	ExternalERC20PredicateAddr           types.Address `json:"externalERC20PredicateAddress"`
+	ExternalMintableERC20PredicateAddr   types.Address `json:"externalMintableERC20PredicateAddress"`
+	ExternalNativeERC20Addr              types.Address `json:"nativeERC20Address"`
+	ExternalERC721PredicateAddr          types.Address `json:"externalERC721PredicateAddress"`
+	ExternalMintableERC721PredicateAddr  types.Address `json:"externalERC721MintablePredicateAddress"`
+	ExternalERC1155PredicateAddr         types.Address `json:"externalERC1155PredicateAddress"`
+	ExternalMintableERC1155PredicateAddr types.Address `json:"externalERC1155MintablePredicateAddress"`
+	ExternalERC20Addr                    types.Address `json:"externalERC20Address"`
+	ExternalERC721Addr                   types.Address `json:"externalERC721Address"`
+	ExternalERC1155Addr                  types.Address `json:"externalERC1155Address"`
+	BladeManagerAddr                     types.Address `json:"bladeManagerAddress"`
 	// only populated if stake-manager-deploy command is executed, and used for e2e tests
 	BLSAddress     types.Address `json:"blsAddr"`
 	BN256G2Address types.Address `json:"bn256G2Addr"`
 
+	// Blade bridge contracts
+	InternalGatewayAddr                  types.Address `json:"internalGatewayAddress"`
+	InternalERC20PredicateAddr           types.Address `json:"internalERC20PredicateAddress"`
+	InternalERC721PredicateAddr          types.Address `json:"internalERC721PredicateAddress"`
+	InternalERC1155PredicateAddr         types.Address `json:"internalERC1155PredicateAddress"`
+	InternalMintableERC20PredicateAddr   types.Address `json:"internalMintableERC20PredicateAddress"`
+	InternalMintableERC721PredicateAddr  types.Address `json:"internalMintableERC721PredicateAddress"`
+	InternalMintableERC1155PredicateAddr types.Address `json:"internalMintableERC1155PredicateAddress"`
+
+	// Event tracker
 	JSONRPCEndpoint         string                   `json:"jsonRPCEndpoint"`
 	EventTrackerStartBlocks map[types.Address]uint64 `json:"eventTrackerStartBlocks"`
 }
 
+// GetHeighestInternalAddress returns the highest address among all internal bridge contracts
+func (b *BridgeConfig) GetHeighestInternalAddress() types.Address {
+	heighest := b.InternalGatewayAddr
+	if b.InternalERC20PredicateAddr.Compare(heighest) > 0 {
+		heighest = b.InternalERC20PredicateAddr
+	}
+
+	if b.InternalERC721PredicateAddr.Compare(heighest) > 0 {
+		heighest = b.InternalERC721PredicateAddr
+	}
+
+	if b.InternalERC1155PredicateAddr.Compare(heighest) > 0 {
+		heighest = b.InternalERC1155PredicateAddr
+	}
+
+	if b.InternalMintableERC20PredicateAddr.Compare(heighest) > 0 {
+		heighest = b.InternalMintableERC20PredicateAddr
+	}
+
+	if b.InternalMintableERC721PredicateAddr.Compare(heighest) > 0 {
+		heighest = b.InternalMintableERC721PredicateAddr
+	}
+
+	if b.InternalMintableERC1155PredicateAddr.Compare(heighest) > 0 {
+		heighest = b.InternalMintableERC1155PredicateAddr
+	}
+
+	return heighest
+}
+
 func (p *PolyBFTConfig) IsBridgeEnabled() bool {
 	return len(p.Bridge) > 0
-}
-
-// RootchainConfig contains rootchain metadata (such as JSON RPC endpoint and contract addresses)
-type RootchainConfig struct {
-	JSONRPCAddr string
-
-	Gateway                      types.Address
-	BLSAddress                   types.Address
-	BN256G2Address               types.Address
-	RootERC20PredicateAddress    types.Address
-	ChildERC20PredicateAddress   types.Address
-	RootNativeERC20Address       types.Address
-	ChildERC20Address            types.Address
-	RootERC721PredicateAddress   types.Address
-	ChildERC721PredicateAddress  types.Address
-	ChildERC721Address           types.Address
-	RootERC1155PredicateAddress  types.Address
-	ChildERC1155PredicateAddress types.Address
-	ChildERC1155Address          types.Address
-	BladeManagerAddress          types.Address
-}
-
-// ToBridgeConfig creates BridgeConfig instance
-func (r *RootchainConfig) ToBridgeConfig() *BridgeConfig {
-	return &BridgeConfig{
-		JSONRPCEndpoint: r.JSONRPCAddr,
-
-		GatewayAddr:               r.Gateway,
-		RootERC20PredicateAddr:    r.RootERC20PredicateAddress,
-		ChildERC20PredicateAddr:   r.ChildERC20PredicateAddress,
-		RootNativeERC20Addr:       r.RootNativeERC20Address,
-		RootERC721PredicateAddr:   r.RootERC721PredicateAddress,
-		ChildERC721PredicateAddr:  r.ChildERC721PredicateAddress,
-		RootERC1155PredicateAddr:  r.RootERC1155PredicateAddress,
-		ChildERC1155PredicateAddr: r.ChildERC1155PredicateAddress,
-		ChildERC20Addr:            r.ChildERC20Address,
-		ChildERC721Addr:           r.ChildERC721Address,
-		ChildERC1155Addr:          r.ChildERC1155Address,
-		BLSAddress:                r.BLSAddress,
-		BN256G2Address:            r.BN256G2Address,
-		BladeManagerAddr:          r.BladeManagerAddress,
-	}
 }
 
 // TokenConfig is the configuration of native token used by edge network

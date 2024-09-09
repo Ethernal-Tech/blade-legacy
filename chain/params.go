@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -79,6 +80,43 @@ func (p *Params) GetEngine() string {
 	}
 
 	return ""
+}
+
+func (p *Params) GetBridgeAllowListAdmin() types.Address {
+	if p.BridgeAllowList == nil || len(p.BridgeAllowList.AdminAddresses) == 0 {
+		return types.ZeroAddress
+	}
+
+	return p.BridgeAllowList.AdminAddresses[0]
+}
+
+func (p *Params) GetBridgeBlockListAdmin() types.Address {
+	if p.BridgeBlockList == nil || len(p.BridgeBlockList.AdminAddresses) == 0 {
+		return types.ZeroAddress
+	}
+
+	return p.BridgeBlockList.AdminAddresses[0]
+}
+
+func (p *Params) GetBridgeOwner() types.Address {
+	owner := p.GetBridgeAllowListAdmin()
+	if owner == types.ZeroAddress {
+		owner = p.GetBridgeBlockListAdmin()
+	}
+
+	if owner == types.ZeroAddress {
+		owner = contracts.SystemCaller
+	}
+
+	return owner
+}
+
+func (p *Params) DoesItUseBridgeAllowList() bool {
+	return p.GetBridgeAllowListAdmin() != types.ZeroAddress
+}
+
+func (p *Params) DoesItUseBridgeBlockList() bool {
+	return p.GetBridgeBlockListAdmin() != types.ZeroAddress
 }
 
 // predefined forks

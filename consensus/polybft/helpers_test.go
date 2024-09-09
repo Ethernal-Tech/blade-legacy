@@ -183,14 +183,14 @@ func generateTestAccount(tb testing.TB) *wallet.Account {
 // createTestBridgeConfig creates test bridge configuration with hard-coded addresses
 func createTestBridgeConfig() *BridgeConfig {
 	return &BridgeConfig{
-		GatewayAddr:               types.StringToAddress("1"),
-		RootERC20PredicateAddr:    types.StringToAddress("2"),
-		ChildERC20PredicateAddr:   types.StringToAddress("3"),
-		RootNativeERC20Addr:       types.StringToAddress("4"),
-		RootERC721PredicateAddr:   types.StringToAddress("5"),
-		ChildERC721PredicateAddr:  types.StringToAddress("6"),
-		RootERC1155PredicateAddr:  types.StringToAddress("7"),
-		ChildERC1155PredicateAddr: types.StringToAddress("8"),
-		JSONRPCEndpoint:           "http://localhost:8545",
+		ExternalGatewayAddr:                  types.StringToAddress("1"),
+		ExternalERC20PredicateAddr:           types.StringToAddress("2"),
+		ExternalMintableERC20PredicateAddr:   types.StringToAddress("3"),
+		ExternalNativeERC20Addr:              types.StringToAddress("4"),
+		ExternalERC721PredicateAddr:          types.StringToAddress("5"),
+		ExternalMintableERC721PredicateAddr:  types.StringToAddress("6"),
+		ExternalERC1155PredicateAddr:         types.StringToAddress("7"),
+		ExternalMintableERC1155PredicateAddr: types.StringToAddress("8"),
+		JSONRPCEndpoint:                      "http://localhost:8545",
 	}
 }

@@ -411,7 +411,7 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 	args := []string{
 		"mint-erc20",
 		"--jsonrpc", t.JSONRPCAddr(),
-		"--erc20-token", polybftConfig.Bridge[tokenConfig.ChainID].RootNativeERC20Addr.String(),
+		"--erc20-token", polybftConfig.Bridge[tokenConfig.ChainID].ExternalNativeERC20Addr.String(),
 	}
 
 	// mint something for every validator
@@ -464,7 +464,7 @@ func (t *TestBridge) premineNativeRootToken(genesisPath string, tokenConfig *pol
 			"--jsonrpc", t.JSONRPCAddr(),
 			"--premine-amount", premineAmount.String(),
 			"--stake-amount", stakedAmount.String(),
-			"--erc20-token", bridgeConfig.RootNativeERC20Addr.String(),
+			"--erc20-token", bridgeConfig.ExternalNativeERC20Addr.String(),
 			"--genesis", genesisPath,
 		}
 

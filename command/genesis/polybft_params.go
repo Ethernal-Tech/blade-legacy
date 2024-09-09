@@ -375,10 +375,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 
 	genesisContracts := []*contractInfo{
 		{
-			artifact: contractsapi.Gateway,
-			address:  contracts.GatewayContractV1,
-		},
-		{
 			artifact: contractsapi.BridgeStorage,
 			address:  contracts.BridgeStorageContractV1,
 		},
@@ -456,46 +452,6 @@ func (p *genesisParams) deployContracts(rewardTokenByteCode []byte,
 			&contractInfo{
 				artifact: contractsapi.NativeERC20Mintable,
 				address:  contracts.NativeERC20TokenContractV1,
-			})
-	}
-
-	if len(params.bridgeAllowListAdmin) != 0 || len(params.bridgeBlockListAdmin) != 0 {
-		// rootchain originated tokens predicates (with access lists)
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.ChildERC20PredicateACL,
-				address:  contracts.ChildERC20PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.ChildERC721PredicateACL,
-				address:  contracts.ChildERC721PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.ChildERC1155PredicateACL,
-				address:  contracts.ChildERC1155PredicateContractV1,
-			})
-	} else {
-		// rootchain originated tokens predicates
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.ChildERC20Predicate,
-				address:  contracts.ChildERC20PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.ChildERC721Predicate,
-				address:  contracts.ChildERC721PredicateContractV1,
-			})
-
-		genesisContracts = append(genesisContracts,
-			&contractInfo{
-				artifact: contractsapi.ChildERC1155Predicate,
-				address:  contracts.ChildERC1155PredicateContractV1,
 			})
 	}
 

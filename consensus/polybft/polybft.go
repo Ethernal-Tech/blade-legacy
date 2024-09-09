@@ -212,174 +212,120 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 				return err
 			}
 
-			// initialize Gateway SC
-			if err = initGatewayContract(polyBFTConfig, transition); err != nil {
-				return err
-			}
-
 			// check if there are Bridge Allow List Admins and Bridge Block List Admins
 			// and if there are, get the first address as the Admin
-			bridgeAllowListAdmin := types.ZeroAddress
-			if config.Params.BridgeAllowList != nil && len(config.Params.BridgeAllowList.AdminAddresses) > 0 {
-				bridgeAllowListAdmin = config.Params.BridgeAllowList.AdminAddresses[0]
-			}
-
-			bridgeBlockListAdmin := types.ZeroAddress
-			if config.Params.BridgeBlockList != nil && len(config.Params.BridgeBlockList.AdminAddresses) > 0 {
-				bridgeBlockListAdmin = config.Params.BridgeBlockList.AdminAddresses[0]
-			}
+			bridgeAllowListAdmin := config.Params.GetBridgeAllowListAdmin()
+			bridgeBlockListAdmin := config.Params.GetBridgeBlockListAdmin()
 
 			// initialize Predicate SCs
 			if bridgeAllowListAdmin != types.ZeroAddress || bridgeBlockListAdmin != types.ZeroAddress {
 				// The owner of the contract will be the allow list admin or the block list admin, if any of them is set.
-				owner := contracts.SystemCaller
+				owner := config.Params.GetBridgeOwner()
 				useBridgeAllowList := bridgeAllowListAdmin != types.ZeroAddress
 				useBridgeBlockList := bridgeBlockListAdmin != types.ZeroAddress
 
-				if bridgeAllowListAdmin != types.ZeroAddress {
-					owner = bridgeAllowListAdmin
-				} else if bridgeBlockListAdmin != types.ZeroAddress {
-					owner = bridgeBlockListAdmin
-				}
-
 				for chainID := range bridgeCfg {
-					// initialize ChildERC20PredicateAccessList SC
-					input, err := getInitERC20PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, false, new(big.Int).SetUint64(chainID))
-					if err != nil {
+					bcfg, ok := bridgeCfg[chainID]
+					if !ok {
+						return fmt.Errorf("bridge config not found for chainID %d", chainID)
+					}
+
+					cID := new(big.Int).SetUint64(chainID)
+
+					// initialize Gateway SC
+					if err = initGatewayContract(polyBFTConfig, bcfg, transition, config.Genesis.Alloc); err != nil {
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.ChildERC20PredicateContract, input,
-						"ChildERC20PredicateAccessList", transition); err != nil {
+					// initialize ChildERC20PredicateAccessList SC
+					if err = initERC20ACLPredicateContract(transition, bcfg, config.Genesis.Alloc,
+						owner, useBridgeAllowList, useBridgeBlockList, false, cID,
+						"ChildERC20PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC721PredicateAccessList SC
-					input, err = getInitERC721PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, false, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.ChildERC721PredicateContract, input,
-						"ChildERC721PredicateAccessList", transition); err != nil {
+					if err = initERC721ACLPredicateContract(transition, bcfg, config.Genesis.Alloc,
+						owner, useBridgeAllowList, useBridgeBlockList, false, cID,
+						"ChildERC721PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC1155PredicateAccessList SC
-					input, err = getInitERC1155PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, false, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.ChildERC1155PredicateContract, input,
-						"ChildERC1155PredicateAccessList", transition); err != nil {
+					if err = initERC1155ACLPredicateContract(transition, bcfg, config.Genesis.Alloc,
+						owner, useBridgeAllowList, useBridgeBlockList, false, cID,
+						"ChildERC1155PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC20PredicateAccessList SC
-					input, err = getInitERC20PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, true, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootERC20PredicateContract, input,
-						"RootERC20PredicateAccessList", transition); err != nil {
+					if err = initERC20ACLPredicateContract(transition, bcfg, config.Genesis.Alloc,
+						owner, useBridgeAllowList, useBridgeBlockList, true, cID,
+						"RootERC20PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC721PredicateAccessList SC
-					input, err = getInitERC721PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, true, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootERC721PredicateContract, input,
-						"RootERC721PredicateAccessList", transition); err != nil {
+					if err = initERC721ACLPredicateContract(transition, bcfg, config.Genesis.Alloc,
+						owner, useBridgeAllowList, useBridgeBlockList, true, cID,
+						"RootERC721PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC1155PredicateAccessList SC
-					input, err = getInitERC1155PredicateACLInput(bridgeCfg[chainID], owner,
-						useBridgeAllowList, useBridgeBlockList, true, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootERC1155PredicateContract, input,
-						"RootERC1155PredicateAccessList", transition); err != nil {
+					if err = initERC1155ACLPredicateContract(transition, bcfg, config.Genesis.Alloc,
+						owner, useBridgeAllowList, useBridgeBlockList, true, cID,
+						"RootERC1155PredicateAccessList"); err != nil {
 						return err
 					}
 				}
 			} else {
 				for chainID := range bridgeCfg {
-					// initialize ChildERC20Predicate SC
-					input, err := getInitERC20PredicateInput(bridgeCfg[chainID], false, new(big.Int).SetUint64(chainID))
-					if err != nil {
+					bcfg, ok := bridgeCfg[chainID]
+					if !ok {
+						return fmt.Errorf("bridge config not found for chainID %d", chainID)
+					}
+
+					cID := new(big.Int).SetUint64(chainID)
+
+					// initialize Gateway SC
+					if err = initGatewayContract(polyBFTConfig, bcfg, transition, config.Genesis.Alloc); err != nil {
 						return err
 					}
 
-					if err = callContract(contracts.SystemCaller, contracts.ChildERC20PredicateContract, input,
-						"ChildERC20Predicate", transition); err != nil {
+					// initialize ChildERC20Predicate SC
+					if err = initERC20PredicateContract(transition, bcfg, config.Genesis.Alloc,
+						false, cID, "ChildERC20Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC721Predicate SC
-					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], false, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.ChildERC721PredicateContract, input,
-						"ChildERC721Predicate", transition); err != nil {
+					if err = initERC721PredicateContract(transition, bcfg, config.Genesis.Alloc,
+						false, cID, "ChildERC721Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC1155Predicate SC
-					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], false, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.ChildERC1155PredicateContract, input,
-						"ChildERC1155Predicate", transition); err != nil {
+					if err = initERC1155PredicateContract(transition, bcfg, config.Genesis.Alloc,
+						false, cID, "ChildERC1155Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC20Predicate SC
-					input, err = getInitERC20PredicateInput(bridgeCfg[chainID], true, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootERC20PredicateContract, input,
-						"RootERC20Predicate", transition); err != nil {
+					if err = initERC20PredicateContract(transition, bcfg, config.Genesis.Alloc,
+						true, cID, "RootERC20Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC721Predicate SC
-					input, err = getInitERC721PredicateInput(bridgeCfg[chainID], true, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootERC721PredicateContract, input,
-						"RootERC721Predicate", transition); err != nil {
+					if err = initERC721PredicateContract(transition, bcfg, config.Genesis.Alloc,
+						true, cID, "RootERC721Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC1155Predicate SC
-					input, err = getInitERC1155PredicateInput(bridgeCfg[chainID], true, new(big.Int).SetUint64(chainID))
-					if err != nil {
-						return err
-					}
-
-					if err = callContract(contracts.SystemCaller, contracts.RootERC1155PredicateContract, input,
-						"RootERC1155Predicate", transition); err != nil {
+					if err = initERC1155PredicateContract(transition, bcfg, config.Genesis.Alloc,
+						true, cID, "RootERC1155Predicate"); err != nil {
 						return err
 					}
 				}
@@ -389,7 +335,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 		if polyBFTConfig.NativeTokenConfig.IsMintable {
 			// initialize NativeERC20Mintable SC
 			params := &contractsapi.InitializeNativeERC20MintableFn{
-				Predicate_:   contracts.ChildERC20PredicateContract,
+				Predicate_:   polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID].InternalERC20PredicateAddr,
 				Owner_:       polyBFTConfig.BladeAdmin,
 				RootToken_:   types.ZeroAddress, // in case native mintable token is used, it is always root token
 				Name_:        polyBFTConfig.NativeTokenConfig.Name,
@@ -413,8 +359,8 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 				Name_:        polyBFTConfig.NativeTokenConfig.Name,
 				Symbol_:      polyBFTConfig.NativeTokenConfig.Symbol,
 				Decimals_:    polyBFTConfig.NativeTokenConfig.Decimals,
-				RootToken_:   polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID].RootNativeERC20Addr,
-				Predicate_:   contracts.ChildERC20PredicateContract,
+				RootToken_:   polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID].ExternalNativeERC20Addr,
+				Predicate_:   polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID].InternalERC20PredicateAddr,
 				TokenSupply_: initialTotalSupply,
 			}
 
@@ -431,7 +377,7 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 			// initialize EIP1559Burn SC
 			if isBurnContractSet {
 				burnParams := &contractsapi.InitializeEIP1559BurnFn{
-					NewChildERC20Predicate: contracts.ChildERC20PredicateContract,
+					NewChildERC20Predicate: polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID].InternalERC20PredicateAddr,
 					NewBurnDestination:     config.Params.BurnContractDestinationAddress,
 				}
 

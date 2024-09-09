@@ -23,6 +23,16 @@ type EventAbi interface {
 	ParseLog(log *ethgo.Log) (bool, error)
 }
 
+// FunctionAbi is an interface representing a function in contractsapi
+type FunctionAbi interface {
+	// Sig returns the function ABI signature or ID (which is unique for all function types)
+	Sig() []byte
+	// DecodeAbi does abi decoding of given function
+	DecodeAbi(buf []byte) error
+	// EncodeAbi does abi encoding of given function
+	EncodeAbi() ([]byte, error)
+}
+
 var (
 	// stateSyncABIType is a specific case where we need to encode state sync event as a tuple of tuple
 	stateSyncABIType = abi.MustNewType(

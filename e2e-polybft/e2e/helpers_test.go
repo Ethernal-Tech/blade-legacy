@@ -210,20 +210,3 @@ func getChildToken(t *testing.T, predicateABI *abi.ABI, predicateAddr types.Addr
 
 	return types.StringToAddress(childTokenRaw)
 }
-
-func getLastBridgeMsgEventID(t *testing.T, relayer txrelayer.TxRelayer) uint64 {
-	t.Helper()
-
-	bridgeMsgEventsCounterFn := contractsapi.Gateway.Abi.Methods["counter"]
-
-	input, err := bridgeMsgEventsCounterFn.Encode([]interface{}{})
-	require.NoError(t, err)
-
-	bridgeMsgEventIDRaw, err := relayer.Call(types.ZeroAddress, contracts.GatewayContract, input)
-	require.NoError(t, err)
-
-	exitEventID, err := common.ParseUint64orHex(&bridgeMsgEventIDRaw)
-	require.NoError(t, err)
-
-	return exitEventID
-}

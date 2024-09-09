@@ -21,7 +21,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
-	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -65,6 +64,7 @@ func (d *dummyBridgeEventManager) ProcessLog(header *types.Header,
 
 // bridgeEventManagerConfig holds the configuration data of bridge event manager
 type bridgeEventManagerConfig struct {
+	bridgeCfg         *BridgeConfig
 	topic             topic
 	key               *wallet.Key
 	maxNumberOfEvents uint64
@@ -543,7 +543,7 @@ func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
 
 	return map[types.Address][]types.Hash{
-		contracts.GatewayContract: {types.Hash(bridgeMessageResult.Sig())},
+		b.config.bridgeCfg.ExternalGatewayAddr: {types.Hash(bridgeMessageResult.Sig())},
 	}
 }
 

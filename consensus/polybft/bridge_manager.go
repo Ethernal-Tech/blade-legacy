@@ -9,7 +9,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
-	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
@@ -197,7 +196,7 @@ func newBridgeManager(
 
 	var err error
 
-	gatewayAddr := runtimeConfig.GenesisConfig.Bridge[chainID].GatewayAddr
+	gatewayAddr := runtimeConfig.GenesisConfig.Bridge[chainID].ExternalGatewayAddr
 	bridgeManager := &bridgeManager{
 		chainID: chainID,
 		logger:  logger.Named("bridge-manager"),
@@ -268,6 +267,7 @@ func (b *bridgeManager) initBridgeEventManager(
 		logger.Named("state-sync-manager"),
 		runtimeConfig.State,
 		&bridgeEventManagerConfig{
+			bridgeCfg:         runtimeConfig.GenesisConfig.Bridge[b.chainID],
 			key:               runtimeConfig.Key,
 			topic:             runtimeConfig.bridgeTopic,
 			maxNumberOfEvents: maxNumberOfEvents,
@@ -302,7 +302,7 @@ func (b *bridgeManager) initStateSyncRelayer(
 				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
 				maxAttemptsToSend:        defaultMaxAttemptsToSend,
 				maxEventsPerBatch:        defaultMaxEventsPerBatch,
-				eventExecutionAddr:       contracts.GatewayContract,
+				//eventExecutionAddr:       contracts.GatewayContract,
 			},
 			logger.Named("state_sync_relayer"))
 	} else {

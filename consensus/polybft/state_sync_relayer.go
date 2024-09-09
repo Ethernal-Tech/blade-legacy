@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
-	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -144,11 +143,12 @@ func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 // and the value is a slice of signatures of events we want to get.
 // This function is the implementation of EventSubscriber interface
 func (ssr *stateSyncRelayerImpl) GetLogFilters() map[types.Address][]types.Hash {
-	return map[types.Address][]types.Hash{
-		contracts.GatewayContract: {
-			types.Hash(new(contractsapi.BridgeMessageResultEvent).Sig()),
-		},
-	}
+	// return map[types.Address][]types.Hash{
+	// 	contracts.GatewayContract: {
+	// 		types.Hash(new(contractsapi.BridgeMessageResultEvent).Sig()),
+	// 	},
+	// }
+	return nil
 }
 
 // ProcessLog is the implementation of EventSubscriber interface,

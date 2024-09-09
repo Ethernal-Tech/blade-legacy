@@ -137,3 +137,113 @@ func TestIsValidAddress(t *testing.T) {
 		}
 	}
 }
+
+func TestIncrementAddressBy(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		address   string
+		increment uint64
+		expected  string
+	}{
+		{
+			"0x0000000000000000000000000000000000000000",
+			1,
+			"0x0000000000000000000000000000000000000001",
+		},
+		{
+			"0x0000000000000000000000000000000000000001",
+			1,
+			"0x0000000000000000000000000000000000000002",
+		},
+		{
+			"0x0000000000000000000000000000000000000001",
+			2,
+			"0x0000000000000000000000000000000000000003",
+		},
+		{
+			"0x00000000000000000000000000000000000000ff",
+			1,
+			"0x0000000000000000000000000000000000000100",
+		},
+		{
+			"0x00000000000000000000000000000000ffffffff",
+			1,
+			"0x0000000000000000000000000000000100000000",
+		},
+		{
+			"0x0000000000000000000000000000000000001001",
+			30,
+			"0x000000000000000000000000000000000000101f",
+		},
+		{
+			"0xffffffffffffffffffffffffffffffffffffffff",
+			1,
+			"0x0000000000000000000000000000000000000000",
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+
+			addr := StringToAddress(c.address)
+			expectedAddr := StringToAddress(c.expected)
+			incrementedAddr := IncrementAddressBy(addr, c.increment)
+
+			assert.Equal(t, expectedAddr, incrementedAddr, "expected address %s, got %s", expectedAddr.String(), incrementedAddr.String())
+		})
+	}
+}
+
+func TestCompare(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		address1 string
+		address2 string
+		expected int
+	}{
+		{
+			"0x0000000000000000000000000000000000000001",
+			"0x0000000000000000000000000000000000000002",
+			-1,
+		},
+		{
+			"0x0000000000000000000000000000000000000002",
+			"0x0000000000000000000000000000000000000001",
+			1,
+		},
+		{
+			"0x0000000000000000000000000000000000000001",
+			"0x0000000000000000000000000000000000000001",
+			0,
+		},
+		{
+			"0xffffffffffffffffffffffffffffffffffffffff",
+			"0x0000000000000000000000000000000000000000",
+			1,
+		},
+		{
+			"0x0000000000000000000000000000000000000000",
+			"0xffffffffffffffffffffffffffffffffffffffff",
+			-1,
+		},
+	}
+
+	for _, c := range cases {
+		c := c
+
+		t.Run("", func(t *testing.T) {
+			t.Parallel()
+
+			addr1 := StringToAddress(c.address1)
+			addr2 := StringToAddress(c.address2)
+			result := addr1.Compare(addr2)
+
+			assert.Equal(t, c.expected, result, "expected comparison result %d, got %d", c.expected, result)
+		})
+	}
+}

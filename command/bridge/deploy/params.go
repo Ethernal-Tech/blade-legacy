@@ -14,16 +14,21 @@ const (
 	deployerKeyFlag = "deployer-key"
 	jsonRPCFlag     = "json-rpc"
 	erc20AddrFlag   = "erc20-token"
+	isBootstrapFlag = "bootstrap"
+	externalRPCFlag = "external-json-rpc"
+	internalRPCFlag = "internal-json-rpc"
 )
 
 type deployParams struct {
 	genesisPath         string
 	deployerKey         string
-	jsonRPCAddress      string
+	externalRPCAddress  string
+	internalRPCAddress  string
 	rootERC20TokenAddr  string
 	proxyContractsAdmin string
 	txTimeout           time.Duration
 	isTestMode          bool
+	isBootstrap         bool
 }
 
 func (ip *deployParams) validateFlags() error {
