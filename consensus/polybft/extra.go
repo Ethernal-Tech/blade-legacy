@@ -167,7 +167,7 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 		return err
 	}
 
-	return i.BlockMetaData.ValidateBasic(parentExtra.BlockMetaData)
+	return i.BlockMetaData.Validate(parentExtra.BlockMetaData)
 }
 
 // ValidateParentSignatures validates signatures for parent block
@@ -361,24 +361,14 @@ func (c *BlockMetaData) Hash(blockHash types.Hash) (types.Hash, error) {
 	return types.BytesToHash(crypto.Keccak256(abiEncoded)), nil
 }
 
-// ValidateBasic encapsulates basic validation logic for block meta data.
+// Validate encapsulates basic validation logic for block meta data.
 // It only checks epoch numbers validity and whether validators hashes are non-empty.
-func (c *BlockMetaData) ValidateBasic(parentBlockMetaData *BlockMetaData) error {
+func (c *BlockMetaData) Validate(parentBlockMetaData *BlockMetaData) error {
 	if c.EpochNumber != parentBlockMetaData.EpochNumber &&
 		c.EpochNumber != parentBlockMetaData.EpochNumber+1 {
 		// epoch-beginning block
 		// epoch number must be incremented by one compared to parent block's block
 		return fmt.Errorf("invalid epoch number for epoch-beginning block")
-	}
-
-	return nil
-}
-
-// Validate encapsulates validation logic for block meta data
-// (with regards to current and next epoch validators)
-func (c *BlockMetaData) Validate(parentBlockMetaData *BlockMetaData) error {
-	if err := c.ValidateBasic(parentBlockMetaData); err != nil {
-		return err
 	}
 
 	return nil
