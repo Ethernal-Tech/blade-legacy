@@ -339,7 +339,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 			return Signature{}, err
 		}
 
-		bmap.Set(uint64(index))
+		bmap.Set(uint64(index)) //nolint:gosec
 
 		signatures = append(signatures, signature)
 		publicKeys = append(publicKeys, validatorsMetadata[index].BlsKey.Marshal())
