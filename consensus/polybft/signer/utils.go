@@ -23,7 +23,7 @@ const (
 )
 
 var (
-	// domain used to map hash to G1 used by (child) validator set
+	// domain used to map hash to G1 used by the StakeManager contract
 	DomainValidatorSet = crypto.Keccak256([]byte(DomainValidatorSetString))
 
 	// domain used to map hash to G1 used by bridge contract

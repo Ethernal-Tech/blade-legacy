@@ -344,7 +344,7 @@ func (f *fsm) Validate(proposal []byte) error {
 
 	var block types.Block
 	if err := block.UnmarshalRLP(proposal); err != nil {
-		return fmt.Errorf("failed to validate, cannot decode block meta data. Error: %w", err)
+		return fmt.Errorf("failed to validate, cannot decode block data. Error: %w", err)
 	}
 
 	// validate header fields
@@ -376,7 +376,7 @@ func (f *fsm) Validate(proposal []byte) error {
 	}
 
 	if err := extra.ValidateParentSignatures(block.Number(), f.polybftBackend, nil, f.parent, parentExtra,
-		f.backend.GetChainID(), signer.DomainBridge, f.logger); err != nil {
+		signer.DomainBridge, f.logger); err != nil {
 		return err
 	}
 

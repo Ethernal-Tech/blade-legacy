@@ -316,12 +316,12 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	// validation is skipped for blocks 0 and 1
 	extra := &Extra{}
 	err := extra.ValidateParentSignatures(
-		1, polyBackendMock, nil, nil, nil, chainID, signer.DomainBridge, hclog.NewNullLogger())
+		1, polyBackendMock, nil, nil, nil, signer.DomainBridge, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	// parent signatures not present
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, nil, nil, chainID, signer.DomainBridge, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, nil, nil, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err, fmt.Sprintf("failed to verify signatures for parent of block %d because signatures are not present", headerNum))
 
 	// validators not found
@@ -330,7 +330,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	invalidSig := createSignature(t, validators.GetPrivateIdentities(), incorrectHash, signer.DomainBridge)
 	extra = &Extra{Parent: invalidSig}
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, nil, nil, chainID, signer.DomainBridge, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, nil, nil, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to validate header for block %d. could not retrieve parent validators: no validators", headerNum))
 
@@ -346,7 +346,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	require.NoError(t, err)
 
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, parent, parentExtra, chainID, signer.DomainBridge, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, parent, parentExtra, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to verify signatures for parent of block %d (proposal hash: %s): could not verify aggregated signature", headerNum, parentBlockMetaHash))
 
@@ -354,7 +354,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	validSig := createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBridge)
 	extra = &Extra{Parent: validSig}
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, parent, parentExtra, chainID, signer.DomainBridge, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, parent, parentExtra, signer.DomainBridge, hclog.NewNullLogger())
 	require.NoError(t, err)
 }
 

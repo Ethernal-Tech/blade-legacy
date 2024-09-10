@@ -64,7 +64,7 @@ func (i *Extra) MarshalRLPWith(ar *fastrlp.Arena) *fastrlp.Value {
 		vv.Set(i.Committed.MarshalRLPWith(ar))
 	}
 
-	// BlockMeta
+	// Block Metadata
 	if i.BlockMetaData == nil {
 		vv.Set(ar.NewNullArray())
 	} else {
@@ -116,7 +116,7 @@ func (i *Extra) UnmarshalRLPWith(v *fastrlp.Value) error {
 		}
 	}
 
-	// BlockMeta
+	// Block Metadata
 	if elems[3].Elems() > 0 {
 		i.BlockMetaData = &BlockMetaData{}
 		if err := i.BlockMetaData.UnmarshalRLPWith(elems[3]); err != nil {
@@ -163,7 +163,7 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 
 	// validate parent signatures
 	if err := i.ValidateParentSignatures(blockNumber, consensusBackend, parents,
-		parent, parentExtra, chainID, domain, logger); err != nil {
+		parent, parentExtra, domain, logger); err != nil {
 		return err
 	}
 
@@ -172,7 +172,7 @@ func (i *Extra) ValidateFinalizedData(header *types.Header, parent *types.Header
 
 // ValidateParentSignatures validates signatures for parent block
 func (i *Extra) ValidateParentSignatures(blockNumber uint64, consensusBackend polybftBackend, parents []*types.Header,
-	parent *types.Header, parentExtra *Extra, chainID uint64, domain []byte, logger hclog.Logger) error {
+	parent *types.Header, parentExtra *Extra, domain []byte, logger hclog.Logger) error {
 	// skip block 1 because genesis does not have committed signatures
 	if blockNumber <= 1 {
 		return nil
