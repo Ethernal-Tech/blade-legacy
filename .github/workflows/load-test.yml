@@ -216,16 +216,6 @@ jobs:
         uses: actions/checkout@v4.1.1
       - name: Install make and jq
         run: sudo apt-get -y install make jq
-      - name: Install Golang
-        run: |
-          rm -rf /usr/local/go
-          sudo wget https://go.dev/dl/go${{ vars.GOLANG_VERSION }}.linux-amd64.tar.gz -O /opt/go${{ vars.GOLANG_VERSION }}.linux-amd64.tar.gz
-          sudo chmod 0755 /opt/go${{ vars.GOLANG_VERSION }}.linux-amd64.tar.gz
-          sudo tar -C /usr/local/ -xzf /opt/go${{ vars.GOLANG_VERSION }}.linux-amd64.tar.gz
-          sudo ln -s /usr/local/go/bin/go /usr/local/bin/go
-          echo GOPATH="/home/ubuntu/go" >> $GITHUB_ENV
-          echo GOCACHE="/home/ubuntu/.cache/go-build" >> $GITHUB_ENV
-          echo GOMODCACHE="/home/ubuntu/.cache/go-mod" >> $GITHUB_ENV
       - name: Build Blade
         run: make build
       - name: Start Load Test
