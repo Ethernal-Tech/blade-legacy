@@ -218,6 +218,10 @@ jobs:
         run: sudo apt-get -y install make jq
       - name: Build Blade
         run: make build
+        env:
+          GOPATH: /home/ubuntu/go
+          GOCACHE: /home/ubuntu/.cache/go-build
+          GOMODCACHE: /home/ubuntu/.cache/go-mod
       - name: Start Load Test
         id: load_test_results
         run: |
