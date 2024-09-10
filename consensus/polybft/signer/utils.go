@@ -26,7 +26,7 @@ var (
 	// domain used to map hash to G1 used by (child) validator set
 	DomainValidatorSet = crypto.Keccak256([]byte(DomainValidatorSetString))
 
-	// domain used to map hash to G1 used by by bridge contract
+	// domain used to map hash to G1 used by bridge contract
 	DomainBridge = crypto.Keccak256([]byte(DomainBridgeString))
 
 	DomainCommonSigning = crypto.Keccak256([]byte(DomainCommonSigningString))
