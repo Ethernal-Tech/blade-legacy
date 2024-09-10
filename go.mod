@@ -33,7 +33,7 @@ require (
 	github.com/holiman/uint256 v1.3.1
 	github.com/json-iterator/go v1.1.12
 	github.com/libp2p/go-libp2p v0.36.2
-	github.com/libp2p/go-libp2p-kbucket v0.6.3
+	github.com/libp2p/go-libp2p-kbucket v0.6.4
 	github.com/libp2p/go-libp2p-pubsub v0.12.0
 	github.com/multiformats/go-multiaddr v0.13.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -139,9 +139,8 @@ require (
 	github.com/huin/goupnp v1.3.0 // indirect
 	github.com/ianlancetaylor/cgosymbolizer v0.0.0-20240503222823-736c933a666d // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/ipfs/boxo v0.8.1 // indirect
+	github.com/ipfs/boxo v0.22.0 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
-	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.5.1 // indirect
 	github.com/jackpal/go-nat-pmp v1.0.2 // indirect
 	github.com/jbenet/go-temp-err-catcher v0.1.0 // indirect
@@ -242,7 +241,6 @@ require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.52.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.53.0 // indirect
 	go.opentelemetry.io/otel v1.28.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.27.0 // indirect
 	go.opentelemetry.io/otel/metric v1.28.0 // indirect
 	go.opentelemetry.io/otel/trace v1.28.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
