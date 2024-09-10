@@ -78,7 +78,7 @@ func (v *validatorsSnapshotCache) GetSnapshot(
 		v.lock.Unlock()
 	}()
 
-	_, extra, err := getBlockMetaData(blockNumber, v.blockchain)
+	_, extra, err := getBlockData(blockNumber, v.blockchain)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +333,7 @@ func (v *validatorsSnapshotCache) getLastCachedSnapshot(currentEpoch uint64,
 func (v *validatorsSnapshotCache) getNextEpochEndingBlock(latestEpochEndingBlock uint64) (uint64, error) {
 	blockNumber := latestEpochEndingBlock + 1 // get next block
 
-	_, extra, err := getBlockMetaData(blockNumber, v.blockchain)
+	_, extra, err := getBlockData(blockNumber, v.blockchain)
 	if err != nil {
 		return 0, err
 	}
@@ -344,7 +344,7 @@ func (v *validatorsSnapshotCache) getNextEpochEndingBlock(latestEpochEndingBlock
 	for startEpoch == epoch {
 		blockNumber++
 
-		_, extra, err = getBlockMetaData(blockNumber, v.blockchain)
+		_, extra, err = getBlockData(blockNumber, v.blockchain)
 		if err != nil {
 			if errors.Is(err, blockchain.ErrNoBlock) {
 				return blockNumber - 1, nil

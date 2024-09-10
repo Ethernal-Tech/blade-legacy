@@ -253,7 +253,7 @@ func (pc *ProposerCalculator) updatePerBlock(blockNumber uint64, dbTx *bolt.Tx) 
 			blockNumber, pc.snapshot.Height)
 	}
 
-	_, extra, err := getBlockMetaData(blockNumber, pc.config.blockchain)
+	_, extra, err := getBlockData(blockNumber, pc.config.blockchain)
 	if err != nil {
 		return fmt.Errorf("cannot get block header and extra while updating proposers snapshot %d: %w", blockNumber, err)
 	}

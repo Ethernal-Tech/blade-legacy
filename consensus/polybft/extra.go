@@ -318,7 +318,7 @@ func (c *BlockMetaData) UnmarshalRLPWith(v *fastrlp.Value) error {
 	// there should be exactly 2 elements:
 	// BlockRound, EpochNumber
 	if num := len(vals); num != 2 {
-		return fmt.Errorf("incorrect elements count to decode BlockMetaData, expected 5 but found %d", num)
+		return fmt.Errorf("incorrect elements count to decode BlockMetaData, expected 2 but found %d", num)
 	}
 
 	// BlockRound

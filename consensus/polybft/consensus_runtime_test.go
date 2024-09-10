@@ -716,7 +716,7 @@ func TestConsensusRuntime_TamperMessageContent(t *testing.T) {
 	}
 	sender := validatorAccounts.GetValidator("A")
 	proposalHash := []byte{2, 4, 6, 8, 10}
-	proposalSignature, err := sender.Key().SignWithDomain(proposalHash, signer.DomainBlockMeta)
+	proposalSignature, err := sender.Key().SignWithDomain(proposalHash, signer.DomainBridge)
 	require.NoError(t, err)
 
 	msg := &proto.IbftMessage{
@@ -939,7 +939,7 @@ func TestConsensusRuntime_BuildCommitMessage(t *testing.T) {
 		},
 	}
 
-	committedSeal, err := key.SignWithDomain(proposalHash, signer.DomainBlockMeta)
+	committedSeal, err := key.SignWithDomain(proposalHash, signer.DomainBridge)
 	require.NoError(t, err)
 
 	expected := proto.IbftMessage{

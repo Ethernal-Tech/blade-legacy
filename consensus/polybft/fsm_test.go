@@ -643,7 +643,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 				// add register batches state transaction
 				hash, err := sc.Hash()
 				require.NoError(t, err)
-				signature := createSignature(t, validators.GetPrivateIdentities(aliases...), hash, signer.DomainStateReceiver)
+				signature := createSignature(t, validators.GetPrivateIdentities(aliases...), hash, signer.DomainBridge)
 				sc.AggSignature = *signature
 			}
 
@@ -682,7 +682,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 		aggregatedSigs := bls.Signatures{}
 
 		nonValidators.IterAcct(nil, func(t *validator.TestValidator) {
-			aggregatedSigs = append(aggregatedSigs, t.MustSign([]byte("dummyHash"), signer.DomainStateReceiver))
+			aggregatedSigs = append(aggregatedSigs, t.MustSign([]byte("dummyHash"), signer.DomainBridge))
 		})
 
 		sig, err := aggregatedSigs.Aggregate().Marshal()
@@ -788,7 +788,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 
 		var txns []*types.Transaction
 
-		signature := createSignature(t, validators.GetPrivateIdentities("A", "B", "C", "D", "E"), hash, signer.DomainStateReceiver)
+		signature := createSignature(t, validators.GetPrivateIdentities("A", "B", "C", "D", "E"), hash, signer.DomainBridge)
 		bridgeBatchSigned.AggSignature = *signature
 
 		inputData, err := bridgeBatchSigned.EncodeAbi()
@@ -872,7 +872,7 @@ func TestFSM_ValidateCommit_InvalidHash(t *testing.T) {
 	require.NoError(t, err)
 
 	nonValidatorAcc := validator.NewTestValidator(t, "non_validator", 1)
-	wrongSignature, err := nonValidatorAcc.MustSign([]byte("Foo"), signer.DomainBlockMeta).Marshal()
+	wrongSignature, err := nonValidatorAcc.MustSign([]byte("Foo"), signer.DomainBridge).Marshal()
 	require.NoError(t, err)
 
 	err = fsm.ValidateCommit(validators.GetValidator("0").Address().Bytes(), wrongSignature, []byte{})
@@ -911,7 +911,7 @@ func TestFSM_ValidateCommit_Good(t *testing.T) {
 	require.NoError(t, block.UnmarshalRLP(proposal))
 
 	validator := validators.GetValidator("A")
-	seal, err := validator.MustSign(block.Hash().Bytes(), signer.DomainBlockMeta).Marshal()
+	seal, err := validator.MustSign(block.Hash().Bytes(), signer.DomainBridge).Marshal()
 	require.NoError(t, err)
 	err = fsm.ValidateCommit(validator.Key().Address().Bytes(), seal, block.Hash().Bytes())
 	require.NoError(t, err)
@@ -944,7 +944,7 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 	require.NoError(t, err)
 
 	extra.Validators = &validator.ValidatorSetDelta{} // this will cause test to fail
-	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBlockMeta)
+	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBridge)
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, extra.MarshalRLPTo(nil))
 
@@ -1042,7 +1042,7 @@ func TestFSM_Validate_EpochEndingBlock_UpdatingValidatorSetInNonEpochEndingBlock
 	require.NoError(t, err)
 
 	extra.Validators = newValidatorDelta // this will cause test to fail
-	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBlockMeta)
+	extra.Parent = createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBridge)
 
 	stateBlock := createDummyStateBlock(parent.Number+1, types.Hash{100, 15}, extra.MarshalRLPTo(nil))
 
@@ -1281,7 +1281,7 @@ func TestFSM_Insert_Good(t *testing.T) {
 		seals := make([]*messages.CommittedSeal, signaturesCount)
 
 		for i := 0; i < signaturesCount; i++ {
-			sign, err := allAccounts[i].Bls.Sign(builtBlock.Block.Hash().Bytes(), signer.DomainBlockMeta)
+			sign, err := allAccounts[i].Bls.Sign(builtBlock.Block.Hash().Bytes(), signer.DomainBridge)
 			require.NoError(t, err)
 			sigRaw, err := sign.Marshal()
 			require.NoError(t, err)
@@ -1365,15 +1365,15 @@ func TestFSM_Insert_InvalidNode(t *testing.T) {
 	validatorA := validators.GetValidator("A")
 	validatorB := validators.GetValidator("B")
 	proposalHash := buildBlock.Block.Hash().Bytes()
-	sigA, err := validatorA.MustSign(proposalHash, signer.DomainBlockMeta).Marshal()
+	sigA, err := validatorA.MustSign(proposalHash, signer.DomainBridge).Marshal()
 	require.NoError(t, err)
 
-	sigB, err := validatorB.MustSign(proposalHash, signer.DomainBlockMeta).Marshal()
+	sigB, err := validatorB.MustSign(proposalHash, signer.DomainBridge).Marshal()
 	require.NoError(t, err)
 
 	// create test account outside of validator set
 	nonValidatorAccount := validator.NewTestValidator(t, "non_validator", 1)
-	nonValidatorSignature, err := nonValidatorAccount.MustSign(proposalHash, signer.DomainBlockMeta).Marshal()
+	nonValidatorSignature, err := nonValidatorAccount.MustSign(proposalHash, signer.DomainBridge).Marshal()
 	require.NoError(t, err)
 
 	commitedSeals := []*messages.CommittedSeal{
@@ -1577,7 +1577,7 @@ func createTestBridgeBatch(t *testing.T, accounts []*wallet.Account) *BridgeBatc
 	var signatures bls.Signatures
 
 	for _, a := range accounts {
-		signature, err := a.Bls.Sign(hash.Bytes(), signer.DomainStateReceiver)
+		signature, err := a.Bls.Sign(hash.Bytes(), signer.DomainBridge)
 		assert.NoError(t, err)
 
 		signatures = append(signatures, signature)

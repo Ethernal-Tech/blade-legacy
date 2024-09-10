@@ -100,7 +100,7 @@ func (c *blsAggSignsVerification) run(input []byte, caller types.Address, host r
 		blsPubKeys[i] = blsPubKey
 	}
 
-	if sig.VerifyAggregated(blsPubKeys, types.Hash(msg).Bytes(), signer.DomainStateReceiver) {
+	if sig.VerifyAggregated(blsPubKeys, types.Hash(msg).Bytes(), signer.DomainBridge) {
 		return abiBoolTrue, nil
 	}
 

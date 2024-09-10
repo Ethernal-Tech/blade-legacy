@@ -14,7 +14,7 @@ import (
 func Test_setupHeaderHashFunc(t *testing.T) {
 	extra := &Extra{
 		Validators: &validator.ValidatorSetDelta{Removed: bitmap.Bitmap{1}},
-		Parent:     createSignature(t, []*wallet.Account{generateTestAccount(t)}, types.ZeroHash, signer.DomainBlockMeta),
+		Parent:     createSignature(t, []*wallet.Account{generateTestAccount(t)}, types.ZeroHash, signer.DomainBridge),
 		Committed:  &Signature{},
 	}
 
@@ -27,7 +27,7 @@ func Test_setupHeaderHashFunc(t *testing.T) {
 	header.ExtraData = extra.MarshalRLPTo(nil)
 	notFullExtraHash := types.HeaderHash(header)
 
-	extra.Committed = createSignature(t, []*wallet.Account{generateTestAccount(t)}, types.ZeroHash, signer.DomainBlockMeta)
+	extra.Committed = createSignature(t, []*wallet.Account{generateTestAccount(t)}, types.ZeroHash, signer.DomainBridge)
 	header.ExtraData = extra.MarshalRLPTo(nil)
 	fullExtraHash := types.HeaderHash(header)
 

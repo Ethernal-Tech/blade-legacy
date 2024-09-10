@@ -620,7 +620,7 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 		return nil, err
 	}
 
-	previousBlockHeader, previousBlockExtra, err := getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
+	previousBlockHeader, previousBlockExtra, err := getBlockData(blockHeader.Number-1, c.config.blockchain)
 	if err != nil {
 		return nil, err
 	}
@@ -636,12 +636,12 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 			return nil, err
 		}
 
-		blockHeader, blockExtra, err = getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
+		blockHeader, blockExtra, err = getBlockData(blockHeader.Number-1, c.config.blockchain)
 		if err != nil {
 			return nil, err
 		}
 
-		previousBlockHeader, previousBlockExtra, err = getBlockMetaData(previousBlockHeader.Number-1, c.config.blockchain)
+		previousBlockHeader, previousBlockExtra, err = getBlockData(previousBlockHeader.Number-1, c.config.blockchain)
 		if err != nil {
 			return nil, err
 		}
@@ -662,7 +662,7 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 				return nil, err
 			}
 
-			blockHeader, blockExtra, err = getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
+			blockHeader, blockExtra, err = getBlockData(blockHeader.Number-1, c.config.blockchain)
 			if err != nil {
 				return nil, err
 			}
@@ -963,7 +963,7 @@ func (c *consensusRuntime) BuildPrepareMessage(proposalHash []byte, view *proto.
 
 // BuildCommitMessage builds a COMMIT message based on the passed in proposal
 func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.View) *proto.IbftMessage {
-	committedSeal, err := c.config.Key.SignWithDomain(proposalHash, signer.DomainBlockMeta)
+	committedSeal, err := c.config.Key.SignWithDomain(proposalHash, signer.DomainBridge)
 	if err != nil {
 		c.logger.Error("Cannot create committed seal message.", "error", err)
 
@@ -1068,7 +1068,7 @@ func (c *consensusRuntime) getFirstBlockOfEpoch(epochNumber uint64, latestHeader
 
 	for blockExtra.BlockMetaData.EpochNumber == epoch {
 		firstBlockInEpoch = blockHeader.Number
-		blockHeader, blockExtra, err = getBlockMetaData(blockHeader.Number-1, c.config.blockchain)
+		blockHeader, blockExtra, err = getBlockData(blockHeader.Number-1, c.config.blockchain)
 
 		if err != nil {
 			return 0, err

@@ -331,7 +331,7 @@ func (f *fsm) ValidateCommit(signerAddr []byte, seal []byte, proposalHash []byte
 		return fmt.Errorf("failed to unmarshall signature: %w", err)
 	}
 
-	if !signature.Verify(validator.BlsKey, proposalHash, signer.DomainBlockMeta) {
+	if !signature.Verify(validator.BlsKey, proposalHash, signer.DomainBridge) {
 		return fmt.Errorf("incorrect commit signature from %s", from)
 	}
 
@@ -376,7 +376,7 @@ func (f *fsm) Validate(proposal []byte) error {
 	}
 
 	if err := extra.ValidateParentSignatures(block.Number(), f.polybftBackend, nil, f.parent, parentExtra,
-		f.backend.GetChainID(), signer.DomainBlockMeta, f.logger); err != nil {
+		f.backend.GetChainID(), signer.DomainBridge, f.logger); err != nil {
 		return err
 	}
 
@@ -695,7 +695,7 @@ func verifyBridgeBatchTx(blockNumber uint64, txHash types.Hash,
 		return fmt.Errorf("error for state tx (%s) while unmarshaling signature: %w", txHash, err)
 	}
 
-	verified := signature.VerifyAggregated(signers.GetBlsKeys(), batchHash.Bytes(), signer.DomainStateReceiver)
+	verified := signature.VerifyAggregated(signers.GetBlsKeys(), batchHash.Bytes(), signer.DomainBridge)
 	if !verified {
 		return fmt.Errorf("invalid signature for state tx (%s)", txHash)
 	}

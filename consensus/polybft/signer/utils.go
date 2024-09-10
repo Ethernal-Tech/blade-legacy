@@ -18,9 +18,8 @@ var (
 
 const (
 	DomainValidatorSetString  = "DOMAIN_CHILD_VALIDATOR_SET"
-	DomainBlockMetaDataString = "DOMAIN_BRIDGE_META"
+	DomainBridgeString        = "DOMAIN_BRIDGE"
 	DomainCommonSigningString = "DOMAIN_COMMON_SIGNING"
-	DomainStateReceiverString = "DOMAIN_STATE_RECEIVER"
 )
 
 var (
@@ -28,10 +27,9 @@ var (
 	DomainValidatorSet = crypto.Keccak256([]byte(DomainValidatorSetString))
 
 	// domain used to map hash to G1 used by child checkpoint manager
-	DomainBlockMeta = crypto.Keccak256([]byte(DomainBlockMetaDataString))
+	DomainBridge = crypto.Keccak256([]byte(DomainBridgeString))
 
 	DomainCommonSigning = crypto.Keccak256([]byte(DomainCommonSigningString))
-	DomainStateReceiver = crypto.Keccak256([]byte(DomainStateReceiverString))
 )
 
 // MakeKOSKSignature creates KOSK signature which prevents rogue attack

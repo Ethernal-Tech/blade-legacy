@@ -58,7 +58,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 			blockMetaHash, err := extra.BlockMetaData.Hash(header.Hash)
 			require.NoError(t, err)
 
-			extra.Committed = createSignature(t, committedAccounts, blockMetaHash, signer.DomainBlockMeta)
+			extra.Committed = createSignature(t, committedAccounts, blockMetaHash, signer.DomainBridge)
 			header.ExtraData = extra.MarshalRLPTo(nil)
 		}
 

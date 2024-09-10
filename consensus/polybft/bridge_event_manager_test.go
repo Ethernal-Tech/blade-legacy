@@ -134,7 +134,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		s.validatorSet = vals.ToValidatorSet()
 
 		badVal := validator.NewTestValidator(t, "a", 0)
-		msg, err := newMockMsg().sign(badVal, signer.DomainStateReceiver)
+		msg, err := newMockMsg().sign(badVal, signer.DomainBridge)
 		require.NoError(t, err)
 
 		msg.SourceChainID = 1
@@ -149,7 +149,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		s.validatorSet = vals.ToValidatorSet()
 
 		val := newMockMsg()
-		msg, err := val.sign(vals.GetValidator("0"), signer.DomainStateReceiver)
+		msg, err := val.sign(vals.GetValidator("0"), signer.DomainBridge)
 		require.NoError(t, err)
 
 		// invalid epoch +2
@@ -175,7 +175,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 
 		// validator signs the msg in behalf of another validator
 		val := newMockMsg()
-		msg, err := val.sign(vals.GetValidator("0"), signer.DomainStateReceiver)
+		msg, err := val.sign(vals.GetValidator("0"), signer.DomainBridge)
 		require.NoError(t, err)
 
 		msg.SourceChainID = 1
@@ -185,7 +185,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 
 		// non validator signs the msg in behalf of a validator
 		badVal := validator.NewTestValidator(t, "a", 0)
-		msg, err = newMockMsg().sign(badVal, signer.DomainStateReceiver)
+		msg, err = newMockMsg().sign(badVal, signer.DomainBridge)
 		require.NoError(t, err)
 
 		msg.SourceChainID = 1
@@ -201,12 +201,12 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		s.validatorSet = vals.ToValidatorSet()
 
 		msg := newMockMsg()
-		val1signed, err := msg.sign(vals.GetValidator("1"), signer.DomainStateReceiver)
+		val1signed, err := msg.sign(vals.GetValidator("1"), signer.DomainBridge)
 		require.NoError(t, err)
 
 		val1signed.SourceChainID = 1
 
-		val2signed, err := msg.sign(vals.GetValidator("2"), signer.DomainStateReceiver)
+		val2signed, err := msg.sign(vals.GetValidator("2"), signer.DomainBridge)
 		require.NoError(t, err)
 
 		val2signed.SourceChainID = 1
@@ -257,12 +257,12 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 
 	// validators 0 and 1 vote for the proposal, there is not enough
 	// voting power for the proposal
-	signedMsg1, err := msg.sign(vals.GetValidator("0"), signer.DomainStateReceiver)
+	signedMsg1, err := msg.sign(vals.GetValidator("0"), signer.DomainBridge)
 	require.NoError(t, err)
 
 	signedMsg1.SourceChainID = 1
 
-	signedMsg2, err := msg.sign(vals.GetValidator("1"), signer.DomainStateReceiver)
+	signedMsg2, err := msg.sign(vals.GetValidator("1"), signer.DomainBridge)
 	require.NoError(t, err)
 
 	signedMsg2.SourceChainID = 1
@@ -276,12 +276,12 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 
 	// validator 2 and 3 vote for the proposal, there is enough voting power now
 
-	signedMsg1, err = msg.sign(vals.GetValidator("2"), signer.DomainStateReceiver)
+	signedMsg1, err = msg.sign(vals.GetValidator("2"), signer.DomainBridge)
 	require.NoError(t, err)
 
 	signedMsg1.SourceChainID = 1
 
-	signedMsg2, err = msg.sign(vals.GetValidator("3"), signer.DomainStateReceiver)
+	signedMsg2, err = msg.sign(vals.GetValidator("3"), signer.DomainBridge)
 	require.NoError(t, err)
 
 	signedMsg2.SourceChainID = 1

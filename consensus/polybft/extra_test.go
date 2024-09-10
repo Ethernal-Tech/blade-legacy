@@ -195,7 +195,7 @@ func TestExtra_UnmarshalRLPWith_NegativeCases(t *testing.T) {
 		key, err := wallet.GenerateAccount()
 		require.NoError(t, err)
 
-		parentSignature := createSignature(t, []*wallet.Account{key}, types.BytesToHash([]byte("This is test hash")), signer.DomainBlockMeta)
+		parentSignature := createSignature(t, []*wallet.Account{key}, types.BytesToHash([]byte("This is test hash")), signer.DomainBridge)
 		extraMarshalled.Set(parentSignature.MarshalRLPWith(ar))
 
 		// Committed
@@ -218,11 +218,11 @@ func TestExtra_UnmarshalRLPWith_NegativeCases(t *testing.T) {
 		key, err := wallet.GenerateAccount()
 		require.NoError(t, err)
 
-		parentSignature := createSignature(t, []*wallet.Account{key}, types.BytesToHash(generateRandomBytes(t)), signer.DomainBlockMeta)
+		parentSignature := createSignature(t, []*wallet.Account{key}, types.BytesToHash(generateRandomBytes(t)), signer.DomainBridge)
 		extraMarshalled.Set(parentSignature.MarshalRLPWith(ar))
 
 		// Committed
-		committedSignature := createSignature(t, []*wallet.Account{key}, types.BytesToHash(generateRandomBytes(t)), signer.DomainBlockMeta)
+		committedSignature := createSignature(t, []*wallet.Account{key}, types.BytesToHash(generateRandomBytes(t)), signer.DomainBridge)
 		extraMarshalled.Set(committedSignature.MarshalRLPWith(ar))
 
 		// Block meta data
@@ -260,13 +260,13 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 	// missing Committed field
 	extra := &Extra{}
 	err := extra.ValidateFinalizedData(
-		header, parent, nil, chainID, nil, signer.DomainBlockMeta, hclog.NewNullLogger())
+		header, parent, nil, chainID, nil, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err, fmt.Sprintf("failed to verify signatures for block %d, because signatures are not present", headerNum))
 
 	// missing Block field
 	extra = &Extra{Committed: &Signature{}}
 	err = extra.ValidateFinalizedData(
-		header, parent, nil, chainID, polyBackendMock, signer.DomainBlockMeta, hclog.NewNullLogger())
+		header, parent, nil, chainID, polyBackendMock, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err, fmt.Sprintf("failed to verify signatures for block %d, because block meta data are not present", headerNum))
 
 	blockMeta := &BlockMetaData{
@@ -275,7 +275,7 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 	}
 	extra = &Extra{Committed: &Signature{}, BlockMetaData: blockMeta}
 	err = extra.ValidateFinalizedData(
-		header, parent, nil, chainID, polyBackendMock, signer.DomainBlockMeta, hclog.NewNullLogger())
+		header, parent, nil, chainID, polyBackendMock, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to validate header for block %d. could not retrieve block validators:validators not found", headerNum))
 
@@ -283,21 +283,21 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 	polyBackendMock = new(polybftBackendMock)
 	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities())
 
-	noQuorumSignature := createSignature(t, validators.GetPrivateIdentities("0", "1"), types.BytesToHash([]byte("FooBar")), signer.DomainBlockMeta)
+	noQuorumSignature := createSignature(t, validators.GetPrivateIdentities("0", "1"), types.BytesToHash([]byte("FooBar")), signer.DomainBridge)
 	extra = &Extra{Committed: noQuorumSignature, BlockMetaData: blockMeta}
 	blockMetaHash, err := blockMeta.Hash(header.Hash)
 	require.NoError(t, err)
 
 	err = extra.ValidateFinalizedData(
-		header, parent, nil, chainID, polyBackendMock, signer.DomainBlockMeta, hclog.NewNullLogger())
+		header, parent, nil, chainID, polyBackendMock, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to verify signatures for block %d (proposal hash %s): quorum not reached", headerNum, blockMetaHash))
 
 	// incorrect parent extra size
-	validSignature := createSignature(t, validators.GetPrivateIdentities(), blockMetaHash, signer.DomainBlockMeta)
+	validSignature := createSignature(t, validators.GetPrivateIdentities(), blockMetaHash, signer.DomainBridge)
 	extra = &Extra{Committed: validSignature}
 	err = extra.ValidateFinalizedData(
-		header, parent, nil, chainID, polyBackendMock, signer.DomainBlockMeta, hclog.NewNullLogger())
+		header, parent, nil, chainID, polyBackendMock, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to verify signatures for block %d, because block meta data are not present", headerNum))
 }
@@ -316,21 +316,21 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	// validation is skipped for blocks 0 and 1
 	extra := &Extra{}
 	err := extra.ValidateParentSignatures(
-		1, polyBackendMock, nil, nil, nil, chainID, signer.DomainBlockMeta, hclog.NewNullLogger())
+		1, polyBackendMock, nil, nil, nil, chainID, signer.DomainBridge, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	// parent signatures not present
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, nil, nil, chainID, signer.DomainBlockMeta, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, nil, nil, chainID, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err, fmt.Sprintf("failed to verify signatures for parent of block %d because signatures are not present", headerNum))
 
 	// validators not found
 	validators := validator.NewTestValidators(t, 5)
 	incorrectHash := types.BytesToHash([]byte("Hello World"))
-	invalidSig := createSignature(t, validators.GetPrivateIdentities(), incorrectHash, signer.DomainBlockMeta)
+	invalidSig := createSignature(t, validators.GetPrivateIdentities(), incorrectHash, signer.DomainBridge)
 	extra = &Extra{Parent: invalidSig}
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, nil, nil, chainID, signer.DomainBlockMeta, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, nil, nil, chainID, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to validate header for block %d. could not retrieve parent validators: no validators", headerNum))
 
@@ -346,15 +346,15 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 	require.NoError(t, err)
 
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, parent, parentExtra, chainID, signer.DomainBlockMeta, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, parent, parentExtra, chainID, signer.DomainBridge, hclog.NewNullLogger())
 	require.ErrorContains(t, err,
 		fmt.Sprintf("failed to verify signatures for parent of block %d (proposal hash: %s): could not verify aggregated signature", headerNum, parentBlockMetaHash))
 
 	// valid signature provided
-	validSig := createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBlockMeta)
+	validSig := createSignature(t, validators.GetPrivateIdentities(), parentBlockMetaHash, signer.DomainBridge)
 	extra = &Extra{Parent: validSig}
 	err = extra.ValidateParentSignatures(
-		headerNum, polyBackendMock, nil, parent, parentExtra, chainID, signer.DomainBlockMeta, hclog.NewNullLogger())
+		headerNum, polyBackendMock, nil, parent, parentExtra, chainID, signer.DomainBridge, hclog.NewNullLogger())
 	require.NoError(t, err)
 }
 
@@ -379,7 +379,7 @@ func TestSignature_Verify(t *testing.T) {
 		for i, val := range vals.GetValidators() {
 			bitmap.Set(uint64(i))
 
-			tempSign, err := val.Account.Bls.Sign(msgHash[:], signer.DomainBlockMeta)
+			tempSign, err := val.Account.Bls.Sign(msgHash[:], signer.DomainBridge)
 			require.NoError(t, err)
 
 			signatures = append(signatures, tempSign)
@@ -391,7 +391,7 @@ func TestSignature_Verify(t *testing.T) {
 				Bitmap:              bitmap,
 			}
 
-			err = s.Verify(10, validatorsMetadata, msgHash, signer.DomainBlockMeta, hclog.NewNullLogger())
+			err = s.Verify(10, validatorsMetadata, msgHash, signer.DomainBridge, hclog.NewNullLogger())
 			signers[val.Address()] = struct{}{}
 
 			if !validatorSet.HasQuorum(10, signers) {
@@ -412,7 +412,7 @@ func TestSignature_Verify(t *testing.T) {
 		bmp.Set(uint64(validatorSet.Len() + 1))
 		s := &Signature{Bitmap: bmp}
 
-		err := s.Verify(0, validatorSet, types.Hash{0x1}, signer.DomainBlockMeta, hclog.NewNullLogger())
+		err := s.Verify(0, validatorSet, types.Hash{0x1}, signer.DomainBridge, hclog.NewNullLogger())
 		require.Error(t, err)
 	})
 }
@@ -466,7 +466,7 @@ func TestSignature_VerifyRandom(t *testing.T) {
 	for _, index := range valIndxsRnd {
 		bitmap.Set(uint64(index))
 
-		tempSign, err := accounts[index].Account.Bls.Sign(msgHash[:], signer.DomainBlockMeta)
+		tempSign, err := accounts[index].Account.Bls.Sign(msgHash[:], signer.DomainBridge)
 		require.NoError(t, err)
 
 		signature = append(signature, tempSign)
@@ -480,7 +480,7 @@ func TestSignature_VerifyRandom(t *testing.T) {
 		Bitmap:              bitmap,
 	}
 
-	err = s.Verify(1, vals.GetPublicIdentities(), msgHash, signer.DomainBlockMeta, hclog.NewNullLogger())
+	err = s.Verify(1, vals.GetPublicIdentities(), msgHash, signer.DomainBridge, hclog.NewNullLogger())
 	assert.NoError(t, err)
 }
 
