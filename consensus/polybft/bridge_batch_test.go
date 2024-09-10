@@ -12,10 +12,6 @@ import (
 func TestBridgeBatchSigned_Hash(t *testing.T) {
 	t.Parallel()
 
-	const (
-		eventsCount = 10
-	)
-
 	bridgeBatchSigned1 := newTestBridgeBatchSigned(t, 1, 0)
 	bridgeBatchSigned2 := newTestBridgeBatchSigned(t, 1, 0)
 	bridgeBatchSigned3 := newTestBridgeBatchSigned(t, 2, 0)

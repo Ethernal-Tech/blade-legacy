@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -16,7 +15,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
-	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -149,22 +147,4 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 		require.NoError(t, result.Err)
 		t.Logf("Number of validators %d on commit epoch, Gas used %+v\n", accSet.Len(), result.GasUsed)
 	}
-}
-
-func deployAndInitContract(t *testing.T, transition *state.Transition, bytecode []byte, sender types.Address,
-	initCallback func() ([]byte, error)) types.Address {
-	t.Helper()
-
-	deployResult := transition.Create2(sender, bytecode, big.NewInt(0), 1e9)
-	assert.NoError(t, deployResult.Err)
-
-	if initCallback != nil {
-		initInput, err := initCallback()
-		require.NoError(t, err)
-
-		result := transition.Call2(sender, deployResult.Address, initInput, big.NewInt(0), 1e9)
-		require.NoError(t, result.Err)
-	}
-
-	return deployResult.Address
 }

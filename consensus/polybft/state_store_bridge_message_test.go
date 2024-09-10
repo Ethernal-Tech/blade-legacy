@@ -284,17 +284,6 @@ func insertTestBridgeBatches(t *testing.T, state *State, numberOfBatches uint64)
 	}
 }
 
-func createTestBridgeMessageEvent(index int64) *contractsapi.BridgeMsgEvent {
-	return &contractsapi.BridgeMsgEvent{
-		ID:                 big.NewInt(index),
-		Sender:             types.ZeroAddress,
-		Receiver:           types.ZeroAddress,
-		Data:               []byte{0, 1},
-		SourceChainID:      big.NewInt(1),
-		DestinationChainID: bigZero,
-	}
-}
-
 func TestState_StateSync_StateSyncRelayerDataAndEvents(t *testing.T) {
 	t.Parallel()
 

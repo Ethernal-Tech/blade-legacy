@@ -333,9 +333,14 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 		}
 
 		if polyBFTConfig.NativeTokenConfig.IsMintable {
+			predicateAddress := types.ZeroAddress
+			if bridgeCfg, exists := polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID]; exists {
+				predicateAddress = bridgeCfg.InternalERC20PredicateAddr
+			}
+
 			// initialize NativeERC20Mintable SC
 			params := &contractsapi.InitializeNativeERC20MintableFn{
-				Predicate_:   polyBFTConfig.Bridge[polyBFTConfig.NativeTokenConfig.ChainID].InternalERC20PredicateAddr,
+				Predicate_:   predicateAddress,
 				Owner_:       polyBFTConfig.BladeAdmin,
 				RootToken_:   types.ZeroAddress, // in case native mintable token is used, it is always root token
 				Name_:        polyBFTConfig.NativeTokenConfig.Name,
