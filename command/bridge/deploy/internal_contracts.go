@@ -1,3 +1,4 @@
+//nolint:dupl
 package deploy
 
 import (
@@ -23,7 +24,8 @@ var (
 
 // initInternalContracts initializes the internal contracts
 func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
-	useBridgeAllowList, useBridgeBlockList := chainCfg.Params.DoesItUseBridgeAllowList(), chainCfg.Params.DoesItUseBridgeBlockList()
+	useBridgeAllowList, useBridgeBlockList := chainCfg.Params.DoesItUseBridgeAllowList(),
+		chainCfg.Params.DoesItUseBridgeBlockList()
 
 	internalContracts = make([]*contract, 0)
 
@@ -86,7 +88,6 @@ func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
 					NewUseBlockList:             useBridgeBlockList,
 					NewOwner:                    chainCfg.Params.GetBridgeOwner(),
 				}
-
 			} else {
 				input = &contractsapi.InitializeChildERC20PredicateFn{
 					NewGateway:                  config.InternalGatewayAddr,
@@ -131,7 +132,6 @@ func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
 					NewUseBlockList:             useBridgeBlockList,
 					NewOwner:                    chainCfg.Params.GetBridgeOwner(),
 				}
-
 			} else {
 				input = &contractsapi.InitializeChildERC721PredicateFn{
 					NewGateway:                  config.InternalGatewayAddr,
@@ -175,7 +175,6 @@ func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
 					NewUseBlockList:             useBridgeBlockList,
 					NewOwner:                    chainCfg.Params.GetBridgeOwner(),
 				}
-
 			} else {
 				input = &contractsapi.InitializeChildERC1155PredicateFn{
 					NewGateway:                  config.InternalGatewayAddr,
@@ -320,13 +319,12 @@ func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
 	})
 }
 
-// preAllocateInternalPredicates pre-allocates internal predicates in genesis if the command is run in bootstrap mode
-func preAllocateInternalPredicates(o command.OutputFormatter, chainCfg *chain.Chain, bridgeCfg *polybft.BridgeConfig) error {
-	if _, err := o.Write([]byte("[BRIDGE - DEPLOY] Pre-allocating internal predicates in bootstrap mode\n")); err != nil {
-		return err
-	}
-
+// preAllocateInternalPredicates pre-allocates internal predicates in genesis
+// if the command is run in bootstrap mode
+func preAllocateInternalPredicates(o command.OutputFormatter,
+	chainCfg *chain.Chain, bridgeCfg *polybft.BridgeConfig) error {
 	predicateBaseProxyAddress := contracts.ChildBridgeContractsBaseAddress
+
 	if consensusCfg.Bridge != nil {
 		for _, bridgeCfg := range consensusCfg.Bridge {
 			heighestAddr := bridgeCfg.GetHeighestInternalAddress()

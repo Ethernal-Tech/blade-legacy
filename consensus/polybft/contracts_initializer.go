@@ -420,7 +420,8 @@ func initERC20ACLPredicateContract(
 		return nil
 	}
 
-	input, err := getInitERC20PredicateACLInput(bcfg, owner, useBridgeAllowList, useBridgeBlockList, childMintable, chainID)
+	input, err := getInitERC20PredicateACLInput(bcfg, owner,
+		useBridgeAllowList, useBridgeBlockList, childMintable, chainID)
 	if err != nil {
 		return err
 	}
@@ -453,7 +454,8 @@ func initERC721ACLPredicateContract(
 		return nil
 	}
 
-	input, err := getInitERC721PredicateACLInput(bcfg, owner, useBridgeAllowList, useBridgeBlockList, childMintable, chainID)
+	input, err := getInitERC721PredicateACLInput(bcfg, owner,
+		useBridgeAllowList, useBridgeBlockList, childMintable, chainID)
 	if err != nil {
 		return err
 	}
@@ -486,7 +488,8 @@ func initERC1155ACLPredicateContract(
 		return nil
 	}
 
-	input, err := getInitERC1155PredicateACLInput(bcfg, owner, useBridgeAllowList, useBridgeBlockList, childMintable, chainID)
+	input, err := getInitERC1155PredicateACLInput(bcfg, owner,
+		useBridgeAllowList, useBridgeBlockList, childMintable, chainID)
 	if err != nil {
 		return err
 	}

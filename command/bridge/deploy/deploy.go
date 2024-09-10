@@ -125,7 +125,8 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	defer outputter.WriteOutput()
 
 	outputter.WriteCommandResult(&helper.MessageResult{
-		Message: fmt.Sprintf("%s started... External Chain JSON RPC address %s.", contractsDeploymentTitle, params.externalRPCAddress),
+		Message: fmt.Sprintf("%s started... External Chain JSON RPC address %s.",
+			contractsDeploymentTitle, params.externalRPCAddress),
 	})
 
 	chainConfig, err := chain.ImportFromFile(params.genesisPath)
@@ -145,11 +146,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 	externalChainID, err := externalChainClient.ChainID()
 	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to get chainID for provided IP address: %s: %w", params.externalRPCAddress, err))
+		outputter.SetError(fmt.Errorf("failed to get chainID for provided IP address: %s: %w",
+			params.externalRPCAddress, err))
 	}
 
 	if consensusCfg.Bridge[externalChainID.Uint64()] != nil {
-		code, err := externalChainClient.GetCode(consensusCfg.Bridge[externalChainID.Uint64()].ExternalGatewayAddr, jsonrpc.LatestBlockNumberOrHash)
+		code, err := externalChainClient.GetCode(consensusCfg.Bridge[externalChainID.Uint64()].ExternalGatewayAddr,
+			jsonrpc.LatestBlockNumberOrHash)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("failed to check if rootchain contracts are deployed: %w", err))
 
@@ -213,7 +216,10 @@ func deployContracts(outputter command.OutputFormatter,
 	initialValidators []*validator.GenesisValidator,
 	cmdCtx context.Context) (deploymentResultInfo, error) {
 	var internalTxRelayer txrelayer.TxRelayer
-	externalTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(externalChainClient), txrelayer.WithWriter(outputter),
+
+	externalTxRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithClient(externalChainClient),
+		txrelayer.WithWriter(outputter),
 		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
 		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil},

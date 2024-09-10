@@ -201,8 +201,10 @@ func IncrementAddressBy(addr Address, increment uint64) Address {
 	addrBigInt.Add(addrBigInt, big.NewInt(0).SetUint64(increment))
 
 	// Convert back to Address
-	var newAddr Address
-	addrBytes := addrBigInt.Bytes()
+	var (
+		newAddr   Address
+		addrBytes = addrBigInt.Bytes()
+	)
 
 	// Handle overflow by truncating to 20 bytes
 	if len(addrBytes) > 20 {

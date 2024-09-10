@@ -322,8 +322,8 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 		return Signature{}, err
 	}
 
-	signatures := make(bls.Signatures, 0, len(votes))
-	publicKeys := make([][]byte, 0, len(votes))
+	var signatures bls.Signatures
+
 	bmap := bitmap.Bitmap{}
 	signers := make(map[types.Address]struct{}, 0)
 
@@ -341,7 +341,6 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 		bmap.Set(uint64(index)) //nolint:gosec
 
 		signatures = append(signatures, signature)
-		publicKeys = append(publicKeys, validatorsMetadata[index].BlsKey.Marshal())
 		signers[types.StringToAddress(vote.From)] = struct{}{}
 	}
 

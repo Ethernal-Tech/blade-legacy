@@ -166,32 +166,32 @@ type BridgeConfig struct {
 
 // GetHeighestInternalAddress returns the highest address among all internal bridge contracts
 func (b *BridgeConfig) GetHeighestInternalAddress() types.Address {
-	heighest := b.InternalGatewayAddr
-	if b.InternalERC20PredicateAddr.Compare(heighest) > 0 {
-		heighest = b.InternalERC20PredicateAddr
+	result := b.InternalGatewayAddr
+	if b.InternalERC20PredicateAddr.Compare(result) > 0 {
+		result = b.InternalERC20PredicateAddr
 	}
 
-	if b.InternalERC721PredicateAddr.Compare(heighest) > 0 {
-		heighest = b.InternalERC721PredicateAddr
+	if b.InternalERC721PredicateAddr.Compare(result) > 0 {
+		result = b.InternalERC721PredicateAddr
 	}
 
-	if b.InternalERC1155PredicateAddr.Compare(heighest) > 0 {
-		heighest = b.InternalERC1155PredicateAddr
+	if b.InternalERC1155PredicateAddr.Compare(result) > 0 {
+		result = b.InternalERC1155PredicateAddr
 	}
 
-	if b.InternalMintableERC20PredicateAddr.Compare(heighest) > 0 {
-		heighest = b.InternalMintableERC20PredicateAddr
+	if b.InternalMintableERC20PredicateAddr.Compare(result) > 0 {
+		result = b.InternalMintableERC20PredicateAddr
 	}
 
-	if b.InternalMintableERC721PredicateAddr.Compare(heighest) > 0 {
-		heighest = b.InternalMintableERC721PredicateAddr
+	if b.InternalMintableERC721PredicateAddr.Compare(result) > 0 {
+		result = b.InternalMintableERC721PredicateAddr
 	}
 
-	if b.InternalMintableERC1155PredicateAddr.Compare(heighest) > 0 {
-		heighest = b.InternalMintableERC1155PredicateAddr
+	if b.InternalMintableERC1155PredicateAddr.Compare(result) > 0 {
+		result = b.InternalMintableERC1155PredicateAddr
 	}
 
-	return heighest
+	return result
 }
 
 func (p *PolyBFTConfig) IsBridgeEnabled() bool {
