@@ -78,12 +78,11 @@ func (txn *Txn) GetDumpTree(dumpObject *Dump, opts *DumpInfo, deleteEmptyObjects
 
 	var (
 		nextKey         []byte
-		startValid      = opts.Start == nil || len(opts.Start) == 0 || bytes.Equal(opts.Start, types.EmptyRootHash.Bytes())
-		committedIradix = txn.GetRadix().Commit()
+		hasStartKey     = opts.Start != nil && len(opts.Start) > 0 && !bytes.Equal(opts.Start, types.EmptyRootHash.Bytes())
+		committedIradix = txn.txn.Commit()
 	)
 
 	dumpObject.Accounts = make(map[types.Address]DumpAccount)
-	dumpObject.Root = txn.snapshot.GetTreeHash().String()
 
 	committedIradix.Root().Walk(func(k []byte, v interface{}) bool {
 		a, ok := v.(*StateObject)
@@ -91,12 +90,12 @@ func (txn *Txn) GetDumpTree(dumpObject *Dump, opts *DumpInfo, deleteEmptyObjects
 			return false
 		}
 
-		if !startValid {
+		if hasStartKey {
 			if !bytes.Equal(opts.Start, k) {
 				return false
 			}
 
-			startValid = true
+			hasStartKey = false
 		}
 
 		if opts.Max > 0 && len(dumpObject.Accounts) >= opts.Max {

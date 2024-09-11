@@ -668,7 +668,7 @@ func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults 
 
 			block, ok := d.store.GetBlockByHash(header.Hash, true)
 			if !ok {
-				return nil, fmt.Errorf("block not found for hash %s", header.Hash.String())
+				return state.IteratorDump{}, fmt.Errorf("block not found for hash %s", header.Hash.String())
 			}
 
 			if maxResults <= 0 || maxResults > AccountRangeMaxResults {
@@ -685,7 +685,7 @@ func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults 
 
 			iDump, err := d.store.GetIteratorDumpTree(block, opts)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get iterator dump tree: %w", err)
+				return state.IteratorDump{}, fmt.Errorf("failed to get iterator dump tree: %w", err)
 			}
 
 			return iDump, nil
@@ -713,12 +713,12 @@ func (d *Debug) DumpBlock(blockNumber BlockNumber) (interface{}, error) {
 				Max:               AccountRangeMaxResults,
 			}
 
-			iDump, err := d.store.GetIteratorDumpTree(block, opts)
+			dump, err := d.store.DumpTree(block, opts)
 			if err != nil {
-				return nil, fmt.Errorf("failed to get iterator dump tree: %w", err)
+				return nil, fmt.Errorf("failed to dump tree: %w", err)
 			}
 
-			return iDump, nil
+			return dump, nil
 		},
 	)
 }

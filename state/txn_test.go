@@ -77,6 +77,46 @@ func TestSnapshotUpdateData(t *testing.T) {
 	assert.Equal(t, hash1, txn.GetState(addr1, hash1))
 }
 
+func TestGetDumpTree(t *testing.T) {
+	txn := newTestTxn(defaultPreState)
+	txn.SetState(addr1, hash1, hash2)
+	txn.SetState(addr2, hash2, hash1)
+
+	dump := &Dump{
+		Accounts: make(map[types.Address]DumpAccount),
+	}
+	opts := &DumpInfo{
+		Start:             []byte{},
+		Max:               1,
+		OnlyWithAddresses: false,
+		SkipCode:          false,
+		SkipStorage:       false,
+	}
+
+	nextKey, err := txn.GetDumpTree(dump, opts, false)
+
+	assert.NoError(t, err)
+	assert.Equal(t, addr2.Bytes(), nextKey)
+	assert.Equal(t, 1, len(dump.Accounts))
+
+	dumpAcc, exist := dump.Accounts[addr1]
+
+	assert.True(t, exist)
+	assert.Equal(t, dumpAcc.SecureKey, addr1.Bytes())
+
+	opts.Start = nextKey
+	nextKey, err = txn.GetDumpTree(dump, opts, false)
+
+	assert.NoError(t, err)
+	assert.Equal(t, []byte(nil), nextKey)
+	assert.Equal(t, 1, len(dump.Accounts))
+
+	dumpAcc, exist = dump.Accounts[addr2]
+
+	assert.True(t, exist)
+	assert.Equal(t, dumpAcc.SecureKey, addr2.Bytes())
+}
+
 func TestIncrNonce(t *testing.T) {
 	t.Parallel()
 

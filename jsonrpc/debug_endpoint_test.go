@@ -1238,6 +1238,234 @@ func TestGetRawReceipts(t *testing.T) {
 	}
 }
 
+func TestAccountRange(t *testing.T) {
+	t.Parallel()
+
+	dumpIter := &state.IteratorDump{
+		Next: addr2[:],
+	}
+
+	dumpEmpty := state.IteratorDump{}
+
+	tests := []struct {
+		name      string
+		filter    BlockNumberOrHash
+		store     *debugEndpointMockStore
+		result    interface{}
+		returnErr string
+		err       bool
+	}{
+		{
+			name:   "HeaderNotFound",
+			filter: EarliestBlockNumberOrHash,
+			store: &debugEndpointMockStore{
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					require.Equal(t, uint64(0), num)
+
+					return nil, false
+				},
+			},
+
+			returnErr: "failed to get header",
+			result:    dumpEmpty,
+			err:       true,
+		},
+		{
+			name:   "BlockNotFound",
+			filter: LatestBlockNumberOrHash,
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return nil, false
+				},
+			},
+
+			returnErr: "block not found for hash",
+			result:    dumpEmpty,
+			err:       true,
+		},
+		{
+			name:   "IteratorDumpTreeError",
+			filter: LatestBlockNumberOrHash,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+
+				getIteratorDumpTreeFn: func(block *types.Block, dump *state.DumpInfo) (*state.IteratorDump, error) {
+					require.Equal(t, testLatestBlock, block)
+
+					return nil, fmt.Errorf("IteratorDump not valid")
+				},
+			},
+
+			returnErr: "failed to get iterator dump tree",
+			result:    dumpEmpty,
+			err:       true,
+		},
+
+		{
+			name:   "IteratorDumpTreeValid",
+			filter: LatestBlockNumberOrHash,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+
+				getIteratorDumpTreeFn: func(block *types.Block, dump *state.DumpInfo) (*state.IteratorDump, error) {
+					require.Equal(t, testLatestBlock, block)
+
+					return dumpIter, nil
+				},
+			},
+
+			returnErr: "",
+			result:    dumpIter,
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.AccountRange(test.filter, []byte{}, 1, false, false, false)
+
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestDumpBlock(t *testing.T) {
+	t.Parallel()
+
+	dump := &state.Dump{}
+
+	tests := []struct {
+		name        string
+		blockNumber BlockNumber
+		store       *debugEndpointMockStore
+		result      interface{}
+		returnErr   string
+		err         bool
+	}{
+		{
+			name:        "GetNumericBlockNumberNotValid",
+			blockNumber: BlockNumber(-5),
+			store:       &debugEndpointMockStore{},
+			returnErr:   "failed to get block number",
+			result:      nil,
+			err:         true,
+		},
+		{
+			name:        "BlockNotFound",
+			blockNumber: *LatestBlockNumberOrHash.BlockNumber,
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByNumberFn: func(num uint64, full bool) (*types.Block, bool) {
+					return nil, false
+				},
+			},
+
+			returnErr: "block not found for number ",
+			result:    nil,
+			err:       true,
+		},
+		{
+			name:        "DumpTreeError",
+			blockNumber: *LatestBlockNumberOrHash.BlockNumber,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByNumberFn: func(num uint64, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+
+				dumpTreeFn: func(block *types.Block, dump *state.DumpInfo) (*state.Dump, error) {
+					require.Equal(t, testLatestBlock, block)
+
+					return nil, fmt.Errorf("dump not valid")
+				},
+			},
+
+			returnErr: "failed to dump tree",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:        "DumpTreeValid",
+			blockNumber: *LatestBlockNumberOrHash.BlockNumber,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getBlockByNumberFn: func(num uint64, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+
+				dumpTreeFn: func(block *types.Block, dumpInfo *state.DumpInfo) (*state.Dump, error) {
+					require.Equal(t, testLatestBlock, block)
+
+					return dump, nil
+				},
+			},
+
+			returnErr: "",
+			result:    dump,
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.DumpBlock(test.blockNumber)
+
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func Test_newTracer(t *testing.T) {
 	t.Parallel()
 

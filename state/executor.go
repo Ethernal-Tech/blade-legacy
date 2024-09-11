@@ -143,6 +143,13 @@ func (e *Executor) GetDumpTree(dump *Dump, parentHash types.Hash,
 		return nil, err
 	}
 
+	snap, err := e.state.NewSnapshotAt(block.Header.StateRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	dump.Root = snap.GetTreeHash().String()
+
 	return next, nil
 }
 
