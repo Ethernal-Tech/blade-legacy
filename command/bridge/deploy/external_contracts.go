@@ -16,13 +16,11 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-var externalContracts []*contract
-
 // initExternalContracts initializes the external contracts
 func initExternalContracts(o command.OutputFormatter,
 	chainCfg *chain.Chain, bridgeCfg *polybft.BridgeConfig,
-	externalChainClient *jsonrpc.EthClient, externalChainID *big.Int) error {
-	externalContracts = make([]*contract, 0)
+	externalChainClient *jsonrpc.EthClient, externalChainID *big.Int) ([]*contract, error) {
+	externalContracts := make([]*contract, 0)
 
 	// deploy root ERC20 token only if non-mintable native token flavor is used on a child chain
 	// and this external chain is the native token origin
@@ -31,7 +29,7 @@ func initExternalContracts(o command.OutputFormatter,
 			// use existing root chain ERC20 token
 			if err := populateExistingNativeTokenAddr(externalChainClient,
 				params.rootERC20TokenAddr, erc20Name, bridgeCfg); err != nil {
-				return err
+				return nil, err
 			}
 		} else {
 			// deploy MockERC20 as a root chain root native token
@@ -314,7 +312,7 @@ func initExternalContracts(o command.OutputFormatter,
 		})
 	}
 
-	return nil
+	return externalContracts, nil
 }
 
 // populateExistingNativeTokenAddr checks whether given token is deployed on the provided address.

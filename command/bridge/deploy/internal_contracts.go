@@ -16,18 +16,14 @@ import (
 	"github.com/Ethernal-Tech/ethgo"
 )
 
-var (
-	bigZero = big.NewInt(0)
-
-	internalContracts []*contract
-)
+var bigZero = big.NewInt(0)
 
 // initInternalContracts initializes the internal contracts
-func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
+func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) []*contract {
 	useBridgeAllowList, useBridgeBlockList := chainCfg.Params.DoesItUseBridgeAllowList(),
 		chainCfg.Params.DoesItUseBridgeBlockList()
 
-	internalContracts = make([]*contract, 0)
+	internalContracts := make([]*contract, 0)
 
 	// Gateway contract
 	internalContracts = append(internalContracts, &contract{
@@ -317,11 +313,13 @@ func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) {
 				getContractName(true, erc1155MintablePredicateName), key)
 		},
 	})
+
+	return internalContracts
 }
 
 // preAllocateInternalPredicates pre-allocates internal predicates in genesis
 // if the command is run in bootstrap mode
-func preAllocateInternalPredicates(o command.OutputFormatter,
+func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts []*contract,
 	chainCfg *chain.Chain, bridgeCfg *polybft.BridgeConfig) error {
 	predicateBaseProxyAddress := contracts.ChildBridgeContractsBaseAddress
 

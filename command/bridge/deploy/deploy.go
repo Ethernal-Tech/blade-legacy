@@ -208,7 +208,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	outputter.SetCommandResult(command.Results(deploymentResultInfo.CommandResults))
 }
 
-// deployContracts deploys and initializes rootchain smart contracts
+// deployContracts deploys and initializes bridge smart contracts
 func deployContracts(outputter command.OutputFormatter,
 	externalChainClient *jsonrpc.EthClient,
 	externalChainID *big.Int,
@@ -241,21 +241,25 @@ func deployContracts(outputter command.OutputFormatter,
 		}
 	}
 
-	internalChainID := chainCfg.Params.ChainID
-	bridgeConfig := &polybft.BridgeConfig{JSONRPCEndpoint: params.externalRPCAddress}
+	var (
+		internalChainID   = chainCfg.Params.ChainID
+		bridgeConfig      = &polybft.BridgeConfig{JSONRPCEndpoint: params.externalRPCAddress}
+		externalContracts []*contract
+		internalContracts []*contract
+	)
 
 	// setup external contracts
-	if err := initExternalContracts(outputter, chainCfg, bridgeConfig,
+	if externalContracts, err = initExternalContracts(outputter, chainCfg, bridgeConfig,
 		externalChainClient, externalChainID); err != nil {
 		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
 	}
 
 	// setup internal contracts
-	initInternalContracts(outputter, chainCfg)
+	internalContracts = initInternalContracts(outputter, chainCfg)
 
 	// pre-allocate internal predicates addresses in genesis if blade is bootstrapping
 	if params.isBootstrap {
-		if err := preAllocateInternalPredicates(outputter, chainCfg, bridgeConfig); err != nil {
+		if err := preAllocateInternalPredicates(outputter, internalContracts, chainCfg, bridgeConfig); err != nil {
 			return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
 		}
 
