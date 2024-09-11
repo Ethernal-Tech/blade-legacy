@@ -31,7 +31,7 @@ func WaitForSubscribers(ctx context.Context, srv *Server, topic string, expected
 }
 
 func TestSimpleGossip(t *testing.T) {
-	numServers := 6
+	numServers := 9
 	sentMessage := fmt.Sprintf("%d", time.Now().UTC().Unix())
 
 	servers, createErr := createServers(numServers, nil)
@@ -75,6 +75,7 @@ func TestSimpleGossip(t *testing.T) {
 	err := WaitForSubscribers(ctx, publisher, topicName, len(servers)-1)
 	require.NoError(t, err, "Unable to wait for subscribers")
 
+	time.Sleep(100 * time.Millisecond)
 	err = publisherTopic.Publish(
 		&testproto.GenericMessage{
 			Message: sentMessage,

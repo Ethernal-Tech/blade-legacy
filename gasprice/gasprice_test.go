@@ -18,7 +18,7 @@ import (
 func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 	t.Parallel()
 
-	defaultGasPrice := DefaultGasHelperConfig.LastPrice
+	defaultGasPrice := big.NewInt(DefaultGasHelperConfig.LastPrice.Int64())
 
 	var cases = []struct {
 		Name       string

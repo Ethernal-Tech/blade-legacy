@@ -85,7 +85,7 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v5.0.0
         with:
-          go-version: 1.21.x
+          go-version: ${{ vars.GOLANG_VERSION }}
       - name: Build Blade
         run: make build
       - name: Configure AWS Credentials
