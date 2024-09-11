@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/umbracle/ethgo/abi"
+	"github.com/Ethernal-Tech/ethgo/abi"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 )

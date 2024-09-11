@@ -1,0 +1,114 @@
+---
+name: Sanity Check Tests
+on: # yamllint disable-line rule:truthy
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: The environment to run against
+        type: choice
+        options: [dev, test] # nightly should not be initiated manually
+  workflow_call:
+    inputs:
+      environment:
+        description: The environment to run against
+        type: string
+        required: true
+    outputs:
+      sanity_check_tests_output:
+        description: Sanity Check Tests output
+        value: ${{ jobs.sanity_check_tests.outputs.test_output_success }}
+      stake_test_output:
+        description: Stake Test output
+        value: ${{ jobs.sanity_check_tests.outputs.stake_test }}
+      unstake_test_output:
+        description: Unstake Test output
+        value: ${{ jobs.sanity_check_tests.outputs.unstake_test }}
+      register_validator_test_output:
+        description: Register Validator Test output
+        value: ${{ jobs.sanity_check_tests.outputs.register_validator_test }}
+      withdraw_rewards_test_output:
+        description: Withdraw Rewards Test output
+        value: ${{ jobs.sanity_check_tests.outputs.withdraw_rewards_test }}
+      unstake_all_test_output:
+        description: Unstake All Test output
+        value: ${{ jobs.sanity_check_tests.outputs.unstake_all_test }}
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      AWS_S3_BLADE_BUCKET:
+        required: true
+      AWS_LOADTESTRUNNER_MNEMONIC:
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+  security-events: write
+
+jobs:
+  check_network:
+    name: Check if the network is already deployed
+    runs-on: ubuntu-latest
+    outputs:
+      rpc_url: ${{ steps.rpc_url.outputs.url }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+      - name: Retrieve state file from s3
+        id: retrieve_state
+        run: echo "retrieve_state_output=$(aws s3 cp s3://${{ secrets.AWS_S3_BLADE_BUCKET }}/states/${{ inputs.environment }} state.json)" >> $GITHUB_OUTPUT
+      - name: Set RPC URL
+        id: rpc_url
+        if: contains(steps.retrieve_state.outputs.retrieve_state_output, 'download')
+        run: echo "url=$(cat state.json | jq -r '.outputs.aws_lb_ext_domain.value // empty')" >> $GITHUB_OUTPUT
+  sanity_check_tests:
+    name: Run Sanity Check
+    runs-on: ubuntu-latest
+    needs: check_network
+    if: needs.check_network.outputs.rpc_url != ''
+    environment: ${{ inputs.environment }}
+    outputs:
+      test_output_success: ${{ steps.sanity_check_tests_results.outputs.test_output }}
+      stake_test: ${{ steps.sanity_check_tests_results.outputs.stake_test }}
+      unstake_test: ${{ steps.sanity_check_tests_results.outputs.unstake_test }}
+      register_validator_test: ${{ steps.sanity_check_tests_results.outputs.register_validator_test }}
+      withdraw_rewards_test: ${{ steps.sanity_check_tests_results.outputs.withdraw_rewards_test }}
+      unstake_all_test: ${{ steps.sanity_check_tests_results.outputs.unstake_all_test }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
+      - name: Install Go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version: ${{ vars.GOLANG_VERSION }}
+      - name: Build Blade
+        run: make build
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.1
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+      - name: Get validator keys
+        run: aws ssm get-parameters --names `aws ec2 describe-instances --filters "Name=tag:BaseDN,Values=${{ inputs.environment }}${{ vars.BASEDN_SUFIX }}" "Name=tag:Role,Values=validator" "Name=instance-state-name,Values=running" --query "Reservations[*].Instances[*].Tags[?Key=='Name'].Value[]" --output text | sed 's/.*/\/${{ inputs.environment }}\/&\/validator-key/'` --with-decryption --region ${{ vars.AWS_REGION }} > keys.json
+      - name: Start Sanity Check Test
+        id: sanity_check_tests_results
+        run: |
+          ./blade sanity-check --jsonrpc "http://${{ needs.check_network.outputs.rpc_url }}" --mnemonic "${{ secrets.AWS_LOADTESTRUNNER_MNEMONIC }}" --receipts-timeout 2m --validator-keys "`cat keys.json | jq -r '.Parameters[].Value' | tr '\n' ',' | sed 's/,$//'`" --to-json
+          echo "test_output=`cat sanity_check_results.json | jq 'map(select(.Result != "PASSED")) | length == 0'`" >> $GITHUB_OUTPUT
+          echo "stake_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Stake Test") | .Result'`" >> $GITHUB_OUTPUT
+          echo "unstake_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Unstake Test") | .Result'`" >> $GITHUB_OUTPUT
+          echo "register_validator_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Register Validator Test") | .Result'`" >> $GITHUB_OUTPUT
+          echo "withdraw_rewards_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Withdraw Rewards Test") | .Result'`" >> $GITHUB_OUTPUT
+          echo "unstake_all_test=`cat sanity_check_results.json | jq -r '.[] | select(.Name == "Unstake All Test") | .Result'`" >> $GITHUB_OUTPUT
+      - name: Archive Sanity Check Test results
+        if: always()
+        uses: actions/upload-artifact@v4.3.0
+        with:
+          name: sanity-check-results
+          path: sanity_check_results.json
+          retention-days: 30

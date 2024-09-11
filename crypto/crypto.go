@@ -202,10 +202,7 @@ func Sign(priv *ecdsa.PrivateKey, hash []byte) ([]byte, error) {
 
 	defer btcPrivKey.Zero()
 
-	sig, err := btc_ecdsa.SignCompact(btcPrivKey, hash, false)
-	if err != nil {
-		return nil, err
-	}
+	sig := btc_ecdsa.SignCompact(btcPrivKey, hash, false)
 
 	// Convert to Ethereum signature format with 'recovery id' v at the end.
 	v := sig[0] - recoveryID
@@ -275,6 +272,10 @@ func generateECDSAKeyAndMarshal() ([]byte, error) {
 	}
 
 	return buf, nil
+}
+
+func HexToECDSA(hexKey string) (*ecdsa.PrivateKey, error) {
+	return BytesToECDSAPrivateKey([]byte(hexKey))
 }
 
 // BytesToECDSAPrivateKey reads the input byte array and constructs a private key if possible
@@ -352,4 +353,30 @@ func convertToBtcPrivKey(priv *ecdsa.PrivateKey) (*btcec.PrivateKey, error) {
 	}
 
 	return &btcPriv, nil
+}
+
+func DToECDSA(d []byte, strict bool) (*ecdsa.PrivateKey, error) {
+	priv := new(ecdsa.PrivateKey)
+	priv.PublicKey.Curve = btcec.S256()
+
+	if strict && 8*len(d) != priv.Params().BitSize {
+		return nil, fmt.Errorf("invalid length, need %d bits", priv.Params().BitSize)
+	}
+
+	priv.D = new(big.Int).SetBytes(d)
+
+	if priv.D.Cmp(secp256k1N) >= 0 {
+		return nil, errors.New("invalid private key, >= N")
+	}
+
+	if priv.D.Sign() <= 0 {
+		return nil, errors.New("invalid private key, zero or negative")
+	}
+
+	priv.PublicKey.X, priv.PublicKey.Y = btcec.S256().ScalarBaseMult(d)
+	if priv.PublicKey.X == nil {
+		return nil, errors.New("invalid private key")
+	}
+
+	return priv, nil
 }

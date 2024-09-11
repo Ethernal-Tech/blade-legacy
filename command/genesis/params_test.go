@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"

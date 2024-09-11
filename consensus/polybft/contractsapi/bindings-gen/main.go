@@ -11,7 +11,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/umbracle/ethgo/abi"
+	"github.com/Ethernal-Tech/ethgo/abi"
 
 	gensc "github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
@@ -543,8 +543,8 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo/abi"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo/abi"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 `

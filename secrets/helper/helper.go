@@ -21,6 +21,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/network"
 	"github.com/0xPolygon/polygon-edge/secrets"
+	alibabassm "github.com/0xPolygon/polygon-edge/secrets/alibaba"
 	"github.com/0xPolygon/polygon-edge/secrets/awsssm"
 	"github.com/0xPolygon/polygon-edge/secrets/gcpssm"
 	"github.com/0xPolygon/polygon-edge/secrets/hashicorpvault"
@@ -70,6 +71,18 @@ func setupGCPSSM(
 	secretsConfig *secrets.SecretsManagerConfig,
 ) (secrets.SecretsManager, error) {
 	return gcpssm.SecretsManagerFactory(
+		secretsConfig,
+		&secrets.SecretsManagerParams{
+			Logger: hclog.NewNullLogger(),
+		},
+	)
+}
+
+// setupAlibabaSSM is a helper method for boilerplate Alibaba Cloud Computing secrets manager setup
+func setupAlibabaSSM(
+	secretsConfig *secrets.SecretsManagerConfig,
+) (secrets.SecretsManager, error) {
+	return alibabassm.SecretsManagerFactory(
 		secretsConfig,
 		&secrets.SecretsManagerParams{
 			Logger: hclog.NewNullLogger(),
@@ -282,6 +295,13 @@ func InitCloudSecretsManager(secretsConfig *secrets.SecretsManagerConfig) (secre
 		}
 
 		secretsManager = GCPSSM
+	case secrets.AlibabaSSM:
+		alibabaSSM, err := setupAlibabaSSM(secretsConfig)
+		if err != nil {
+			return secretsManager, err
+		}
+
+		secretsManager = alibabaSSM
 	default:
 		return secretsManager, errors.New("unsupported secrets manager")
 	}

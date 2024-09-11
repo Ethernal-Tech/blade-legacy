@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/types"
 )

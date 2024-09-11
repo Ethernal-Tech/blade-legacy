@@ -9,8 +9,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/umbracle/ethgo"
 )
 
 const couldNotFoundBlockFormat = "could not find block. Number: %d, Hash: %s"

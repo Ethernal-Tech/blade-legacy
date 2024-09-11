@@ -6,8 +6,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 // UnstakeAllTest is a test that unstakes all the stake of a validator
@@ -62,18 +61,14 @@ func (t *UnstakeAllTest) Run() error {
 		return err
 	}
 
-	var epochEndingBlock *types.Header
+	if blockNum%t.config.EpochSize == 0 {
+		// if validator unstaked all on the epoch ending block, it will be removed on the next epoch
+		blockNum++
+	}
 
-	if blockNum%t.config.EpochSize != 0 {
-		epochEndingBlock, err = t.waitForEpochEnding(&blockNum)
-		if err != nil {
-			return err
-		}
-	} else {
-		epochEndingBlock, err = t.client.GetHeaderByNumber(jsonrpc.BlockNumber(blockNum))
-		if err != nil {
-			return err
-		}
+	epochEndingBlock, err := t.waitForEpochEnding(&blockNum)
+	if err != nil {
+		return err
 	}
 
 	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)
@@ -84,7 +79,8 @@ func (t *UnstakeAllTest) Run() error {
 	fmt.Println("Checking if validator is removed from validator set since it unstaked all")
 
 	if extra.Validators == nil || extra.Validators.IsEmpty() {
-		return fmt.Errorf("validator set delta is empty on an epoch ending block")
+		return fmt.Errorf("validator set delta is empty on an epoch ending block. Block: %d. EpochSize: %d",
+			epochEndingBlock.Number, t.config.EpochSize)
 	}
 
 	if len(extra.Validators.Removed) != 1 {

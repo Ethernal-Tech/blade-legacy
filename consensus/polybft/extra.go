@@ -8,8 +8,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/hashicorp/go-hclog"
-	"github.com/umbracle/ethgo/abi"
 	"github.com/umbracle/fastrlp"
 )
 

@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
-	"github.com/umbracle/ethgo"
 
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"

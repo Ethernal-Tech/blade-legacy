@@ -161,7 +161,7 @@ func TestEth_DecodeTxn(t *testing.T) {
 				store.SetAccount(addr, acc)
 			}
 
-			res, err := DecodeTxn(tt.arg, 1, store, false)
+			res, err := DecodeTxn(tt.arg, store, false)
 			assert.Equal(t, tt.res, res)
 			assert.Equal(t, tt.err, err)
 		})
@@ -279,7 +279,7 @@ func TestEth_TxnType(t *testing.T) {
 		types.WithInput([]byte{}),
 		types.WithNonce(0),
 	))
-	res, err := DecodeTxn(args, 1, store, false)
+	res, err := DecodeTxn(args, store, false)
 
 	expectedRes.ComputeHash()
 	assert.NoError(t, err)
@@ -288,13 +288,13 @@ func TestEth_TxnType(t *testing.T) {
 
 func newTestEthEndpoint(store testStore) *Eth {
 	return &Eth{
-		hclog.NewNullLogger(), store, 100, nil, 0,
+		hclog.NewNullLogger(), store, 100, nil, 0, nil,
 	}
 }
 
 func newTestEthEndpointWithPriceLimit(store testStore, priceLimit uint64) *Eth {
 	return &Eth{
-		hclog.NewNullLogger(), store, 100, nil, priceLimit,
+		hclog.NewNullLogger(), store, 100, nil, priceLimit, nil,
 	}
 }
 

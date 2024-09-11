@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
 	jsonIter "github.com/json-iterator/go"
@@ -38,12 +39,13 @@ func (f *funcData) numParams() int {
 }
 
 type endpoints struct {
-	Eth    *Eth
-	Web3   *Web3
-	Net    *Net
-	TxPool *TxPool
-	Bridge *Bridge
-	Debug  *Debug
+	Eth      *Eth
+	Web3     *Web3
+	Net      *Net
+	TxPool   *TxPool
+	Bridge   *Bridge
+	Debug    *Debug
+	Personal *Personal
 }
 
 // Dispatcher handles all json rpc requests by delegating
@@ -76,6 +78,7 @@ func newDispatcher(
 	logger hclog.Logger,
 	store JSONRPCStore,
 	params *dispatcherParams,
+	manager accounts.AccountManager,
 ) (*Dispatcher, error) {
 	d := &Dispatcher{
 		logger: logger.Named("dispatcher"),
@@ -87,20 +90,21 @@ func newDispatcher(
 		go d.filterManager.Run()
 	}
 
-	if err := d.registerEndpoints(store); err != nil {
+	if err := d.registerEndpoints(store, manager); err != nil {
 		return nil, err
 	}
 
 	return d, nil
 }
 
-func (d *Dispatcher) registerEndpoints(store JSONRPCStore) error {
+func (d *Dispatcher) registerEndpoints(store JSONRPCStore, manager accounts.AccountManager) error {
 	d.endpoints.Eth = &Eth{
 		d.logger,
 		store,
 		d.params.chainID,
 		d.filterManager,
 		d.params.priceLimit,
+		manager,
 	}
 	d.endpoints.Net = &Net{
 		store,
@@ -116,6 +120,7 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore) error {
 		store,
 	}
 	d.endpoints.Debug = NewDebug(store, d.params.concurrentRequestsDebug)
+	d.endpoints.Personal = NewPersonal(manager)
 
 	var err error
 
@@ -136,6 +141,10 @@ func (d *Dispatcher) registerEndpoints(store JSONRPCStore) error {
 	}
 
 	if err = d.registerService("bridge", d.endpoints.Bridge); err != nil {
+		return err
+	}
+
+	if err = d.registerService("personal", d.endpoints.Personal); err != nil {
 		return err
 	}
 
@@ -488,7 +497,7 @@ func (d *Dispatcher) registerService(serviceName string, service interface{}) er
 			continue
 		}
 
-		name := lowerCaseFirst(mv.Name)
+		name := lowerCaseFirstRune(mv.Name)
 		funcName := serviceName + "_" + name
 		fd := &funcData{
 			fv: mv.Func,
@@ -578,10 +587,11 @@ func getError(v reflect.Value) error {
 	return extractedErr
 }
 
-func lowerCaseFirst(str string) string {
-	for i, v := range str {
-		return string(unicode.ToLower(v)) + str[i+1:]
+// lowerCaseFirstRune converts the first character of the string to lowercase.
+func lowerCaseFirstRune(str string) string {
+	if len(str) == 0 {
+		return ""
 	}
 
-	return ""
+	return string(unicode.ToLower(rune(str[0]))) + str[1:]
 }

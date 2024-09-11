@@ -22,7 +22,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5.0.0
         with:
-          go-version: 1.21.x
+          go-version: ${{ vars.GOLANG_VERSION }}
       - name: Install Cardano tools
         uses: milos-ethernal/cardano-node-action@5a3bce7266cc1500d96e8fa63b3bb97135988482
       - name: Install Dependencies

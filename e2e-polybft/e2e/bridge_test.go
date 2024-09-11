@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
@@ -1355,6 +1355,12 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 	// this test case will check first if they can withdraw some of the premined amount of non-mintable token
 	t.Run("do a withdraw for premined validator address and premined non-validator address", func(t *testing.T) {
+		waitOneBlockFn := func(server *framework.TestServer) {
+			currentBlock, err := server.JSONRPC().GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
+			require.NoError(t, err)
+			require.NoError(t, cluster.WaitForBlock(currentBlock.Header.Number+1, time.Second*5))
+		}
+
 		validatorSrv := cluster.Servers[1]
 		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
@@ -1374,6 +1380,9 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			false)
 		require.NoError(t, err)
 
+		// Wait for 1 block before getting expected child balance
+		waitOneBlockFn(validatorSrv)
+
 		validatorBalanceAfterWithdraw, err := childEthEndpoint.GetBalance(
 			validatorAcc.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
@@ -1389,6 +1398,9 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			contracts.NativeERC20TokenContract,
 			false)
 		require.NoError(t, err)
+
+		// Wait for 1 block before getting expected child balance
+		waitOneBlockFn(validatorSrv)
 
 		nonValidatorBalanceAfterWithdraw, err := childEthEndpoint.GetBalance(
 			nonValidatorKey.Address(), jsonrpc.LatestBlockNumberOrHash)

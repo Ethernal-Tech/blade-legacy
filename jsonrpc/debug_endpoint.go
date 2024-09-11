@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"runtime/debug"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -11,9 +15,15 @@ import (
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer/calltracer"
 	"github.com/0xPolygon/polygon-edge/state/runtime/tracer/structtracer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/davecgh/go-spew/spew"
 )
 
-const callTracerName = "callTracer"
+const (
+	callTracerName = "callTracer"
+	blockString    = "block"
+	mutexString    = "mutex"
+	heapString     = "heap"
+)
 
 var (
 	defaultTraceTimeout = 5 * time.Second
@@ -33,8 +43,14 @@ type debugBlockchainStore interface {
 	// GetHeaderByNumber gets a header using the provided number
 	GetHeaderByNumber(uint64) (*types.Header, bool)
 
+	// GetReceiptsByHash returns the receipts by block hash
+	GetReceiptsByHash(types.Hash) ([]*types.Receipt, error)
+
 	// ReadTxLookup returns a block hash in which a given txn was mined
 	ReadTxLookup(txnHash types.Hash) (uint64, bool)
+
+	// GetPendingTx returns the transaction by hash in the TxPool (pending txn) [Thread-safe]
+	GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
 
 	// GetBlockByHash gets a block using the provided hash
 	GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool)
@@ -68,15 +84,330 @@ type debugStore interface {
 
 // Debug is the debug jsonrpc endpoint
 type Debug struct {
-	store      debugStore
-	throttling *Throttling
+	store        debugStore
+	throttling   *Throttling
+	handler      *DebugHandler
+	ReadFileFunc func(filename string) ([]byte, error)
 }
 
 func NewDebug(store debugStore, requestsPerSecond uint64) *Debug {
 	return &Debug{
-		store:      store,
-		throttling: NewThrottling(requestsPerSecond, time.Second),
+		store:        store,
+		throttling:   NewThrottling(requestsPerSecond, time.Second),
+		handler:      new(DebugHandler),
+		ReadFileFunc: os.ReadFile,
 	}
+}
+
+// CpuProfile turns on CPU profiling for nsec seconds and writes
+// profile data to file.
+//
+//nolint:stylecheck
+func (d *Debug) CpuProfile(file string, nsec int64) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartCPUProfile(file); err != nil {
+				return nil, err
+			}
+
+			time.Sleep(time.Duration(nsec) * time.Second)
+
+			if err := d.handler.StopCPUProfile(); err != nil {
+				return nil, err
+			}
+
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, nil
+		},
+	)
+}
+
+// FreeOSMemory forces a garbage collection.
+func (d *Debug) FreeOSMemory() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			debug.FreeOSMemory()
+
+			return nil, nil
+		},
+	)
+}
+
+// GcStats returns GC statistics.
+func (d *Debug) GcStats() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			s := new(debug.GCStats)
+			debug.ReadGCStats(s)
+
+			return s, nil
+		},
+	)
+}
+
+// MemStats returns detailed runtime memory statistics.
+func (d *Debug) MemStats() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			s := new(runtime.MemStats)
+			runtime.ReadMemStats(s)
+
+			return s, nil
+		},
+	)
+}
+
+// MutexProfile turns on mutex profiling for nsec seconds and writes profile data to file.
+// It uses a profile rate of 1 for most accurate information. If a different rate is
+// desired, set the rate and write the profile manually.
+func (d *Debug) MutexProfile(file string, nsec int64) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetMutexProfileFraction(1)
+			time.Sleep(time.Duration(nsec) * time.Second)
+			defer runtime.SetMutexProfileFraction(0)
+
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, writeProfile(mutexString, file)
+		},
+	)
+}
+
+// BlockProfile turns on goroutine profiling for nsec seconds and writes profile data to
+// file. It uses a profile rate of 1 for most accurate information. If a different rate is
+// desired, set the rate and write the profile manually.
+func (d *Debug) BlockProfile(file string, nsec int64) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetBlockProfileRate(1)
+			time.Sleep(time.Duration(nsec) * time.Second)
+
+			defer runtime.SetBlockProfileRate(0)
+
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, writeProfile(blockString, file)
+		},
+	)
+}
+
+// SetBlockProfileRate sets the rate of goroutine block profile data collection.
+// rate 0 disables block profiling.
+func (d *Debug) SetBlockProfileRate(rate int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetBlockProfileRate(rate)
+
+			return nil, nil
+		},
+	)
+}
+
+// SetGCPercent sets the garbage collection target percentage. It returns the previous
+// setting. A negative value disables GC.
+func (d *Debug) SetGCPercent(v int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return debug.SetGCPercent(v), nil
+		},
+	)
+}
+
+// SetMutexProfileFraction sets the rate of mutex profiling.
+func (d *Debug) SetMutexProfileFraction(rate int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			runtime.SetMutexProfileFraction(rate)
+
+			return nil, nil
+		},
+	)
+}
+
+// StartCPUProfile turns on CPU profiling, writing to the given file.
+func (d *Debug) StartCPUProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartCPUProfile(file); err != nil {
+				return nil, err
+			}
+
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, nil
+		},
+	)
+}
+
+// GoTrace turns on tracing for nsec seconds and writes
+func (d *Debug) GoTrace(file string, nsec int64) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartGoTrace(file); err != nil {
+				return nil, err
+			}
+
+			time.Sleep(time.Duration(nsec) * time.Second)
+
+			if err := d.handler.StopGoTrace(); err != nil {
+				return nil, err
+			}
+
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, nil
+		},
+	)
+}
+
+// PrintBlock retrieves a block and returns its pretty printed form.
+func (d *Debug) PrintBlock(number uint64) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			block, ok := d.store.GetBlockByNumber(number, true)
+			if !ok {
+				return nil, fmt.Errorf("block %d not found", number)
+			}
+
+			return spew.Sdump(block), nil
+		},
+	)
+}
+
+// StartGoTrace turns on tracing, writing to the given file.
+func (d *Debug) StartGoTrace(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StartGoTrace(file); err != nil {
+				return nil, err
+			}
+
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, nil
+		},
+	)
+}
+
+// StopCPUProfile stops an ongoing CPU profile.
+func (d *Debug) StopCPUProfile() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StopCPUProfile(); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// StopGoTrace stops an ongoing trace.
+func (d *Debug) StopGoTrace() (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			if err := d.handler.StopGoTrace(); err != nil {
+				return nil, err
+			}
+
+			return nil, nil
+		},
+	)
+}
+
+// WriteBlockProfile writes a goroutine blocking profile to the given file.
+func (d *Debug) WriteBlockProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, writeProfile(blockString, file)
+		},
+	)
+}
+
+// WriteMemProfile writes an allocation profile to the given file.
+// Note that the profiling rate cannot be set through the API,
+// it must be set on the command line.
+// WriteBlockProfile writes a goroutine blocking profile to the given file.
+func (d *Debug) WriteMemProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, writeProfile(heapString, file)
+		},
+	)
+}
+
+// WriteMutexProfile writes a goroutine blocking profile to the given file.
+func (d *Debug) WriteMutexProfile(file string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			absPath, err := filepath.Abs(file)
+			if err != nil {
+				return nil, err
+			}
+
+			return absPath, writeProfile(mutexString, file)
+		},
+	)
+}
+
+// Stacks returns a printed representation of the stacks of all goroutines. It
+// also permits the following optional filters to be used:
+//   - filter: boolean expression of packages to filter for
+func (d *Debug) Stacks(filter *string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return d.handler.Stacks(filter)
+		},
+	)
 }
 
 type TraceConfig struct {
@@ -150,6 +481,28 @@ func (d *Debug) TraceBlock(
 	)
 }
 
+func (d *Debug) TraceBlockFromFile(
+	input string,
+	config *TraceConfig,
+) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			blockByte, decodeErr := d.ReadFileFunc(input)
+			if decodeErr != nil {
+				return nil, fmt.Errorf("could not read file: %w", decodeErr)
+			}
+
+			block := &types.Block{}
+			if err := block.UnmarshalRLP(blockByte); err != nil {
+				return nil, err
+			}
+
+			return d.traceBlock(block, config)
+		},
+	)
+}
+
 func (d *Debug) TraceTransaction(
 	txHash types.Hash,
 	config *TraceConfig,
@@ -191,7 +544,7 @@ func (d *Debug) TraceCall(
 				return nil, ErrHeaderNotFound
 			}
 
-			tx, err := DecodeTxn(arg, header.Number, d.store, true)
+			tx, err := DecodeTxn(arg, d.store, true)
 			if err != nil {
 				return nil, err
 			}
@@ -209,6 +562,86 @@ func (d *Debug) TraceCall(
 			defer cancel()
 
 			return d.store.TraceCall(tx, header, tracer)
+		},
+	)
+}
+
+// GetRawBlock retrieves the RLP encoded for a single block.
+func (d *Debug) GetRawBlock(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			block, ok := d.store.GetBlockByHash(header.Hash, true)
+			if !ok {
+				return nil, fmt.Errorf("block %s not found", header.Hash)
+			}
+
+			return block.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawHeader retrieves the RLP encoding for a single header.
+func (d *Debug) GetRawHeader(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			return header.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawTransaction returns the bytes of the transaction for the given hash.
+func (d *Debug) GetRawTransaction(txHash types.Hash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			tx, _ := GetTxAndBlockByTxHash(txHash, d.store)
+			if tx == nil {
+				tx, _ = d.store.GetPendingTx(txHash)
+			}
+
+			if tx == nil {
+				return nil, nil
+			}
+
+			return tx.MarshalRLP(), nil
+		},
+	)
+}
+
+// GetRawReceipts retrieves the binary-encoded receipts of a single block.
+func (d *Debug) GetRawReceipts(filter BlockNumberOrHash) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			header, err := GetHeaderFromBlockNumberOrHash(filter, d.store)
+			if err != nil {
+				return nil, err
+			}
+
+			receipts, err := d.store.GetReceiptsByHash(header.Hash)
+			if err != nil {
+				return nil, err
+			}
+
+			result := make([][]byte, len(receipts))
+
+			for i, receipt := range receipts {
+				result[i] = receipt.MarshalRLP()
+			}
+
+			return result, nil
 		},
 	)
 }

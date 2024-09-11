@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"reflect"
 
+	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/mitchellh/mapstructure"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/abi"
 )
 
 const abiMethodIDLength = 4

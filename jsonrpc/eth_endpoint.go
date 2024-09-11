@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 
+	"github.com/0xPolygon/polygon-edge/accounts"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/gasprice"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -101,6 +102,7 @@ type Eth struct {
 	chainID       uint64
 	filterManager *FilterManager
 	priceLimit    uint64
+	accManager    accounts.AccountManager
 }
 
 // ChainId returns the chain id of the client
@@ -108,6 +110,11 @@ type Eth struct {
 //nolint:stylecheck
 func (e *Eth) ChainId() (interface{}, error) {
 	return argUintPtr(e.chainID), nil
+}
+
+// Accounts returns the collection of accounts this node manages.
+func (e *Eth) Accounts() (interface{}, error) {
+	return e.accManager.Accounts(), nil
 }
 
 func (e *Eth) Syncing() (interface{}, error) {
@@ -228,7 +235,7 @@ func (e *Eth) CreateAccessList(arg *txnArgs, filter BlockNumberOrHash) (interfac
 		return nil, err
 	}
 
-	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	transaction, err := DecodeTxn(arg, e.store, true)
 	if err != nil {
 		return nil, err
 	}
@@ -318,6 +325,19 @@ func (e *Eth) BlockNumber() (interface{}, error) {
 	return argUintPtr(h.Number), nil
 }
 
+// SignTransaction sign transaction with key of account, key need to be unlocked
+func (e *Eth) SignTransaction(txn *txnArgs) (interface{}, error) {
+	signedTx, err := e.signTx(txn)
+	if err != nil {
+		return nil, err
+	}
+
+	return &SignTransactionResult{
+		Raw: *argBytesPtr(signedTx.MarshalRLP()),
+		Tx:  signedTx,
+	}, nil
+}
+
 // SendRawTransaction sends a raw transaction
 func (e *Eth) SendRawTransaction(buf argBytes) (interface{}, error) {
 	tx := &types.Transaction{}
@@ -333,10 +353,41 @@ func (e *Eth) SendRawTransaction(buf argBytes) (interface{}, error) {
 	return tx.Hash().String(), nil
 }
 
-// SendTransaction rejects eth_sendTransaction json-rpc call as we don't support wallet management
-func (e *Eth) SendTransaction(_ *txnArgs) (interface{}, error) {
-	return nil, fmt.Errorf("request calls to eth_sendTransaction method are not supported," +
-		" use eth_sendRawTransaction instead")
+// SendTransaction creates a transaction for the given argument, signs it, and submits it to the tx pool
+func (e *Eth) SendTransaction(args *txnArgs) (interface{}, error) {
+	signedTx, err := e.signTx(args)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.store.AddTx(signedTx)
+	if err != nil {
+		return nil, err
+	}
+
+	return signedTx.Hash().String(), nil
+}
+
+// Sign calculates an ECDSA signature for the given data
+//
+// Note, the produced signature conforms to the secp256k1 curve R, S and V values,
+// where the V value will be 27 or 28 for legacy reasons.
+//
+// The account associated with addr must be unlocked.
+func (e *Eth) Sign(from types.Address, buf argBytes) (interface{}, error) {
+	account := accounts.Account{Address: from}
+
+	keyStore, err := getKeystore(e.accManager)
+	if err != nil {
+		return nil, err
+	}
+
+	signature, err := keyStore.SignHash(account, buf)
+	if err == nil {
+		signature[64] += 27 // Transform V from 0/1 to 27/28 according to the yellow paper
+	}
+
+	return argBytesPtr(signature), err
 }
 
 // GetTransactionByHash returns a transaction by its hash.
@@ -579,7 +630,7 @@ func (e *Eth) Call(arg *txnArgs, filter BlockNumberOrHash, apiOverride *StateOve
 		return nil, err
 	}
 
-	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	transaction, err := DecodeTxn(arg, e.store, true)
 	if err != nil {
 		return nil, err
 	}
@@ -634,7 +685,7 @@ func (e *Eth) EstimateGas(arg *txnArgs, rawNum *BlockNumber) (interface{}, error
 	}
 
 	// testTransaction should execute tx with nonce always set to the current expected nonce for the account
-	transaction, err := DecodeTxn(arg, header.Number, e.store, true)
+	transaction, err := DecodeTxn(arg, e.store, true)
 	if err != nil {
 		return nil, err
 	}
@@ -1014,4 +1065,25 @@ func (e *Eth) FeeHistory(blockCount argUint64, newestBlock BlockNumber,
 	}
 
 	return result, nil
+}
+
+// signTx signs a transaction with the account's private key if it exists in store
+func (e *Eth) signTx(args *txnArgs) (*types.Transaction, error) {
+	if err := args.setDefaults(e.priceLimit, e); err != nil {
+		return nil, err
+	}
+
+	tx, err := DecodeTxn(args, e.store, true)
+	if err != nil {
+		return nil, err
+	}
+
+	account := accounts.Account{Address: tx.From()}
+
+	keyStore, err := getKeystore(e.accManager)
+	if err != nil {
+		return nil, err
+	}
+
+	return keyStore.SignTx(account, tx)
 }

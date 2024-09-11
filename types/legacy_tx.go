@@ -28,6 +28,9 @@ func (tx *LegacyTx) chainID() *big.Int       { return deriveChainID(tx.v()) }
 func (tx *LegacyTx) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *LegacyTx) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *LegacyTx) gasFeeCap() *big.Int     { return tx.GasPrice }
+func (tx *LegacyTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
+	return new(big.Int).Set(tx.GasPrice)
+}
 
 func (tx *LegacyTx) accessList() TxAccessList { return nil }
 
@@ -204,7 +207,7 @@ func (tx *LegacyTx) marshalJSON(a *fastjson.Arena) *fastjson.Value {
 	v := a.NewObject()
 
 	tx.BaseTx.marshalJSON(a, v)
-	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+	v.Set("type", a.NewString(tx.transactionType().ToHexString()))
 
 	if tx.GasPrice != nil {
 		v.Set("gasPrice", a.NewString(fmt.Sprintf("0x%x", tx.GasPrice)))

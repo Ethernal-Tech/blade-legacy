@@ -6,7 +6,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 type deployContractResult struct {

@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -345,6 +346,7 @@ func NewTestServers(t *testing.T, num int, conf func(*TestServerConfig)) []*Test
 
 		srv := NewTestServer(t, dataDir, func(c *TestServerConfig) {
 			c.SetLogsDir(logsDir)
+			c.SetName(strconv.Itoa(i))
 			c.SetSaveLogs(true)
 			conf(c)
 		})

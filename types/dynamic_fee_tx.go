@@ -33,6 +33,22 @@ func (tx *DynamicFeeTx) gasPrice() *big.Int      { return nil }
 func (tx *DynamicFeeTx) gasTipCap() *big.Int     { return tx.GasTipCap }
 func (tx *DynamicFeeTx) gasFeeCap() *big.Int     { return tx.GasFeeCap }
 
+func (tx *DynamicFeeTx) effectiveGasPrice(baseFee *big.Int) *big.Int {
+	tmp := new(big.Int)
+
+	if baseFee == nil {
+		return tmp.Set(tx.GasFeeCap)
+	}
+
+	tmp.Sub(tx.GasFeeCap, baseFee)
+
+	if tmp.Cmp(tx.GasTipCap) > 0 {
+		tmp.Set(tx.GasTipCap)
+	}
+
+	return tmp.Add(tmp, baseFee)
+}
+
 func (tx *DynamicFeeTx) accessList() TxAccessList { return tx.AccessList }
 
 func (tx *DynamicFeeTx) setChainID(id *big.Int) {
@@ -252,10 +268,10 @@ func (tx *DynamicFeeTx) marshalJSON(a *fastjson.Arena) *fastjson.Value {
 	v := a.NewObject()
 
 	tx.BaseTx.marshalJSON(a, v)
-	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+	v.Set("type", a.NewString(tx.transactionType().ToHexString()))
 
 	if tx.GasTipCap != nil {
-		v.Set("maxPriorityFeePerGas", a.NewString(fmt.Sprintf("0x%x", tx.GasTipCap)))
+		v.Set("maxPriorityFeePerGas", a.NewString(fmt.Sprintf("0x%02x", tx.GasTipCap)))
 	}
 
 	if tx.GasFeeCap != nil {

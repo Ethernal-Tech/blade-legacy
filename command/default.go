@@ -3,7 +3,7 @@ package command
 import (
 	"fmt"
 
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/server"

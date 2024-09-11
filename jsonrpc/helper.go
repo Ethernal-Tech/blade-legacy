@@ -4,6 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"os/user"
+	"path/filepath"
+	"runtime/pprof"
+	"strings"
 
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -180,7 +185,7 @@ func GetNextNonce(address types.Address, number BlockNumber, store nonceGetter) 
 	return acc.Nonce, nil
 }
 
-func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonce bool) (*types.Transaction, error) {
+func DecodeTxn(arg *txnArgs, store nonceGetter, forceSetNonce bool) (*types.Transaction, error) {
 	if arg == nil {
 		return nil, errors.New("missing value for required argument 0")
 	}
@@ -244,6 +249,10 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 		txn.SetAccessList(*arg.AccessList)
 	}
 
+	if arg.ChainID != nil {
+		txn.SetChainID(new(big.Int).SetUint64(uint64(*arg.ChainID)))
+	}
+
 	switch txType {
 	case types.LegacyTxType:
 		txn.SetGasPrice(new(big.Int).SetBytes(*arg.GasPrice))
@@ -265,4 +274,35 @@ func DecodeTxn(arg *txnArgs, blockNumber uint64, store nonceGetter, forceSetNonc
 	txn.ComputeHash()
 
 	return txn, nil
+}
+
+// expandHomeDirectory expands home directory in file paths and sanitizes it.
+// For example ~someuser/tmp will not be expanded.
+func expandHomeDirectory(p string) string {
+	if strings.HasPrefix(p, "~/") || strings.HasPrefix(p, "~\\") {
+		home := os.Getenv("HOME")
+		if home == "" {
+			if usr, err := user.Current(); err == nil {
+				home = usr.HomeDir
+			}
+		}
+
+		if home != "" {
+			p = home + p[1:]
+		}
+	}
+
+	return filepath.Clean(p)
+}
+
+func writeProfile(name, file string) error {
+	p := pprof.Lookup(name)
+
+	f, err := os.Create(expandHomeDirectory(file))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return p.WriteTo(f, 0)
 }

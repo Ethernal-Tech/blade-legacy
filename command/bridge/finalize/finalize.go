@@ -19,8 +19,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
 )
 
 var (

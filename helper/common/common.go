@@ -80,6 +80,15 @@ func BigMin(x, y *big.Int) *big.Int {
 	return x
 }
 
+// BigMax returns the larger of x or y.
+func BigMax(x, y *big.Int) *big.Int {
+	if x.Cmp(y) > 0 {
+		return x
+	}
+
+	return y
+}
+
 func ConvertUnmarshalledUint(x interface{}) (uint64, error) {
 	switch tx := x.(type) {
 	case float64:
@@ -439,4 +448,12 @@ func GetFreePort() (port int, err error) {
 	}
 
 	return
+}
+
+// ToMB converts a byte slice size to a string representation in MB
+func ToMB(data []byte) string {
+	sizeInBytes := len(data)
+	sizeInMB := float64(sizeInBytes) / (1024 * 1024)
+
+	return fmt.Sprintf("%.2f MB", sizeInMB)
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
-	"github.com/umbracle/ethgo"
 )
 
 var errUnknownExitEvent = errors.New("unknown event from exit helper or checkpoint manager")

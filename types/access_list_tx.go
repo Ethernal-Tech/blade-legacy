@@ -207,6 +207,9 @@ func (tx *AccessListTxn) chainID() *big.Int       { return tx.ChainID }
 func (tx *AccessListTxn) gasPrice() *big.Int      { return tx.GasPrice }
 func (tx *AccessListTxn) gasTipCap() *big.Int     { return tx.GasPrice }
 func (tx *AccessListTxn) gasFeeCap() *big.Int     { return tx.GasPrice }
+func (tx *AccessListTxn) effectiveGasPrice(baseFee *big.Int) *big.Int {
+	return new(big.Int).Set(tx.gasPrice())
+}
 
 func (tx *AccessListTxn) accessList() TxAccessList {
 	return tx.AccessList
@@ -413,7 +416,7 @@ func (tx *AccessListTxn) marshalJSON(a *fastjson.Arena) *fastjson.Value {
 	v := a.NewObject()
 
 	tx.BaseTx.marshalJSON(a, v)
-	v.Set("type", a.NewString(fmt.Sprintf("0x%x", tx.transactionType())))
+	v.Set("type", a.NewString(tx.transactionType().ToHexString()))
 
 	if tx.ChainID != nil {
 		v.Set("chainId", a.NewString(fmt.Sprintf("0x%x", tx.ChainID)))

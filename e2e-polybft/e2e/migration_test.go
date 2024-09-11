@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"

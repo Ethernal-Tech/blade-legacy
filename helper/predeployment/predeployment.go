@@ -5,8 +5,8 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/hashicorp/go-hclog"
-	"github.com/umbracle/ethgo/abi"
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/contracts"

@@ -8,6 +8,7 @@ import (
 	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
 	"github.com/0xPolygon/polygon-edge/secrets"
+	alibabassm "github.com/0xPolygon/polygon-edge/secrets/alibaba"
 	"github.com/0xPolygon/polygon-edge/secrets/awsssm"
 	"github.com/0xPolygon/polygon-edge/secrets/gcpssm"
 	"github.com/0xPolygon/polygon-edge/secrets/hashicorpvault"
@@ -44,6 +45,7 @@ var secretsManagerBackends = map[secrets.SecretsManagerType]secrets.SecretsManag
 	secrets.HashicorpVault: hashicorpvault.SecretsManagerFactory,
 	secrets.AWSSSM:         awsssm.SecretsManagerFactory,
 	secrets.GCPSSM:         gcpssm.SecretsManagerFactory,
+	secrets.AlibabaSSM:     alibabassm.SecretsManagerFactory,
 }
 
 var genesisCreationFactory = map[ConsensusType]GenesisFactoryHook{

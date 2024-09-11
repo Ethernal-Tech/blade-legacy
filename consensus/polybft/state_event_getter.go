@@ -3,7 +3,7 @@ package polybft
 import (
 	"github.com/0xPolygon/polygon-edge/blockchain"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 	bolt "go.etcd.io/bbolt"
 )
 

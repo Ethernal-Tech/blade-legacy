@@ -8,13 +8,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
+	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/helper/tests"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -28,12 +29,15 @@ var (
 func TestE2E_JsonRPC(t *testing.T) {
 	const epochSize = uint64(5)
 
-	preminedAcct, err := crypto.GenerateECDSAKey()
+	preminedAcctOne, err := crypto.GenerateECDSAKey()
+	require.NoError(t, err)
+
+	preminedAcctTwo, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 4,
 		framework.WithEpochSize(int(epochSize)),
-		framework.WithPremine(preminedAcct.Address()),
+		framework.WithPremine(preminedAcctOne.Address(), preminedAcctTwo.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 		framework.WithHTTPS(),
 		framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
@@ -43,6 +47,9 @@ func TestE2E_JsonRPC(t *testing.T) {
 	cluster.WaitForReady(t)
 
 	ethClient, err := jsonrpc.NewEthClient(cluster.Servers[0].JSONRPCAddr())
+	require.NoError(t, err)
+
+	chainID, err := ethClient.ChainID()
 	require.NoError(t, err)
 
 	t.Run("eth_blockNumber", func(t *testing.T) {
@@ -104,7 +111,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getCode", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcctOne, contractsapi.TestSimple.Bytecode)
 		require.True(t, deployTxn.Succeed())
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
@@ -118,7 +125,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		txn := cluster.Transfer(t, preminedAcct, key1.Address(), ethgo.Ether(1))
+		txn := cluster.Transfer(t, preminedAcctOne, key1.Address(), ethgo.Ether(1))
 		require.True(t, txn.Succeed())
 
 		txn = cluster.Deploy(t, key1, contractsapi.TestSimple.Bytecode)
@@ -146,13 +153,13 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionByHash and eth_getTransactionReceipt", func(t *testing.T) {
-		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
+		txn := cluster.Transfer(t, preminedAcctOne, types.StringToAddress("0xDEADBEEF"), one)
 		require.True(t, txn.Succeed())
 
 		ethTxn, err := ethClient.GetTransactionByHash(types.Hash(txn.Receipt().TransactionHash))
 		require.NoError(t, err)
 
-		require.Equal(t, ethTxn.From(), preminedAcct.Address())
+		require.Equal(t, ethTxn.From(), preminedAcctOne.Address())
 
 		receipt, err := ethClient.GetTransactionReceipt(ethTxn.Hash())
 		require.NoError(t, err)
@@ -161,20 +168,20 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getTransactionCount", func(t *testing.T) {
-		nonce, err := ethClient.GetNonce(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
+		nonce, err := ethClient.GetNonce(preminedAcctOne.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.GreaterOrEqual(t, nonce, uint64(0)) // since we used this account in previous tests
 
-		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
+		txn := cluster.Transfer(t, preminedAcctOne, types.StringToAddress("0xDEADBEEF"), one)
 		require.True(t, txn.Succeed())
 
-		newNonce, err := ethClient.GetNonce(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
+		newNonce, err := ethClient.GetNonce(preminedAcctOne.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.Equal(t, nonce+1, newNonce)
 	})
 
 	t.Run("eth_getBalance", func(t *testing.T) {
-		balance, err := ethClient.GetBalance(preminedAcct.Address(), jsonrpc.LatestBlockNumberOrHash)
+		balance, err := ethClient.GetBalance(preminedAcctOne.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 		require.True(t, balance.Cmp(big.NewInt(0)) >= 0)
 
@@ -182,7 +189,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		tokens := ethgo.Ether(1)
 
-		txn := cluster.Transfer(t, preminedAcct, receiver, tokens)
+		txn := cluster.Transfer(t, preminedAcctOne, receiver, tokens)
 		require.True(t, txn.Succeed())
 
 		newBalance, err := ethClient.GetBalance(receiver, jsonrpc.LatestBlockNumberOrHash)
@@ -191,14 +198,14 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_estimateGas", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcctOne, contractsapi.TestSimple.Bytecode)
 		require.True(t, deployTxn.Succeed())
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
 		input := contractsapi.TestSimple.Abi.GetMethod("getValue").ID()
 
 		estimatedGas, err := ethClient.EstimateGas(&jsonrpc.CallMsg{
-			From: preminedAcct.Address(),
+			From: preminedAcctOne.Address(),
 			To:   &target,
 			Data: input,
 		})
@@ -213,7 +220,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_call", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcctOne, contractsapi.TestSimple.Bytecode)
 		require.True(t, deployTxn.Succeed())
 
 		target := types.Address(deployTxn.Receipt().ContractAddress)
@@ -248,15 +255,12 @@ func TestE2E_JsonRPC(t *testing.T) {
 		receiver := types.StringToAddress("0xDEADFFFF")
 		tokenAmount := ethgo.Ether(1)
 
-		chainID, err := ethClient.ChainID()
-		require.NoError(t, err)
-
 		gasPrice, err := ethClient.GasPrice()
 		require.NoError(t, err)
 
 		newAccountKey, newAccountAddr := tests.GenerateKeyAndAddr(t)
 
-		transferTxn := cluster.Transfer(t, preminedAcct, newAccountAddr, tokenAmount)
+		transferTxn := cluster.Transfer(t, preminedAcctOne, newAccountAddr, tokenAmount)
 		require.True(t, transferTxn.Succeed())
 
 		newAccountBalance, err := ethClient.GetBalance(newAccountAddr, jsonrpc.LatestBlockNumberOrHash)
@@ -287,7 +291,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		txn := cluster.Transfer(t, preminedAcct, key1.Address(), one)
+		txn := cluster.Transfer(t, preminedAcctOne, key1.Address(), one)
 		require.True(t, txn.Succeed())
 		txReceipt := txn.Receipt()
 
@@ -302,7 +306,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 		key1, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
-		txn := cluster.Transfer(t, preminedAcct, key1.Address(), one)
+		txn := cluster.Transfer(t, preminedAcctOne, key1.Address(), one)
 		require.True(t, txn.Succeed())
 		txReceipt := txn.Receipt()
 
@@ -314,7 +318,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_getBlockReceipts", func(t *testing.T) {
-		txn := cluster.Transfer(t, preminedAcct, types.StringToAddress("0xDEADBEEF"), one)
+		txn := cluster.Transfer(t, preminedAcctOne, types.StringToAddress("0xDEADBEEF"), one)
 		require.True(t, txn.Succeed())
 		receipt := txn.Receipt()
 
@@ -329,7 +333,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_createAccessList", func(t *testing.T) {
-		deployTxn := cluster.Deploy(t, preminedAcct, contractsapi.TestSimple.Bytecode)
+		deployTxn := cluster.Deploy(t, preminedAcctOne, contractsapi.TestSimple.Bytecode)
 		require.True(t, deployTxn.Succeed())
 		contractAddr := types.Address(deployTxn.Receipt().ContractAddress)
 
@@ -340,7 +344,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		tx := types.NewTx(
 			types.NewDynamicFeeTx(
-				types.WithFrom(preminedAcct.Address()),
+				types.WithFrom(preminedAcctOne.Address()),
 				types.WithTo(&contractAddr),
 				types.WithInput(inputValue),
 			))
@@ -368,6 +372,145 @@ func TestE2E_JsonRPC(t *testing.T) {
 		}
 
 		require.True(t, foundContractAddr, fmt.Sprintf("contract address %s was not found in the access list", contractAddr))
+	})
+
+	t.Run("eth_signTransaction", func(t *testing.T) {
+		accPassword := "testpassword"
+
+		keyRaw, err := preminedAcctOne.MarshallPrivateKey()
+		require.NoError(t, err)
+
+		hexKey := hex.EncodeToString(keyRaw)
+
+		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		require.NoError(t, err)
+		require.Equal(t, preminedAcctOne.Address(), accAddr)
+
+		nonce, err := ethClient.GetNonce(preminedAcctOne.Address(), jsonrpc.LatestBlockNumberOrHash)
+		require.NoError(t, err)
+
+		gasPrice, err := ethClient.GasPrice()
+		require.NoError(t, err)
+
+		target := types.StringToAddress("0xDEADBEEF")
+
+		txn := &jsonrpc.CallMsg{
+			From:     preminedAcctOne.Address(),
+			To:       &target,
+			Gas:      21000,
+			GasPrice: new(big.Int).SetUint64(gasPrice * 2),
+			Nonce:    nonce,
+			ChainID:  chainID,
+			Value:    big.NewInt(1),
+			Type:     uint64(types.LegacyTxType),
+		}
+
+		isUnlocked, err := ethClient.Unlock(preminedAcctOne.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		require.NoError(t, err)
+		require.True(t, isUnlocked)
+
+		res, err := ethClient.SignTransaction(txn)
+		require.NoError(t, err)
+		require.NotEmpty(t, res.Raw)
+		require.Equal(t, preminedAcctOne.Address(), res.Tx.From())
+
+		hash, err := ethClient.SendRawTransaction(res.Raw)
+		require.NoError(t, err)
+		require.NotEqual(t, types.ZeroHash, hash)
+
+		require.NoError(t, cluster.WaitUntil(2*time.Minute, 2*time.Second, func() bool {
+			receipt, err := ethClient.GetTransactionReceipt(hash)
+			if err != nil || receipt == nil {
+				return false
+			}
+
+			return true
+		}))
+	})
+
+	t.Run("eth_sendTransaction", func(t *testing.T) {
+		accPassword := "testpassword"
+
+		keyRaw, err := preminedAcctTwo.MarshallPrivateKey()
+		require.NoError(t, err)
+
+		hexKey := hex.EncodeToString(keyRaw)
+
+		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		require.NoError(t, err)
+		require.Equal(t, preminedAcctTwo.Address(), accAddr)
+
+		nonce, err := ethClient.GetNonce(preminedAcctTwo.Address(), jsonrpc.LatestBlockNumberOrHash)
+		require.NoError(t, err)
+
+		gasPrice, err := ethClient.GasPrice()
+		require.NoError(t, err)
+
+		target := preminedAcctOne.Address()
+
+		txn := types.NewTx(types.NewLegacyTx(
+			types.WithFrom(preminedAcctTwo.Address()),
+			types.WithTo(&target),
+			types.WithGas(21000),
+			types.WithGasPrice(new(big.Int).SetUint64(gasPrice*2)),
+			types.WithNonce(nonce),
+			types.WithChainID(chainID),
+			types.WithValue(big.NewInt(1)),
+		))
+
+		isUnlocked, err := ethClient.Unlock(preminedAcctTwo.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		require.NoError(t, err)
+		require.True(t, isUnlocked)
+
+		hash, err := ethClient.SendTransaction(txn)
+		require.NoError(t, err)
+		require.NotEqual(t, types.ZeroHash, hash)
+	})
+
+	t.Run("eth_sign", func(t *testing.T) {
+		accPassword := "testpassword"
+
+		key, err := crypto.GenerateECDSAKey()
+		require.NoError(t, err)
+
+		keyRaw, err := key.MarshallPrivateKey()
+		require.NoError(t, err)
+
+		hexKey := hex.EncodeToString(keyRaw)
+
+		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		require.NoError(t, err)
+		require.Equal(t, key.Address(), accAddr)
+
+		nonce, err := ethClient.GetNonce(key.Address(), jsonrpc.LatestBlockNumberOrHash)
+		require.NoError(t, err)
+
+		gasPrice, err := ethClient.GasPrice()
+		require.NoError(t, err)
+
+		receiver := types.StringToAddress("0xDEADFFFF")
+
+		txn := types.NewTx(
+			types.NewLegacyTx(
+				types.WithNonce(nonce),
+				types.WithFrom(key.Address()),
+				types.WithTo(&receiver),
+				types.WithValue(ethgo.Gwei(1)),
+				types.WithGas(21000),
+				types.WithGasPrice(new(big.Int).SetUint64(gasPrice)),
+			))
+
+		isUnlocked, err := ethClient.Unlock(key.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		require.NoError(t, err)
+		require.True(t, isUnlocked)
+
+		dataSign, err := ethClient.Sign(key.Address(), txn.Hash().Bytes())
+		require.NoError(t, err)
+
+		sig, err := hex.DecodeHex(dataSign)
+		require.NoError(t, err)
+		require.Len(t, sig, 65)
+		require.NotEqual(t, 0, sig[64])
 	})
 }
 

@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 // EOARunner represents a runner for executing load tests specific to EOAs (Externally Owned Accounts).

@@ -10,13 +10,15 @@ import (
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/ethgo"
 )
 
 func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 	t.Parallel()
+
+	defaultGasPrice := big.NewInt(DefaultGasHelperConfig.LastPrice.Int64())
 
 	var cases = []struct {
 		Name       string
@@ -118,7 +120,7 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 		{
 			Name: "Number of blocks in chain smaller than numOfBlocksToCheck",
 			Expected: DefaultGasHelperConfig.LastPrice.Mul(
-				DefaultGasHelperConfig.LastPrice, big.NewInt(2)), // at least two times of default last price
+				defaultGasPrice, big.NewInt(2)), // at least two times of default last price
 			GetBackend: func() Blockchain {
 				backend := createTestBlocks(t, 10)
 				createTestTxs(t, backend, 3, 200)
@@ -129,7 +131,7 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 		{
 			Name: "Number of blocks in chain higher than numOfBlocksToCheck",
 			Expected: DefaultGasHelperConfig.LastPrice.Mul(
-				DefaultGasHelperConfig.LastPrice, big.NewInt(2)), // at least two times of default last price
+				defaultGasPrice, big.NewInt(2)), // at least two times of default last price
 			GetBackend: func() Blockchain {
 				backend := createTestBlocks(t, 30)
 				createTestTxs(t, backend, 3, 200)
@@ -140,7 +142,7 @@ func TestGasHelper_MaxPriorityFeePerGas(t *testing.T) {
 		{
 			Name: "Not enough transactions in first 20 blocks, so read some more blocks",
 			Expected: DefaultGasHelperConfig.LastPrice.Mul(
-				DefaultGasHelperConfig.LastPrice, big.NewInt(2)), // at least two times of default last price
+				defaultGasPrice, big.NewInt(2)), // at least two times of default last price
 			GetBackend: func() Blockchain {
 				backend := createTestBlocks(t, 50)
 				createTestTxs(t, backend, 1, 200)

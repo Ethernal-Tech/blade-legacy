@@ -3,8 +3,8 @@ package fund
 import (
 	"fmt"
 
+	"github.com/Ethernal-Tech/ethgo"
 	"github.com/spf13/cobra"
-	"github.com/umbracle/ethgo"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/0xPolygon/polygon-edge/command"

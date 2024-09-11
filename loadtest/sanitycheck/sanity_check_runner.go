@@ -8,7 +8,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/umbracle/ethgo/wallet"
+	"github.com/Ethernal-Tech/ethgo/wallet"
 )
 
 const (
@@ -22,14 +22,14 @@ type SanityCheckTestResult struct {
 	Name          string
 	ExecutionTime string
 	Result        string
-	Err           error
+	Err           string
 }
 
 // String returns a string representation of the SanityCheckTestResult.
 func (s SanityCheckTestResult) String() string {
-	if s.Err != nil {
+	if s.Err != "" {
 		return fmt.Sprintf("%s: Execution time: %s. Error: %s. Result: %s.",
-			s.Name, s.ExecutionTime, s.Err.Error(), s.Result)
+			s.Name, s.ExecutionTime, s.Err, s.Result)
 	}
 
 	return fmt.Sprintf("%s: Execution time: %s. Result: %s.", s.Name, s.ExecutionTime, s.Result)
@@ -147,16 +147,19 @@ func (r *SanityCheckTestRunner) Run() error {
 		result := passed
 		t := time.Now().UTC()
 
+		errMsg := ""
+
 		err := test.Run()
 		if err != nil {
 			result = failed
+			errMsg = err.Error()
 		}
 
 		results = append(results, SanityCheckTestResult{
 			Name:          test.Name(),
 			ExecutionTime: time.Since(t).String(),
 			Result:        result,
-			Err:           err,
+			Err:           errMsg,
 		})
 	}
 

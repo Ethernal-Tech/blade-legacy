@@ -33,6 +33,11 @@ func TestSupportedServiceManager(t *testing.T) {
 			true,
 		},
 		{
+			"Valid Alibaba secrets manager",
+			AlibabaSSM,
+			true,
+		},
+		{
 			"Invalid secrets manager",
 			"MarsSecretsManager",
 			false,

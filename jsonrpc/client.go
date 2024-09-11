@@ -6,8 +6,8 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/umbracle/ethgo"
-	"github.com/umbracle/ethgo/jsonrpc"
+	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/jsonrpc"
 )
 
 // EthClient is a wrapper around jsonrpc.Client
@@ -263,4 +263,55 @@ func (e *EthClient) TxPoolStatus() (*StatusResponse, error) {
 
 func (e *EthClient) Close() error {
 	return e.client.Close()
+}
+
+// SendTransaction creates new message call transaction or a contract creation
+func (e *EthClient) SignTransaction(msg *CallMsg) (*SignTransactionResult, error) {
+	var signTransactionResult *SignTransactionResult
+	if err := e.client.Call("eth_signTransaction", &signTransactionResult, msg); err != nil {
+		return nil, err
+	}
+
+	return signTransactionResult, nil
+}
+
+// NewAccount creates a new account with the given password
+func (e *EthClient) NewAccount(password string) (types.Address, error) {
+	var addr types.Address
+	if err := e.client.Call("personal_newAccount", &addr, password); err != nil {
+		return types.ZeroAddress, err
+	}
+
+	return addr, nil
+}
+
+// ImportRawKey imports a raw private key into the keystore
+func (e *EthClient) ImportRawKey(privKey string, password string) (types.Address, error) {
+	var addr types.Address
+	if err := e.client.Call("personal_importRawKey", &addr, privKey, password); err != nil {
+		return types.ZeroAddress, err
+	}
+
+	return addr, nil
+}
+
+// Unlock unlocks the account with the given address and password for the given duration
+func (e *EthClient) Unlock(addr types.Address, password string, duration uint64) (bool, error) {
+	var isUnlocked bool
+	if err := e.client.Call("personal_unlockAccount", &isUnlocked, addr, password, duration); err != nil {
+		return false, err
+	}
+
+	return isUnlocked, nil
+}
+
+// Sign calculates an ECDSA signature
+func (e *EthClient) Sign(addr types.Address, data []byte) (string, error) {
+	var res string
+
+	if err := e.client.Call("eth_sign", &res, addr, hex.EncodeToHex(data)); err != nil {
+		return "", err
+	}
+
+	return res, nil
 }
