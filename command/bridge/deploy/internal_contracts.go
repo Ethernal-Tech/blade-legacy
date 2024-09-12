@@ -358,8 +358,8 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 
 // generateInternalContractAndProxyAddress generates the internal contract and proxy addresses
 func generateInternalContractAndProxyAddress(lastAddress types.Address) (types.Address, types.Address) {
-	proxyAddress := types.IncrementAddressBy(lastAddress, 10)
-	implAddress := types.IncrementAddressBy(proxyAddress, 1)
+	proxyAddress := lastAddress.IncrementBy(10)
+	implAddress := lastAddress.IncrementBy(1)
 
 	return proxyAddress, implAddress
 }

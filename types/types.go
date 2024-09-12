@@ -48,6 +48,25 @@ var (
 
 type Hash [HashLength]byte
 
+func (h Hash) Bytes() []byte {
+	return h[:]
+}
+
+func (h Hash) String() string {
+	return hex.EncodeToHex(h[:])
+}
+
+// UnmarshalText parses a hash in hex syntax.
+func (h *Hash) UnmarshalText(input []byte) error {
+	*h = BytesToHash(StringToBytes(string(input)))
+
+	return nil
+}
+
+func (h Hash) MarshalText() ([]byte, error) {
+	return []byte(h.String()), nil
+}
+
 type Address [AddressLength]byte
 
 func min(i, j int) int {
@@ -67,14 +86,6 @@ func BytesToHash(b []byte) Hash {
 	copy(h[HashLength-min:], b[len(b)-min:])
 
 	return h
-}
-
-func (h Hash) Bytes() []byte {
-	return h[:]
-}
-
-func (h Hash) String() string {
-	return hex.EncodeToHex(h[:])
 }
 
 // checksumEncode returns the checksummed address with 0x prefix, as by EIP-55
@@ -112,6 +123,55 @@ func (a Address) String() string {
 
 func (a Address) Bytes() []byte {
 	return a[:]
+}
+
+// IncrementBy increments the provided address by the given number.
+//
+// It does not mutate the original address, but returns altered copy instead.
+func (a *Address) IncrementBy(increment uint64) Address {
+	// Convert Address to big.Int (20 bytes address space)
+	addrBigInt := new(big.Int).SetBytes(a[:])
+
+	// Increment by the provided number
+	addrBigInt.Add(addrBigInt, new(big.Int).SetUint64(increment))
+
+	var (
+		addrBytes = addrBigInt.Bytes()
+		newAddr   Address
+	)
+
+	// Handle overflow by truncating to 20 bytes
+	if len(addrBytes) > AddressLength {
+		copy(newAddr[:], addrBytes[len(addrBytes)-AddressLength:])
+	} else {
+		copy(newAddr[AddressLength-len(addrBytes):], addrBytes)
+	}
+
+	return newAddr
+}
+
+// Compare returns 1 if addr1 is higher, -1 if addr2 is higher, and 0 if they are equal.
+func (a Address) Compare(to Address) int {
+	addr1BigInt := new(big.Int).SetBytes(a[:])
+	addr2BigInt := new(big.Int).SetBytes(to[:])
+
+	return addr1BigInt.Cmp(addr2BigInt)
+}
+
+// UnmarshalText parses an address in hex syntax.
+func (a *Address) UnmarshalText(input []byte) error {
+	buf := StringToBytes(string(input))
+	if len(buf) != AddressLength {
+		return fmt.Errorf("incorrect length")
+	}
+
+	*a = BytesToAddress(buf)
+
+	return nil
+}
+
+func (a Address) MarshalText() ([]byte, error) {
+	return []byte(a.String()), nil
 }
 
 func StringToHash(str string) Hash {
@@ -190,65 +250,6 @@ func IsValidAddress(address string, zeroAddressAllowed bool) (Address, error) {
 	}
 
 	return addr, nil
-}
-
-// IncrementAddressBy increments the provided address by the given number.
-func IncrementAddressBy(addr Address, increment uint64) Address {
-	// Convert Address to big.Int
-	addrBigInt := new(big.Int).SetBytes(addr[:])
-
-	// Increment by the provided number
-	addrBigInt.Add(addrBigInt, big.NewInt(0).SetUint64(increment))
-
-	// Convert back to Address
-	var (
-		newAddr   Address
-		addrBytes = addrBigInt.Bytes()
-	)
-
-	// Handle overflow by truncating to 20 bytes
-	if len(addrBytes) > 20 {
-		copy(newAddr[:], addrBytes[len(addrBytes)-20:])
-	} else {
-		copy(newAddr[20-len(addrBytes):], addrBytes)
-	}
-
-	return newAddr
-}
-
-// Compare returns 1 if addr1 is higher, -1 if addr2 is higher, and 0 if they are equal.
-func (a Address) Compare(to Address) int {
-	addr1BigInt := new(big.Int).SetBytes(a[:])
-	addr2BigInt := new(big.Int).SetBytes(to[:])
-
-	return addr1BigInt.Cmp(addr2BigInt)
-}
-
-// UnmarshalText parses a hash in hex syntax.
-func (h *Hash) UnmarshalText(input []byte) error {
-	*h = BytesToHash(StringToBytes(string(input)))
-
-	return nil
-}
-
-// UnmarshalText parses an address in hex syntax.
-func (a *Address) UnmarshalText(input []byte) error {
-	buf := StringToBytes(string(input))
-	if len(buf) != AddressLength {
-		return fmt.Errorf("incorrect length")
-	}
-
-	*a = BytesToAddress(buf)
-
-	return nil
-}
-
-func (h Hash) MarshalText() ([]byte, error) {
-	return []byte(h.String()), nil
-}
-
-func (a Address) MarshalText() ([]byte, error) {
-	return []byte(a.String()), nil
 }
 
 type Proof struct {

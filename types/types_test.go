@@ -191,7 +191,7 @@ func TestIncrementAddressBy(t *testing.T) {
 
 			addr := StringToAddress(c.address)
 			expectedAddr := StringToAddress(c.expected)
-			incrementedAddr := IncrementAddressBy(addr, c.increment)
+			incrementedAddr := addr.IncrementBy(c.increment)
 
 			assert.Equal(t, expectedAddr, incrementedAddr, "expected address %s, got %s", expectedAddr.String(), incrementedAddr.String())
 		})

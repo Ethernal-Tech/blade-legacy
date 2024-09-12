@@ -372,7 +372,7 @@ func initBridgeStorageContract(cfg PolyBFTConfig, transition *state.Transition) 
 // initGatewayContract initializes Gateway contract on blade chain
 func initGatewayContract(cfg PolyBFTConfig, bridgeCfg *BridgeConfig,
 	transition *state.Transition, alloc map[types.Address]*chain.GenesisAccount) error {
-	implementationAddr := types.IncrementAddressBy(bridgeCfg.InternalGatewayAddr, 1)
+	implementationAddr := bridgeCfg.InternalGatewayAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize gateway contract for bridges that were added
 		// after the genesis block
@@ -413,7 +413,7 @@ func initERC20ACLPredicateContract(
 		contractAddr = bcfg.InternalERC20PredicateAddr
 	}
 
-	implementationAddr := types.IncrementAddressBy(contractAddr, 1)
+	implementationAddr := contractAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize child predicates for bridges that were added
 		// after the genesis block
@@ -447,7 +447,7 @@ func initERC721ACLPredicateContract(
 		contractAddr = bcfg.InternalERC721PredicateAddr
 	}
 
-	implementationAddr := types.IncrementAddressBy(contractAddr, 1)
+	implementationAddr := contractAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize child predicates for bridges that were added
 		// after the genesis block
@@ -481,7 +481,7 @@ func initERC1155ACLPredicateContract(
 		contractAddr = bcfg.InternalERC1155PredicateAddr
 	}
 
-	implementationAddr := types.IncrementAddressBy(contractAddr, 1)
+	implementationAddr := contractAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize child predicates for bridges that were added
 		// after the genesis block
@@ -514,7 +514,7 @@ func initERC20PredicateContract(
 		contractAddr = bcfg.InternalERC20PredicateAddr
 	}
 
-	implementationAddr := types.IncrementAddressBy(contractAddr, 1)
+	implementationAddr := contractAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize child predicates for bridges that were added
 		// after the genesis block
@@ -546,7 +546,7 @@ func initERC721PredicateContract(
 		contractAddr = bcfg.InternalERC721PredicateAddr
 	}
 
-	implementationAddr := types.IncrementAddressBy(contractAddr, 1)
+	implementationAddr := contractAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize child predicates for bridges that were added
 		// after the genesis block
@@ -578,7 +578,7 @@ func initERC1155PredicateContract(
 		contractAddr = bcfg.InternalERC1155PredicateAddr
 	}
 
-	implementationAddr := types.IncrementAddressBy(contractAddr, 1)
+	implementationAddr := contractAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
 		// we do not initialize child predicates for bridges that were added
 		// after the genesis block
