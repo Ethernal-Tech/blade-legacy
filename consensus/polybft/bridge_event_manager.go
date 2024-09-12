@@ -376,7 +376,7 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	b.epoch = req.NewEpochID
 
 	// build a new batch at the end of the epoch
-	nextBridgeEventIDIndex, err := req.SystemState.GetNextCommittedIndex(b.externalChainID)
+	nextBridgeEventIDIndex, err := req.SystemState.GetNextCommittedIndexExternal(b.externalChainID)
 	if err != nil {
 		b.lock.Unlock()
 
@@ -385,7 +385,7 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 
 	b.nextBridgeEventIDIndex = nextBridgeEventIDIndex
 
-	b.nextBridgeEventIDInternal, err = req.SystemState.GetNextCommittedIndex(b.internalChainID)
+	b.nextBridgeEventIDInternal, err = req.SystemState.GetNextCommittedIndexInternal(b.internalChainID)
 	if err != nil {
 		b.lock.Unlock()
 

@@ -25,7 +25,9 @@ type SystemState interface {
 	// GetEpoch retrieves current epoch number from the smart contract
 	GetEpoch() (uint64, error)
 	// GetNextCommittedIndex retrieves next committed bridge message index
-	GetNextCommittedIndex(sourceChainID uint64) (uint64, error)
+	GetNextCommittedIndexExternal(sourceChainID uint64) (uint64, error)
+
+	GetNextCommittedIndexInternal(sourceChainID uint64) (uint64, error)
 }
 
 var _ SystemState = &SystemStateImpl{}
@@ -71,7 +73,7 @@ func (s *SystemStateImpl) GetEpoch() (uint64, error) {
 }
 
 // GetNextCommittedIndex retrieves next committed bridge message index
-func (s *SystemStateImpl) GetNextCommittedIndex(sourceChainID uint64) (uint64, error) {
+func (s *SystemStateImpl) GetNextCommittedIndexExternal(sourceChainID uint64) (uint64, error) {
 	rawResult, err := s.sidechainBridgeContract.Call(
 		"lastCommitted",
 		ethgo.Latest,
@@ -83,6 +85,23 @@ func (s *SystemStateImpl) GetNextCommittedIndex(sourceChainID uint64) (uint64, e
 	nextCommittedIndex, isOk := rawResult["0"].(*big.Int)
 	if !isOk {
 		return 0, fmt.Errorf("failed to decode next committed index")
+	}
+
+	return nextCommittedIndex.Uint64() + 1, nil
+}
+
+func (s *SystemStateImpl) GetNextCommittedIndexInternal(DestinationChainID uint64) (uint64, error) {
+	rawResult, err := s.sidechainBridgeContract.Call(
+		"lastCommittedInternal",
+		ethgo.Latest,
+		new(big.Int).SetUint64(DestinationChainID))
+	if err != nil {
+		return 0, err
+	}
+
+	nextCommittedIndex, isOk := rawResult["0"].(*big.Int)
+	if !isOk {
+		return 0, fmt.Errorf("failed to decode next committed Index")
 	}
 
 	return nextCommittedIndex.Uint64() + 1, nil
