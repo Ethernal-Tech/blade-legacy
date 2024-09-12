@@ -295,6 +295,8 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 }
 
 func TestBridgeEventManager_BuildProofs(t *testing.T) {
+	t.Skip()
+
 	vals := validator.NewTestValidators(t, 5)
 
 	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})

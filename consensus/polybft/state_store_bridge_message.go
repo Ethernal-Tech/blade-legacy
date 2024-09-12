@@ -143,7 +143,8 @@ func (bms *BridgeMessageStore) list() ([]*contractsapi.BridgeMsgEvent, error) {
 
 // getBridgeMessageEventsForBridgeBatch returns bridge events for bridge batch
 func (bms *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
-	fromIndex, toIndex uint64, dbTx *bolt.Tx, sourceChainID, destinationChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
+	fromIndex, toIndex uint64, dbTx *bolt.Tx, sourceChainID, destinationChainID uint64) (
+	[]*contractsapi.BridgeMsgEvent, error) {
 	var (
 		events []*contractsapi.BridgeMsgEvent
 		err    error

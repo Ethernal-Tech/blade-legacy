@@ -361,7 +361,8 @@ func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 // InsertEpoch inserts a new epoch to db with its meta data
 func (b *bridgeManager) InsertEpoch(epochNumber uint64, dbTx *bolt.Tx) error {
 	if err := b.state.EpochStore.insertEpoch(epochNumber, dbTx, b.externalChainID); err != nil {
-		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w", b.externalChainID, err)
+		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w",
+			b.externalChainID, err)
 	}
 
 	return nil

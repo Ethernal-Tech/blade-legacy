@@ -157,7 +157,8 @@ func (b *bridgeEventManager) saveVote(msg *TransportMessage) error {
 	valSet := b.validatorSet
 	b.lock.RUnlock()
 
-	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 || b.externalChainID != msg.SourceChainID && b.internalChainID != msg.SourceChainID {
+	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 ||
+		b.externalChainID != msg.SourceChainID && b.internalChainID != msg.SourceChainID {
 		// Epoch metadata is undefined or received a message for the irrelevant epoch
 		return nil
 	}
@@ -590,7 +591,8 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 
 // getEventsFromReceipts returns list of all events from list of receipts
 // it returns events with desired destinationChainID
-func getEventsFromReceipts(receipts []*types.Receipt, destinationChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
+func getEventsFromReceipts(receipts []*types.Receipt, destinationChainID uint64) (
+	[]*contractsapi.BridgeMsgEvent, error) {
 	events := make([]*contractsapi.BridgeMsgEvent, 0)
 
 	for _, receipt := range receipts {
