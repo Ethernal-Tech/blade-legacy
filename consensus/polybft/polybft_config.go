@@ -164,34 +164,36 @@ type BridgeConfig struct {
 	EventTrackerStartBlocks map[types.Address]uint64 `json:"eventTrackerStartBlocks"`
 }
 
-// GetHeighestInternalAddress returns the highest address among all internal bridge contracts
-func (b *BridgeConfig) GetHeighestInternalAddress() types.Address {
-	result := b.InternalGatewayAddr
-	if b.InternalERC20PredicateAddr.Compare(result) > 0 {
-		result = b.InternalERC20PredicateAddr
+// GetHighestInternalAddress returns the highest address among all internal bridge contracts
+func (b *BridgeConfig) GetHighestInternalAddress() types.Address {
+	internalAddrs := b.getInternalContractAddrs()
+
+	if len(internalAddrs) == 0 {
+		return types.ZeroAddress
 	}
 
-	if b.InternalERC721PredicateAddr.Compare(result) > 0 {
-		result = b.InternalERC721PredicateAddr
+	highestAddr := internalAddrs[0]
+
+	for _, addr := range internalAddrs[1:] {
+		if addr.Compare(highestAddr) > 0 {
+			highestAddr = addr
+		}
 	}
 
-	if b.InternalERC1155PredicateAddr.Compare(result) > 0 {
-		result = b.InternalERC1155PredicateAddr
-	}
+	return highestAddr
+}
 
-	if b.InternalMintableERC20PredicateAddr.Compare(result) > 0 {
-		result = b.InternalMintableERC20PredicateAddr
+// getInternalContractAddrs enumerates all the Internal bridge contract addresses
+func (b *BridgeConfig) getInternalContractAddrs() []types.Address {
+	return []types.Address{
+		b.InternalGatewayAddr,
+		b.InternalERC20PredicateAddr,
+		b.InternalERC721PredicateAddr,
+		b.InternalERC1155PredicateAddr,
+		b.InternalMintableERC20PredicateAddr,
+		b.InternalMintableERC721PredicateAddr,
+		b.InternalMintableERC1155PredicateAddr,
 	}
-
-	if b.InternalMintableERC721PredicateAddr.Compare(result) > 0 {
-		result = b.InternalMintableERC721PredicateAddr
-	}
-
-	if b.InternalMintableERC1155PredicateAddr.Compare(result) > 0 {
-		result = b.InternalMintableERC1155PredicateAddr
-	}
-
-	return result
 }
 
 func (p *PolyBFTConfig) IsBridgeEnabled() bool {

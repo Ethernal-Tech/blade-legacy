@@ -325,9 +325,9 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 
 	if consensusCfg.Bridge != nil {
 		for _, bridgeCfg := range consensusCfg.Bridge {
-			heighestAddr := bridgeCfg.GetHeighestInternalAddress()
-			if heighestAddr.Compare(predicateBaseProxyAddress) > 0 {
-				predicateBaseProxyAddress = heighestAddr
+			highestAddr := bridgeCfg.GetHighestInternalAddress()
+			if highestAddr.Compare(predicateBaseProxyAddress) > 0 {
+				predicateBaseProxyAddress = highestAddr
 			}
 		}
 	}
