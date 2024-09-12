@@ -249,13 +249,12 @@ func deployContracts(outputter command.OutputFormatter,
 	)
 
 	// setup external contracts
-	if externalContracts, err = initExternalContracts(outputter, chainCfg, bridgeConfig,
-		externalChainClient, externalChainID); err != nil {
+	if externalContracts, err = initExternalContracts(bridgeConfig, externalChainClient, externalChainID); err != nil {
 		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
 	}
 
 	// setup internal contracts
-	internalContracts = initInternalContracts(outputter, chainCfg)
+	internalContracts = initInternalContracts(chainCfg)
 
 	// pre-allocate internal predicates addresses in genesis if blade is bootstrapping
 	if params.isBootstrap {
@@ -310,7 +309,7 @@ func deployContracts(outputter command.OutputFormatter,
 			case <-ctx.Done():
 				return ctx.Err()
 			default:
-				return contract.initializeFn(outputter, externalTxRelayer,
+				return contract.initializeFn(outputter, txr,
 					initialValidators, bridgeConfig, deployerKey, chainID)
 
 			}

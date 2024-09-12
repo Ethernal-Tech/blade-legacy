@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -17,8 +16,7 @@ import (
 )
 
 // initExternalContracts initializes the external contracts
-func initExternalContracts(o command.OutputFormatter,
-	chainCfg *chain.Chain, bridgeCfg *polybft.BridgeConfig,
+func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 	externalChainClient *jsonrpc.EthClient, externalChainID *big.Int) ([]*contract, error) {
 	externalContracts := make([]*contract, 0)
 

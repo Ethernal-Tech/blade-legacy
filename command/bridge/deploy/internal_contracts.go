@@ -19,7 +19,7 @@ import (
 var bigZero = big.NewInt(0)
 
 // initInternalContracts initializes the internal contracts
-func initInternalContracts(o command.OutputFormatter, chainCfg *chain.Chain) []*contract {
+func initInternalContracts(chainCfg *chain.Chain) []*contract {
 	useBridgeAllowList, useBridgeBlockList := chainCfg.Params.DoesItUseBridgeAllowList(),
 		chainCfg.Params.DoesItUseBridgeBlockList()
 
