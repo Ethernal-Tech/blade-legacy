@@ -81,12 +81,14 @@ type bridgeEventManager struct {
 	config *bridgeEventManagerConfig
 
 	// per epoch fields
-	lock                   sync.RWMutex
-	pendingBridgeBatches   []*PendingBridgeBatch
-	validatorSet           validator.ValidatorSet
-	epoch                  uint64
-	nextBridgeEventIDIndex uint64
-	sourceChainID          uint64
+	lock                      sync.RWMutex
+	pendingBridgeBatches      []*PendingBridgeBatch
+	validatorSet              validator.ValidatorSet
+	epoch                     uint64
+	nextBridgeEventIDIndex    uint64
+	nextBridgeEventIDInternal uint64
+	externalChainID           uint64
+	internalChainID           uint64
 
 	runtime Runtime
 }
@@ -99,13 +101,14 @@ type topic interface {
 
 // newBridgeEventManager creates a new instance of bridge event manager
 func newBridgeEventManager(logger hclog.Logger, state *State, config *bridgeEventManagerConfig,
-	runtime Runtime, sourceChainID uint64) *bridgeEventManager {
+	runtime Runtime, externalChainID, internalChainID uint64) *bridgeEventManager {
 	return &bridgeEventManager{
-		logger:        logger,
-		state:         state,
-		config:        config,
-		runtime:       runtime,
-		sourceChainID: sourceChainID,
+		logger:          logger,
+		state:           state,
+		config:          config,
+		runtime:         runtime,
+		externalChainID: externalChainID,
+		internalChainID: internalChainID,
 	}
 }
 
@@ -154,7 +157,7 @@ func (b *bridgeEventManager) saveVote(msg *TransportMessage) error {
 	valSet := b.validatorSet
 	b.lock.RUnlock()
 
-	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 || b.sourceChainID != msg.SourceChainID {
+	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 || b.externalChainID != msg.SourceChainID && b.internalChainID != msg.SourceChainID {
 		// Epoch metadata is undefined or received a message for the irrelevant epoch
 		return nil
 	}
@@ -216,7 +219,7 @@ func (b *bridgeEventManager) verifyVoteSignature(valSet validator.ValidatorSet, 
 
 // AddLog saves the received log from event tracker if it matches a bridge message event ABI
 func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
-	if b.sourceChainID != chainID.Uint64() {
+	if b.externalChainID != chainID.Uint64() {
 		return nil
 	}
 
@@ -246,7 +249,7 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 		return err
 	}
 
-	if err := b.buildBridgeBatch(nil); err != nil {
+	if err := b.buildBridgeBatch(nil, false); err != nil {
 		// we don't return an error here. If bridge message event is inserted in db,
 		// we will just try to build a batch on next block or next event arrival
 		b.logger.Error("could not build a batch on arrival of new bridge message event",
@@ -317,7 +320,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 	votes, err := b.state.BridgeMessageStore.getMessageVotes(
 		pendingBridgeBatch.Epoch,
 		bridgeBatchHash.Bytes(),
-		b.sourceChainID)
+		b.externalChainID)
 	if err != nil {
 		return Signature{}, err
 	}
@@ -372,7 +375,7 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	b.epoch = req.NewEpochID
 
 	// build a new batch at the end of the epoch
-	nextBridgeEventIDIndex, err := req.SystemState.GetNextCommittedIndex(b.sourceChainID)
+	nextBridgeEventIDIndex, err := req.SystemState.GetNextCommittedIndex(b.externalChainID)
 	if err != nil {
 		b.lock.Unlock()
 
@@ -381,46 +384,67 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 
 	b.nextBridgeEventIDIndex = nextBridgeEventIDIndex
 
+	b.nextBridgeEventIDInternal, err = req.SystemState.GetNextCommittedIndex(b.internalChainID)
+	if err != nil {
+		b.lock.Unlock()
+
+		return err
+	}
+
 	b.lock.Unlock()
 
-	return b.buildBridgeBatch(req.DBTx)
+	if err := b.buildBridgeBatch(req.DBTx, true); err != nil {
+		return err
+	}
+
+	return b.buildBridgeBatch(req.DBTx, false)
 }
 
 // PostBlock notifies bridge event manager that a block was finalized,.
 // Additionally, it will remove any processed bridge message events.
 func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
-	bridgeBatch, err := getBridgeBatchSignedTx(req.FullBlock.Block.Transactions)
+	bridgeMsgEvents, err := getEventsFromReceipts(req.FullBlock.Receipts, b.externalChainID)
 	if err != nil {
 		return err
 	}
 
-	// no bridge batch message -> this is not end of sprint block
-	if bridgeBatch == nil {
-		return nil
+	for _, bridgMsgEvent := range bridgeMsgEvents {
+		if err := b.state.BridgeMessageStore.insertBridgeMessageEvent(bridgMsgEvent); err != nil {
+			return err
+		}
 	}
 
-	if err := b.state.BridgeMessageStore.insertBridgeBatchMessage(bridgeBatch, req.DBTx); err != nil {
-		return fmt.Errorf("insert batch message error: %w", err)
+	if err := b.buildBridgeBatch(nil, true); err != nil {
+		// we don't return an error here. If bridge message event is inserted in db,
+		// we will just try to build a batch on next block or next event arrival
+		b.logger.Error("could not build a batch on arrival of new bridge message event",
+			"err", err)
 	}
-
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	length := len(bridgeBatch.MessageBatch.Messages)
-	// update the nextBridgeEventIdIndex since a bridge batch was submitted
-	b.nextBridgeEventIDIndex =
-		bridgeBatch.MessageBatch.Messages[length-1].ID.Uint64() + 1
-	// batch was submitted, so discard what we have in memory, so we can build a new one
-	b.pendingBridgeBatches = nil
 
 	return nil
 }
 
 // buildBridgeBatch builds a new bridge batch, signs it and gossips its vote for it
-func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
+func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, internal bool) error {
 	if !b.runtime.IsActiveValidator() {
 		// don't build batch if not a validator
 		return nil
+	}
+
+	var (
+		sourceChainID          uint64
+		destinationChainID     uint64
+		nextBridgeEventIDIndex uint64
+	)
+
+	if internal {
+		sourceChainID = b.internalChainID
+		destinationChainID = b.externalChainID
+		nextBridgeEventIDIndex = b.nextBridgeEventIDInternal
+	} else {
+		sourceChainID = b.externalChainID
+		destinationChainID = 0
+		nextBridgeEventIDIndex = b.nextBridgeEventIDIndex
 	}
 
 	b.lock.RLock()
@@ -428,10 +452,10 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
 	// Since lock is reduced grab original values into local variables in order to keep them
 	epoch := b.epoch
 	bridgeMessageEvents, err := b.state.BridgeMessageStore.getBridgeMessageEventsForBridgeBatch(
-		b.nextBridgeEventIDIndex,
-		b.nextBridgeEventIDIndex+b.config.maxNumberOfEvents-1,
+		nextBridgeEventIDIndex,
+		nextBridgeEventIDIndex+b.config.maxNumberOfEvents-1,
 		dbTx,
-		b.sourceChainID)
+		sourceChainID, destinationChainID)
 
 	if err != nil && !errors.Is(err, errNotEnoughBridgeEvents) {
 		b.lock.RUnlock()
@@ -485,7 +509,7 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
 		hashBytes,
 		sig,
 		dbTx,
-		b.sourceChainID); err != nil {
+		sourceChainID); err != nil {
 		return fmt.Errorf(
 			"failed to insert signature for message batch to the state. Error: %w",
 			err,
@@ -498,7 +522,7 @@ func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx) error {
 		Signature:     signature,
 		From:          b.config.key.String(),
 		EpochNumber:   epoch,
-		SourceChainID: b.sourceChainID,
+		SourceChainID: sourceChainID,
 	})
 
 	numberOfMessages := len(pendingBridgeBatch.BridgeMessageBatch.Messages)
@@ -557,9 +581,37 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 		return err
 	}
 
-	if !doesMatch || b.sourceChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
+	if !doesMatch || b.externalChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
 		return nil
 	}
 
-	return b.state.BridgeMessageStore.removeBridgeEventsAndProofs(bridgeMessageResultEvent)
+	return b.state.BridgeMessageStore.removeBridgeEvents(bridgeMessageResultEvent)
+}
+
+// getEventsFromReceipts returns list of all events from list of receipts
+// it returns events with desired destinationChainID
+func getEventsFromReceipts(receipts []*types.Receipt, destinationChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
+	events := make([]*contractsapi.BridgeMsgEvent, 0)
+
+	for _, receipt := range receipts {
+		for _, log := range receipt.Logs {
+			convertedLog := convertLog(log)
+			event := &contractsapi.BridgeMsgEvent{}
+
+			doesMatch, err := event.ParseLog(convertedLog)
+			if err != nil {
+				return nil, err
+			}
+
+			if !doesMatch {
+				continue
+			}
+
+			if event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
+				events = append(events, event)
+			}
+		}
+	}
+
+	return events, nil
 }
