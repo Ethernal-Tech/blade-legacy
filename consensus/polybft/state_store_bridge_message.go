@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -95,8 +96,8 @@ func (bms *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Brid
 	})
 }
 
-// removeBridgeEventsAndProofs remove bridge events and their proofs from the buckets in db
-func (bms *BridgeMessageStore) removeBridgeEventsAndProofs(
+// removeBridgeEvents remove bridge events and their proofs from the buckets in db
+func (bms *BridgeMessageStore) removeBridgeEvents(
 	bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return bms.db.Update(func(tx *bolt.Tx) error {
 		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).
@@ -142,7 +143,7 @@ func (bms *BridgeMessageStore) list() ([]*contractsapi.BridgeMsgEvent, error) {
 
 // getBridgeMessageEventsForBridgeBatch returns bridge events for bridge batch
 func (bms *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
-	fromIndex, toIndex uint64, dbTx *bolt.Tx, sourceChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
+	fromIndex, toIndex uint64, dbTx *bolt.Tx, sourceChainID, destinationChainID uint64) ([]*contractsapi.BridgeMsgEvent, error) {
 	var (
 		events []*contractsapi.BridgeMsgEvent
 		err    error
@@ -161,7 +162,11 @@ func (bms *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
 				return err
 			}
 
-			events = append(events, event)
+			if destinationChainID == 0 {
+				events = append(events, event)
+			} else if event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
+				events = append(events, event)
+			}
 		}
 
 		return nil
@@ -239,23 +244,6 @@ func (bms *BridgeMessageStore) insertBridgeBatchMessage(signedBridgeBatch *Bridg
 	}
 
 	return insertFn(dbTx)
-}
-
-// getBridgeBatchSigned queries the signed bridge batch from the db
-func (bms *BridgeMessageStore) getBridgeBatchSigned(toIndex uint64, chainID uint64) (*BridgeBatchSigned, error) {
-	var signedBridgeBatch *BridgeBatchSigned
-
-	err := bms.db.View(func(tx *bolt.Tx) error {
-		raw := tx.Bucket(bridgeBatchBucket).
-			Bucket(common.EncodeUint64ToBytes(chainID)).Get(common.EncodeUint64ToBytes(toIndex))
-		if raw == nil {
-			return nil
-		}
-
-		return json.Unmarshal(raw, &signedBridgeBatch)
-	})
-
-	return signedBridgeBatch, err
 }
 
 // insertMessageVote inserts given vote to signatures bucket of given epoch

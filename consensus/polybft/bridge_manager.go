@@ -179,7 +179,8 @@ type bridgeManager struct {
 	eventTracker       *tracker.EventTracker
 	eventTrackerConfig *eventTrackerConfig
 	logger             hclog.Logger
-	chainID            uint64
+	externalChainID    uint64
+	internalChainID    uint64
 	state              *State
 }
 
@@ -198,8 +199,8 @@ func newBridgeManager(
 
 	gatewayAddr := runtimeConfig.GenesisConfig.Bridge[chainID].ExternalGatewayAddr
 	bridgeManager := &bridgeManager{
-		chainID: chainID,
-		logger:  logger.Named("bridge-manager"),
+		externalChainID: chainID,
+		logger:          logger.Named("bridge-manager"),
 		eventTrackerConfig: &eventTrackerConfig{
 			EventTracker:        *runtimeConfig.eventTracker,
 			jsonrpcAddr:         runtimeConfig.GenesisConfig.Bridge[chainID].JSONRPCEndpoint,
@@ -273,7 +274,8 @@ func (b *bridgeManager) initBridgeEventManager(
 			maxNumberOfEvents: maxNumberOfEvents,
 		},
 		runtime,
-		b.chainID,
+		b.externalChainID,
+		b.internalChainID,
 	)
 
 	b.bridgeEventManager = bridgeEventManager
@@ -358,8 +360,8 @@ func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 
 // InsertEpoch inserts a new epoch to db with its meta data
 func (b *bridgeManager) InsertEpoch(epochNumber uint64, dbTx *bolt.Tx) error {
-	if err := b.state.EpochStore.insertEpoch(epochNumber, dbTx, b.chainID); err != nil {
-		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w", b.chainID, err)
+	if err := b.state.EpochStore.insertEpoch(epochNumber, dbTx, b.externalChainID); err != nil {
+		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w", b.externalChainID, err)
 	}
 
 	return nil

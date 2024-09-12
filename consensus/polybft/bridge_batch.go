@@ -1,7 +1,6 @@
 package polybft
 
 import (
-	"bytes"
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/bls"
@@ -133,27 +132,4 @@ func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 	}
 
 	return nil
-}
-
-// getBridgeBatchSignedTx returns a BridgeBatchSigned object from a commit state transaction
-func getBridgeBatchSignedTx(txs []*types.Transaction) (*BridgeBatchSigned, error) {
-	var commitFn contractsapi.CommitBatchBridgeStorageFn
-	for _, tx := range txs {
-		// skip non state BridgeBatchSigned transactions
-		if tx.Type() != types.StateTxType ||
-			len(tx.Input()) < abiMethodIDLength ||
-			!bytes.Equal(tx.Input()[:abiMethodIDLength], commitFn.Sig()) {
-			continue
-		}
-
-		obj := &BridgeBatchSigned{}
-
-		if err := obj.DecodeAbi(tx.Input()); err != nil {
-			return nil, fmt.Errorf("get batch message signed tx error: %w", err)
-		}
-
-		return obj, nil
-	}
-
-	return nil, nil
 }
