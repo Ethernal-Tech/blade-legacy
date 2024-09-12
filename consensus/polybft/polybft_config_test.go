@@ -30,9 +30,11 @@ func TestBridgeConfig_getInternalContractAddrs(t *testing.T) {
 	internalAddrs := config.getInternalContractAddrs()
 
 	// Use reflection to find all fields that start with "Internal" and are of type `types.Address`
-	var expectedAddrs []types.Address
-	val := reflect.ValueOf(config).Elem()
-	typ := reflect.TypeOf(*config)
+	var (
+		expectedAddrs []types.Address
+		val           = reflect.ValueOf(config).Elem()
+		typ           = reflect.TypeOf(*config)
+	)
 
 	for i := 0; i < typ.NumField(); i++ {
 		field := typ.Field(i)

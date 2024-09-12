@@ -36,11 +36,11 @@ var (
 	// BridgeStorageContractV1 is an address of bridge storage contract on child chain
 	BridgeStorageContractV1 = types.StringToAddress("0x1081")
 
-	// ChildERC20Contract is an address of bridgable ERC20 token contract on the child chain
+	// ChildERC20Contract is an address of ERC20 token template
 	ChildERC20Contract = types.StringToAddress("0x1003")
-	// ChildERC721Contract is an address of bridgable ERC721 token contract on the child chain
+	// ChildERC721Contract is an address of ERC721 token template
 	ChildERC721Contract = types.StringToAddress("0x1004")
-	// ChildERC1155Contract is an address of bridgable ERC1155 token contract on the child chain
+	// ChildERC1155Contract is an address of ERC1155 token template
 	ChildERC1155Contract = types.StringToAddress("0x1005")
 
 	ChildBridgeContractsBaseAddress = types.StringToAddress("0x5006")
