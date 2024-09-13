@@ -90,6 +90,7 @@ func (s *SystemStateImpl) GetNextCommittedIndexExternal(sourceChainID uint64) (u
 	return nextCommittedIndex.Uint64() + 1, nil
 }
 
+// GetNextCommittedIndex retrieves next committed internal bridge message index
 func (s *SystemStateImpl) GetNextCommittedIndexInternal(destinationChainID uint64) (uint64, error) {
 	rawResult, err := s.sidechainBridgeContract.Call(
 		"lastCommittedInternal",
