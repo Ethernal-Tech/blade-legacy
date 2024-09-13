@@ -20,10 +20,10 @@ var bigZero = big.NewInt(0)
 
 // initInternalContracts initializes the internal contracts
 func initInternalContracts(chainCfg *chain.Chain) []*contract {
-	useBridgeAllowList, useBridgeBlockList := chainCfg.Params.DoesItUseBridgeAllowList(),
-		chainCfg.Params.DoesItUseBridgeBlockList()
+	useBridgeAllowList := chainCfg.Params.IsBridgeAllowListEnabled()
+	useBridgeBlockList := chainCfg.Params.IsBridgeBlockListEnabled()
 
-	internalContracts := make([]*contract, 0)
+	internalContracts := make([]*contract, 0, 7)
 
 	// Gateway contract
 	internalContracts = append(internalContracts, &contract{

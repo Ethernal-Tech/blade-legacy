@@ -205,24 +205,22 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 			return err
 		}
 
-		bridgeCfgMap := polyBFTConfig.Bridge
 		if polyBFTConfig.IsBridgeEnabled() {
 			// initialize BridgeStorage SC
 			if err = initBridgeStorageContract(polyBFTConfig, transition); err != nil {
 				return err
 			}
 
-			// check if there are Bridge Allow List Admins and Bridge Block List Admins
-			// and if there are, get the first address as the Admin
-			bridgeAllowListAdmin := config.Params.GetBridgeAllowListAdmin()
-			bridgeBlockListAdmin := config.Params.GetBridgeBlockListAdmin()
+			bridgeCfgMap := polyBFTConfig.Bridge
+			isBridgeAllowListEnabled := config.Params.IsBridgeAllowListEnabled()
+			isBridgeBlockListEnabled := config.Params.IsBridgeBlockListEnabled()
 
 			// initialize Predicate SCs
-			if bridgeAllowListAdmin != types.ZeroAddress || bridgeBlockListAdmin != types.ZeroAddress {
+			if isBridgeAllowListEnabled || isBridgeBlockListEnabled {
 				// The owner of the contract will be the allow list admin or the block list admin, if any of them is set.
 				owner := config.Params.GetBridgeOwner()
-				useBridgeAllowList := bridgeAllowListAdmin != types.ZeroAddress
-				useBridgeBlockList := bridgeBlockListAdmin != types.ZeroAddress
+				useBridgeAllowList := isBridgeAllowListEnabled
+				useBridgeBlockList := isBridgeBlockListEnabled
 
 				for chainID, chainBridgeCfg := range bridgeCfgMap {
 					chainIDBig := new(big.Int).SetUint64(chainID)
