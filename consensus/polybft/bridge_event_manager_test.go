@@ -24,6 +24,8 @@ import (
 func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runtime Runtime) *bridgeEventManager {
 	t.Helper()
 
+	blockchainMock := new(blockchainMock)
+
 	tmpDir, err := os.MkdirTemp("/tmp", "test-data-dir-state-sync")
 	require.NoError(t, err)
 
@@ -32,7 +34,10 @@ func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runti
 
 	topic := &mockTopic{}
 
-	s := newBridgeEventManager(hclog.NewNullLogger(), state,
+	s := newBridgeEventManager(
+		NewEventProvider(blockchainMock),
+		hclog.NewNullLogger(),
+		state,
 		&bridgeEventManagerConfig{
 			topic:             topic,
 			key:               key.Key(),

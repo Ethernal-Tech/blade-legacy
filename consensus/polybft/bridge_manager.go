@@ -210,7 +210,7 @@ func newBridgeManager(
 		state: runtimeConfig.State,
 	}
 
-	if err := bridgeManager.initBridgeEventManager(runtime, runtimeConfig, logger); err != nil {
+	if err := bridgeManager.initBridgeEventManager(eventProvider, runtime, runtimeConfig, logger); err != nil {
 		return nil, err
 	}
 
@@ -261,11 +261,13 @@ func (b *bridgeManager) Close() {
 // initBridgeEventManager initializes bridge event manager
 // if bridge is not enabled, then a dummy bridge event manager will be used
 func (b *bridgeManager) initBridgeEventManager(
+	eventProvider *EventProvider,
 	runtime Runtime,
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
 	bridgeEventManager := newBridgeEventManager(
-		logger.Named("state-sync-manager"),
+		eventProvider,
+		logger.Named("bridge-event-manager"),
 		runtimeConfig.State,
 		&bridgeEventManagerConfig{
 			bridgeCfg:         runtimeConfig.GenesisConfig.Bridge[b.chainID],
@@ -277,6 +279,8 @@ func (b *bridgeManager) initBridgeEventManager(
 		b.externalChainID,
 		b.internalChainID,
 	)
+
+	eventProvider.Subscribe(b.bridgeEventManager)
 
 	b.bridgeEventManager = bridgeEventManager
 

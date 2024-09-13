@@ -24,6 +24,10 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
+var (
+	errUnknownBridgeEvent = errors.New("unknown bridge event")
+)
+
 type Runtime interface {
 	IsActiveValidator() bool
 }
@@ -78,7 +82,8 @@ type bridgeEventManager struct {
 	logger hclog.Logger
 	state  *State
 
-	config *bridgeEventManagerConfig
+	config        *bridgeEventManagerConfig
+	eventProvider *EventProvider
 
 	// per epoch fields
 	lock                      sync.RWMutex
@@ -100,7 +105,7 @@ type topic interface {
 }
 
 // newBridgeEventManager creates a new instance of bridge event manager
-func newBridgeEventManager(logger hclog.Logger, state *State, config *bridgeEventManagerConfig,
+func newBridgeEventManager(eventProvider *EventProvider, logger hclog.Logger, state *State, config *bridgeEventManagerConfig,
 	runtime Runtime, externalChainID, internalChainID uint64) *bridgeEventManager {
 	return &bridgeEventManager{
 		logger:          logger,
@@ -109,6 +114,7 @@ func newBridgeEventManager(logger hclog.Logger, state *State, config *bridgeEven
 		runtime:         runtime,
 		externalChainID: externalChainID,
 		internalChainID: internalChainID,
+		eventProvider:   eventProvider,
 	}
 }
 
@@ -404,15 +410,13 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 // PostBlock notifies bridge event manager that a block was finalized,.
 // Additionally, it will remove any processed bridge message events.
 func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
-	bridgeMsgEvents, err := getEventsFromReceipts(req.FullBlock.Receipts, b.externalChainID)
+	lastProccesedBlock, err := b.state.getLastProcessedEventsBlock(req.DBTx)
 	if err != nil {
-		return err
+		return nil
 	}
 
-	for _, bridgMsgEvent := range bridgeMsgEvents {
-		if err := b.state.BridgeMessageStore.insertBridgeMessageEvent(bridgMsgEvent); err != nil {
-			return err
-		}
+	if err := b.eventProvider.GetEventsFromBlocks(lastProccesedBlock, req.FullBlock, req.DBTx); err != nil {
+		return err
 	}
 
 	if err := b.buildBridgeBatch(nil, true); err != nil {
@@ -566,54 +570,48 @@ func (b *bridgeEventManager) multicast(msg interface{}) {
 // This function is the implementation of EventSubscriber interface
 func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
+	var bridgeMsg contractsapi.BridgeMsgEvent
 
 	return map[types.Address][]types.Hash{
-		b.config.bridgeCfg.ExternalGatewayAddr: {types.Hash(bridgeMessageResult.Sig())},
+		b.config.bridgeCfg.ExternalGatewayAddr: {
+			types.Hash(bridgeMessageResult.Sig()),
+			types.Hash(bridgeMsg.Sig())},
 	}
 }
 
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
-	bridgeMessageResultEvent := &contractsapi.BridgeMessageResultEvent{}
+	var (
+		bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
+		bridgeMsgEvent           contractsapi.BridgeMsgEvent
+	)
 
-	doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
-	if err != nil {
-		return err
-	}
-
-	if !doesMatch || b.externalChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
-		return nil
-	}
-
-	return b.state.BridgeMessageStore.removeBridgeEvents(bridgeMessageResultEvent)
-}
-
-// getEventsFromReceipts returns list of all events from list of receipts
-// it returns events with desired destinationChainID
-func getEventsFromReceipts(receipts []*types.Receipt, destinationChainID uint64) (
-	[]*contractsapi.BridgeMsgEvent, error) {
-	events := make([]*contractsapi.BridgeMsgEvent, 0)
-
-	for _, receipt := range receipts {
-		for _, log := range receipt.Logs {
-			convertedLog := convertLog(log)
-			event := &contractsapi.BridgeMsgEvent{}
-
-			doesMatch, err := event.ParseLog(convertedLog)
-			if err != nil {
-				return nil, err
-			}
-
-			if !doesMatch {
-				continue
-			}
-
-			if event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
-				events = append(events, event)
-			}
+	switch log.Topics[0] {
+	case bridgeMessageResultEvent.Sig():
+		doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
+		if err != nil {
+			return err
 		}
+
+		if !doesMatch || b.externalChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
+			return nil
+		}
+
+		return b.state.BridgeMessageStore.removeBridgeEvents(&bridgeMessageResultEvent)
+	case bridgeMsgEvent.Sig():
+		doesMatch, err := bridgeMsgEvent.ParseLog(log)
+		if err != nil {
+			return err
+		}
+
+		if !doesMatch || b.internalChainID != bridgeMessageResultEvent.SourceChainID.Uint64() {
+			return nil
+		}
+
+		return b.state.BridgeMessageStore.insertBridgeMessageEvent(&bridgeMsgEvent)
+	default:
+		return errUnknownBridgeEvent
 	}
 
-	return events, nil
 }
