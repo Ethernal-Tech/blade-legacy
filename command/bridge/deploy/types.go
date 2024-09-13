@@ -69,10 +69,11 @@ func (c *contract) deploy(
 	deployResults := make([]*deployContractResult, 0, 2)
 	implementationAddress := types.Address(receipt.ContractAddress)
 
-	deployResults = append(deployResults, newDeployContractsResult(c.name, false,
-		implementationAddress,
-		receipt.TransactionHash,
-		receipt.GasUsed))
+	deployResults = append(deployResults,
+		newDeployContractsResult(c.name, false,
+			implementationAddress,
+			receipt.TransactionHash,
+			receipt.GasUsed))
 
 	if c.hasProxy {
 		proxyContractName := getProxyNameForImpl(c.name)
@@ -87,10 +88,11 @@ func (c *contract) deploy(
 			return nil, fmt.Errorf("deployment of %s contract failed", proxyContractName)
 		}
 
-		deployResults = append(deployResults, newDeployContractsResult(proxyContractName, true,
-			types.Address(receipt.ContractAddress),
-			receipt.TransactionHash,
-			receipt.GasUsed))
+		deployResults = append(deployResults,
+			newDeployContractsResult(proxyContractName, true,
+				types.Address(receipt.ContractAddress),
+				receipt.TransactionHash,
+				receipt.GasUsed))
 	}
 
 	c.addressPopulatorFn(bridgeCfg, deployResults)

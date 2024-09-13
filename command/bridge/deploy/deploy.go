@@ -67,7 +67,7 @@ func GetCommand() *cobra.Command {
 	)
 
 	cmd.Flags().StringVar(
-		&params.externalRPCAddress,
+		&params.internalRPCAddress,
 		internalRPCFlag,
 		txrelayer.DefaultRPCAddress,
 		"the JSON RPC blade chain IP address",
@@ -125,7 +125,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	defer outputter.WriteOutput()
 
 	outputter.WriteCommandResult(&helper.MessageResult{
-		Message: fmt.Sprintf("%s started... External Chain JSON RPC address %s.",
+		Message: fmt.Sprintf("%s started... External chain JSON RPC address %s.",
 			contractsDeploymentTitle, params.externalRPCAddress),
 	})
 
