@@ -526,11 +526,7 @@ func initERC20PredicateContract(
 		return err
 	}
 
-	if err = callContract(contracts.SystemCaller, contractAddr, input, contractName, transition); err != nil {
-		return err
-	}
-
-	return nil
+	return callContract(contracts.SystemCaller, contractAddr, input, contractName, transition)
 }
 
 // initERC721PredicateContract initializes ChildERC721Predicate contract on blade chain
@@ -558,11 +554,7 @@ func initERC721PredicateContract(
 		return err
 	}
 
-	if err = callContract(contracts.SystemCaller, contractAddr, input, contractName, transition); err != nil {
-		return err
-	}
-
-	return nil
+	return callContract(contracts.SystemCaller, contractAddr, input, contractName, transition)
 }
 
 // initERC1155PredicateContract initializes ChildERC1155Predicate contract on blade chain
@@ -590,16 +582,12 @@ func initERC1155PredicateContract(
 		return err
 	}
 
-	if err = callContract(contracts.SystemCaller, contractAddr, input, contractName, transition); err != nil {
-		return err
-	}
-
-	return nil
+	return callContract(contracts.SystemCaller, contractAddr, input, contractName, transition)
 }
 
 // mintRewardTokensToWallet mints configured amount of reward tokens to reward wallet address
 func mintRewardTokensToWallet(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
-	if isNativeRewardToken(polyBFTConfig) {
+	if isNativeRewardToken(polyBFTConfig.RewardConfig.TokenAddress) {
 		// if reward token is a native erc20 token, we don't need to mint an amount of tokens
 		// for given wallet address to it since this is done in premine
 		return nil
@@ -705,8 +693,8 @@ func getValidatorStorageValidators(initialValidators []*validator.GenesisValidat
 }
 
 // isNativeRewardToken returns true in case a native token is used as a reward token as well
-func isNativeRewardToken(cfg PolyBFTConfig) bool {
-	return cfg.RewardConfig.TokenAddress == contracts.NativeERC20TokenContract
+func isNativeRewardToken(rewardTokenAddr types.Address) bool {
+	return rewardTokenAddr == contracts.NativeERC20TokenContract
 }
 
 // IsNativeStakeToken return true in case a native token is used for staking
