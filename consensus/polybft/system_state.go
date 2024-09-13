@@ -90,11 +90,11 @@ func (s *SystemStateImpl) GetNextCommittedIndexExternal(sourceChainID uint64) (u
 	return nextCommittedIndex.Uint64() + 1, nil
 }
 
-func (s *SystemStateImpl) GetNextCommittedIndexInternal(DestinationChainID uint64) (uint64, error) {
+func (s *SystemStateImpl) GetNextCommittedIndexInternal(destinationChainID uint64) (uint64, error) {
 	rawResult, err := s.sidechainBridgeContract.Call(
 		"lastCommittedInternal",
 		ethgo.Latest,
-		new(big.Int).SetUint64(DestinationChainID))
+		new(big.Int).SetUint64(destinationChainID))
 	if err != nil {
 		return 0, err
 	}

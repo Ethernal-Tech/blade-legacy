@@ -105,8 +105,13 @@ type topic interface {
 }
 
 // newBridgeEventManager creates a new instance of bridge event manager
-func newBridgeEventManager(eventProvider *EventProvider, logger hclog.Logger, state *State, config *bridgeEventManagerConfig,
-	runtime Runtime, externalChainID, internalChainID uint64) *bridgeEventManager {
+func newBridgeEventManager(
+	eventProvider *EventProvider,
+	logger hclog.Logger,
+	state *State,
+	config *bridgeEventManagerConfig,
+	runtime Runtime,
+	externalChainID, internalChainID uint64) *bridgeEventManager {
 	return &bridgeEventManager{
 		logger:          logger,
 		state:           state,
@@ -570,6 +575,7 @@ func (b *bridgeEventManager) multicast(msg interface{}) {
 // This function is the implementation of EventSubscriber interface
 func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
+
 	var bridgeMsg contractsapi.BridgeMsgEvent
 
 	return map[types.Address][]types.Hash{
@@ -613,5 +619,4 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 	default:
 		return errUnknownBridgeEvent
 	}
-
 }
