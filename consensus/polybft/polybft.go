@@ -273,8 +273,8 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 					}
 				}
 			} else {
-				for chainID, chainBridgeCfg := range bridgeCfgMap {
-					chainIDBig := new(big.Int).SetUint64(chainID)
+				for destChainID, chainBridgeCfg := range bridgeCfgMap {
+					destChainIDBig := new(big.Int).SetUint64(destChainID)
 
 					// initialize Gateway SC
 					if err = initGatewayContract(polyBFTConfig, chainBridgeCfg, transition, config.Genesis.Alloc); err != nil {
@@ -283,37 +283,37 @@ func GenesisPostHookFactory(config *chain.Chain, engineName string) func(txn *st
 
 					// initialize ChildERC20Predicate SC
 					if err = initERC20PredicateContract(transition, chainBridgeCfg, config.Genesis.Alloc,
-						false, chainIDBig, "ChildERC20Predicate"); err != nil {
+						false, destChainIDBig, "ChildERC20Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC721Predicate SC
 					if err = initERC721PredicateContract(transition, chainBridgeCfg, config.Genesis.Alloc,
-						false, chainIDBig, "ChildERC721Predicate"); err != nil {
+						false, destChainIDBig, "ChildERC721Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC1155Predicate SC
 					if err = initERC1155PredicateContract(transition, chainBridgeCfg, config.Genesis.Alloc,
-						false, chainIDBig, "ChildERC1155Predicate"); err != nil {
+						false, destChainIDBig, "ChildERC1155Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC20Predicate SC
 					if err = initERC20PredicateContract(transition, chainBridgeCfg, config.Genesis.Alloc,
-						true, chainIDBig, "RootERC20Predicate"); err != nil {
+						true, destChainIDBig, "RootERC20Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC721Predicate SC
 					if err = initERC721PredicateContract(transition, chainBridgeCfg, config.Genesis.Alloc,
-						true, chainIDBig, "RootERC721Predicate"); err != nil {
+						true, destChainIDBig, "RootERC721Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC1155Predicate SC
 					if err = initERC1155PredicateContract(transition, chainBridgeCfg, config.Genesis.Alloc,
-						true, chainIDBig, "RootERC1155Predicate"); err != nil {
+						true, destChainIDBig, "RootERC1155Predicate"); err != nil {
 						return err
 					}
 				}
