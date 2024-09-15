@@ -94,7 +94,10 @@ func initEpochManager(polyBFTConfig PolyBFTConfig, transition *state.Transition)
 }
 
 // getInitERC20PredicateInput builds initialization input parameters for child chain ERC20Predicate SC
-func getInitERC20PredicateInput(config *BridgeConfig, childChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
+func getInitERC20PredicateInput(
+	config *BridgeConfig,
+	childChainMintable bool,
+	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
 	if childChainMintable {
 		params = &contractsapi.InitializeRootERC20PredicateFn{
@@ -147,7 +150,10 @@ func getInitERC20PredicateACLInput(config *BridgeConfig, owner types.Address,
 }
 
 // getInitERC721PredicateInput builds initialization input parameters for child chain ERC721Predicate SC
-func getInitERC721PredicateInput(config *BridgeConfig, childOriginatedTokens bool, destinationChainID *big.Int) ([]byte, error) {
+func getInitERC721PredicateInput(
+	config *BridgeConfig,
+	childOriginatedTokens bool,
+	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
 	if childOriginatedTokens {
 		params = &contractsapi.InitializeRootERC721PredicateFn{
@@ -199,7 +205,10 @@ func getInitERC721PredicateACLInput(config *BridgeConfig, owner types.Address,
 }
 
 // getInitERC1155PredicateInput builds initialization input parameters for child chain ERC1155Predicate SC
-func getInitERC1155PredicateInput(config *BridgeConfig, childChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
+func getInitERC1155PredicateInput(
+	config *BridgeConfig,
+	childChainMintable bool,
+	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
 	if childChainMintable {
 		params = &contractsapi.InitializeRootERC1155PredicateFn{
