@@ -74,7 +74,7 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			validatorSet, err := getValidatorSet(fmt, genesisValidators)
 			if err != nil {
 				return err
@@ -103,14 +103,14 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			input := &contractsapi.InitializeRootERC20PredicateFn{
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewChildERC20Predicate:      config.InternalERC20PredicateAddr,
 				NewDestinationTokenTemplate: contracts.ChildERC20Contract,
 				// root native token address should be non-zero only if native token is non-mintable on a childchain
 				NewNativeTokenRoot:    config.ExternalNativeERC20Addr,
-				NewDestinationChainID: big.NewInt(chainID),
+				NewDestinationChainID: big.NewInt(destinationChainID),
 			}
 
 			return initContract(fmt, relayer, input, config.ExternalERC20PredicateAddr,
@@ -130,12 +130,12 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			input := &contractsapi.InitializeChildERC20PredicateFn{
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewRootERC20Predicate:       config.InternalMintableERC20PredicateAddr,
 				NewDestinationTokenTemplate: config.ExternalERC20Addr,
-				NewDestinationChainID:       big.NewInt(chainID),
+				NewDestinationChainID:       big.NewInt(destinationChainID),
 			}
 
 			return initContract(fmt, relayer, input, config.ExternalMintableERC20PredicateAddr,
@@ -165,12 +165,12 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			input := &contractsapi.InitializeRootERC721PredicateFn{
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewChildERC721Predicate:     config.InternalERC721PredicateAddr,
 				NewDestinationTokenTemplate: contracts.ChildERC721Contract,
-				NewDestinationChainID:       big.NewInt(chainID),
+				NewDestinationChainID:       big.NewInt(destinationChainID),
 			}
 
 			return initContract(fmt, relayer, input, config.ExternalERC721PredicateAddr,
@@ -190,12 +190,12 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			input := &contractsapi.InitializeChildERC721PredicateFn{
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewRootERC721Predicate:      config.InternalMintableERC721PredicateAddr,
 				NewDestinationTokenTemplate: config.ExternalERC721Addr,
-				NewDestinationChainID:       big.NewInt(chainID),
+				NewDestinationChainID:       big.NewInt(destinationChainID),
 			}
 
 			return initContract(fmt, relayer, input, config.ExternalMintableERC721PredicateAddr,
@@ -225,12 +225,12 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			input := &contractsapi.InitializeRootERC1155PredicateFn{
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewChildERC1155Predicate:    config.InternalERC1155PredicateAddr,
 				NewDestinationTokenTemplate: contracts.ChildERC1155Contract,
-				NewDestinationChainID:       big.NewInt(chainID),
+				NewDestinationChainID:       big.NewInt(destinationChainID),
 			}
 
 			return initContract(fmt, relayer, input, config.ExternalERC1155PredicateAddr,
@@ -250,12 +250,12 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			input := &contractsapi.InitializeChildERC1155PredicateFn{
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewRootERC1155Predicate:     config.InternalMintableERC1155PredicateAddr,
 				NewDestinationTokenTemplate: config.ExternalERC1155Addr,
-				NewDestinationChainID:       big.NewInt(chainID),
+				NewDestinationChainID:       big.NewInt(destinationChainID),
 			}
 
 			return initContract(fmt, relayer, input, config.ExternalMintableERC1155PredicateAddr,
@@ -287,7 +287,7 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 				genesisValidators []*validator.GenesisValidator,
 				config *polybft.BridgeConfig,
 				key crypto.Key,
-				chainID int64) error {
+				destinationChainID int64) error {
 				gvs := make([]*contractsapi.GenesisAccount, len(genesisValidators))
 				for i := 0; i < len(genesisValidators); i++ {
 					gvs[i] = &contractsapi.GenesisAccount{

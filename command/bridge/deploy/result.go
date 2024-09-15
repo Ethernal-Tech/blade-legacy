@@ -17,10 +17,12 @@ type deployContractResult struct {
 	isProxy bool          `json:"-"`
 }
 
-func newDeployContractsResult(name string,
+func newDeployContractsResult(
+	name string,
 	isProxy bool,
 	address types.Address,
-	hash ethgo.Hash, gasUsed uint64) *deployContractResult {
+	hash ethgo.Hash,
+	gasUsed uint64) *deployContractResult {
 	return &deployContractResult{
 		Name:    name,
 		Address: address,

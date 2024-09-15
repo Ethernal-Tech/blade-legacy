@@ -106,9 +106,9 @@ func GetCommand() *cobra.Command {
 		&params.isBootstrap,
 		isBootstrapFlag,
 		true,
-		"indicates if bridge depoly command is run in bootstraping of blade chain. "+
-			"If it is run on a live blade chain, the command will deploy and initialize internal predicates, "+
-			"otherwise it will pre-allocate the internal predicates addresses in genesis",
+		"indicates if bridge deploy command is run during bootstraping of the Blade chain. "+
+			"If it is run on a live Blade chain, the command will deploy and initialize internal predicates, "+
+			"otherwise it will pre-allocate the internal predicates addresses in the genesis configuration.",
 	)
 
 	cmd.MarkFlagsMutuallyExclusive(helper.TestModeFlag, deployerKeyFlag)
@@ -217,8 +217,6 @@ func deployContracts(
 	chainCfg *chain.Chain,
 	initialValidators []*validator.GenesisValidator,
 	cmdCtx context.Context) (*deploymentResultInfo, error) {
-	var internalTxRelayer txrelayer.TxRelayer
-
 	externalTxRelayer, err := txrelayer.NewTxRelayer(
 		txrelayer.WithClient(externalChainClient),
 		txrelayer.WithWriter(outputter),
@@ -260,12 +258,6 @@ func deployContracts(
 	if params.isBootstrap {
 		if err := preAllocateInternalPredicates(outputter, internalContracts, chainCfg, bridgeConfig); err != nil {
 			return nil, err
-		}
-
-		internalTxRelayer, err = txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.internalRPCAddress),
-			txrelayer.WithWriter(outputter), txrelayer.WithReceiptsTimeout(params.txTimeout))
-		if err != nil {
-			return nil, fmt.Errorf("failed to initialize tx relayer for internal chain: %w", err)
 		}
 	}
 
@@ -320,8 +312,15 @@ func deployContracts(
 		deployContractFn(contract, externalTxRelayer)
 	}
 
-	// deploy internal contracts if blade is live
+	var internalTxRelayer txrelayer.TxRelayer
+	// deploy internal contracts if blade is already running
 	if !params.isBootstrap {
+		internalTxRelayer, err = txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.internalRPCAddress),
+			txrelayer.WithWriter(outputter), txrelayer.WithReceiptsTimeout(params.txTimeout))
+		if err != nil {
+			return nil, fmt.Errorf("failed to initialize tx relayer for internal chain: %w", err)
+		}
+
 		for _, contract := range internalContracts {
 			deployContractFn(contract, internalTxRelayer)
 		}

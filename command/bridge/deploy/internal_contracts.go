@@ -37,7 +37,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			_ int64) error {
 			validatorSet, err := getValidatorSet(fmt, genesisValidators)
 			if err != nil {
 				return err
@@ -71,14 +71,14 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
 			if useBridgeAllowList || useBridgeBlockList {
 				input = &contractsapi.InitializeChildERC20PredicateACLFn{
 					NewGateway:                  config.InternalGatewayAddr,
 					NewRootERC20Predicate:       config.ExternalERC20PredicateAddr,
 					NewDestinationTokenTemplate: contracts.ChildERC20Contract,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 					NewNativeTokenRootAddress:   config.ExternalNativeERC20Addr,
 					NewUseAllowList:             useBridgeAllowList,
 					NewUseBlockList:             useBridgeBlockList,
@@ -90,7 +90,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 					NewRootERC20Predicate:       config.ExternalERC20PredicateAddr,
 					NewDestinationTokenTemplate: contracts.ChildERC20Contract,
 					NewNativeTokenRootAddress:   config.ExternalNativeERC20Addr,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 				}
 			}
 
@@ -116,14 +116,14 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
 			if useBridgeAllowList || useBridgeBlockList {
 				input = &contractsapi.InitializeChildERC721PredicateACLFn{
 					NewGateway:                  config.InternalGatewayAddr,
 					NewRootERC721Predicate:      config.ExternalERC721PredicateAddr,
 					NewDestinationTokenTemplate: contracts.ChildERC721Contract,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 					NewUseAllowList:             useBridgeAllowList,
 					NewUseBlockList:             useBridgeBlockList,
 					NewOwner:                    chainCfg.Params.GetBridgeOwner(),
@@ -133,7 +133,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 					NewGateway:                  config.InternalGatewayAddr,
 					NewRootERC721Predicate:      config.ExternalERC721PredicateAddr,
 					NewDestinationTokenTemplate: contracts.ChildERC721Contract,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 				}
 			}
 
@@ -159,14 +159,14 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
 			if useBridgeAllowList || useBridgeBlockList {
 				input = &contractsapi.InitializeChildERC1155PredicateACLFn{
 					NewGateway:                  config.InternalGatewayAddr,
 					NewRootERC1155Predicate:     config.ExternalERC1155PredicateAddr,
 					NewDestinationTokenTemplate: contracts.ChildERC1155Contract,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 					NewUseAllowList:             useBridgeAllowList,
 					NewUseBlockList:             useBridgeBlockList,
 					NewOwner:                    chainCfg.Params.GetBridgeOwner(),
@@ -176,7 +176,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 					NewGateway:                  config.InternalGatewayAddr,
 					NewRootERC1155Predicate:     config.ExternalERC1155PredicateAddr,
 					NewDestinationTokenTemplate: contracts.ChildERC1155Contract,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 				}
 			}
 
@@ -202,14 +202,14 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
 			if useBridgeAllowList || useBridgeBlockList {
 				input = &contractsapi.InitializeRootMintableERC20PredicateACLFn{
 					NewGateway:             config.InternalGatewayAddr,
 					NewChildERC20Predicate: config.ExternalMintableERC20PredicateAddr,
 					NewTokenTemplate:       config.ExternalERC20Addr,
-					NewDestinationChainID:  big.NewInt(chainID),
+					NewDestinationChainID:  big.NewInt(destinationChainID),
 					NewUseAllowList:        useBridgeAllowList,
 					NewUseBlockList:        useBridgeBlockList,
 					NewOwner:               chainCfg.Params.GetBridgeOwner(),
@@ -219,7 +219,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 					NewGateway:                  config.InternalGatewayAddr,
 					NewChildERC20Predicate:      config.ExternalMintableERC20PredicateAddr,
 					NewDestinationTokenTemplate: config.ExternalERC20Addr,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 				}
 			}
 
@@ -245,14 +245,14 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
 			if useBridgeAllowList || useBridgeBlockList {
 				input = &contractsapi.InitializeRootMintableERC721PredicateACLFn{
 					NewGateway:              config.InternalGatewayAddr,
 					NewChildERC721Predicate: config.ExternalMintableERC721PredicateAddr,
 					NewTokenTemplate:        config.ExternalERC721Addr,
-					NewDestinationChainID:   big.NewInt(chainID),
+					NewDestinationChainID:   big.NewInt(destinationChainID),
 					NewUseAllowList:         useBridgeAllowList,
 					NewUseBlockList:         useBridgeBlockList,
 					NewOwner:                chainCfg.Params.GetBridgeOwner(),
@@ -262,7 +262,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 					NewGateway:                  config.InternalGatewayAddr,
 					NewChildERC721Predicate:     config.ExternalMintableERC721PredicateAddr,
 					NewDestinationTokenTemplate: config.ExternalERC721Addr,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 				}
 			}
 
@@ -288,14 +288,14 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 			genesisValidators []*validator.GenesisValidator,
 			config *polybft.BridgeConfig,
 			key crypto.Key,
-			chainID int64) error {
+			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
 			if useBridgeAllowList || useBridgeBlockList {
 				input = &contractsapi.InitializeRootMintableERC1155PredicateACLFn{
 					NewGateway:               config.InternalGatewayAddr,
 					NewChildERC1155Predicate: config.ExternalMintableERC1155PredicateAddr,
 					NewTokenTemplate:         config.ExternalERC1155Addr,
-					NewDestinationChainID:    big.NewInt(chainID),
+					NewDestinationChainID:    big.NewInt(destinationChainID),
 					NewUseAllowList:          useBridgeAllowList,
 					NewUseBlockList:          useBridgeBlockList,
 					NewOwner:                 chainCfg.Params.GetBridgeOwner(),
@@ -305,7 +305,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 					NewGateway:                  config.InternalGatewayAddr,
 					NewChildERC1155Predicate:    config.ExternalMintableERC1155PredicateAddr,
 					NewDestinationTokenTemplate: config.ExternalERC1155Addr,
-					NewDestinationChainID:       big.NewInt(chainID),
+					NewDestinationChainID:       big.NewInt(destinationChainID),
 				}
 			}
 
