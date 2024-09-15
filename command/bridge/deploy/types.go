@@ -16,7 +16,7 @@ import (
 const (
 	contractsDeploymentTitle = "[BRIDGE - CONTRACTS DEPLOYMENT]"
 
-	proxySufix     = "Proxy"
+	proxySuffix    = "Proxy"
 	externalPrefix = "External"
 	internalPrefix = "Internal"
 
@@ -76,7 +76,7 @@ func (c *contract) deploy(
 			receipt.GasUsed))
 
 	if c.hasProxy {
-		proxyContractName := getProxyNameForImpl(c.name)
+		proxyContractName := c.constructProxyName()
 
 		receipt, err := helper.DeployProxyContract(
 			txRelayer, deployerKey, proxyContractName, proxyAdmin, implementationAddress)
@@ -100,8 +100,9 @@ func (c *contract) deploy(
 	return deployResults, nil
 }
 
-func getProxyNameForImpl(input string) string {
-	return input + proxySufix
+// constructProxyName builds a proxy contract name, by adding a predefined proxy suffix on the contract name.
+func (c *contract) constructProxyName() string {
+	return fmt.Sprintf("%s%s", c.name, proxySuffix)
 }
 
 func getContractName(isInternal bool, input string) string {
@@ -110,5 +111,5 @@ func getContractName(isInternal bool, input string) string {
 		prefix = internalPrefix
 	}
 
-	return prefix + input + proxySufix
+	return fmt.Sprintf("%s%s%s", prefix, input, proxySuffix)
 }

@@ -338,7 +338,7 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 
 		contract.addressPopulatorFn(bridgeCfg, []*deployContractResult{
 			newDeployContractsResult(contract.name, false, implAddress, ethgo.ZeroHash, 0),
-			newDeployContractsResult(getProxyNameForImpl(contract.name), true, proxyAddress, ethgo.ZeroHash, 0),
+			newDeployContractsResult(contract.constructProxyName(), true, proxyAddress, ethgo.ZeroHash, 0),
 		})
 
 		chainCfg.Genesis.Alloc[implAddress] = &chain.GenesisAccount{
