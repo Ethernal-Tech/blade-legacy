@@ -40,7 +40,7 @@ type deploymentResultInfo struct {
 func GetCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "deploy",
-		Short:   "Deploys and initializes required smart contracts on the rootchain",
+		Short:   "Deploys and initializes set of bridge smart contracts",
 		PreRunE: preRunCommand,
 		Run:     runCommand,
 	}
@@ -56,7 +56,7 @@ func GetCommand() *cobra.Command {
 		&params.deployerKey,
 		deployerKeyFlag,
 		"",
-		"hex-encoded private key of the account which deploys rootchain contracts",
+		"hex-encoded private key of the account which deploys bridge contracts",
 	)
 
 	cmd.Flags().StringVar(
@@ -77,14 +77,14 @@ func GetCommand() *cobra.Command {
 		&params.rootERC20TokenAddr,
 		erc20AddrFlag,
 		"",
-		"existing root native erc20 token address, that originates from a rootchain",
+		"existing erc20 token address, that originates from a rootchain and that gets mapped to the Blade native one",
 	)
 
 	cmd.Flags().BoolVar(
 		&params.isTestMode,
 		helper.TestModeFlag,
 		false,
-		"test indicates whether rootchain contracts deployer is hardcoded test account"+
+		"test indicates whether bridge contracts deployer is hardcoded test account"+
 			" (otherwise provided secrets are used to resolve deployer account)",
 	)
 
@@ -144,17 +144,19 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		return
 	}
 
-	externalChainID, err := externalChainClient.ChainID()
+	externalChainIDBig, err := externalChainClient.ChainID()
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to get chainID for provided IP address: %s: %w",
 			params.externalRPCAddress, err))
 	}
 
-	if consensusCfg.Bridge[externalChainID.Uint64()] != nil {
-		code, err := externalChainClient.GetCode(consensusCfg.Bridge[externalChainID.Uint64()].ExternalGatewayAddr,
-			jsonrpc.LatestBlockNumberOrHash)
+	externalChainID := externalChainIDBig.Uint64()
+	bridgeCfg := consensusCfg.Bridge[externalChainID]
+
+	if bridgeCfg != nil {
+		code, err := externalChainClient.GetCode(bridgeCfg.ExternalGatewayAddr, jsonrpc.LatestBlockNumberOrHash)
 		if err != nil {
-			outputter.SetError(fmt.Errorf("failed to check if rootchain contracts are deployed: %w", err))
+			outputter.SetError(fmt.Errorf("failed to check if external chain bridge contracts are deployed: %w", err))
 
 			return
 		} else if code != "0x" {
@@ -166,30 +168,29 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 	}
 
-	// set event tracker start blocks for rootchain contract(s) of interest
-	// the block number should be queried before deploying contracts so that no events during deployment
-	// and initialization are missed
-	blockNum, err := externalChainClient.BlockNumber()
-	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to query rootchain latest block number: %w", err))
-
-		return
-	}
-
-	deploymentResultInfo, err := deployContracts(outputter, externalChainClient, externalChainID,
+	deploymentResultInfo, err := deployContracts(outputter, externalChainClient, externalChainIDBig,
 		chainConfig, consensusCfg.InitialValidatorSet, cmd.Context())
 	if err != nil {
-		outputter.SetError(fmt.Errorf("failed to deploy rootchain contracts: %w", err))
+		outputter.SetError(fmt.Errorf("failed to deploy bridge contracts: %w", err))
 		outputter.SetCommandResult(command.Results(deploymentResultInfo.CommandResults))
 
 		return
 	}
 
-	// populate bridge configuration
-	consensusCfg.Bridge[externalChainID.Uint64()] = deploymentResultInfo.BridgeCfg
+	// set event tracker start blocks for external chain contract(s) of interest
+	// the block number should be queried before deploying contracts so that no events during deployment
+	// and initialization are missed
+	latestBlockNum, err := externalChainClient.BlockNumber()
+	if err != nil {
+		outputter.SetError(fmt.Errorf("failed to query the external chain's latest block number: %w", err))
 
-	consensusCfg.Bridge[externalChainID.Uint64()].EventTrackerStartBlocks = map[types.Address]uint64{
-		deploymentResultInfo.BridgeCfg.ExternalGatewayAddr: blockNum,
+		return
+	}
+
+	// populate bridge configuration
+	consensusCfg.Bridge[externalChainID] = deploymentResultInfo.BridgeCfg
+	consensusCfg.Bridge[externalChainID].EventTrackerStartBlocks = map[types.Address]uint64{
+		deploymentResultInfo.BridgeCfg.ExternalGatewayAddr: latestBlockNum,
 	}
 
 	// write updated consensus configuration
@@ -209,12 +210,13 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 // deployContracts deploys and initializes bridge smart contracts
-func deployContracts(outputter command.OutputFormatter,
+func deployContracts(
+	outputter command.OutputFormatter,
 	externalChainClient *jsonrpc.EthClient,
 	externalChainID *big.Int,
 	chainCfg *chain.Chain,
 	initialValidators []*validator.GenesisValidator,
-	cmdCtx context.Context) (deploymentResultInfo, error) {
+	cmdCtx context.Context) (*deploymentResultInfo, error) {
 	var internalTxRelayer txrelayer.TxRelayer
 
 	externalTxRelayer, err := txrelayer.NewTxRelayer(
@@ -222,14 +224,12 @@ func deployContracts(outputter command.OutputFormatter,
 		txrelayer.WithWriter(outputter),
 		txrelayer.WithReceiptsTimeout(params.txTimeout))
 	if err != nil {
-		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil},
-			fmt.Errorf("failed to initialize tx relayer for external chain: %w", err)
+		return nil, fmt.Errorf("failed to initialize tx relayer for external chain: %w", err)
 	}
 
 	deployerKey, err := helper.DecodePrivateKey(params.deployerKey)
 	if err != nil {
-		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil},
-			fmt.Errorf("failed to initialize deployer key: %w", err)
+		return nil, fmt.Errorf("failed to initialize deployer key: %w", err)
 	}
 
 	if params.isTestMode {
@@ -237,7 +237,7 @@ func deployContracts(outputter command.OutputFormatter,
 
 		txn := helper.CreateTransaction(types.ZeroAddress, &deployerAddr, nil, ethgo.Ether(1), true)
 		if _, err = externalTxRelayer.SendTransactionLocal(txn); err != nil {
-			return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
+			return nil, err
 		}
 	}
 
@@ -250,7 +250,7 @@ func deployContracts(outputter command.OutputFormatter,
 
 	// setup external contracts
 	if externalContracts, err = initExternalContracts(bridgeConfig, externalChainClient, externalChainID); err != nil {
-		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
+		return nil, err
 	}
 
 	// setup internal contracts
@@ -259,19 +259,18 @@ func deployContracts(outputter command.OutputFormatter,
 	// pre-allocate internal predicates addresses in genesis if blade is bootstrapping
 	if params.isBootstrap {
 		if err := preAllocateInternalPredicates(outputter, internalContracts, chainCfg, bridgeConfig); err != nil {
-			return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
+			return nil, err
 		}
 
 		internalTxRelayer, err = txrelayer.NewTxRelayer(txrelayer.WithIPAddress(params.internalRPCAddress),
 			txrelayer.WithWriter(outputter), txrelayer.WithReceiptsTimeout(params.txTimeout))
 		if err != nil {
-			return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil},
-				fmt.Errorf("failed to initialize tx relayer for internal chain: %w", err)
+			return nil, fmt.Errorf("failed to initialize tx relayer for internal chain: %w", err)
 		}
 	}
 
 	g, ctx := errgroup.WithContext(cmdCtx)
-	results := make(map[string]*deployContractResult, 0)
+	results := make(map[string]*deployContractResult)
 	resultsLock := sync.Mutex{}
 	proxyAdmin := types.StringToAddress(params.proxyContractsAdmin)
 
@@ -350,7 +349,7 @@ func deployContracts(outputter command.OutputFormatter,
 
 	// wait for all contracts to be initialized
 	if err := g.Wait(); err != nil {
-		return deploymentResultInfo{BridgeCfg: nil, CommandResults: nil}, err
+		return nil, err
 	}
 
 	commandResults := make([]command.CommandResult, 0, len(results))
@@ -358,9 +357,7 @@ func deployContracts(outputter command.OutputFormatter,
 		commandResults = append(commandResults, result)
 	}
 
-	return deploymentResultInfo{
-		BridgeCfg:      bridgeConfig,
-		CommandResults: commandResults}, nil
+	return &deploymentResultInfo{BridgeCfg: bridgeConfig, CommandResults: commandResults}, nil
 }
 
 // initContract initializes arbitrary contract with given parameters deployed on a given address
@@ -386,7 +383,7 @@ func initContract(cmdOutput command.OutputFormatter, txRelayer txrelayer.TxRelay
 	return nil
 }
 
-func collectResultsOnError(results map[string]*deployContractResult) deploymentResultInfo {
+func collectResultsOnError(results map[string]*deployContractResult) *deploymentResultInfo {
 	commandResults := make([]command.CommandResult, 0, len(results)+1)
 	messageResult := helper.MessageResult{Message: "[BRIDGE - DEPLOY] Successfully deployed the following contracts\n"}
 
@@ -400,10 +397,7 @@ func collectResultsOnError(results map[string]*deployContractResult) deploymentR
 
 	commandResults = append([]command.CommandResult{messageResult}, commandResults...)
 
-	return deploymentResultInfo{
-		BridgeCfg: nil,
-
-		CommandResults: commandResults}
+	return &deploymentResultInfo{BridgeCfg: nil, CommandResults: commandResults}
 }
 
 // getValidatorSet converts given validators to generic map
