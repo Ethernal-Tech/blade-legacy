@@ -764,7 +764,7 @@ func createCommitValidatorSetInput(
 	}
 
 	return &contractsapi.CommitValidatorSetBridgeStorageFn{
-		NewValidatorSet: validators.ToAPIBinding(),
+		NewValidatorSet: validators.ToABIBinding(),
 		Signature:       signatureBig,
 		Bitmap:          extra.Committed.Bitmap,
 	}, nil

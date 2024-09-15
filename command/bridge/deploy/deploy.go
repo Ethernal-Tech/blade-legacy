@@ -443,5 +443,5 @@ func getValidatorSet(o command.OutputFormatter,
 		return nil, err
 	}
 
-	return accSet.ToAPIBinding(), nil
+	return accSet.ToABIBinding(), nil
 }

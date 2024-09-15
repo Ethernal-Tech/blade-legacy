@@ -235,7 +235,7 @@ func (as AccountSet) Copy() AccountSet {
 
 // Hash returns hash value of the AccountSet
 func (as AccountSet) Hash() (types.Hash, error) {
-	abiEncoded, err := accountSetABIType.Encode([]interface{}{as.ToAPIBinding()})
+	abiEncoded, err := accountSetABIType.Encode([]interface{}{as.ToABIBinding()})
 	if err != nil {
 		return types.ZeroHash, err
 	}
@@ -243,8 +243,8 @@ func (as AccountSet) Hash() (types.Hash, error) {
 	return types.BytesToHash(crypto.Keccak256(abiEncoded)), nil
 }
 
-// ToAPIBinding converts AccountSet to slice of contract api stubs to be encoded
-func (as AccountSet) ToAPIBinding() []*contractsapi.Validator {
+// ToABIBinding converts AccountSet to slice of contract ABI stubs to be encoded
+func (as AccountSet) ToABIBinding() []*contractsapi.Validator {
 	apiBinding := make([]*contractsapi.Validator, len(as))
 	for i, v := range as {
 		apiBinding[i] = &contractsapi.Validator{
