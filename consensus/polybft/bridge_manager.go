@@ -227,7 +227,7 @@ func newBridgeManager(
 
 // PostBlock is a function executed on every block finalization (either by consensus or syncer)
 func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
-	if err := b.bridgeEventManager.CreateInternalBatch(); err != nil {
+	if err := b.bridgeEventManager.PostBlock(); err != nil {
 		return fmt.Errorf("failed to execute post block in bridge event manager. Err: %w", err)
 	}
 

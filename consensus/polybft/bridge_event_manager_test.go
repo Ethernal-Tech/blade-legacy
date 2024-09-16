@@ -58,7 +58,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		// there are no bridge messages
-		require.NoError(t, s.buildBridgeBatch(nil, false))
+		require.NoError(t, s.buildExternalBridgeBatch(nil))
 		require.Nil(t, s.pendingBridgeBatches)
 
 		bridgeMessages10 := generateBridgeMessageEvents(t, 10, 0)
@@ -68,7 +68,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
-		require.NoError(t, s.buildBridgeBatch(nil, false))
+		require.NoError(t, s.buildExternalBridgeBatch(nil))
 		length := len(s.pendingBridgeBatches[0].BridgeMessageBatch.Messages)
 		require.Len(t, s.pendingBridgeBatches, 1)
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
@@ -80,7 +80,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 			require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(bridgeMessages10[i]))
 		}
 
-		require.NoError(t, s.buildBridgeBatch(nil, false))
+		require.NoError(t, s.buildExternalBridgeBatch(nil))
 		length = len(s.pendingBridgeBatches[1].BridgeMessageBatch.Messages)
 		require.Len(t, s.pendingBridgeBatches, 2)
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
@@ -104,7 +104,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 		}
 
 		// I am not a validator so no batches should be built
-		require.NoError(t, s.buildBridgeBatch(nil, false))
+		require.NoError(t, s.buildExternalBridgeBatch(nil))
 		require.Len(t, s.pendingBridgeBatches, 0)
 	})
 }
