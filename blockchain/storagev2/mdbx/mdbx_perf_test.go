@@ -38,7 +38,7 @@ func Benchmark(b *testing.B) {
 	}()
 
 	blockCount := 1000
-	storagev2.BenchmarkStorage(b, blockCount, s, 40, 18) // CI times
+	storagev2.BenchmarkStorage(b, blockCount, s, 43, 18) // CI times
 
 	size, err := dbSize(path)
 	require.NoError(b, err)
