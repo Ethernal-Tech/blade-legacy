@@ -322,10 +322,11 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 		return Signature{}, err
 	}
 
-	var signatures bls.Signatures
-
-	bmap := bitmap.Bitmap{}
-	signers := make(map[types.Address]struct{}, 0)
+	var (
+		signatures = make(bls.Signatures, 0, len(votes))
+		bmap       = bitmap.Bitmap{}
+		signers    = make(map[types.Address]struct{}, 0)
+	)
 
 	for _, vote := range votes {
 		index, exists := validatorAddrToIndex[vote.From]
