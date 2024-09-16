@@ -431,7 +431,10 @@ func (b *bridgeEventManager) buildInternalBridgeBatch(dbTx *bolt.Tx) error {
 	return b.buildBridgeBatch(dbTx, b.internalChainID, b.externalChainID, b.nextBridgeEventIDInternal)
 }
 
-func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, sourceChainID, destinationChainID uint64, nextBridgeEventIDIndex uint64) error {
+func (b *bridgeEventManager) buildBridgeBatch(
+	dbTx *bolt.Tx,
+	sourceChainID, destinationChainID uint64,
+	nextBridgeEventIDIndex uint64) error {
 	if !b.runtime.IsActiveValidator() {
 		// don't build batch if not a validator
 		return nil
