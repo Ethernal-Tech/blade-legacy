@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -294,62 +293,6 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	batch, err = s.BridgeBatch(1)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
-}
-
-func TestBridgeEventManager_BuildProofs(t *testing.T) {
-	t.Skip()
-
-	vals := validator.NewTestValidators(t, 5)
-
-	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
-
-	for _, evnt := range generateBridgeMessageEvents(t, 20, 0) {
-		require.NoError(t, s.state.BridgeMessageStore.insertBridgeMessageEvent(evnt))
-	}
-
-	require.NoError(t, s.buildBridgeBatch(nil, false))
-	require.Len(t, s.pendingBridgeBatches, 1)
-
-	blsKey, err := bls.GenerateBlsKey()
-	require.NoError(t, err)
-
-	data, err := s.pendingBridgeBatches[0].BridgeMessageBatch.EncodeAbi()
-	require.NoError(t, err)
-
-	signature, err := blsKey.Sign(data, domain)
-	require.NoError(t, err)
-
-	signatures := bls.Signatures{signature}
-
-	aggSig, err := signatures.Aggregate().Marshal()
-	require.NoError(t, err)
-
-	mockMsg := &BridgeBatchSigned{
-		MessageBatch: &contractsapi.BridgeMessageBatch{
-			Messages:           s.pendingBridgeBatches[0].BridgeMessageBatch.Messages,
-			SourceChainID:      s.pendingBridgeBatches[0].BridgeMessageBatch.SourceChainID,
-			DestinationChainID: s.pendingBridgeBatches[0].BridgeMessageBatch.DestinationChainID,
-		},
-		AggSignature: Signature{AggregatedSignature: aggSig},
-	}
-
-	txData, err := mockMsg.EncodeAbi()
-	require.NoError(t, err)
-
-	tx := createStateTransactionWithData(types.Address{}, txData)
-
-	req := &PostBlockRequest{
-		FullBlock: &types.FullBlock{
-			Block: &types.Block{
-				Transactions: []*types.Transaction{tx},
-			},
-		},
-	}
-
-	length := len(mockMsg.MessageBatch.Messages)
-
-	require.NoError(t, s.PostBlock(req))
-	require.Equal(t, mockMsg.MessageBatch.Messages[length-1].ID.Uint64()+1, s.nextBridgeEventIDIndex)
 }
 
 func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {

@@ -38,7 +38,7 @@ type BridgeEventManager interface {
 	Init() error
 	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 	BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error)
-	PostBlock(req *PostBlockRequest) error
+	CreateInternalBatch() error
 	PostEpoch(req *PostEpochRequest) error
 }
 
@@ -52,7 +52,7 @@ func (d *dummyBridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) 
 func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
-func (d *dummyBridgeEventManager) PostBlock(req *PostBlockRequest) error { return nil }
+func (d *dummyBridgeEventManager) CreateInternalBatch() error { return nil }
 func (d *dummyBridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	return nil
 }
@@ -409,9 +409,8 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	return b.buildBridgeBatch(req.DBTx, false)
 }
 
-// PostBlock notifies bridge event manager that a block was finalized,.
-// Additionally, it will remove any processed bridge message events.
-func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
+// CreateInternalBatch creates batch from internal events.
+func (b *bridgeEventManager) CreateInternalBatch() error {
 	if err := b.buildBridgeBatch(nil, true); err != nil {
 		// we don't return an error here. If bridge message event is inserted in db,
 		// we will just try to build a batch on next block or next event arrival
