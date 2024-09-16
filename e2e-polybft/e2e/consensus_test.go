@@ -225,10 +225,10 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 
 	// start the first and the second validator
 	cluster.InitTestServer(t, cluster.Config.ValidatorPrefix+strconv.Itoa(validatorSetSize+1),
-		cluster.Bridge.JSONRPCAddr(), framework.Validator)
+		[]string{}, framework.Validator)
 
 	cluster.InitTestServer(t, cluster.Config.ValidatorPrefix+strconv.Itoa(validatorSetSize+2),
-		cluster.Bridge.JSONRPCAddr(), framework.Validator)
+		[]string{}, framework.Validator)
 
 	// wait for couple of epochs until new validators start
 	require.NoError(t, cluster.WaitForBlock(epochSize*3, time.Minute))
@@ -544,7 +544,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 
 	// sender must have premined some native tokens
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: burnContractAddr}),
 		framework.WithSecretsCallback(func(a []types.Address, config *framework.TestClusterConfig) {

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -30,8 +31,7 @@ const (
 	gethConsoleImage = "ghcr.io/0xpolygon/go-ethereum-console:latest"
 	gethImage        = "ethereum/client-go:v1.9.25"
 
-	defaultHostIP   = "127.0.0.1"
-	defaultHostPort = "8545"
+	defaultHostIP = "127.0.0.1"
 )
 
 var (
@@ -67,6 +67,20 @@ func setFlags(cmd *cobra.Command) {
 		noConsole,
 		false,
 		"use the official geth image instead of the console fork",
+	)
+
+	cmd.Flags().Uint64Var(
+		&params.chainID,
+		"chain-id",
+		666,
+		"custom chain id for bridge chain",
+	)
+
+	cmd.Flags().StringVar(
+		&params.port,
+		"chain-id",
+		"8545",
+		"port for bridge chain",
 	)
 }
 
@@ -104,7 +118,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	if err := PingServer(closeCh); err != nil {
 		close(closeCh)
 
-		if ip, err := helper.ReadRootchainIP(); err != nil {
+		if ip, err := helper.ReadRootchainIP(params.port); err != nil {
 			outputter.SetError(fmt.Errorf("failed to ping rootchain server: %w", err))
 		} else {
 			outputter.SetError(fmt.Errorf("failed to ping rootchain server at address %s: %w", ip, err))
@@ -155,6 +169,8 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 		return fmt.Errorf("cannot copy: %w", err)
 	}
 
+	chainID := strconv.FormatUint(params.chainID, 10)
+
 	// create the client
 	args := []string{"--dev"}
 
@@ -162,7 +178,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	args = append(args, "--dev.period", "2")
 
 	// add data dir
-	args = append(args, "--datadir", "/eth1data")
+	args = append(args, "--datadir", "/ethdata"+chainID)
 
 	// add ipcpath
 	args = append(args, "--ipcpath", "/eth1data/geth.ipc")
@@ -172,6 +188,9 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 
 	// enable ws
 	args = append(args, "--ws", "--ws.addr", "0.0.0.0")
+
+	// set chain id
+	args = append(args, "--networkid", chainID)
 
 	config := &container.Config{
 		Image: image,
@@ -195,16 +214,16 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 		}
 	}
 
-	port := nat.Port(fmt.Sprintf("%s/tcp", defaultHostPort))
+	port := nat.Port(fmt.Sprintf("%s/tcp", params.port))
 	hostConfig := &container.HostConfig{
 		Binds: []string{
-			mountDir + ":/eth1data",
+			mountDir + ":/ethdata" + chainID,
 		},
 		PortBindings: nat.PortMap{
 			port: []nat.PortBinding{
 				{
 					HostIP:   defaultHostIP,
-					HostPort: defaultHostPort,
+					HostPort: params.port,
 				},
 			},
 		},
@@ -265,7 +284,7 @@ func PingServer(closeCh <-chan struct{}) error {
 	for {
 		select {
 		case <-time.After(500 * time.Millisecond):
-			resp, err := httpClient.Post(fmt.Sprintf("http://%s:%s", defaultHostIP, defaultHostPort), "application/json", nil)
+			resp, err := httpClient.Post(fmt.Sprintf("http://%s:%s", defaultHostIP, params.port), "application/json", nil)
 			if err == nil {
 				return resp.Body.Close()
 			}

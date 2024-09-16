@@ -359,7 +359,7 @@ func TestE2E_AddressLists_Bridge(t *testing.T) {
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(adminAddr, targetAddr, otherAddr),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithBridgeAllowListAdmin(adminAddr),
 		framework.WithBridgeAllowListEnabled(otherAddr),
 		framework.WithBridgeBlockListAdmin(adminAddr),

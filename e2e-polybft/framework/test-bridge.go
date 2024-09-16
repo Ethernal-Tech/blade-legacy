@@ -23,18 +23,22 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+var initialPortForBridge = uint64(8545)
+
 type TestBridge struct {
 	t             *testing.T
 	clusterConfig *TestClusterConfig
+	id            uint64
 	node          *node
 }
 
-func NewTestBridge(t *testing.T, clusterConfig *TestClusterConfig) (*TestBridge, error) {
+func NewTestBridge(t *testing.T, clusterConfig *TestClusterConfig, idOfChain uint64) (*TestBridge, error) {
 	t.Helper()
 
 	bridge := &TestBridge{
 		t:             t,
 		clusterConfig: clusterConfig,
+		id:            idOfChain,
 	}
 
 	err := bridge.Start()
@@ -50,10 +54,12 @@ func (t *TestBridge) Start() error {
 	args := []string{
 		"bridge",
 		"server",
-		"--data-dir", t.clusterConfig.Dir("test-rootchain"),
+		"--data-dir", t.clusterConfig.Dir(fmt.Sprintf("test-external-chain-%d", t.id)),
+		"--chain-id", strconv.FormatUint(t.id, 10),
+		"--port", t.calculatePort(),
 	}
 
-	stdout := t.clusterConfig.GetStdout("bridge")
+	stdout := t.clusterConfig.GetStdout(fmt.Sprintf("bridge-%d", t.id))
 
 	bridgeNode, err := newNode(t.clusterConfig.Binary, args, stdout)
 	if err != nil {
@@ -78,7 +84,7 @@ func (t *TestBridge) Stop() {
 }
 
 func (t *TestBridge) JSONRPCAddr() string {
-	return fmt.Sprintf("http://%s:%d", hostIP, 8545)
+	return fmt.Sprintf("http://%s:%s", hostIP, t.calculatePort())
 }
 
 func (t *TestBridge) WaitUntil(pollFrequency, timeout time.Duration, handler func() (bool, error)) error {
@@ -535,6 +541,10 @@ func (t *TestBridge) premineNativeRootToken(genesisPath string, tokenConfig *pol
 	}
 
 	return g.Wait()
+}
+
+func (t *TestBridge) calculatePort() string {
+	return strconv.FormatUint(initialPortForBridge+t.id-1, 10)
 }
 
 // finalizeGenesis finalizes genesis on BladeManager contract on root

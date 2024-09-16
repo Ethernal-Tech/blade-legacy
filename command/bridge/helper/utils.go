@@ -10,6 +10,7 @@ import (
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/go-connections/nat"
 
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
@@ -42,7 +43,6 @@ const (
 
 var (
 	ErrRootchainNotFound = errors.New("rootchain not found")
-	ErrRootchainPortBind = errors.New("port 8545 is not bind with localhost")
 	errTestModeSecrets   = errors.New("rootchain test mode does not imply specifying secrets parameters")
 
 	ErrNoAddressesProvided = errors.New("no addresses provided")
@@ -84,6 +84,7 @@ func DecodePrivateKey(rawKey string) (crypto.Key, error) {
 	return rootchainAccountKey, nil
 }
 
+// GetRootchainID returns chainID of bridge
 func GetRootchainID() (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -104,7 +105,8 @@ func GetRootchainID() (string, error) {
 	return "", ErrRootchainNotFound
 }
 
-func ReadRootchainIP() (string, error) {
+// ReadRootchainIP returns ip address of bridge
+func ReadRootchainIP(port string) (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return "", fmt.Errorf("rootchain id error: %w", err)
@@ -120,9 +122,11 @@ func ReadRootchainIP() (string, error) {
 		return "", fmt.Errorf("rootchain ip error: %w", err)
 	}
 
-	ports, ok := inspect.HostConfig.PortBindings["8545/tcp"]
+	portMapKey := port + "/tcp"
+
+	ports, ok := inspect.HostConfig.PortBindings[nat.Port(portMapKey)]
 	if !ok || len(ports) == 0 {
-		return "", ErrRootchainPortBind
+		return "", fmt.Errorf("port %s is not bind with localhost", port)
 	}
 
 	return fmt.Sprintf("http://%s:%s", ports[0].HostIP, ports[0].HostPort), nil

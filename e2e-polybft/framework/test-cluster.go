@@ -99,7 +99,7 @@ type TestClusterConfig struct {
 	NonValidatorCount    int
 	WithLogs             bool
 	WithStdout           bool
-	HasBridge            bool
+	NumberOfBridges      uint64
 	LogsDir              string
 	TmpDir               string
 	BlockGasLimit        uint64
@@ -232,7 +232,7 @@ func (c *TestClusterConfig) getStakeAmount(validatorIndex int) *big.Int {
 type TestCluster struct {
 	Config      *TestClusterConfig
 	Servers     []*TestServer
-	Bridge      *TestBridge
+	Bridges     []*TestBridge
 	initialPort int64
 
 	once         sync.Once
@@ -268,9 +268,9 @@ func WithValidatorSnapshot(validatorsLen uint64) ClusterOption {
 	}
 }
 
-func WithBridge() ClusterOption {
+func WithBridges(numberOfBridges uint64) ClusterOption {
 	return func(h *TestClusterConfig) {
-		h.HasBridge = true
+		h.NumberOfBridges = numberOfBridges
 	}
 }
 
@@ -496,16 +496,16 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 	var err error
 
 	config := &TestClusterConfig{
-		t:             t,
-		WithLogs:      isTrueEnv(envLogsEnabled),
-		WithStdout:    isTrueEnv(envStdoutEnabled),
-		Binary:        resolveBinary(),
-		EpochSize:     10,
-		EpochReward:   1,
-		BlockGasLimit: 1e7, // 10M
-		StakeAmounts:  []*big.Int{},
-		HasBridge:     false,
-		VotingDelay:   10,
+		t:               t,
+		WithLogs:        isTrueEnv(envLogsEnabled),
+		WithStdout:      isTrueEnv(envStdoutEnabled),
+		Binary:          resolveBinary(),
+		EpochSize:       10,
+		EpochReward:     1,
+		BlockGasLimit:   1e7, // 10M
+		StakeAmounts:    []*big.Int{},
+		NumberOfBridges: 0,
+		VotingDelay:     10,
 	}
 
 	if config.ValidatorPrefix == "" {
@@ -536,6 +536,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		initialPort: 30300,
 		failCh:      make(chan struct{}),
 		once:        sync.Once{},
+		Bridges:     make([]*TestBridge, 0),
 	}
 
 	// in case no validators are specified in opts, all nodes will be validators
@@ -693,7 +694,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 				strings.Join(sliceAddressToSliceString(cluster.Config.TransactionsBlockListEnabled), ","))
 		}
 
-		if cluster.Config.HasBridge {
+		if cluster.Config.NumberOfBridges > 0 {
 			if len(cluster.Config.BridgeAllowListAdmin) != 0 {
 				args = append(args, "--bridge-allow-list-admin",
 					strings.Join(sliceAddressToSliceString(cluster.Config.BridgeAllowListAdmin), ","))
@@ -748,13 +749,15 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		require.NoError(t, err)
 	}
 
-	if cluster.Config.HasBridge {
+	bridgeJSONRPCs := make([]string, config.NumberOfBridges)
+
+	for i := uint64(0); i < cluster.Config.NumberOfBridges; i++ {
 		// start bridge
-		cluster.Bridge, err = NewTestBridge(t, cluster.Config)
+		bridge, err := NewTestBridge(t, cluster.Config, i+1)
 		require.NoError(t, err)
 
 		// deploy rootchain contracts
-		err = cluster.Bridge.deployRootchainContracts(genesisPath)
+		err = bridge.deployRootchainContracts(genesisPath)
 		require.NoError(t, err)
 
 		polybftConfig, err := polybft.LoadPolyBFTConfig(genesisPath)
@@ -764,19 +767,23 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		require.NoError(t, err)
 
 		// fund addresses on the rootchain
-		err = cluster.Bridge.fundAddressesOnRoot(polybftConfig)
+		err = bridge.fundAddressesOnRoot(polybftConfig)
 		require.NoError(t, err)
 
 		// add premine if token is non-mintable
-		err = cluster.Bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
+		err = bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
 		require.NoError(t, err)
 
-		err = cluster.Bridge.premineNativeRootToken(genesisPath, tokenConfig, polybftConfig)
+		err = bridge.premineNativeRootToken(genesisPath, tokenConfig, polybftConfig)
 		require.NoError(t, err)
 
 		// finalize genesis validators on the rootchain
-		err = cluster.Bridge.finalizeGenesis(genesisPath, tokenConfig)
+		err = bridge.finalizeGenesis(genesisPath, tokenConfig)
 		require.NoError(t, err)
+
+		bridgeJSONRPCs[i] = bridge.JSONRPCAddr()
+
+		cluster.Bridges = append(cluster.Bridges, bridge)
 	}
 
 	for i := 1; i <= int(cluster.Config.ValidatorSetSize); i++ {
@@ -786,19 +793,19 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		}
 
 		dir := cluster.Config.ValidatorPrefix + strconv.Itoa(i)
-		cluster.InitTestServer(t, dir, cluster.Bridge.JSONRPCAddr(), nodeType)
+		cluster.InitTestServer(t, dir, bridgeJSONRPCs, nodeType)
 	}
 
 	for i := 1; i <= cluster.Config.NonValidatorCount; i++ {
 		dir := nonValidatorPrefix + strconv.Itoa(i)
-		cluster.InitTestServer(t, dir, cluster.Bridge.JSONRPCAddr(), None)
+		cluster.InitTestServer(t, dir, bridgeJSONRPCs, None)
 	}
 
 	return cluster
 }
 
 func (c *TestCluster) InitTestServer(t *testing.T,
-	dataDir string, bridgeJSONRPC string, nodeType NodeType) {
+	dataDir string, bridgeJSONRPCs []string, nodeType NodeType) {
 	t.Helper()
 
 	logLevel := os.Getenv(envLogLevel)
@@ -811,7 +818,7 @@ func (c *TestCluster) InitTestServer(t *testing.T,
 		}
 	}
 
-	srv := NewTestServer(t, c.Config, bridgeJSONRPC, func(config *TestServerConfig) {
+	srv := NewTestServer(t, c.Config, bridgeJSONRPCs, func(config *TestServerConfig) {
 		config.DataDir = dataDir
 		config.Validator = nodeType.IsSet(Validator)
 		config.Chain = c.Config.Dir("genesis.json")
@@ -819,7 +826,7 @@ func (c *TestCluster) InitTestServer(t *testing.T,
 		config.LogLevel = logLevel
 		config.Relayer = nodeType.IsSet(Relayer)
 		config.NumBlockConfirmations = c.Config.NumBlockConfirmations
-		config.BridgeJSONRPC = bridgeJSONRPC
+		config.BridgeJSONRPCs = bridgeJSONRPCs
 		config.UseTLS = c.Config.UseTLS
 		config.TLSCertFile = c.Config.TLSCertFile
 		config.TLSKeyFile = c.Config.TLSKeyFile
@@ -850,8 +857,8 @@ func (c *TestCluster) Fail(err error) {
 }
 
 func (c *TestCluster) Stop() {
-	if c.Bridge != nil {
-		c.Bridge.Stop()
+	for _, bridge := range c.Bridges {
+		bridge.Stop()
 	}
 
 	for _, srv := range c.Servers {

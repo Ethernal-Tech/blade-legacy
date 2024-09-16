@@ -72,7 +72,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		framework.WithTestRewardToken(),
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
 		framework.WithEpochSize(epochSize),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
 				// premine receivers, so that they are able to do withdrawals
@@ -84,6 +84,8 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 	defer cluster.Stop()
 
+	bridgeOne := 0
+
 	cluster.WaitForReady(t)
 
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
@@ -93,7 +95,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 	childEthEndpoint := validatorSrv.JSONRPC()
 
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[0].JSONRPCAddr()))
 	require.NoError(t, err)
 
 	chainID, err := rootchainTxRelayer.Client().ChainID()
@@ -128,7 +130,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		// DEPOSIT ERC20 TOKENS
 		// send a few transactions to the bridge
 		require.NoError(t,
-			cluster.Bridge.Deposit(
+			cluster.Bridges[bridgeOne].Deposit(
 				common.ERC20,
 				rootERC20Token,
 				bridgeCfg.ExternalERC20PredicateAddr,
@@ -136,7 +138,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 				strings.Join(receivers[:], ","),
 				strings.Join(amounts[:], ","),
 				"",
-				cluster.Bridge.JSONRPCAddr(),
+				cluster.Bridges[bridgeOne].JSONRPCAddr(),
 				bridgeHelper.TestAccountPrivKey,
 				false,
 			))
@@ -170,7 +172,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		// WITHDRAW ERC20 TOKENS
 		// send withdraw transaction
 		for i, senderKey := range receiverKeys {
-			err = cluster.Bridge.Withdraw(
+			err = cluster.Bridges[bridgeOne].Withdraw(
 				common.ERC20,
 				senderKey,
 				receivers[i],
@@ -218,7 +220,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.NoError(t, cluster.WaitForBlock(initialBlockNum, 1*time.Minute))
 
 		// send two transactions to the bridge so that we have a minimal commitment
-		require.NoError(t, cluster.Bridge.Deposit(
+		require.NoError(t, cluster.Bridges[bridgeOne].Deposit(
 			common.ERC20,
 			rootERC20Token,
 			bridgeCfg.ExternalERC20PredicateAddr,
@@ -226,7 +228,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 			strings.Join(receivers[:depositsSubset], ","),
 			strings.Join(amounts[:depositsSubset], ","),
 			"",
-			cluster.Bridge.JSONRPCAddr(),
+			cluster.Bridges[bridgeOne].JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
@@ -245,7 +247,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.Equal(t, initialCommittedID+depositsSubset, lastCommittedID)
 
 		// send some more transactions to the bridge to build another commitment in epoch
-		require.NoError(t, cluster.Bridge.Deposit(
+		require.NoError(t, cluster.Bridges[bridgeOne].Deposit(
 			common.ERC20,
 			rootERC20Token,
 			bridgeCfg.ExternalERC20PredicateAddr,
@@ -253,7 +255,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 			strings.Join(receivers[depositsSubset:], ","),
 			strings.Join(amounts[depositsSubset:], ","),
 			"",
-			cluster.Bridge.JSONRPCAddr(),
+			cluster.Bridges[bridgeOne].JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
@@ -312,7 +314,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithEpochSize(epochSize),
 		framework.WithPremine(receiversAddrs...),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
 				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
@@ -321,12 +323,14 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	)
 	defer cluster.Stop()
 
+	bridgeOne := 0
+
 	cluster.WaitForReady(t)
 
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
 	require.NoError(t, err)
 
 	chainID, err := rootchainTxRelayer.Client().ChainID()
@@ -354,7 +358,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	// send a few transactions to the bridge
 	require.NoError(
 		t,
-		cluster.Bridge.Deposit(
+		cluster.Bridges[bridgeOne].Deposit(
 			common.ERC721,
 			rootERC721Addr,
 			bridgeCfg.ExternalERC721PredicateAddr,
@@ -362,7 +366,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 			strings.Join(receivers[:], ","),
 			"",
 			strings.Join(tokenIDs[:], ","),
-			cluster.Bridge.JSONRPCAddr(),
+			cluster.Bridges[bridgeOne].JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
 	)
@@ -415,7 +419,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	// WITHDRAW ERC721 TOKENS
 	for i, receiverKey := range receiverKeys {
 		// send withdraw transactions
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC721,
 			receiverKey,
 			receivers[i],
@@ -478,7 +482,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
 		framework.WithPremine(receiversAddrs...),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
 				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
@@ -487,12 +491,14 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	)
 	defer cluster.Stop()
 
+	bridgeOne := 0
+
 	cluster.WaitForReady(t)
 
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
 	require.NoError(t, err)
 
 	chainID, err := rootchainTxRelayer.Client().ChainID()
@@ -520,7 +526,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	// send a few transactions to the bridge
 	require.NoError(
 		t,
-		cluster.Bridge.Deposit(
+		cluster.Bridges[bridgeOne].Deposit(
 			common.ERC1155,
 			rootERC1155Addr,
 			bridgeCfg.ExternalERC1155PredicateAddr,
@@ -528,7 +534,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 			strings.Join(receivers[:], ","),
 			strings.Join(amounts[:], ","),
 			strings.Join(tokenIDs[:], ","),
-			cluster.Bridge.JSONRPCAddr(),
+			cluster.Bridges[bridgeOne].JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
 	)
@@ -599,7 +605,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 
 	for i, receiverKey := range receiverKeys {
 		// send withdraw transactions
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC1155,
 			receiverKey,
 			receivers[i],
@@ -672,10 +678,12 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithPremine(append(depositors, adminAddr)...)) //nolint:makezero
 	defer cluster.Stop()
+
+	bridgeOne := 0
 
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
@@ -684,11 +692,11 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	childEthEndpoint := validatorSrv.JSONRPC()
 
 	// fund accounts on rootchain
-	require.NoError(t, validatorSrv.RootchainFundFor(depositors, funds))
+	require.NoError(t, validatorSrv.RootchainFundFor(depositors, funds, uint64(bridgeOne)))
 
 	cluster.WaitForReady(t)
 
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
 	require.NoError(t, err)
 
 	chainID, err := rootchainTxRelayer.Client().ChainID()
@@ -708,7 +716,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 		// try sending a single native token deposit transaction
 		// it should fail, because first depositor is added to bridge transactions block list
-		err = cluster.Bridge.Deposit(
+		err = cluster.Bridges[bridgeOne].Deposit(
 			common.ERC20,
 			rootToken,
 			bridgeCfg.InternalMintableERC20PredicateAddr,
@@ -727,7 +735,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		// allow list each depositor and make sure deposit is successfully executed
 		for i, key := range depositorKeys {
 			// make sure deposit is successfully executed
-			err = cluster.Bridge.Deposit(
+			err = cluster.Bridges[bridgeOne].Deposit(
 				common.ERC20,
 				rootToken,
 				bridgeCfg.InternalMintableERC20PredicateAddr,
@@ -765,13 +773,13 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 		// withdraw child token on the rootchain
 		for i, depositorKey := range depositorKeys {
-			err = cluster.Bridge.Withdraw(
+			err = cluster.Bridges[bridgeOne].Withdraw(
 				common.ERC20,
 				depositorKey,
 				depositors[i].String(),
 				amounts[i],
 				"",
-				cluster.Bridge.JSONRPCAddr(),
+				cluster.Bridges[bridgeOne].JSONRPCAddr(),
 				bridgeCfg.ExternalMintableERC20PredicateAddr,
 				l1ChildToken,
 				true)
@@ -824,7 +832,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		}
 
 		// deposit should fail because depositors are in bridge block list
-		err = cluster.Bridge.Deposit(
+		err = cluster.Bridges[bridgeOne].Deposit(
 			common.ERC721,
 			rootERC721Token,
 			bridgeCfg.InternalMintableERC721PredicateAddr,
@@ -842,7 +850,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			setAccessListRole(t, cluster, contracts.BlockListBridgeAddr, depositors[i], addresslist.NoRole, admin)
 
 			// deposit (without minting, as it was already done beforehand)
-			err = cluster.Bridge.Deposit(
+			err = cluster.Bridges[bridgeOne].Deposit(
 				common.ERC721,
 				types.Address(rootERC721Token),
 				bridgeCfg.InternalMintableERC721PredicateAddr,
@@ -875,13 +883,13 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 		// withdraw tokens
 		for i, depositorKey := range depositorKeys {
-			err = cluster.Bridge.Withdraw(
+			err = cluster.Bridges[bridgeOne].Withdraw(
 				common.ERC721,
 				depositorKey,
 				depositors[i].String(),
 				"",
 				fmt.Sprintf("%d", i),
-				cluster.Bridge.JSONRPCAddr(),
+				cluster.Bridges[bridgeOne].JSONRPCAddr(),
 				polybftCfg.Bridge[chainID.Uint64()].ExternalMintableERC721PredicateAddr,
 				l1ChildToken,
 				true)
@@ -937,7 +945,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		framework.WithEpochSize(epochSize),
 		framework.WithTestRewardToken(),
 		framework.WithRootTrackerPollInterval(3*time.Second),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithBridgeAllowListAdmin(adminAddr),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithSecretsCallback(func(a []types.Address, tcc *framework.TestClusterConfig) {
@@ -956,6 +964,8 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	)
 	defer cluster.Stop()
 
+	bridgeOne := 0
+
 	cluster.WaitForReady(t)
 
 	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
@@ -970,9 +980,9 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	require.NoError(t, err)
 
 	// fund admin on rootchain
-	require.NoError(t, validatorSrv.RootchainFundFor([]types.Address{adminAddr}, []*big.Int{ethgo.Ether(1)}))
+	require.NoError(t, validatorSrv.RootchainFundFor([]types.Address{adminAddr}, []*big.Int{ethgo.Ether(1)}, uint64(bridgeOne)))
 
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
 	require.NoError(t, err)
 
 	chainID, err := rootchainTxRelayer.Client().ChainID()
@@ -1000,7 +1010,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		// send a few transactions to the bridge
 		require.NoError(
 			t,
-			cluster.Bridge.Deposit(
+			cluster.Bridges[bridgeOne].Deposit(
 				common.ERC20,
 				rootERC20Token,
 				bridgeCfg.ExternalERC20PredicateAddr,
@@ -1008,7 +1018,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 				strings.Join(receivers[:], ","),
 				strings.Join(depositAmounts[:], ","),
 				"",
-				cluster.Bridge.JSONRPCAddr(),
+				cluster.Bridges[bridgeOne].JSONRPCAddr(),
 				bridgeHelper.TestAccountPrivKey,
 				false),
 		)
@@ -1044,7 +1054,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 		// send withdraw transaction.
 		// It should fail because sender is not allow-listed.
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC20,
 			hex.EncodeToString(rawKey),
 			strings.Join(receivers[:], ","),
@@ -1060,7 +1070,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		setAccessListRole(t, cluster, contracts.AllowListBridgeAddr, senderAccount.Address(), addresslist.EnabledRole, admin)
 
 		// try to withdraw again
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC20,
 			hex.EncodeToString(rawKey),
 			strings.Join(receivers[:], ","),
@@ -1076,7 +1086,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		setAccessListRole(t, cluster, contracts.BlockListBridgeAddr, senderAccount.Address(), addresslist.EnabledRole, admin)
 
 		// it should fail now because sender accont is in the block list
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC20,
 			hex.EncodeToString(rawKey),
 			strings.Join(receivers[:], ","),
@@ -1138,7 +1148,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	// start cluster with default, non-mintable native erc20 root token
 	// with london fork enabled
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithEpochSize(int(epochSize)),
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
 		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
@@ -1167,7 +1177,9 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	)
 	defer cluster.Stop()
 
-	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridge.JSONRPCAddr()))
+	bridgeOne := 0
+
+	rootchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
 	require.NoError(t, err)
 
 	chainID, err := rootchainTxRelayer.Client().ChainID()
@@ -1236,7 +1248,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		validatorRawKey, err := validatorAcc.Ecdsa.MarshallPrivateKey()
 		require.NoError(t, err)
 
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC20,
 			hex.EncodeToString(validatorRawKey),
 			validatorAcc.Address().String(),
@@ -1255,7 +1267,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			validatorAcc.Address(), jsonrpc.LatestBlockNumberOrHash)
 		require.NoError(t, err)
 
-		err = cluster.Bridge.Withdraw(
+		err = cluster.Bridges[bridgeOne].Withdraw(
 			common.ERC20,
 			hex.EncodeToString(nonValidatorKeyRaw),
 			nonValidatorKey.Address().String(),
@@ -1292,7 +1304,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		validatorAcc, err := validatorHelper.GetAccountFromDir(validatorSrv.DataDir())
 		require.NoError(t, err)
 
-		require.NoError(t, cluster.Bridge.Deposit(
+		require.NoError(t, cluster.Bridges[bridgeOne].Deposit(
 			common.ERC20,
 			bridgeCfg.ExternalNativeERC20Addr,
 			bridgeCfg.ExternalERC20PredicateAddr,
@@ -1300,7 +1312,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			strings.Join([]string{validatorAcc.Address().String(), nonValidatorKey.Address().String()}, ","),
 			strings.Join([]string{tokensToTransfer.String(), tokensToTransfer.String()}, ","),
 			"",
-			cluster.Bridge.JSONRPCAddr(),
+			cluster.Bridges[bridgeOne].JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
@@ -1339,7 +1351,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		currentBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
 		require.NoError(t, err)
 
-		require.NoError(t, cluster.Bridge.Deposit(
+		require.NoError(t, cluster.Bridges[bridgeOne].Deposit(
 			common.ERC20,
 			bridgeCfg.ExternalNativeERC20Addr,
 			bridgeCfg.ExternalERC20PredicateAddr,
@@ -1347,7 +1359,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 			strings.Join([]string{nonValidatorKey.Address().String()}, ","),
 			strings.Join([]string{tenMilionTokens.String()}, ","),
 			"",
-			cluster.Bridge.JSONRPCAddr(),
+			cluster.Bridges[bridgeOne].JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
 		)
@@ -1398,7 +1410,7 @@ func TestE2E_Bridge_L1OriginatedNativeToken_ERC20StakingToken(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithBridge(),
+		framework.WithBridges(1),
 		framework.WithBladeAdmin(minter.Address().String()),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {

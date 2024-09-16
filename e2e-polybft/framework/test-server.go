@@ -38,7 +38,7 @@ type TestServerConfig struct {
 	LogLevel              string
 	Relayer               bool
 	NumBlockConfirmations uint64
-	BridgeJSONRPC         string
+	BridgeJSONRPCs        []string
 	UseTLS                bool
 	TLSCertFile           string
 	TLSKeyFile            string
@@ -75,8 +75,13 @@ func (t *TestServer) JSONRPCAddr() string {
 	}
 }
 
-func (t *TestServer) BridgeJSONRPCAddr() string {
-	return t.config.BridgeJSONRPC
+func (t *TestServer) BridgeJSONRPCAddr(index uint64) (string, error) {
+	numberOfBridges := len(t.config.BridgeJSONRPCs)
+	if index >= uint64(numberOfBridges) {
+		return "", fmt.Errorf("bridge index is bigger than number of bridges")
+	}
+
+	return t.config.BridgeJSONRPCs[index], nil
 }
 
 func (t *TestServer) JSONRPC() *jsonrpc.EthClient {
@@ -111,15 +116,15 @@ func (t *TestServer) TxnPoolOperator() txpoolProto.TxnPoolOperatorClient {
 }
 
 func NewTestServer(t *testing.T, clusterConfig *TestClusterConfig,
-	bridgeJSONRPC string, callback TestServerConfigCallback) *TestServer {
+	bridgeJSONRPCs []string, callback TestServerConfigCallback) *TestServer {
 	t.Helper()
 
 	config := &TestServerConfig{
-		Name:          uuid.New().String(),
-		JSONRPCPort:   getOpenPortForServer(),
-		GRPCPort:      getOpenPortForServer(),
-		P2PPort:       getOpenPortForServer(),
-		BridgeJSONRPC: bridgeJSONRPC,
+		Name:           uuid.New().String(),
+		JSONRPCPort:    getOpenPortForServer(),
+		GRPCPort:       getOpenPortForServer(),
+		P2PPort:        getOpenPortForServer(),
+		BridgeJSONRPCs: bridgeJSONRPCs,
 	}
 
 	if callback != nil {
@@ -215,20 +220,25 @@ func (t *TestServer) Stop() {
 }
 
 // RootchainFund funds given validator account on the rootchain
-func (t *TestServer) RootchainFund(amount *big.Int) error {
-	return t.RootchainFundFor([]types.Address{t.address}, []*big.Int{amount})
+func (t *TestServer) RootchainFund(amount *big.Int, index uint64) error {
+	return t.RootchainFundFor([]types.Address{t.address}, []*big.Int{amount}, index)
 }
 
 // RootchainFundFor funds given account on the rootchain
-func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.Int) error {
+func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.Int, index uint64) error {
 	if len(accounts) != len(amounts) {
 		return errors.New("same size for accounts and amounts must be provided to the rootchain funding")
+	}
+
+	jsonrpc, err := t.BridgeJSONRPCAddr(index)
+	if err != nil {
+		return err
 	}
 
 	args := []string{
 		"bridge",
 		"fund",
-		"--json-rpc", t.BridgeJSONRPCAddr(),
+		"--json-rpc", jsonrpc,
 	}
 
 	for i := 0; i < len(accounts); i++ {
