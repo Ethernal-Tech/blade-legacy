@@ -269,7 +269,7 @@ func (b *bridgeManager) initBridgeEventManager(
 		logger.Named("bridge-event-manager"),
 		runtimeConfig.State,
 		&bridgeEventManagerConfig{
-			bridgeCfg:         runtimeConfig.GenesisConfig.Bridge[b.chainID],
+			bridgeCfg:         runtimeConfig.GenesisConfig.Bridge[b.externalChainID],
 			key:               runtimeConfig.Key,
 			topic:             runtimeConfig.bridgeTopic,
 			maxNumberOfEvents: maxNumberOfEvents,
