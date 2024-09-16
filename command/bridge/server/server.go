@@ -78,7 +78,7 @@ func setFlags(cmd *cobra.Command) {
 
 	cmd.Flags().StringVar(
 		&params.port,
-		"chain-id",
+		"port",
 		"8545",
 		"port for bridge chain",
 	)
