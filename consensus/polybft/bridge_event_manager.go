@@ -423,25 +423,20 @@ func (b *bridgeEventManager) PostBlock() error {
 
 // buildExternalBridgeBatch builds a new external bridge batch, signs it and gossips its vote for it
 func (b *bridgeEventManager) buildExternalBridgeBatch(dbTx *bolt.Tx) error {
-	if !b.runtime.IsActiveValidator() {
-		// don't build batch if not a validator
-		return nil
-	}
-
 	return b.buildBridgeBatch(dbTx, b.externalChainID, b.internalChainID, b.nextBridgeEventIDExternal)
 }
 
 // buildInternalBridgeBatch builds a new internal bridge batch, signs it and gossips its vote for it
 func (b *bridgeEventManager) buildInternalBridgeBatch(dbTx *bolt.Tx) error {
+	return b.buildBridgeBatch(dbTx, b.internalChainID, b.externalChainID, b.nextBridgeEventIDInternal)
+}
+
+func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, sourceChainID, destinationChainID uint64, nextBridgeEventIDIndex uint64) error {
 	if !b.runtime.IsActiveValidator() {
 		// don't build batch if not a validator
 		return nil
 	}
 
-	return b.buildBridgeBatch(dbTx, b.internalChainID, b.externalChainID, b.nextBridgeEventIDInternal)
-}
-
-func (b *bridgeEventManager) buildBridgeBatch(dbTx *bolt.Tx, sourceChainID, destinationChainID uint64, nextBridgeEventIDIndex uint64) error {
 	b.lock.RLock()
 
 	// Since lock is reduced grab original values into local variables in order to keep them
