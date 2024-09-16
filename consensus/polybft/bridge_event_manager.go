@@ -82,8 +82,7 @@ type bridgeEventManager struct {
 	logger hclog.Logger
 	state  *State
 
-	config        *bridgeEventManagerConfig
-	eventProvider *EventProvider
+	config *bridgeEventManagerConfig
 
 	// per epoch fields
 	lock                      sync.RWMutex
@@ -106,7 +105,6 @@ type topic interface {
 
 // newBridgeEventManager creates a new instance of bridge event manager
 func newBridgeEventManager(
-	eventProvider *EventProvider,
 	logger hclog.Logger,
 	state *State,
 	config *bridgeEventManagerConfig,
@@ -119,7 +117,6 @@ func newBridgeEventManager(
 		runtime:         runtime,
 		externalChainID: externalChainID,
 		internalChainID: internalChainID,
-		eventProvider:   eventProvider,
 	}
 }
 
@@ -415,15 +412,6 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 // PostBlock notifies bridge event manager that a block was finalized,.
 // Additionally, it will remove any processed bridge message events.
 func (b *bridgeEventManager) PostBlock(req *PostBlockRequest) error {
-	lastProccesedBlock, err := b.state.getLastProcessedEventsBlock(req.DBTx)
-	if err != nil {
-		return nil
-	}
-
-	if err := b.eventProvider.GetEventsFromBlocks(lastProccesedBlock, req.FullBlock, req.DBTx); err != nil {
-		return err
-	}
-
 	if err := b.buildBridgeBatch(nil, true); err != nil {
 		// we don't return an error here. If bridge message event is inserted in db,
 		// we will just try to build a batch on next block or next event arrival

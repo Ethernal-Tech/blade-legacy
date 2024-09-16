@@ -266,7 +266,6 @@ func (b *bridgeManager) initBridgeEventManager(
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
 	bridgeEventManager := newBridgeEventManager(
-		eventProvider,
 		logger.Named("bridge-event-manager"),
 		runtimeConfig.State,
 		&bridgeEventManagerConfig{
