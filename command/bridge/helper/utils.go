@@ -84,8 +84,8 @@ func DecodePrivateKey(rawKey string) (crypto.Key, error) {
 	return rootchainAccountKey, nil
 }
 
-// GetRootchainID returns chainID of bridge
-func GetRootchainID() (string, error) {
+// GetBridgeChainID returns chainID of bridge
+func GetBridgeChainID() (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return "", fmt.Errorf("rootchain id error: %w", err)
@@ -105,14 +105,14 @@ func GetRootchainID() (string, error) {
 	return "", ErrRootchainNotFound
 }
 
-// ReadRootchainIP returns ip address of bridge
-func ReadRootchainIP(port string) (string, error) {
+// ReadBridgeChainIP returns ip address of bridge
+func ReadBridgeChainIP(port string) (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return "", fmt.Errorf("rootchain id error: %w", err)
 	}
 
-	contID, err := GetRootchainID()
+	contID, err := GetBridgeChainID()
 	if err != nil {
 		return "", err
 	}

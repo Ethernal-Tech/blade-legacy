@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -97,7 +98,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	closeCh := make(chan struct{})
 
 	// Check if the client is already running
-	if cid, err := helper.GetRootchainID(); !errors.Is(err, helper.ErrRootchainNotFound) {
+	if cid, err := helper.GetBridgeChainID(); !errors.Is(err, helper.ErrRootchainNotFound) {
 		if err != nil {
 			outputter.SetError(err)
 		} else if cid != "" {
@@ -118,7 +119,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	if err := PingServer(closeCh); err != nil {
 		close(closeCh)
 
-		if ip, err := helper.ReadRootchainIP(params.port); err != nil {
+		if ip, err := helper.ReadBridgeChainIP(params.port); err != nil {
 			outputter.SetError(fmt.Errorf("failed to ping rootchain server: %w", err))
 		} else {
 			outputter.SetError(fmt.Errorf("failed to ping rootchain server at address %s: %w", ip, err))
@@ -171,6 +172,8 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 
 	chainID := strconv.FormatUint(params.chainID, 10)
 
+	folderName := "/ethdata" + chainID
+
 	// create the client
 	args := []string{"--dev"}
 
@@ -178,10 +181,10 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	args = append(args, "--dev.period", "2")
 
 	// add data dir
-	args = append(args, "--datadir", "/ethdata"+chainID)
+	args = append(args, "--datadir", folderName)
 
 	// add ipcpath
-	args = append(args, "--ipcpath", "/eth1data/geth.ipc")
+	args = append(args, "--ipcpath", path.Join(folderName, "geth.ipc"))
 
 	// enable rpc
 	args = append(args, "--http", "--http.addr", "0.0.0.0", "--http.api", "eth,net,web3,debug")
@@ -217,7 +220,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	port := nat.Port(fmt.Sprintf("%s/tcp", params.port))
 	hostConfig := &container.HostConfig{
 		Binds: []string{
-			mountDir + ":/ethdata" + chainID,
+			mountDir + ":" + folderName,
 		},
 		PortBindings: nat.PortMap{
 			port: []nat.PortBinding{
