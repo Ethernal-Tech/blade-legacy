@@ -346,6 +346,9 @@ func TestE2E_BlockList_Transactions(t *testing.T) {
 }
 
 func TestE2E_AddressLists_Bridge(t *testing.T) {
+	const (
+		numberOfBridges = 1
+	)
 	// create two accounts, one for an admin sender and a second
 	// one for a non-enabled account that will switch on-off between
 	// both enabled and non-enabled roles.
@@ -359,7 +362,7 @@ func TestE2E_AddressLists_Bridge(t *testing.T) {
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(adminAddr, targetAddr, otherAddr),
-		framework.WithBridges(1),
+		framework.WithBridges(numberOfBridges),
 		framework.WithBridgeAllowListAdmin(adminAddr),
 		framework.WithBridgeAllowListEnabled(otherAddr),
 		framework.WithBridgeBlockListAdmin(adminAddr),

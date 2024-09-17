@@ -41,6 +41,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		sprintSize           = uint64(5)
 		numberOfAttempts     = 7
 		stateSyncedLogsCount = 2 // map token and deposit
+		numberOfBridges      = 1
 	)
 
 	var (
@@ -72,7 +73,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		framework.WithTestRewardToken(),
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
 		framework.WithEpochSize(epochSize),
-		framework.WithBridges(1),
+		framework.WithBridges(numberOfBridges),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
 				// premine receivers, so that they are able to do withdrawals
@@ -289,6 +290,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 		epochSize            = 5
 		numberOfAttempts     = 4
 		stateSyncedLogsCount = 2
+		numberOfBridges      = 1
 	)
 
 	receiverKeys := make([]string, transfersCount)
@@ -314,7 +316,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithEpochSize(epochSize),
 		framework.WithPremine(receiversAddrs...),
-		framework.WithBridges(1),
+		framework.WithBridges(numberOfBridges),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
 				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
@@ -454,6 +456,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		epochSize            = 5
 		numberOfAttempts     = 4
 		stateSyncedLogsCount = 2
+		numberOfBridges      = 1
 	)
 
 	receiverKeys := make([]string, transfersCount)
@@ -482,7 +485,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
 		framework.WithPremine(receiversAddrs...),
-		framework.WithBridges(1),
+		framework.WithBridges(numberOfBridges),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
 				tcc.StakeAmounts = append(tcc.StakeAmounts, ethgo.Ether(10))
@@ -645,6 +648,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		epochSize        = 30
 		sprintSize       = uint64(5)
 		numberOfAttempts = 4
+		numberOfBridges  = 1
 	)
 
 	// init private keys and amounts
@@ -678,7 +682,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithBridges(1),
+		framework.WithBridges(numberOfBridges),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithPremine(append(depositors, adminAddr)...)) //nolint:makezero
 	defer cluster.Stop()
@@ -929,8 +933,9 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		depositAmount  = ethgo.Ether(5)
 		withdrawAmount = ethgo.Ether(1)
 		// make epoch size long enough, so that all exit events are processed within the same epoch
-		epochSize  = 40
-		sprintSize = uint64(5)
+		epochSize       = 40
+		sprintSize      = uint64(5)
+		numberOfBridges = 1
 	)
 
 	receivers := make([]string, transfersCount)
@@ -945,7 +950,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		framework.WithEpochSize(epochSize),
 		framework.WithTestRewardToken(),
 		framework.WithRootTrackerPollInterval(3*time.Second),
-		framework.WithBridges(1),
+		framework.WithBridges(uint64(numberOfBridges)),
 		framework.WithBridgeAllowListAdmin(adminAddr),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithSecretsCallback(func(a []types.Address, tcc *framework.TestClusterConfig) {
@@ -1131,6 +1136,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		tokensToTransfer      = ethgo.Gwei(10)
 		tenMilionTokens       = ethgo.Ether(10000000)
 		bigZero               = big.NewInt(0)
+		numberOfBridges       = 1
 	)
 
 	nonValidatorKey, err := crypto.GenerateECDSAKey()
@@ -1148,7 +1154,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 	// start cluster with default, non-mintable native erc20 root token
 	// with london fork enabled
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithBridges(1),
+		framework.WithBridges(uint64(numberOfBridges)),
 		framework.WithEpochSize(int(epochSize)),
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
 		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
@@ -1394,8 +1400,9 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 func TestE2E_Bridge_L1OriginatedNativeToken_ERC20StakingToken(t *testing.T) {
 	const (
-		epochSize    = 5
-		blockTimeout = 30 * time.Second
+		epochSize       = 5
+		blockTimeout    = 30 * time.Second
+		numberOfBridges = 1
 	)
 
 	var (
@@ -1410,7 +1417,7 @@ func TestE2E_Bridge_L1OriginatedNativeToken_ERC20StakingToken(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
 		framework.WithEpochSize(epochSize),
-		framework.WithBridges(1),
+		framework.WithBridges(numberOfBridges),
 		framework.WithBladeAdmin(minter.Address().String()),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
