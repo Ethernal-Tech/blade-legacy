@@ -74,9 +74,19 @@ func (b bridge) PostBlock(req *PostBlockRequest) error {
 // PostEpoch is a function executed on epoch ending / start of new epoch
 // and calls PostEpoch in each bridge manager
 func (b bridge) PostEpoch(req *PostEpochRequest) error {
+	isInserted := false
+
 	for chainID, bridgeManager := range b {
 		if err := bridgeManager.PostEpoch(req); err != nil {
 			return fmt.Errorf("erorr bridge post epoch, chainID: %d, err: %w", chainID, err)
+		}
+
+		if !isInserted {
+			if err := bridgeManager.InsertEpochInternal(req.NewEpochID, req.DBTx); err != nil {
+				return err
+			} else {
+				isInserted = true
+			}
 		}
 	}
 
@@ -102,7 +112,7 @@ func (b bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, er
 // InsertEpoch calls InsertEpoch in each bridge manager on chain
 func (b bridge) InsertEpoch(epoch uint64, dbTx *bolt.Tx) error {
 	for _, brigeManager := range b {
-		if err := brigeManager.InsertEpoch(epoch, dbTx); err != nil {
+		if err := brigeManager.InsertEpochExternal(epoch, dbTx); err != nil {
 			return err
 		}
 	}

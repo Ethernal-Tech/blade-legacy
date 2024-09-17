@@ -149,7 +149,8 @@ type BridgeManager interface {
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
 	BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error)
-	InsertEpoch(epoch uint64, tx *bolt.Tx) error
+	InsertEpochExternal(epoch uint64, tx *bolt.Tx) error
+	InsertEpochInternal(epoch uint64, tx *bolt.Tx) error
 }
 
 var _ BridgeManager = (*dummyBridgeManager)(nil)
@@ -166,7 +167,8 @@ func (d *dummyBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error
 func (d *dummyBridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
-func (d *dummyBridgeManager) InsertEpoch(epoch uint64, tx *bolt.Tx) error { return nil }
+func (d *dummyBridgeManager) InsertEpochExternal(epoch uint64, tx *bolt.Tx) error { return nil }
+func (d *dummyBridgeManager) InsertEpochInternal(epoch uint64, tx *bolt.Tx) error { return nil }
 
 var _ BridgeManager = (*bridgeManager)(nil)
 
@@ -361,9 +363,19 @@ func (b *bridgeManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	}
 }
 
-// InsertEpoch inserts a new epoch to db with its meta data
-func (b *bridgeManager) InsertEpoch(epochNumber uint64, dbTx *bolt.Tx) error {
+// InsertEpochExternal inserts a new epoch to db with its meta data
+func (b *bridgeManager) InsertEpochExternal(epochNumber uint64, dbTx *bolt.Tx) error {
 	if err := b.state.EpochStore.insertEpoch(epochNumber, dbTx, b.externalChainID); err != nil {
+		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w",
+			b.externalChainID, err)
+	}
+
+	return nil
+}
+
+// InsertEpochInternal inserts a new epoch to db with its meta data
+func (b *bridgeManager) InsertEpochInternal(epochNumber uint64, dbTx *bolt.Tx) error {
+	if err := b.state.EpochStore.insertEpoch(epochNumber, dbTx, b.internalChainID); err != nil {
 		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w",
 			b.externalChainID, err)
 	}

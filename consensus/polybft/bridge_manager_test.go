@@ -23,7 +23,14 @@ func (mbm *mockBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, erro
 func (mbm *mockBridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
-func (mbm *mockBridgeManager) InsertEpoch(epoch uint64, dbTx *bolt.Tx) error {
+func (mbm *mockBridgeManager) InsertEpochExternal(epoch uint64, dbTx *bolt.Tx) error {
+	if err := mbm.state.EpochStore.insertEpoch(epoch, dbTx, mbm.chainID); err != nil {
+		return err
+	}
+
+	return nil
+}
+func (mbm *mockBridgeManager) InsertEpochInternal(epoch uint64, dbTx *bolt.Tx) error {
 	if err := mbm.state.EpochStore.insertEpoch(epoch, dbTx, mbm.chainID); err != nil {
 		return err
 	}

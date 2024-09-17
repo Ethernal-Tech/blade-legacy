@@ -562,10 +562,9 @@ func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 	var bridgeMsg contractsapi.BridgeMsgEvent
 
 	return map[types.Address][]types.Hash{
-		b.config.bridgeCfg.ExternalGatewayAddr: {
-			types.Hash(bridgeMessageResult.Sig())},
 		b.config.bridgeCfg.InternalGatewayAddr: {
-			types.Hash(bridgeMsg.Sig())},
+			types.Hash(bridgeMsg.Sig()),
+			types.Hash(bridgeMessageResult.Sig())},
 	}
 }
 
