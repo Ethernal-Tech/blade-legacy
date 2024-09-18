@@ -29,6 +29,8 @@ type BridgeBatchVote struct {
 	EpochNumber uint64
 	// SourceChainID from bridge batch
 	SourceChainID uint64
+	// DestinationChainID from bridge batch
+	DestinationChainID uint64
 }
 
 // State represents a persistence layer which persists consensus data off-chain

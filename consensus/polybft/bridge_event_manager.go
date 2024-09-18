@@ -164,9 +164,9 @@ func (b *bridgeEventManager) saveVote(msg *BridgeBatchVote) error {
 	valSet := b.validatorSet
 	b.lock.RUnlock()
 
-	// TODO: Filter out those votes whose source or destination chain ids are neither internal chain id nor external chain id
 	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 ||
-		(b.externalChainID != msg.SourceChainID && b.internalChainID != msg.SourceChainID) {
+		((b.externalChainID != msg.SourceChainID && b.internalChainID != msg.DestinationChainID) &&
+			(b.internalChainID != msg.SourceChainID && b.externalChainID != msg.DestinationChainID)) {
 		// Epoch metadata is undefined or received a message for the irrelevant epoch
 		return nil
 	}
@@ -516,8 +516,9 @@ func (b *bridgeEventManager) buildBridgeBatch(
 			Signature: signature,
 			Sender:    b.config.key.String(),
 		},
-		EpochNumber:   epoch,
-		SourceChainID: sourceChainID,
+		EpochNumber:        epoch,
+		SourceChainID:      sourceChainID,
+		DestinationChainID: destinationChainID,
 	})
 
 	numberOfMessages := len(pendingBridgeBatch.BridgeMessageBatch.Messages)
@@ -590,7 +591,11 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 			return nil
 		}
 
-		return b.state.BridgeMessageStore.removeBridgeEvents(&bridgeMessageResultEvent)
+		if bridgeMessageResultEvent.Status {
+			return b.state.BridgeMessageStore.removeBridgeEvents(&bridgeMessageResultEvent)
+		}
+
+		return nil
 	case bridgeMsgEvent.Sig():
 		doesMatch, err := bridgeMsgEvent.ParseLog(log)
 		if err != nil {
