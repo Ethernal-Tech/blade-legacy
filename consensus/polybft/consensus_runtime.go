@@ -511,10 +511,6 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		c.logger.Error("Could not clean previous epochs from db.", "error", err)
 	}
 
-	if err := c.bridge.InsertEpoch(epochNumber, dbTx); err != nil {
-		return nil, err
-	}
-
 	c.logger.Info(
 		"restartEpoch",
 		"block number", header.Number,
