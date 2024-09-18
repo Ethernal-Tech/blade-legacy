@@ -122,11 +122,11 @@ func ReadBridgeChainIP(port string) (string, error) {
 		return "", fmt.Errorf("rootchain ip error: %w", err)
 	}
 
-	portMapKey := port + "/tcp"
+	portMapKey := fmt.Sprintf("%s/tcp", port)
 
 	ports, ok := inspect.HostConfig.PortBindings[nat.Port(portMapKey)]
 	if !ok || len(ports) == 0 {
-		return "", fmt.Errorf("port %s is not bind with localhost", port)
+		return "", fmt.Errorf("port %s is not bound with localhost", port)
 	}
 
 	return fmt.Sprintf("http://%s:%s", ports[0].HostIP, ports[0].HostPort), nil

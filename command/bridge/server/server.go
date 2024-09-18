@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -33,6 +32,7 @@ const (
 	gethImage        = "ethereum/client-go:v1.9.25"
 
 	defaultHostIP = "127.0.0.1"
+	defaultPort   = "8545"
 )
 
 var (
@@ -73,14 +73,14 @@ func setFlags(cmd *cobra.Command) {
 	cmd.Flags().Uint64Var(
 		&params.chainID,
 		"chain-id",
-		666,
+		101,
 		"custom chain id for bridge chain",
 	)
 
 	cmd.Flags().StringVar(
 		&params.port,
 		"port",
-		"8545",
+		defaultPort,
 		"port for bridge chain",
 	)
 }
@@ -170,9 +170,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 		return fmt.Errorf("cannot copy: %w", err)
 	}
 
-	chainID := strconv.FormatUint(params.chainID, 10)
-
-	folderName := "/ethdata" + chainID
+	folderName := fmt.Sprintf("/ethdata_%d", params.chainID)
 
 	// create the client
 	args := []string{"--dev"}
@@ -193,7 +191,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	args = append(args, "--ws", "--ws.addr", "0.0.0.0")
 
 	// set chain id
-	args = append(args, "--networkid", chainID)
+	args = append(args, "--networkid", fmt.Sprintf("%d", params.chainID))
 
 	config := &container.Config{
 		Image: image,
@@ -220,7 +218,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 	port := nat.Port(fmt.Sprintf("%s/tcp", params.port))
 	hostConfig := &container.HostConfig{
 		Binds: []string{
-			mountDir + ":" + folderName,
+			mountDir + fmt.Sprintf(":%s", folderName),
 		},
 		PortBindings: nat.PortMap{
 			port: []nat.PortBinding{

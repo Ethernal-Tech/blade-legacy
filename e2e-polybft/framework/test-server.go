@@ -78,7 +78,7 @@ func (t *TestServer) JSONRPCAddr() string {
 func (t *TestServer) BridgeJSONRPCAddr(index uint64) (string, error) {
 	numberOfBridges := len(t.config.BridgeJSONRPCs)
 	if index >= uint64(numberOfBridges) {
-		return "", fmt.Errorf("bridge index is bigger than number of bridges")
+		return "", fmt.Errorf("invalid bridge index")
 	}
 
 	return t.config.BridgeJSONRPCs[index], nil

@@ -536,7 +536,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		initialPort: 30300,
 		failCh:      make(chan struct{}),
 		once:        sync.Once{},
-		Bridges:     make([]*TestBridge, 0),
+		Bridges:     make([]*TestBridge, config.NumberOfBridges),
 	}
 
 	// in case no validators are specified in opts, all nodes will be validators
@@ -771,8 +771,10 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		require.NoError(t, err)
 
 		// add premine if token is non-mintable
-		err = bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
-		require.NoError(t, err)
+		if i == 0 {
+			err = bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
+			require.NoError(t, err)
+		}
 
 		err = bridge.premineNativeRootToken(genesisPath, tokenConfig, polybftConfig)
 		require.NoError(t, err)
@@ -783,7 +785,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 
 		bridgeJSONRPCs[i] = bridge.JSONRPCAddr()
 
-		cluster.Bridges = append(cluster.Bridges, bridge)
+		cluster.Bridges[i] = bridge
 	}
 
 	for i := 1; i <= int(cluster.Config.ValidatorSetSize); i++ {

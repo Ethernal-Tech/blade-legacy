@@ -935,7 +935,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		// make epoch size long enough, so that all exit events are processed within the same epoch
 		epochSize       = 40
 		sprintSize      = uint64(5)
-		numberOfBridges = 1
+		numberOfBridges = uint64(1)
 	)
 
 	receivers := make([]string, transfersCount)
@@ -950,7 +950,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		framework.WithEpochSize(epochSize),
 		framework.WithTestRewardToken(),
 		framework.WithRootTrackerPollInterval(3*time.Second),
-		framework.WithBridges(uint64(numberOfBridges)),
+		framework.WithBridges(numberOfBridges),
 		framework.WithBridgeAllowListAdmin(adminAddr),
 		framework.WithBridgeBlockListAdmin(adminAddr),
 		framework.WithSecretsCallback(func(a []types.Address, tcc *framework.TestClusterConfig) {
