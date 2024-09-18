@@ -158,52 +158,60 @@ func (b *bridgeEventManager) initTransport() error {
 }
 
 // saveVote saves the gotten vote to boltDb for later quorum check and signature aggregation
-func (b *bridgeEventManager) saveVote(msg *BridgeBatchVote) error {
+func (b *bridgeEventManager) saveVote(vote *BridgeBatchVote) error {
 	b.lock.RLock()
 	epoch := b.epoch
 	valSet := b.validatorSet
 	b.lock.RUnlock()
 
-	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 ||
-		((b.externalChainID != msg.SourceChainID && b.internalChainID != msg.DestinationChainID) &&
-			(b.internalChainID != msg.SourceChainID && b.externalChainID != msg.DestinationChainID)) {
-		// Epoch metadata is undefined or received a message for the irrelevant epoch
+	if valSet == nil || vote.EpochNumber < epoch || vote.EpochNumber > epoch+1 {
+		// Epoch metadata is undefined or received a vote for the irrelevant epoch
 		return nil
 	}
 
-	if msg.EpochNumber == epoch+1 {
-		if err := b.state.EpochStore.insertEpoch(epoch+1, nil, msg.SourceChainID); err != nil {
+	if !b.isRelevantChainID(vote.SourceChainID) || !b.isRelevantChainID(vote.DestinationChainID) {
+		// Vote is for irrelevant chain, skip it
+		return nil
+	}
+
+	if vote.EpochNumber == epoch+1 {
+		if err := b.state.EpochStore.insertEpoch(epoch+1, nil, vote.SourceChainID); err != nil {
 			return fmt.Errorf("error saving msg vote from a future epoch: %d. Error: %w", epoch+1, err)
 		}
 	}
 
-	if err := b.verifyVoteSignature(valSet, types.StringToAddress(msg.Sender), msg.Signature, msg.Hash); err != nil {
+	if err := b.verifyVoteSignature(valSet, types.StringToAddress(vote.Sender), vote.Signature, vote.Hash); err != nil {
 		return fmt.Errorf("error verifying vote signature: %w", err)
 	}
 
 	msgVote := &BridgeBatchVoteConsensusData{
-		Sender:    msg.Sender,
-		Signature: msg.Signature,
+		Sender:    vote.Sender,
+		Signature: vote.Signature,
 	}
 
 	numSignatures, err := b.state.BridgeMessageStore.insertConsensusData(
-		msg.EpochNumber,
-		msg.Hash,
+		vote.EpochNumber,
+		vote.Hash,
 		msgVote,
 		nil,
-		msg.SourceChainID)
+		vote.SourceChainID)
 	if err != nil {
 		return fmt.Errorf("error inserting message vote: %w", err)
 	}
 
 	b.logger.Info(
 		"deliver message",
-		"hash", hex.EncodeToString(msg.Hash),
-		"sender", msg.Sender,
+		"hash", hex.EncodeToString(vote.Hash),
+		"sender", vote.Sender,
 		"signatures", numSignatures,
 	)
 
 	return nil
+}
+
+// isRelevantChainID checks whether internal or external chain id corresponds to the given chain id
+func (b *bridgeEventManager) isRelevantChainID(chainID uint64) bool {
+	return b.internalChainID == chainID || b.externalChainID == chainID
 }
 
 // Verifies signature of the message against the public key of the signer and checks if the signer is a validator
