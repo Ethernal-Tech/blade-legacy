@@ -20,22 +20,27 @@ type ValidatorInfo struct {
 	IsWhitelisted       bool          `json:"isWhitelisted"`
 }
 
+type ChainType int
+
+const (
+	Internal ChainType = iota // Internal will be 0
+	External                  // External will be 1
+)
+
 // SystemState is an interface to interact with the consensus system contracts in the chain
 type SystemState interface {
 	// GetEpoch retrieves current epoch number from the smart contract
 	GetEpoch() (uint64, error)
-	// GetNextCommittedIndexExternal retrieves next committed external bridge message index
-	GetNextCommittedIndexExternal(sourceChainID uint64) (uint64, error)
-	// GetNextCommittedIndexInternal retrieves next committed internal bridge message index
-	GetNextCommittedIndexInternal(sourceChainID uint64) (uint64, error)
+	// GetNextCommittedIndex retrieves next committed bridge message index, based on the chain type
+	GetNextCommittedIndex(chainID uint64, chainType ChainType) (uint64, error)
 }
 
 var _ SystemState = &SystemStateImpl{}
 
 // SystemStateImpl is implementation of SystemState interface
 type SystemStateImpl struct {
-	validatorContract       *contract.Contract
-	sidechainBridgeContract *contract.Contract
+	validatorContract     *contract.Contract
+	bridgeStorageContract *contract.Contract
 }
 
 // NewSystemState initializes new instance of systemState which abstracts smart contracts functions
@@ -48,7 +53,7 @@ func NewSystemState(
 		ethgo.Address(valSetAddr),
 		contractsapi.EpochManager.Abi, contract.WithProvider(provider),
 	)
-	s.sidechainBridgeContract = contract.NewContract(
+	s.bridgeStorageContract = contract.NewContract(
 		ethgo.Address(bridgeStorageAddr),
 		contractsapi.BridgeStorage.Abi,
 		contract.WithProvider(provider),
@@ -73,11 +78,19 @@ func (s *SystemStateImpl) GetEpoch() (uint64, error) {
 }
 
 // GetNextCommittedIndexExternal retrieves next committed external bridge message index
-func (s *SystemStateImpl) GetNextCommittedIndexExternal(sourceChainID uint64) (uint64, error) {
-	rawResult, err := s.sidechainBridgeContract.Call(
-		"lastCommitted",
-		ethgo.Latest,
-		new(big.Int).SetUint64(sourceChainID))
+func (s *SystemStateImpl) GetNextCommittedIndex(chainID uint64, chainType ChainType) (uint64, error) {
+	var funcName string
+
+	switch chainType {
+	case Internal:
+		funcName = "lastCommittedInternal"
+	case External:
+		funcName = "lastCommitted"
+	default:
+		return 0, fmt.Errorf("unsupported chain type: %d", chainType)
+	}
+
+	rawResult, err := s.bridgeStorageContract.Call(funcName, ethgo.Latest, new(big.Int).SetUint64(chainID))
 	if err != nil {
 		return 0, err
 	}
@@ -85,24 +98,6 @@ func (s *SystemStateImpl) GetNextCommittedIndexExternal(sourceChainID uint64) (u
 	nextCommittedIndex, isOk := rawResult["0"].(*big.Int)
 	if !isOk {
 		return 0, fmt.Errorf("failed to decode next committed index")
-	}
-
-	return nextCommittedIndex.Uint64() + 1, nil
-}
-
-// GetNextCommittedIndexInternal retrieves next committed internal bridge message index
-func (s *SystemStateImpl) GetNextCommittedIndexInternal(destinationChainID uint64) (uint64, error) {
-	rawResult, err := s.sidechainBridgeContract.Call(
-		"lastCommittedInternal",
-		ethgo.Latest,
-		new(big.Int).SetUint64(destinationChainID))
-	if err != nil {
-		return 0, err
-	}
-
-	nextCommittedIndex, isOk := rawResult["0"].(*big.Int)
-	if !isOk {
-		return 0, fmt.Errorf("failed to decode next committed Index")
 	}
 
 	return nextCommittedIndex.Uint64() + 1, nil

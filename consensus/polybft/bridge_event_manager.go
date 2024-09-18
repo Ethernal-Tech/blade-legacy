@@ -85,14 +85,14 @@ type bridgeEventManager struct {
 	config *bridgeEventManagerConfig
 
 	// per epoch fields
-	lock                      sync.RWMutex
-	pendingBridgeBatches      []*PendingBridgeBatch
-	validatorSet              validator.ValidatorSet
-	epoch                     uint64
-	nextBridgeEventIDExternal uint64
-	nextBridgeEventIDInternal uint64
-	externalChainID           uint64
-	internalChainID           uint64
+	lock                 sync.RWMutex
+	pendingBridgeBatches []*PendingBridgeBatch
+	validatorSet         validator.ValidatorSet
+	epoch                uint64
+	nextEventIDExternal  uint64
+	nextEventIDInternal  uint64
+	externalChainID      uint64
+	internalChainID      uint64
 
 	runtime Runtime
 }
@@ -386,14 +386,14 @@ func (b *bridgeEventManager) PostEpoch(req *PostEpochRequest) error {
 	b.epoch = req.NewEpochID
 
 	// build a new batch at the end of the epoch
-	b.nextBridgeEventIDExternal, err = req.SystemState.GetNextCommittedIndexExternal(b.externalChainID)
+	b.nextEventIDExternal, err = req.SystemState.GetNextCommittedIndex(b.externalChainID, External)
 	if err != nil {
 		b.lock.Unlock()
 
 		return err
 	}
 
-	b.nextBridgeEventIDInternal, err = req.SystemState.GetNextCommittedIndexInternal(b.internalChainID)
+	b.nextEventIDInternal, err = req.SystemState.GetNextCommittedIndex(b.internalChainID, Internal)
 	if err != nil {
 		b.lock.Unlock()
 
@@ -423,12 +423,12 @@ func (b *bridgeEventManager) PostBlock() error {
 
 // buildExternalBridgeBatch builds a new external bridge batch, signs it and gossips its vote for it
 func (b *bridgeEventManager) buildExternalBridgeBatch(dbTx *bolt.Tx) error {
-	return b.buildBridgeBatch(dbTx, b.externalChainID, b.internalChainID, b.nextBridgeEventIDExternal)
+	return b.buildBridgeBatch(dbTx, b.externalChainID, b.internalChainID, b.nextEventIDExternal)
 }
 
 // buildInternalBridgeBatch builds a new internal bridge batch, signs it and gossips its vote for it
 func (b *bridgeEventManager) buildInternalBridgeBatch(dbTx *bolt.Tx) error {
-	return b.buildBridgeBatch(dbTx, b.internalChainID, b.externalChainID, b.nextBridgeEventIDInternal)
+	return b.buildBridgeBatch(dbTx, b.internalChainID, b.externalChainID, b.nextEventIDInternal)
 }
 
 func (b *bridgeEventManager) buildBridgeBatch(

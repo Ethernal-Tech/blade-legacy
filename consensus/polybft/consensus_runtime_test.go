@@ -1150,5 +1150,8 @@ func createTestBridge(t *testing.T, state *State) Bridge {
 
 	manager := &mockBridgeManager{state: state, chainID: 1}
 
-	return &bridge{bridgeManagers: map[uint64]BridgeManager{1: manager}}
+	return &bridge{
+		bridgeManagers: map[uint64]BridgeManager{1: manager},
+		state:          state,
+	}
 }

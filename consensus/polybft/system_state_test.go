@@ -63,7 +63,7 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
 	assert.NoError(t, err)
 
-	nextCommittedIndex, err := systemState.GetNextCommittedIndexExternal(0)
+	nextCommittedIndex, err := systemState.GetNextCommittedIndex(0, External)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedNextCommittedIndex+1, nextCommittedIndex)
 }

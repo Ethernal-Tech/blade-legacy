@@ -44,10 +44,15 @@ func newBridge(runtime Runtime,
 	logger hclog.Logger) (Bridge, error) {
 	internalChainID := runtimeConfig.blockchain.GetChainID()
 
-	bridge := &bridge{bridgeManagers: make(map[uint64]BridgeManager), state: runtimeConfig.State, internalChainID: internalChainID}
+	bridge := &bridge{
+		bridgeManagers:  make(map[uint64]BridgeManager),
+		state:           runtimeConfig.State,
+		internalChainID: internalChainID,
+	}
 
 	for externalChainID := range runtimeConfig.GenesisConfig.Bridge {
-		bridgeManager, err := newBridgeManager(runtime, runtimeConfig, eventProvider, logger, externalChainID, internalChainID)
+		bridgeManager, err := newBridgeManager(runtime, runtimeConfig, eventProvider,
+			logger, externalChainID, internalChainID)
 		if err != nil {
 			return nil, err
 		}
