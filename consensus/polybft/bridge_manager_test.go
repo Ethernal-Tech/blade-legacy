@@ -30,10 +30,3 @@ func (mbm *mockBridgeManager) InsertEpoch(epoch uint64, dbTx *bolt.Tx) error {
 
 	return nil
 }
-func (mbm *mockBridgeManager) InsertEpochInternal(epoch uint64, dbTx *bolt.Tx) error {
-	if err := mbm.state.EpochStore.insertEpoch(epoch, dbTx, mbm.chainID); err != nil {
-		return err
-	}
-
-	return nil
-}

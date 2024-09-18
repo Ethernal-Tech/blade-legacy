@@ -199,14 +199,15 @@ func newBridgeManager(
 
 	var err error
 
-	gatewayAddr := runtimeConfig.GenesisConfig.Bridge[externalChainID].ExternalGatewayAddr
+	chainBridgeCfg := runtimeConfig.GenesisConfig.Bridge[externalChainID]
+	gatewayAddr := chainBridgeCfg.ExternalGatewayAddr
 	bridgeManager := &bridgeManager{
 		externalChainID: externalChainID,
 		logger:          logger.Named("bridge-manager"),
 		eventTrackerConfig: &eventTrackerConfig{
 			EventTracker:        *runtimeConfig.eventTracker,
-			jsonrpcAddr:         runtimeConfig.GenesisConfig.Bridge[externalChainID].JSONRPCEndpoint,
-			startBlock:          runtimeConfig.GenesisConfig.Bridge[externalChainID].EventTrackerStartBlocks[gatewayAddr],
+			jsonrpcAddr:         chainBridgeCfg.JSONRPCEndpoint,
+			startBlock:          chainBridgeCfg.EventTrackerStartBlocks[gatewayAddr],
 			trackerPollInterval: runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
 		},
 		state:           runtimeConfig.State,

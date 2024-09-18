@@ -96,7 +96,7 @@ func (bms *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Brid
 	})
 }
 
-// removeBridgeEvents remove bridge events and their proofs from the buckets in db
+// removeBridgeEvents removes bridge events and their proofs from the buckets in db
 func (bms *BridgeMessageStore) removeBridgeEvents(
 	bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
 	return bms.db.Update(func(tx *bolt.Tx) error {
@@ -104,7 +104,6 @@ func (bms *BridgeMessageStore) removeBridgeEvents(
 			Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
 
 		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
-
 		bridgeMessageEventIDKey := common.EncodeUint64ToBytes(bridgeMessageID)
 
 		if err := eventsBucket.Delete(bridgeMessageEventIDKey); err != nil {
@@ -163,9 +162,8 @@ func (bms *BridgeMessageStore) getBridgeMessageEventsForBridgeBatch(
 				return err
 			}
 
-			if destinationChainID == 0 {
-				events = append(events, event)
-			} else if event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
+			if destinationChainID == 0 ||
+				event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
 				events = append(events, event)
 			}
 		}
@@ -247,9 +245,9 @@ func (bms *BridgeMessageStore) insertBridgeBatchMessage(signedBridgeBatch *Bridg
 	return insertFn(dbTx)
 }
 
-// insertMessageVote inserts given vote to signatures bucket of given epoch
-func (bms *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
-	vote *MessageSignature, dbTx *bolt.Tx, sourceChainID uint64) (int, error) {
+// insertConsensusData inserts given batch consensus data to corresponding bucket of given epoch
+func (bms *BridgeMessageStore) insertConsensusData(epoch uint64, key []byte,
+	vote *BridgeBatchVoteConsensusData, dbTx *bolt.Tx, sourceChainID uint64) (int, error) {
 	var (
 		numOfSignatures int
 		err             error
@@ -263,13 +261,13 @@ func (bms *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
 
 		// check if the signature has already being included
 		for _, sigs := range signatures {
-			if sigs.From == vote.From {
+			if sigs.Sender == vote.Sender {
 				return nil
 			}
 		}
 
 		if signatures == nil {
-			signatures = []*MessageSignature{vote}
+			signatures = []*BridgeBatchVoteConsensusData{vote}
 		} else {
 			signatures = append(signatures, vote)
 		}
@@ -304,8 +302,8 @@ func (bms *BridgeMessageStore) insertMessageVote(epoch uint64, key []byte,
 func (bms *BridgeMessageStore) getMessageVotes(
 	epoch uint64,
 	hash []byte,
-	sourceChainID uint64) ([]*MessageSignature, error) {
-	var signatures []*MessageSignature
+	sourceChainID uint64) ([]*BridgeBatchVoteConsensusData, error) {
+	var signatures []*BridgeBatchVoteConsensusData
 
 	err := bms.db.View(func(tx *bolt.Tx) error {
 		res, err := bms.getMessageVotesLocked(tx, epoch, hash, sourceChainID)
@@ -327,7 +325,7 @@ func (bms *BridgeMessageStore) getMessageVotes(
 
 // getMessageVotesLocked gets all signatures from db associated with given epoch and hash
 func (bms *BridgeMessageStore) getMessageVotesLocked(tx *bolt.Tx, epoch uint64,
-	hash []byte, sourceChainID uint64) ([]*MessageSignature, error) {
+	hash []byte, sourceChainID uint64) ([]*BridgeBatchVoteConsensusData, error) {
 	bucket, err := getNestedBucketInEpoch(tx, epoch, messageVotesBucket, sourceChainID)
 	if err != nil {
 		return nil, err
@@ -338,7 +336,7 @@ func (bms *BridgeMessageStore) getMessageVotesLocked(tx *bolt.Tx, epoch uint64,
 		return nil, nil
 	}
 
-	var signatures []*MessageSignature
+	var signatures []*BridgeBatchVoteConsensusData
 	if err := json.Unmarshal(v, &signatures); err != nil {
 		return nil, err
 	}

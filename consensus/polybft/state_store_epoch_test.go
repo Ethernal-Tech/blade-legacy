@@ -116,8 +116,8 @@ func TestState_InsertVoteConcurrent(t *testing.T) {
 		go func(i int) {
 			defer wg.Done()
 
-			_, _ = state.BridgeMessageStore.insertMessageVote(epoch, hash, &MessageSignature{
-				From:      fmt.Sprintf("NODE_%d", i),
+			_, _ = state.BridgeMessageStore.insertConsensusData(epoch, hash, &BridgeBatchVoteConsensusData{
+				Sender:    fmt.Sprintf("NODE_%d", i),
 				Signature: []byte{1, 2},
 			}, nil, 0)
 		}(i)
@@ -142,10 +142,11 @@ func TestState_Insert_And_Cleanup(t *testing.T) {
 
 		assert.NoError(t, err)
 
-		_, _ = state.BridgeMessageStore.insertMessageVote(epoch, hash1, &MessageSignature{
-			From:      "NODE_1",
-			Signature: []byte{1, 2},
-		}, nil, 0)
+		_, _ = state.BridgeMessageStore.insertConsensusData(epoch, hash1,
+			&BridgeBatchVoteConsensusData{
+				Sender:    "NODE_1",
+				Signature: []byte{1, 2},
+			}, nil, 0)
 	}
 
 	stats, err := state.EpochStore.epochsDBStats()
@@ -172,10 +173,11 @@ func TestState_Insert_And_Cleanup(t *testing.T) {
 		err := state.EpochStore.insertEpoch(epoch, nil, 0)
 		assert.NoError(t, err)
 
-		_, _ = state.BridgeMessageStore.insertMessageVote(epoch, hash1, &MessageSignature{
-			From:      "NODE_1",
-			Signature: []byte{1, 2},
-		}, nil, 0)
+		_, _ = state.BridgeMessageStore.insertConsensusData(epoch, hash1,
+			&BridgeBatchVoteConsensusData{
+				Sender:    "NODE_1",
+				Signature: []byte{1, 2},
+			}, nil, 0)
 	}
 
 	stats, err = state.EpochStore.epochsDBStats()

@@ -120,7 +120,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		s.epoch = 1
-		msg := &TransportMessage{
+		msg := &BridgeBatchVote{
 			EpochNumber: 0,
 		}
 
@@ -181,7 +181,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 
 		msg.SourceChainID = 1
 
-		msg.From = vals.GetValidator("1").Address().String()
+		msg.Sender = vals.GetValidator("1").Address().String()
 		require.Error(t, s.saveVote(msg))
 
 		// non validator signs the msg in behalf of a validator
@@ -191,7 +191,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 
 		msg.SourceChainID = 1
 
-		msg.From = vals.GetValidator("1").Address().String()
+		msg.Sender = vals.GetValidator("1").Address().String()
 		require.Error(t, s.saveVote(msg))
 	})
 
@@ -492,16 +492,18 @@ func (m *mockMsg) WithHash(hash []byte) *mockMsg {
 	return m
 }
 
-func (m *mockMsg) sign(val *validator.TestValidator, domain []byte) (*TransportMessage, error) {
+func (m *mockMsg) sign(val *validator.TestValidator, domain []byte) (*BridgeBatchVote, error) {
 	signature, err := val.MustSign(m.hash, domain).Marshal()
 	if err != nil {
 		return nil, err
 	}
 
-	return &TransportMessage{
-		Hash:        m.hash,
-		Signature:   signature,
-		From:        val.Address().String(),
+	return &BridgeBatchVote{
+		Hash: m.hash,
+		BridgeBatchVoteConsensusData: &BridgeBatchVoteConsensusData{
+			Signature: signature,
+			Sender:    val.Address().String(),
+		},
 		EpochNumber: m.epoch,
 	}, nil
 }

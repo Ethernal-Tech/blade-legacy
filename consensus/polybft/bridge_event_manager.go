@@ -144,8 +144,7 @@ func (b *bridgeEventManager) initTransport() error {
 			return
 		}
 
-		var transportMsg *TransportMessage
-
+		var transportMsg *BridgeBatchVote
 		if err := json.Unmarshal(msg.Data, &transportMsg); err != nil {
 			b.logger.Warn("failed to deliver vote", "error", err)
 
@@ -159,12 +158,13 @@ func (b *bridgeEventManager) initTransport() error {
 }
 
 // saveVote saves the gotten vote to boltDb for later quorum check and signature aggregation
-func (b *bridgeEventManager) saveVote(msg *TransportMessage) error {
+func (b *bridgeEventManager) saveVote(msg *BridgeBatchVote) error {
 	b.lock.RLock()
 	epoch := b.epoch
 	valSet := b.validatorSet
 	b.lock.RUnlock()
 
+	// TODO: Filter out those votes whose source or destination chain ids are neither internal chain id nor external chain id
 	if valSet == nil || msg.EpochNumber < epoch || msg.EpochNumber > epoch+1 ||
 		(b.externalChainID != msg.SourceChainID && b.internalChainID != msg.SourceChainID) {
 		// Epoch metadata is undefined or received a message for the irrelevant epoch
@@ -177,16 +177,16 @@ func (b *bridgeEventManager) saveVote(msg *TransportMessage) error {
 		}
 	}
 
-	if err := b.verifyVoteSignature(valSet, types.StringToAddress(msg.From), msg.Signature, msg.Hash); err != nil {
+	if err := b.verifyVoteSignature(valSet, types.StringToAddress(msg.Sender), msg.Signature, msg.Hash); err != nil {
 		return fmt.Errorf("error verifying vote signature: %w", err)
 	}
 
-	msgVote := &MessageSignature{
-		From:      msg.From,
+	msgVote := &BridgeBatchVoteConsensusData{
+		Sender:    msg.Sender,
 		Signature: msg.Signature,
 	}
 
-	numSignatures, err := b.state.BridgeMessageStore.insertMessageVote(
+	numSignatures, err := b.state.BridgeMessageStore.insertConsensusData(
 		msg.EpochNumber,
 		msg.Hash,
 		msgVote,
@@ -199,7 +199,7 @@ func (b *bridgeEventManager) saveVote(msg *TransportMessage) error {
 	b.logger.Info(
 		"deliver message",
 		"hash", hex.EncodeToString(msg.Hash),
-		"sender", msg.From,
+		"sender", msg.Sender,
 		"signatures", numSignatures,
 	)
 
@@ -341,7 +341,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 	)
 
 	for _, vote := range votes {
-		index, exists := validatorAddrToIndex[vote.From]
+		index, exists := validatorAddrToIndex[vote.Sender]
 		if !exists {
 			continue // don't count this vote, because it does not belong to validator
 		}
@@ -354,7 +354,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 		bmap.Set(uint64(index)) //nolint:gosec
 
 		signatures = append(signatures, signature)
-		signers[types.StringToAddress(vote.From)] = struct{}{}
+		signers[types.StringToAddress(vote.Sender)] = struct{}{}
 	}
 
 	if !validatorSet.HasQuorum(blockNumber, signers) {
@@ -492,12 +492,12 @@ func (b *bridgeEventManager) buildBridgeBatch(
 		return fmt.Errorf("failed to sign batch message. Error: %w", err)
 	}
 
-	sig := &MessageSignature{
-		From:      b.config.key.String(),
+	sig := &BridgeBatchVoteConsensusData{
+		Sender:    b.config.key.String(),
 		Signature: signature,
 	}
 
-	if _, err = b.state.BridgeMessageStore.insertMessageVote(
+	if _, err = b.state.BridgeMessageStore.insertConsensusData(
 		epoch,
 		hashBytes,
 		sig,
@@ -510,10 +510,12 @@ func (b *bridgeEventManager) buildBridgeBatch(
 	}
 
 	// gossip message
-	b.multicast(&TransportMessage{
-		Hash:          hashBytes,
-		Signature:     signature,
-		From:          b.config.key.String(),
+	b.multicast(&BridgeBatchVote{
+		Hash: hashBytes,
+		BridgeBatchVoteConsensusData: &BridgeBatchVoteConsensusData{
+			Signature: signature,
+			Sender:    b.config.key.String(),
+		},
 		EpochNumber:   epoch,
 		SourceChainID: sourceChainID,
 	})
@@ -557,9 +559,10 @@ func (b *bridgeEventManager) multicast(msg interface{}) {
 // and the value is a slice of signatures of events we want to get.
 // This function is the implementation of EventSubscriber interface
 func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
-	var bridgeMessageResult contractsapi.BridgeMessageResultEvent
-
-	var bridgeMsg contractsapi.BridgeMsgEvent
+	var (
+		bridgeMessageResult contractsapi.BridgeMessageResultEvent
+		bridgeMsg           contractsapi.BridgeMsgEvent
+	)
 
 	return map[types.Address][]types.Hash{
 		b.config.bridgeCfg.InternalGatewayAddr: {

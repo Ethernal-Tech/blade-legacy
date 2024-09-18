@@ -46,8 +46,8 @@ func TestState_Insert_And_Get_MessageVotes(t *testing.T) {
 	assert.NoError(t, state.EpochStore.insertEpoch(epoch, nil, 0))
 
 	hash := []byte{1, 2}
-	_, err := state.BridgeMessageStore.insertMessageVote(1, hash, &MessageSignature{
-		From:      "NODE_1",
+	_, err := state.BridgeMessageStore.insertConsensusData(1, hash, &BridgeBatchVoteConsensusData{
+		Sender:    "NODE_1",
 		Signature: []byte{1, 2},
 	}, nil, 0)
 
@@ -56,7 +56,7 @@ func TestState_Insert_And_Get_MessageVotes(t *testing.T) {
 	votes, err := state.BridgeMessageStore.getMessageVotes(epoch, hash, 0)
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(votes))
-	assert.Equal(t, "NODE_1", votes[0].From)
+	assert.Equal(t, "NODE_1", votes[0].Sender)
 	assert.True(t, bytes.Equal([]byte{1, 2}, votes[0].Signature))
 }
 

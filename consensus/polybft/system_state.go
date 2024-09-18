@@ -23,8 +23,8 @@ type ValidatorInfo struct {
 type ChainType int
 
 const (
-	Internal ChainType = iota // Internal will be 0
-	External                  // External will be 1
+	Internal ChainType = iota // Internal = 0
+	External                  // External = 1
 )
 
 // SystemState is an interface to interact with the consensus system contracts in the chain
