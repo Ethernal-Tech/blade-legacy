@@ -198,7 +198,7 @@ func GetValidatorInfo(validatorAddr types.Address, supernetManagerAddr, stakeMan
 	}
 
 	stakeOfFn := &contractsapi.StakeOfStakeManagerFn{
-		Validator: types.Address(validatorAddr),
+		Validator: validatorAddr,
 	}
 
 	encode, err = stakeOfFn.EncodeAbi()
