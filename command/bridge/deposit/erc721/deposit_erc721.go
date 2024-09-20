@@ -195,7 +195,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		Title:        "DEPOSIT ERC 721",
 	}
 
-	if dp.ChildChainMintable {
+	if dp.InternalChainMintable {
 		bridgeMsgEventIDs, err := common.ExtractBridgeMessageIDs(receipt)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("failed to extract bridgeMsg event: %w", err))
@@ -235,7 +235,7 @@ func createDepositTxn(sender types.Address,
 
 	addr := types.StringToAddress(dp.PredicateAddr)
 
-	return helper.CreateTransaction(sender, &addr, input, nil, !dp.ChildChainMintable), nil
+	return helper.CreateTransaction(sender, &addr, input, nil, !dp.InternalChainMintable), nil
 }
 
 // createMintTxn encodes parameters for mint function on rootchain token contract
@@ -252,7 +252,7 @@ func createMintTxn(sender, receiver types.Address) (*types.Transaction, error) {
 	addr := types.StringToAddress(dp.TokenAddr)
 
 	return helper.CreateTransaction(sender, &addr,
-		input, nil, !dp.ChildChainMintable), nil
+		input, nil, !dp.InternalChainMintable), nil
 }
 
 // createApproveERC721PredicateTxn sends approve transaction
@@ -268,5 +268,5 @@ func createApproveERC721PredicateTxn(rootERC721Predicate, rootERC721Token types.
 	}
 
 	return helper.CreateTransaction(types.ZeroAddress, &rootERC721Token, input,
-		nil, !dp.ChildChainMintable), nil
+		nil, !dp.InternalChainMintable), nil
 }

@@ -640,7 +640,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 	}
 }
 
-func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
+func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 	const (
 		transfersCount = uint64(4)
 		amount         = 100
@@ -708,7 +708,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 	bridgeCfg := polybftCfg.Bridge[chainID.Uint64()]
 
-	childchainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(childEthEndpoint))
+	internalChainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(childEthEndpoint))
 	require.NoError(t, err)
 
 	t.Run("bridge native tokens", func(t *testing.T) {
@@ -757,7 +757,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC20Predicate.Abi, bridgeCfg.ExternalMintableERC20PredicateAddr,
 			rootToken, externalChainTxRelayer)
 		l2ChildToken := getChildToken(t, contractsapi.RootERC20Predicate.Abi, bridgeCfg.InternalMintableERC20PredicateAddr,
-			rootToken, childchainTxRelayer)
+			rootToken, internalChainTxRelayer)
 
 		t.Log("L1 child token", l1ChildToken)
 		t.Log("L2 child token", l2ChildToken)
@@ -803,7 +803,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 			// check that balances on the child chain are correct
 			for i, receiver := range depositors {
-				balance := erc20BalanceOf(t, receiver, contracts.NativeERC20TokenContract, childchainTxRelayer)
+				balance := erc20BalanceOf(t, receiver, contracts.NativeERC20TokenContract, internalChainTxRelayer)
 				t.Log("Attempt", it+1, "Balance before", balancesBefore[i], "Balance after", balance)
 
 				if balance.Cmp(new(big.Int).Add(balancesBefore[i], big.NewInt(amount))) != 0 {
@@ -872,7 +872,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC721Predicate.Abi, bridgeCfg.ExternalMintableERC721PredicateAddr,
 			types.Address(rootERC721Token), externalChainTxRelayer)
 		l2ChildToken := getChildToken(t, contractsapi.RootERC721Predicate.Abi, bridgeCfg.InternalMintableERC721PredicateAddr,
-			types.Address(rootERC721Token), childchainTxRelayer)
+			types.Address(rootERC721Token), internalChainTxRelayer)
 
 		t.Log("L1 child token", l1ChildToken)
 		t.Log("L2 child token", l2ChildToken)
@@ -903,16 +903,16 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		allSuccessful := false
 
 		for it := 0; it < numberOfAttempts && !allSuccessful; it++ {
-			childChainBlockNum, err := childEthEndpoint.BlockNumber()
+			internalChainBlockNum, err := childEthEndpoint.BlockNumber()
 			require.NoError(t, err)
 
 			// wait for commitment execution
-			require.NoError(t, cluster.WaitForBlock(childChainBlockNum+3*sprintSize, 2*time.Minute))
+			require.NoError(t, cluster.WaitForBlock(internalChainBlockNum+3*sprintSize, 2*time.Minute))
 
 			allSuccessful = true
 			// check owners on the child chain
 			for i, receiver := range depositors {
-				owner := erc721OwnerOf(t, big.NewInt(int64(i)), types.Address(rootERC721Token), childchainTxRelayer)
+				owner := erc721OwnerOf(t, big.NewInt(int64(i)), types.Address(rootERC721Token), internalChainTxRelayer)
 				t.Log("Attempt:", it+1, " Owner:", owner, " Receiver:", receiver)
 
 				if receiver != owner {

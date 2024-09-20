@@ -26,16 +26,16 @@ const (
 )
 
 const (
-	SenderKeyFlag          = "sender-key"
-	ReceiversFlag          = "receivers"
-	AmountsFlag            = "amounts"
-	TokenIDsFlag           = "token-ids"
-	RootTokenFlag          = "root-token"
-	RootPredicateFlag      = "root-predicate"
-	ChildPredicateFlag     = "child-predicate"
-	ChildTokenFlag         = "child-token"
-	JSONRPCFlag            = "json-rpc"
-	ChildChainMintableFlag = "child-chain-mintable"
+	SenderKeyFlag             = "sender-key"
+	ReceiversFlag             = "receivers"
+	AmountsFlag               = "amounts"
+	TokenIDsFlag              = "token-ids"
+	RootTokenFlag             = "root-token"
+	RootPredicateFlag         = "root-predicate"
+	ChildPredicateFlag        = "child-predicate"
+	ChildTokenFlag            = "child-token"
+	JSONRPCFlag               = "json-rpc"
+	InternalChainMintableFlag = "internal-chain-mintable"
 
 	MinterKeyFlag     = "minter-key"
 	MinterKeyFlagDesc = "minter key is the account which is able to mint tokens to sender account " +
@@ -48,13 +48,13 @@ var (
 )
 
 type BridgeParams struct {
-	SenderKey          string
-	Receivers          []string
-	TokenAddr          string
-	PredicateAddr      string
-	JSONRPCAddr        string
-	ChildChainMintable bool
-	TxTimeout          time.Duration
+	SenderKey             string
+	Receivers             []string
+	TokenAddr             string
+	PredicateAddr         string
+	JSONRPCAddr           string
+	InternalChainMintable bool
+	TxTimeout             time.Duration
 }
 
 // RegisterCommonFlags registers common bridge flags to a given command
@@ -81,10 +81,10 @@ func (p *BridgeParams) RegisterCommonFlags(cmd *cobra.Command) {
 	)
 
 	cmd.Flags().BoolVar(
-		&p.ChildChainMintable,
-		ChildChainMintableFlag,
+		&p.InternalChainMintable,
+		InternalChainMintableFlag,
 		false,
-		"flag indicating whether tokens originate from child chain",
+		"flag indicating whether tokens originate from internal chain",
 	)
 
 	cmd.Flags().DurationVar(

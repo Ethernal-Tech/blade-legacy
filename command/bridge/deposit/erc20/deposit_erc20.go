@@ -124,7 +124,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 		// mint tokens to depositor, so he is able to send them
 		mintTxn, err := helper.CreateMintTxn(types.Address(depositorAddr),
-			types.StringToAddress(dp.TokenAddr), aggregateAmount, !dp.ChildChainMintable)
+			types.StringToAddress(dp.TokenAddr), aggregateAmount, !dp.InternalChainMintable)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("mint transaction creation failed: %w", err))
 
@@ -149,7 +149,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	approveTxn, err := helper.CreateApproveERC20Txn(aggregateAmount,
 		types.StringToAddress(dp.PredicateAddr),
 		types.StringToAddress(dp.TokenAddr),
-		!dp.ChildChainMintable,
+		!dp.InternalChainMintable,
 	)
 	if err != nil {
 		outputter.SetError(fmt.Errorf("failed to create root erc 20 approve transaction: %w", err))
@@ -209,7 +209,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 
 				var bridgeMsgEventIDs []*big.Int
 
-				if dp.ChildChainMintable {
+				if dp.InternalChainMintable {
 					if bridgeMsgEventIDs, err = common.ExtractBridgeMessageIDs(receipt); err != nil {
 						return fmt.Errorf("failed to extract exit event: %w", err)
 					}
@@ -283,5 +283,5 @@ func createDepositTxn(sender, receiver types.Address, amount *big.Int) (*types.T
 	addr := types.StringToAddress(dp.PredicateAddr)
 
 	return helper.CreateTransaction(sender, &addr,
-		input, nil, !dp.ChildChainMintable), nil
+		input, nil, !dp.InternalChainMintable), nil
 }

@@ -129,7 +129,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 			return
 		}
 
-		if !wp.ChildChainMintable {
+		if !wp.InternalChainMintable {
 			extractedBridgeMsgEventIDs, err := common.ExtractBridgeMessageIDs(receipt)
 			if err != nil {
 				outputter.SetError(fmt.Errorf("failed to extract bridge message event: %w", err))
@@ -170,5 +170,5 @@ func createWithdrawTxn(receiver types.Address, amount *big.Int) (*types.Transact
 	addr := types.StringToAddress(wp.PredicateAddr)
 
 	return helper.CreateTransaction(types.ZeroAddress, &addr, input,
-		nil, wp.ChildChainMintable), nil
+		nil, wp.InternalChainMintable), nil
 }

@@ -96,10 +96,10 @@ func initEpochManager(polyBFTConfig PolyBFTConfig, transition *state.Transition)
 // getInitERC20PredicateInput builds initialization input parameters for child chain ERC20Predicate SC
 func getInitERC20PredicateInput(
 	config *BridgeConfig,
-	childChainMintable bool,
+	internalChainMintable bool,
 	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
-	if childChainMintable {
+	if internalChainMintable {
 		params = &contractsapi.InitializeRootERC20PredicateFn{
 			NewGateway:                  config.InternalGatewayAddr,
 			NewChildERC20Predicate:      config.ExternalMintableERC20PredicateAddr,
@@ -121,9 +121,9 @@ func getInitERC20PredicateInput(
 
 // getInitERC20PredicateACLInput builds initialization input parameters for child chain ERC20PredicateAccessList SC
 func getInitERC20PredicateACLInput(config *BridgeConfig, owner types.Address,
-	useAllowList, useBlockList, childChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
+	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
-	if childChainMintable {
+	if internalChainMintable {
 		params = &contractsapi.InitializeRootMintableERC20PredicateACLFn{
 			NewGateway:             config.InternalGatewayAddr,
 			NewChildERC20Predicate: config.ExternalMintableERC20PredicateAddr,
@@ -177,9 +177,9 @@ func getInitERC721PredicateInput(
 // getInitERC721PredicateACLInput builds initialization input parameters
 // for child chain ERC721PredicateAccessList SC
 func getInitERC721PredicateACLInput(config *BridgeConfig, owner types.Address,
-	useAllowList, useBlockList, childChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
+	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
-	if childChainMintable {
+	if internalChainMintable {
 		params = &contractsapi.InitializeRootMintableERC721PredicateACLFn{
 			NewGateway:              config.InternalGatewayAddr,
 			NewChildERC721Predicate: config.ExternalMintableERC721PredicateAddr,
@@ -207,10 +207,10 @@ func getInitERC721PredicateACLInput(config *BridgeConfig, owner types.Address,
 // getInitERC1155PredicateInput builds initialization input parameters for child chain ERC1155Predicate SC
 func getInitERC1155PredicateInput(
 	config *BridgeConfig,
-	childChainMintable bool,
+	internalChainMintable bool,
 	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
-	if childChainMintable {
+	if internalChainMintable {
 		params = &contractsapi.InitializeRootERC1155PredicateFn{
 			NewGateway:                  config.InternalGatewayAddr,
 			NewChildERC1155Predicate:    config.ExternalMintableERC1155PredicateAddr,
@@ -232,9 +232,9 @@ func getInitERC1155PredicateInput(
 // getInitERC1155PredicateACLInput builds initialization input parameters
 // for child chain ERC1155PredicateAccessList SC
 func getInitERC1155PredicateACLInput(config *BridgeConfig, owner types.Address,
-	useAllowList, useBlockList, childChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
+	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
-	if childChainMintable {
+	if internalChainMintable {
 		params = &contractsapi.InitializeRootMintableERC1155PredicateACLFn{
 			NewGateway:               config.InternalGatewayAddr,
 			NewChildERC1155Predicate: config.ExternalMintableERC1155PredicateAddr,

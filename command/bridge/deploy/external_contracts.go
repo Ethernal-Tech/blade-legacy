@@ -108,7 +108,7 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 				NewGateway:                  config.ExternalGatewayAddr,
 				NewChildERC20Predicate:      config.InternalERC20PredicateAddr,
 				NewDestinationTokenTemplate: contracts.ChildERC20Contract,
-				// root native token address should be non-zero only if native token is non-mintable on a childchain
+				// root native token address should be non-zero only if native token is non-mintable on a internal chain
 				NewNativeTokenRoot:    config.ExternalNativeERC20Addr,
 				NewDestinationChainID: big.NewInt(destinationChainID),
 			}

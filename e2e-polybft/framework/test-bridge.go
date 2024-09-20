@@ -112,7 +112,7 @@ func (t *TestBridge) WaitUntil(pollFrequency, timeout time.Duration, handler fun
 // Deposit function invokes bridge deposit of ERC tokens (from the root to the child chain)
 // with given receivers, amounts and/or token ids
 func (t *TestBridge) Deposit(token bridgeCommon.TokenType, rootTokenAddr, rootPredicateAddr types.Address,
-	senderKey, receivers, amounts, tokenIDs, jsonRPCAddr, minterKey string, childChainMintable bool) error {
+	senderKey, receivers, amounts, tokenIDs, jsonRPCAddr, minterKey string, internalChainMintable bool) error {
 	args := []string{}
 
 	if receivers == "" {
@@ -144,8 +144,8 @@ func (t *TestBridge) Deposit(token bridgeCommon.TokenType, rootTokenAddr, rootPr
 			"--minter-key", minterKey,
 			"--json-rpc", jsonRPCAddr)
 
-		if childChainMintable {
-			args = append(args, "--child-chain-mintable")
+		if internalChainMintable {
+			args = append(args, "--internal-chain-mintable")
 		}
 
 	case bridgeCommon.ERC721:
@@ -164,8 +164,8 @@ func (t *TestBridge) Deposit(token bridgeCommon.TokenType, rootTokenAddr, rootPr
 			"--minter-key", minterKey,
 			"--json-rpc", jsonRPCAddr)
 
-		if childChainMintable {
-			args = append(args, "--child-chain-mintable")
+		if internalChainMintable {
+			args = append(args, "--internal-chain-mintable")
 		}
 
 	case bridgeCommon.ERC1155:
@@ -189,8 +189,8 @@ func (t *TestBridge) Deposit(token bridgeCommon.TokenType, rootTokenAddr, rootPr
 			"--minter-key", minterKey,
 			"--json-rpc", jsonRPCAddr)
 
-		if childChainMintable {
-			args = append(args, "--child-chain-mintable")
+		if internalChainMintable {
+			args = append(args, "--internal-chain-mintable")
 		}
 	}
 
@@ -201,7 +201,7 @@ func (t *TestBridge) Deposit(token bridgeCommon.TokenType, rootTokenAddr, rootPr
 // with given receivers, amounts and/or token ids
 func (t *TestBridge) Withdraw(token bridgeCommon.TokenType,
 	senderKey, receivers, amounts, tokenIDs, jsonRPCAddr string,
-	childPredicate, childToken types.Address, childChainMintable bool) error {
+	childPredicate, childToken types.Address, internalChainMintable bool) error {
 	if senderKey == "" {
 		return errors.New("provide hex-encoded sender private key")
 	}
@@ -236,8 +236,8 @@ func (t *TestBridge) Withdraw(token bridgeCommon.TokenType,
 			"--amounts", amounts,
 			"--json-rpc", jsonRPCAddr)
 
-		if childChainMintable {
-			args = append(args, "--child-chain-mintable")
+		if internalChainMintable {
+			args = append(args, "--internal-chain-mintable")
 		}
 
 	case bridgeCommon.ERC721:
@@ -255,8 +255,8 @@ func (t *TestBridge) Withdraw(token bridgeCommon.TokenType,
 			"--token-ids", tokenIDs,
 			"--json-rpc", jsonRPCAddr)
 
-		if childChainMintable {
-			args = append(args, "--child-chain-mintable")
+		if internalChainMintable {
+			args = append(args, "--internal-chain-mintable")
 		}
 
 	case bridgeCommon.ERC1155:
@@ -279,8 +279,8 @@ func (t *TestBridge) Withdraw(token bridgeCommon.TokenType,
 			"--token-ids", tokenIDs,
 			"--json-rpc", jsonRPCAddr)
 
-		if childChainMintable {
-			args = append(args, "--child-chain-mintable")
+		if internalChainMintable {
+			args = append(args, "--internal-chain-mintable")
 		}
 	}
 
