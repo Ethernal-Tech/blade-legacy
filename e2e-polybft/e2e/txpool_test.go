@@ -25,7 +25,7 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithPremine(types.Address(sender.Address())),
+		framework.WithPremine(sender.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 	)
 	defer cluster.Stop()

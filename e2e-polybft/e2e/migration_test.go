@@ -32,7 +32,7 @@ func TestE2E_Migration(t *testing.T) {
 	initialBalance := ethgo.Ether(10)
 	srvs := framework.NewTestServers(t, 1, func(config *framework.TestServerConfig) {
 		config.SetConsensus(framework.ConsensusDev)
-		config.Premine(types.Address(userAddr), initialBalance)
+		config.Premine(userAddr, initialBalance)
 	})
 
 	srv := srvs[0]
@@ -151,7 +151,7 @@ func TestE2E_Migration(t *testing.T) {
 		frameworkpolybft.WithNonValidators(2),
 		frameworkpolybft.WithValidatorSnapshot(5),
 		frameworkpolybft.WithTestRewardToken(),
-		frameworkpolybft.WithGenesisState(tmpDir, types.Hash(stateRoot)),
+		frameworkpolybft.WithGenesisState(tmpDir, stateRoot),
 	)
 	defer cluster.Stop()
 
