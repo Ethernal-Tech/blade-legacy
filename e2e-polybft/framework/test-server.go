@@ -219,15 +219,15 @@ func (t *TestServer) Stop() {
 	t.node = nil
 }
 
-// RootchainFund funds given validator account on the rootchain
-func (t *TestServer) RootchainFund(amount *big.Int, index uint64) error {
-	return t.RootchainFundFor([]types.Address{t.address}, []*big.Int{amount}, index)
+// ExternalChainFund funds given validator account on the external chain
+func (t *TestServer) ExternalChainFund(amount *big.Int, index uint64) error {
+	return t.ExternalChainFundFor([]types.Address{t.address}, []*big.Int{amount}, index)
 }
 
-// RootchainFundFor funds given account on the rootchain
-func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.Int, index uint64) error {
+// ExternalChainFundFor funds given account on the external chain
+func (t *TestServer) ExternalChainFundFor(accounts []types.Address, amounts []*big.Int, index uint64) error {
 	if len(accounts) != len(amounts) {
-		return errors.New("same size for accounts and amounts must be provided to the rootchain funding")
+		return errors.New("same size for accounts and amounts must be provided to the external chain funding")
 	}
 
 	jsonrpc, err := t.BridgeJSONRPCAddr(index)
@@ -252,7 +252,7 @@ func (t *TestServer) RootchainFundFor(accounts []types.Address, amounts []*big.I
 			acctAddrs[i] = acc.String()
 		}
 
-		return fmt.Errorf("failed to fund accounts (%s) on the rootchain: %w", strings.Join(acctAddrs, ","), err)
+		return fmt.Errorf("failed to fund accounts (%s) on the external chain: %w", strings.Join(acctAddrs, ","), err)
 	}
 
 	return nil

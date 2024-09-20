@@ -756,8 +756,8 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		bridge, err := NewTestBridge(t, cluster.Config, i+1)
 		require.NoError(t, err)
 
-		// deploy rootchain contracts
-		err = bridge.deployRootchainContracts(genesisPath)
+		// deploy bridge chain contracts
+		err = bridge.deployExternalChainContracts(genesisPath)
 		require.NoError(t, err)
 
 		polybftConfig, err := polybft.LoadPolyBFTConfig(genesisPath)
@@ -766,7 +766,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
 		require.NoError(t, err)
 
-		// fund addresses on the rootchain
+		// fund addresses on the bridge chain
 		err = bridge.fundAddressesOnRoot(polybftConfig)
 		require.NoError(t, err)
 
@@ -774,14 +774,14 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		if i == 0 {
 			err = bridge.mintNativeRootToken(addresses, tokenConfig, polybftConfig)
 			require.NoError(t, err)
+
+			err = bridge.premineNativeRootToken(genesisPath, tokenConfig, polybftConfig)
+			require.NoError(t, err)
+
+			// finalize genesis validators on the bridge chain
+			err = bridge.finalizeGenesis(genesisPath, tokenConfig)
+			require.NoError(t, err)
 		}
-
-		err = bridge.premineNativeRootToken(genesisPath, tokenConfig, polybftConfig)
-		require.NoError(t, err)
-
-		// finalize genesis validators on the rootchain
-		err = bridge.finalizeGenesis(genesisPath, tokenConfig)
-		require.NoError(t, err)
 
 		bridgeJSONRPCs[i] = bridge.JSONRPCAddr()
 

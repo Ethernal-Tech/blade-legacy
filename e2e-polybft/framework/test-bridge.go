@@ -308,8 +308,8 @@ func (t *TestBridge) cmdRun(args ...string) error {
 	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("bridge"))
 }
 
-// deployRootchainContracts deploys and initializes rootchain contracts
-func (t *TestBridge) deployRootchainContracts(genesisPath string) error {
+// deployExternalChainContracts deploys and initializes external chain contracts
+func (t *TestBridge) deployExternalChainContracts(genesisPath string) error {
 	args := []string{
 		"bridge",
 		"deploy",
@@ -319,17 +319,17 @@ func (t *TestBridge) deployRootchainContracts(genesisPath string) error {
 	}
 
 	if err := t.cmdRun(args...); err != nil {
-		return fmt.Errorf("failed to deploy rootchain contracts: %w", err)
+		return fmt.Errorf("failed to deploy external chain contracts: %w", err)
 	}
 
 	return nil
 }
 
-// fundAddressesOnRoot sends predefined amount of tokens to rootchain addresses
+// fundAddressesOnRoot sends predefined amount of tokens to external chain addresses
 func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) error {
 	validatorSecrets, err := genesis.GetValidatorKeyFiles(t.clusterConfig.TmpDir, t.clusterConfig.ValidatorPrefix)
 	if err != nil {
-		return fmt.Errorf("could not get validator secrets on initial rootchain funding of genesis validators: %w", err)
+		return fmt.Errorf("could not get validator secrets on initial external chain funding of genesis validators: %w", err)
 	}
 
 	// first fund validators
@@ -343,7 +343,7 @@ func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) er
 
 	if err := t.FundValidators(
 		secrets, balances); err != nil {
-		return fmt.Errorf("failed to fund validators on the rootchain: %w", err)
+		return fmt.Errorf("failed to fund validators on the external chain: %w", err)
 	}
 
 	// then fund all other addresses so that if token is non-mintable
@@ -373,7 +373,7 @@ func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) er
 	return nil
 }
 
-// FundValidators sends tokens to a rootchain validators
+// FundValidators sends tokens to a external chain validators
 func (t *TestBridge) FundValidators(secretsPaths []string, amounts []*big.Int) error {
 	if len(secretsPaths) != len(amounts) {
 		return errors.New("expected the same length of secrets paths and amounts")

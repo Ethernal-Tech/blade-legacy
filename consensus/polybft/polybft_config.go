@@ -40,7 +40,7 @@ type PolyBFTConfig struct {
 	// InitialValidatorSet are the genesis validators
 	InitialValidatorSet []*validator.GenesisValidator `json:"initialValidatorSet"`
 
-	// Bridge is the rootchain bridge configuration
+	// Bridge represent configuration for external bridges
 	Bridge map[uint64]*BridgeConfig `json:"bridge"`
 
 	// EpochSize is size of epoch
@@ -83,7 +83,7 @@ type PolyBFTConfig struct {
 	BlockTimeDrift uint64 `json:"blockTimeDrift"`
 
 	// BlockTrackerPollInterval specifies interval
-	// at which block tracker polls for blocks on a rootchain
+	// at which block tracker polls for blocks on a external chain
 	BlockTrackerPollInterval common.Duration `json:"blockTrackerPollInterval"`
 
 	// ProxyContractsAdmin is the address that will have the privilege to change both the proxy
@@ -131,7 +131,7 @@ func GetPolyBFTConfig(chainParams *chain.Params) (PolyBFTConfig, error) {
 	return polyBFTConfig, nil
 }
 
-// BridgeConfig is the rootchain configuration, needed for bridging
+// BridgeConfig is the external chain configuration, needed for bridging
 type BridgeConfig struct {
 	// External chain bridge contracts
 	ExternalGatewayAddr                  types.Address `json:"externalGatewayAddress"`

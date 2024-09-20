@@ -24,13 +24,13 @@ func GetCommand() *cobra.Command {
 		withdraw.GetCommand(),
 		// sidechain (reward pool) command to withdraw pending rewards
 		withdrawRewards.GetCommand(),
-		// rootchain (supernet manager) command that queries validator info
+		// external chain (supernet manager) command that queries validator info
 		validators.GetCommand(),
-		// rootchain (supernet manager) whitelist validator
+		// external chain (supernet manager) whitelist validator
 		whitelist.GetCommand(),
-		// rootchain (supernet manager) register validator
+		// external chain (supernet manager) register validator
 		registration.GetCommand(),
-		// rootchain (stake manager) stake command
+		// external chain (stake manager) stake command
 		staking.GetCommand(),
 	)
 

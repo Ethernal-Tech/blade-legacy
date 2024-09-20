@@ -22,16 +22,16 @@ var (
 
 // GetCommand returns the bridge fund command
 func GetCommand() *cobra.Command {
-	rootchainFundCmd := &cobra.Command{
+	externalChainFundCmd := &cobra.Command{
 		Use:     "fund",
 		Short:   "Fund validator account with given tokens amount",
 		PreRunE: preRunCommand,
 		Run:     runCommand,
 	}
 
-	setFlags(rootchainFundCmd)
+	setFlags(externalChainFundCmd)
 
-	return rootchainFundCmd
+	return externalChainFundCmd
 }
 
 func setFlags(cmd *cobra.Command) {
@@ -46,14 +46,14 @@ func setFlags(cmd *cobra.Command) {
 		&params.amounts,
 		helper.AmountsFlag,
 		nil,
-		"token amounts which is funded to validator on a root chain",
+		"token amounts which is funded to validator on a external chain",
 	)
 
 	cmd.Flags().StringVar(
 		&params.jsonRPCAddress,
 		jsonRPCFlag,
 		txrelayer.DefaultRPCAddress,
-		"the rootchain JSON RPC endpoint",
+		"the external chain JSON RPC endpoint",
 	)
 
 	cmd.Flags().StringVar(

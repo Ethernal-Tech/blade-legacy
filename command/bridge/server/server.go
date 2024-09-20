@@ -43,23 +43,23 @@ var (
 
 // GetCommand returns the bridge server command
 func GetCommand() *cobra.Command {
-	rootchainServerCmd := &cobra.Command{
+	externalChainServerCmd := &cobra.Command{
 		Use:     "server",
-		Short:   "Start the rootchain command",
+		Short:   "Start the external chain command",
 		PreRunE: runPreRun,
 		Run:     runCommand,
 	}
 
-	setFlags(rootchainServerCmd)
+	setFlags(externalChainServerCmd)
 
-	return rootchainServerCmd
+	return externalChainServerCmd
 }
 
 func setFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(
 		&params.dataDir,
 		dataDirFlag,
-		"test-rootchain",
+		"test-external-chain",
 		"target directory for the chain",
 	)
 
@@ -74,14 +74,14 @@ func setFlags(cmd *cobra.Command) {
 		&params.chainID,
 		"chain-id",
 		101,
-		"custom chain id for bridge chain",
+		"custom chain id for external chain",
 	)
 
 	cmd.Flags().StringVar(
 		&params.port,
 		"port",
 		defaultPort,
-		"port for bridge chain",
+		"port for external chain",
 	)
 }
 
@@ -98,19 +98,19 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	closeCh := make(chan struct{})
 
 	// Check if the client is already running
-	if cid, err := helper.GetBridgeChainID(); !errors.Is(err, helper.ErrRootchainNotFound) {
+	if cid, err := helper.GetBridgeChainID(); !errors.Is(err, helper.ErrExternalChainNotFound) {
 		if err != nil {
 			outputter.SetError(err)
 		} else if cid != "" {
-			outputter.SetError(fmt.Errorf("rootchain already running: %s", cid))
+			outputter.SetError(fmt.Errorf("external chain already running: %s", cid))
 		}
 
 		return
 	}
 
 	// Start the client
-	if err := runRootchain(ctx, outputter, closeCh); err != nil {
-		outputter.SetError(fmt.Errorf("failed to run rootchain: %w", err))
+	if err := runExternalChain(ctx, outputter, closeCh); err != nil {
+		outputter.SetError(fmt.Errorf("failed to run external chain: %w", err))
 
 		return
 	}
@@ -120,9 +120,9 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		close(closeCh)
 
 		if ip, err := helper.ReadBridgeChainIP(params.port); err != nil {
-			outputter.SetError(fmt.Errorf("failed to ping rootchain server: %w", err))
+			outputter.SetError(fmt.Errorf("failed to ping external chain server: %w", err))
 		} else {
-			outputter.SetError(fmt.Errorf("failed to ping rootchain server at address %s: %w", ip, err))
+			outputter.SetError(fmt.Errorf("failed to ping external chain server at address %s: %w", ip, err))
 		}
 
 		return
@@ -142,7 +142,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 }
 
-func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeCh chan struct{}) error {
+func runExternalChain(ctx context.Context, outputter command.OutputFormatter, closeCh chan struct{}) error {
 	var err error
 	if dockerClient, err = dockerclient.NewClientWithOpts(dockerclient.FromEnv,
 		dockerclient.WithAPIVersionNegotiation()); err != nil {
@@ -197,7 +197,7 @@ func runRootchain(ctx context.Context, outputter command.OutputFormatter, closeC
 		Image: image,
 		Cmd:   args,
 		Labels: map[string]string{
-			"edge-type": "rootchain",
+			"edge-type": "external-chain",
 		},
 	}
 
@@ -292,7 +292,7 @@ func PingServer(closeCh <-chan struct{}) error {
 		case <-httpTimer.C:
 			return fmt.Errorf("timeout to start http")
 		case <-closeCh:
-			return fmt.Errorf("closed before connecting with http. Is there any other process running and using rootchain dir?")
+			return fmt.Errorf("closed before connecting with http. Is there any other process running and using external chain dir?")
 		}
 	}
 }

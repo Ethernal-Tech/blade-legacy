@@ -227,7 +227,7 @@ func setFlags(cmd *cobra.Command) {
 			&params.blockTrackerPollInterval,
 			blockTrackerPollIntervalFlag,
 			defaultBlockTrackerPollInterval,
-			"interval (number of seconds) at which block tracker polls for latest block at rootchain",
+			"interval (number of seconds) at which block tracker polls for latest block on external chain",
 		)
 
 		cmd.Flags().StringVar(

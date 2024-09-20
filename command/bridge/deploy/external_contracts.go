@@ -314,7 +314,7 @@ func initExternalContracts(bridgeCfg *polybft.BridgeConfig,
 }
 
 // populateExistingNativeTokenAddr checks whether given token is deployed on the provided address.
-// If it is, then its address is set to the rootchain config, otherwise an error is returned
+// If it is, then its address is set to the bridge config, otherwise an error is returned
 func populateExistingNativeTokenAddr(eth *jsonrpc.EthClient, tokenAddr, tokenName string,
 	bridgeCfg *polybft.BridgeConfig) error {
 	addr := types.StringToAddress(tokenAddr)

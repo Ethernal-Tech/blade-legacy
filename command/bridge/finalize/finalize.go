@@ -193,7 +193,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	// update the voting power in genesis block extra
-	// based on finalized stake on rootchain
+	// based on finalized stake on external chain
 	genesisExtraData, err := genesis.GenerateExtraDataPolyBft(validatorMetadata)
 	if err != nil {
 		return err

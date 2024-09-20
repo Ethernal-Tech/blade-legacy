@@ -25,7 +25,7 @@ func GetCommand() *cobra.Command {
 	premineCmd := &cobra.Command{
 		Use: "premine",
 		Short: "Premine native root token to the caller, which determines genesis balances. " +
-			"This command is used in case Blade native token is rootchain originated.",
+			"This command is used in case Blade native token is external chain originated.",
 		PreRunE: runPreRun,
 		RunE:    runCommand,
 	}

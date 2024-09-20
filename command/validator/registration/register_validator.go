@@ -27,7 +27,7 @@ var params registerParams
 func GetCommand() *cobra.Command {
 	registerCmd := &cobra.Command{
 		Use:     "register-validator",
-		Short:   "registers a whitelisted validator to supernet manager on rootchain",
+		Short:   "registers a whitelisted validator to supernet manager on external chain",
 		PreRunE: runPreRun,
 		RunE:    runCommand,
 	}
@@ -98,7 +98,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	rootChainID, err := txRelayer.Client().ChainID()
+	externalChainID, err := txRelayer.Client().ChainID()
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 
 	koskSignature, err := signer.MakeKOSKSignature(
 		validatorAccount.Bls, validatorAccount.Address(),
-		rootChainID.Int64(), signer.DomainValidatorSet, contracts.StakeManagerContract)
+		externalChainID.Int64(), signer.DomainValidatorSet, contracts.StakeManagerContract)
 	if err != nil {
 		return err
 	}

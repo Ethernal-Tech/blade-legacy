@@ -77,7 +77,7 @@ func GetCommand() *cobra.Command {
 		&params.rootERC20TokenAddr,
 		erc20AddrFlag,
 		"",
-		"existing erc20 token address, that originates from a rootchain and that gets mapped to the Blade native one",
+		"existing erc20 token address, that originates from a external chain and that gets mapped to the Blade native one",
 	)
 
 	cmd.Flags().BoolVar(

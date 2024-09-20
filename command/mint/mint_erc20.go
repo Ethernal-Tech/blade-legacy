@@ -17,7 +17,7 @@ var (
 	params mintParams
 )
 
-// GetCommand returns the rootchain fund command
+// GetCommand returns the external chain fund command
 func GetCommand() *cobra.Command {
 	mintCmd := &cobra.Command{
 		Use:     "mint-erc20",

@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	// bucket to store rootchain bridge events
+	// bucket to store bridge events
 	bridgeMessageEventsBucket = []byte("bridgeMessageEvents")
 	// bucket to store bridge buckets
 	bridgeBatchBucket = []byte("bridgeBatches")
