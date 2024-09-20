@@ -356,9 +356,9 @@ func TestE2E_AddressLists_Bridge(t *testing.T) {
 	target, _ := crypto.GenerateECDSAKey()
 	other, _ := crypto.GenerateECDSAKey()
 
-	adminAddr := types.Address(admin.Address())
-	targetAddr := types.Address(target.Address())
-	otherAddr := types.Address(other.Address())
+	adminAddr := admin.Address()
+	targetAddr := target.Address()
+	otherAddr := other.Address()
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithPremine(adminAddr, targetAddr, otherAddr),

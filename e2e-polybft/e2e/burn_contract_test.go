@@ -7,7 +7,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
-	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -15,8 +14,8 @@ func TestE2E_BurnContract_Deployed(t *testing.T) {
 	contractKey, _ := crypto.GenerateECDSAKey()
 	destinationKey, _ := crypto.GenerateECDSAKey()
 
-	contractAddr := types.Address(contractKey.Address())
-	destinationAddr := types.Address(destinationKey.Address())
+	contractAddr := contractKey.Address()
+	destinationAddr := destinationKey.Address()
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithBridges(1),
