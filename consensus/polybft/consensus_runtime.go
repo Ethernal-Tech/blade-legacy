@@ -399,7 +399,7 @@ func (c *consensusRuntime) FSM() error {
 
 	blockBuilder, err := c.config.blockchain.NewBlockBuilder(
 		parent,
-		types.Address(c.config.Key.Address()),
+		c.config.Key.Address(),
 		c.config.txPool,
 		epoch.CurrentClientConfig.BlockTime.Duration,
 		c.logger,

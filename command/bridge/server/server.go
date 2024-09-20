@@ -292,7 +292,8 @@ func PingServer(closeCh <-chan struct{}) error {
 		case <-httpTimer.C:
 			return fmt.Errorf("timeout to start http")
 		case <-closeCh:
-			return fmt.Errorf("closed before connecting with http. Is there any other process running and using external chain dir?")
+			return fmt.Errorf(
+				"closed before connecting with http. Is there any other process running and using external chain dir?")
 		}
 	}
 }
