@@ -140,7 +140,7 @@ func TestE2E_Migration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, types.Hash(stateRoot), copiedStateRoot)
+	require.Equal(t, stateRoot, copiedStateRoot)
 
 	err = db.Close()
 	if err != nil {

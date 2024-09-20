@@ -123,7 +123,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 
 		// mint tokens to depositor, so he is able to send them
-		mintTxn, err := helper.CreateMintTxn(types.Address(depositorAddr),
+		mintTxn, err := helper.CreateMintTxn(depositorAddr,
 			types.StringToAddress(dp.TokenAddr), aggregateAmount, !dp.InternalChainMintable)
 		if err != nil {
 			outputter.SetError(fmt.Errorf("mint transaction creation failed: %w", err))
@@ -191,7 +191,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 				return ctx.Err()
 			default:
 				// deposit tokens
-				depositTxn, err := createDepositTxn(types.Address(depositorAddr), types.StringToAddress(receiver), amount)
+				depositTxn, err := createDepositTxn(depositorAddr, types.StringToAddress(receiver), amount)
 				if err != nil {
 					return fmt.Errorf("failed to create tx input: %w", err)
 				}
