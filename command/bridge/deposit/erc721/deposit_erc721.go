@@ -120,7 +120,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 		}
 
 		for i := 0; i < len(tokenIDs); i++ {
-			mintTxn, err := createMintTxn(types.Address(depositorAddr), types.Address(depositorAddr))
+			mintTxn, err := createMintTxn(depositorAddr, depositorAddr)
 			if err != nil {
 				outputter.SetError(fmt.Errorf("mint transaction creation failed: %w", err))
 
