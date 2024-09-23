@@ -8,7 +8,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -56,8 +55,8 @@ type bridgeEventRelayerImpl struct {
 	key    crypto.Key
 	logger hclog.Logger
 
-	lastValidatorSet []*contractsapi.Validator
-	bridgeBatches    []*contractsapi.BridgeMessageBatch
+	lastValidatorSet *contractsapi.SignedValidatorSet
+	bridgeBatches    []*contractsapi.SignedBridgeMessageBatch
 
 	lastGatewayValidatorSet map[uint64][]*contractsapi.Validator
 	state                   *BridgeMessageStore
@@ -75,13 +74,14 @@ func newBridgeEventRelayer(
 	runtimeConfig *runtimeConfig,
 	key crypto.Key,
 	logger hclog.Logger,
-	bridgeConfig *BridgeConfig,
+	eventTrackerConfigs []*eventTrackerConfig,
 ) *bridgeEventRelayerImpl {
 	relayer := &bridgeEventRelayerImpl{
-		key:           key,
-		logger:        logger,
-		txRelayers:    txRelayers,
-		runtimeConfig: runtimeConfig,
+		key:                 key,
+		logger:              logger,
+		txRelayers:          txRelayers,
+		runtimeConfig:       runtimeConfig,
+		eventTrackerConfigs: eventTrackerConfigs,
 	}
 
 	return relayer
@@ -127,33 +127,45 @@ func (b *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) erro
 }
 
 func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
+	for _, batch := range ber.bridgeBatches {
+		input, err := (&contractsapi.ReceiveBatchGatewayFn{
+			Batch:     batch.Batch,
+			Signature: batch.Signature,
+			Bitmap:    batch.Bitmap,
+		}).EncodeAbi()
+		if err != nil {
+			return err
+		}
 
-	extra, err := GetIbftExtra(req.FullBlock.Block.Header.ExtraData)
-	if err != nil {
-		return err
+		destionationChainID := batch.Batch.DestinationChainID.Uint64()
+
+		txn := types.NewTx(types.NewLegacyTx(types.WithFrom(
+			ber.key.Address()),
+			types.WithTo(&ber.bridgeConfig[destionationChainID].InternalGatewayAddr),
+			types.WithGas(types.StateTransactionGasLimit),
+			types.WithInput(input)))
+
+		if _, err = ber.txRelayers[destionationChainID].SendTransaction(
+			txn,
+			ber.key,
+		); err != nil {
+			return err
+		}
 	}
 
-	signature, err := bls.UnmarshalSignature(extra.Committed.AggregatedSignature)
-	if err != nil {
-		return err
-	}
-
-	signatureBig, err := signature.ToBigInt()
-	if err != nil {
-		return err
-	}
+	ber.bridgeBatches = make([]*contractsapi.SignedBridgeMessageBatch, 0)
 
 	input, err := (&contractsapi.CommitValidatorSetBridgeStorageFn{
-		NewValidatorSet: ber.lastValidatorSet,
-		Signature:       signatureBig,
-		Bitmap:          extra.Committed.Bitmap,
+		NewValidatorSet: ber.lastValidatorSet.NewValidatorSet,
+		Signature:       ber.lastValidatorSet.Signature,
+		Bitmap:          ber.lastValidatorSet.Bitmap,
 	}).EncodeAbi()
 	if err != nil {
 		return err
 	}
 
 	for chainID, txRelayer := range ber.txRelayers {
-		if !isValidatorSetEqual(ber.lastGatewayValidatorSet[chainID], ber.lastValidatorSet) {
+		if !isValidatorSetEqual(ber.lastGatewayValidatorSet[chainID], ber.lastValidatorSet.NewValidatorSet) {
 			txn := types.NewTx(types.NewLegacyTx(
 				types.WithFrom(ber.key.Address()),
 				types.WithTo(&ber.bridgeConfig[chainID].ExternalGatewayAddr),
@@ -199,8 +211,14 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 	var (
 		bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
 		newBatchEvent            contractsapi.NewBatchEvent
-		newValidatorSetEvent     contractsapi.NewValidatorSetEvent
+		newValidatorSetEvent     contractsapi.NewValidatorSetStoredEvent
 	)
+	provider, err := ber.runtimeConfig.blockchain.GetStateProviderForBlock(header)
+	if err != nil {
+		return err
+	}
+
+	systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
 
 	switch log.Topics[0] {
 	case bridgeMessageResultEvent.Sig():
@@ -222,15 +240,13 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 
 		return nil
 	case newValidatorSetEvent.Sig():
-		ber.lastValidatorSet = newValidatorSetEvent.NewValidatorSet
-	case newBatchEvent.Sig():
-		provider, err := ber.runtimeConfig.blockchain.GetStateProviderForBlock(header)
+		newValidatorSet, err := systemState.GetValidatorSetByNumber(newValidatorSetEvent.ID)
 		if err != nil {
 			return err
 		}
 
-		systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
-
+		ber.lastValidatorSet = newValidatorSet
+	case newBatchEvent.Sig():
 		bridgeBatch, err := systemState.GetBridgeBatchByNumber(newBatchEvent.ID)
 		if err != nil {
 			return err

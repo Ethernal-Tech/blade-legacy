@@ -3,6 +3,8 @@ package polybft
 import (
 	"fmt"
 
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
+	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 )
@@ -11,9 +13,10 @@ var _ Bridge = (*bridge)(nil)
 
 // bridge is a struct that manages different bridges
 type bridge struct {
-	bridgeManagers  map[uint64]BridgeManager
-	state           *State
-	internalChainID uint64
+	bridgeManagers     map[uint64]BridgeManager
+	state              *State
+	internalChainID    uint64
+	bridgeEventRelayer BridgeEventRelayer
 }
 
 // Bridge is an interface that defines functions that a bridge must implement
@@ -65,12 +68,13 @@ func newBridge(runtime Runtime,
 
 // initStateSyncRelayer initializes bridge event relayer
 // if not enabled, then a dummy bridge event relayer will be used
-/* func initBridgeEventRelayer(
+func (b *bridge) initBridgeEventRelayer(
 	eventProvider *EventProvider,
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
 	if runtimeConfig.consensusConfig.IsRelayer {
 		txRelayerMap := make(map[uint64]txrelayer.TxRelayer)
+		eventTrackerConfigs := make([]*eventTrackerConfig, 0, len(runtimeConfig.GenesisConfig.Bridge))
 		for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
 			txRelayer, err := getBridgeTxRelayer(config.JSONRPCEndpoint, logger)
 			if err != nil {
@@ -78,6 +82,12 @@ func newBridge(runtime Runtime,
 			}
 
 			txRelayerMap[chainID] = txRelayer
+			eventTrackerConfigs = append(eventTrackerConfigs, &eventTrackerConfig{
+				gatewayAddr:         config.ExternalGatewayAddr,
+				jsonrpcAddr:         config.JSONRPCEndpoint,
+				startBlock:          config.EventTrackerStartBlocks[config.ExternalGatewayAddr],
+				trackerPollInterval: runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
+			})
 		}
 
 		bridgeEventRelayer := newBridgeEventRelayer(
@@ -85,20 +95,21 @@ func newBridge(runtime Runtime,
 			runtimeConfig,
 			wallet.NewEcdsaSigner(runtimeConfig.Key),
 			logger.Named("bridge_event_relayer"),
-			runtimeConfig.GenesisConfig.Bridge[b.chainID])
+			eventTrackerConfigs,
+		)
 
 		bridgeEventRelayer.initTrackers(runtimeConfig)
 
-		b.stateSyncRelayer = bridgeEventRelayer
+		b.bridgeEventRelayer = bridgeEventRelayer
 
 	} else {
-		b.stateSyncRelayer = &dummyBridgeEventRelayer{}
+		b.bridgeEventRelayer = &dummyBridgeEventRelayer{}
 	}
 
-	eventProvider.Subscribe(b.stateSyncRelayer)
+	eventProvider.Subscribe(b.bridgeEventRelayer)
 
 	return nil
-} */
+}
 
 // Close calls Close on each bridge manager, which stops ongoing go routines in manager
 func (b *bridge) Close() {

@@ -378,6 +378,7 @@ func main() {
 			[]string{
 				"NewBatch",
 				"NewValidatorSet",
+				"NewValidatorSetStored",
 			},
 		},
 		{

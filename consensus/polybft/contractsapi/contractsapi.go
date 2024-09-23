@@ -2035,6 +2035,30 @@ func (n *NewValidatorSetEvent) Decode(input []byte) error {
 	return BridgeStorage.Abi.Events["NewValidatorSet"].Inputs.DecodeStruct(input, &n)
 }
 
+type NewValidatorSetStoredEvent struct {
+	ID *big.Int `abi:"id"`
+}
+
+func (*NewValidatorSetStoredEvent) Sig() ethgo.Hash {
+	return BridgeStorage.Abi.Events["NewValidatorSetStored"].ID()
+}
+
+func (n *NewValidatorSetStoredEvent) Encode() ([]byte, error) {
+	return BridgeStorage.Abi.Events["NewValidatorSetStored"].Inputs.Encode(n)
+}
+
+func (n *NewValidatorSetStoredEvent) ParseLog(log *ethgo.Log) (bool, error) {
+	if !BridgeStorage.Abi.Events["NewValidatorSetStored"].Match(log) {
+		return false, nil
+	}
+
+	return true, decodeEvent(BridgeStorage.Abi.Events["NewValidatorSetStored"], log, n)
+}
+
+func (n *NewValidatorSetStoredEvent) Decode(input []byte) error {
+	return BridgeStorage.Abi.Events["NewValidatorSetStored"].Inputs.DecodeStruct(input, &n)
+}
+
 type InitializeGatewayFn struct {
 	NewBls     types.Address `abi:"newBls"`
 	NewBn256G2 types.Address `abi:"newBn256G2"`
