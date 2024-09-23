@@ -127,6 +127,10 @@ func (b bridge) PostBlock(req *PostBlockRequest) error {
 		}
 	}
 
+	if err := b.bridgeEventRelayer.PostBlock(req); err != nil {
+		return err
+	}
+
 	return nil
 }
 

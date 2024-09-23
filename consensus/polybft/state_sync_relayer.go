@@ -34,13 +34,11 @@ type BridgeEventRelayer interface {
 
 var _ BridgeEventRelayer = (*dummyBridgeEventRelayer)(nil)
 
-// dummyBridgeEventRelayer is a dummy implementation of a StateSyncRelayer
+// dummyBridgeEventRelayer is a dummy implementation of a BridgeEventRelayer
 type dummyBridgeEventRelayer struct{}
 
 func (d *dummyBridgeEventRelayer) PostBlock(req *PostBlockRequest) error              { return nil }
 func (d *dummyBridgeEventRelayer) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
-
-// EventSubscriber implementation
 func (d *dummyBridgeEventRelayer) GetLogFilters() map[types.Address][]types.Hash {
 	return make(map[types.Address][]types.Hash)
 }
@@ -153,7 +151,7 @@ func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
 		}
 	}
 
-	ber.bridgeBatches = make([]*contractsapi.SignedBridgeMessageBatch, 0)
+	ber.bridgeBatches = make([]*contractsapi.SignedBridgeMessageBatch, 0) //TO DO logic for resend batches
 
 	input, err := (&contractsapi.CommitValidatorSetBridgeStorageFn{
 		NewValidatorSet: ber.lastValidatorSet.NewValidatorSet,
@@ -260,6 +258,8 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 	return nil
 }
 
+// AddLog is EventTracker implementation
+// used to handle a log with data from external chain
 func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	bridgeMessageResultEvent := &contractsapi.BridgeMessageResultEvent{}
 	gatewayNewValidatorSetEvent := &contractsapi.NewValidatorSetEvent{}
