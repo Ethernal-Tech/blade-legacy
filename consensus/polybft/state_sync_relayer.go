@@ -214,7 +214,7 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		}
 
 		if bridgeMessageResultEvent.Status {
-			if err := ber.state.removeBridgeEventsAndProofs(&bridgeMessageResultEvent); err != nil {
+			if err := ber.state.removeBridgeEvents(&bridgeMessageResultEvent); err != nil {
 				return err
 			}
 
@@ -260,7 +260,7 @@ func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log)
 		}
 
 		if bridgeMessageResultEvent.Status {
-			ber.state.removeBridgeEventsAndProofs(bridgeMessageResultEvent)
+			ber.state.removeBridgeEvents(bridgeMessageResultEvent)
 		}
 	case gatewayNewValidatorSetEvent.Sig():
 		doesMatch, err := gatewayNewValidatorSetEvent.ParseLog(eventLog)
