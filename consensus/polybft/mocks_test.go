@@ -1,9 +1,11 @@
 package polybft
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/blockchain"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/helper/progress"
 	"github.com/0xPolygon/polygon-edge/state"
@@ -241,6 +243,22 @@ func (m *systemStateMock) GetNextCommittedIndex(chainID uint64, chainType ChainT
 	}
 
 	return 0, nil
+}
+
+func (m *systemStateMock) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
+	*contractsapi.BridgeMessageBatch, error) {
+	args := m.Called()
+	if len(args) == 1 {
+		batch, _ := args.Get(0).(contractsapi.BridgeMessageBatch)
+
+		return &batch, nil
+	} else if len(args) == 2 {
+		batch, _ := args.Get(0).(contractsapi.BridgeMessageBatch)
+
+		return &batch, args.Error(1)
+	}
+
+	return &contractsapi.BridgeMessageBatch{}, nil
 }
 
 func (m *systemStateMock) GetEpoch() (uint64, error) {

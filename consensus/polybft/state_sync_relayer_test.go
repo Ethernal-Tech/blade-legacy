@@ -1,18 +1,6 @@
 package polybft
 
-import (
-	"errors"
-	"testing"
-	"time"
-
-	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/Ethernal-Tech/ethgo"
-	"github.com/hashicorp/go-hclog"
-	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-)
-
-func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
+/* func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	t.Skip()
 	t.Parallel()
 
@@ -27,8 +15,8 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	dummyTxRelayer := newDummyStakeTxRelayer(t, nil)
 	state := newTestState(t)
 
-	stateSyncRelayer := newStateSyncRelayer(
-		dummyTxRelayer,
+	stateSyncRelayer := newBridgeEventRelayer(
+		map[uint64]txrelayer.TxRelayer{1: dummyTxRelayer},
 		state.BridgeMessageStore,
 		blockhainMock,
 		testKey,
@@ -118,3 +106,4 @@ func TestStateSyncRelayer_FullWorkflow(t *testing.T) {
 	blockhainMock.AssertExpectations(t)
 	dummyTxRelayer.AssertExpectations(t)
 }
+*/

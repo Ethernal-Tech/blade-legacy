@@ -8,7 +8,6 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
 	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
@@ -29,28 +28,6 @@ const (
 
 var bridgeMessageEventSig = new(contractsapi.BridgeMsgEvent).Sig()
 
-// RelayerEventMetaData keeps information about a relayer event
-type RelayerEventMetaData struct {
-	EventID            uint64 `json:"eventID"`
-	CountTries         uint64 `json:"countTries"`
-	BlockNumber        uint64 `json:"blockNumber"` // block when event is sent
-	SentStatus         bool   `json:"sentStatus"`
-	SourceChainID      uint64 `json:"sourceChainID"`
-	DestinationChainID uint64 `json:"destinationChainID"`
-}
-
-func (ed RelayerEventMetaData) String() string {
-	return fmt.Sprintf("%d", ed.EventID)
-}
-
-// relayerConfig is a struct that holds the relayer configuration
-type relayerConfig struct {
-	maxBlocksToWaitForResend uint64
-	maxAttemptsToSend        uint64
-	maxEventsPerBatch        uint64
-	eventExecutionAddr       types.Address
-}
-
 // eventTrackerConfig is a struct that holds the event tracker configuration
 type eventTrackerConfig struct {
 	consensus.EventTracker
@@ -59,86 +36,6 @@ type eventTrackerConfig struct {
 	jsonrpcAddr         string
 	startBlock          uint64
 	trackerPollInterval time.Duration
-}
-
-// RelayerState is an interface that defines functions that a relayer store has to implement
-type RelayerState interface {
-	GetAllAvailableRelayerEvents(limit int) (result []*RelayerEventMetaData, err error)
-	UpdateRelayerEvents(events []*RelayerEventMetaData, removedEvents []*RelayerEventMetaData, dbTx *bolt.Tx) error
-}
-
-// relayerEventsProcessor is a parent struct of both bridge event and exit relayer
-// that holds functions common to both relayers
-type relayerEventsProcessor struct {
-	logger     hclog.Logger
-	state      RelayerState
-	blockchain blockchainBackend
-
-	config *relayerConfig
-	sendTx func([]*RelayerEventMetaData) error
-}
-
-// ProcessEvents processes all relayer events that were either successfully or unsuccessfully executed
-// and executes all the events that can be executed in regards to relayerConfig
-func (r *relayerEventsProcessor) processEvents() {
-	// we need twice as batch size because events from first batch are possible already sent maxAttemptsToSend times
-	events, err := r.state.GetAllAvailableRelayerEvents(int(r.config.maxEventsPerBatch) * 2)
-	if err != nil {
-		r.logger.Error("retrieving events failed", "err", err)
-
-		return
-	}
-
-	if len(events) == 0 {
-		return
-	}
-
-	removedEventIDs := make([]*RelayerEventMetaData, 0, len(events))
-	sendingEvents := make([]*RelayerEventMetaData, 0, len(events))
-	currentBlockNumber := r.blockchain.CurrentHeader().Number
-
-	// check already processed events
-	for _, event := range events {
-		// quit if we are still waiting for some old event confirmation (there is no parallelization right now!)
-		if event.SentStatus && event.BlockNumber+r.config.maxBlocksToWaitForResend > currentBlockNumber {
-			return
-		}
-
-		// remove event if it is processed too many times
-		if event.CountTries+1 > r.config.maxAttemptsToSend {
-			removedEventIDs = append(removedEventIDs, event)
-		} else {
-			event.CountTries++
-			event.BlockNumber = currentBlockNumber
-			event.SentStatus = true
-
-			sendingEvents = append(sendingEvents, event)
-			if len(sendingEvents) == int(r.config.maxEventsPerBatch) {
-				break
-			}
-		}
-	}
-
-	// update state only if needed
-	if len(sendingEvents)+len(removedEventIDs) > 0 {
-		r.logger.Debug("updating relayer events storage", "events", sendingEvents, "removed", removedEventIDs)
-
-		if err := r.state.UpdateRelayerEvents(sendingEvents, removedEventIDs, nil); err != nil {
-			r.logger.Error("updating relayer events storage failed",
-				"events", sendingEvents, "removed", removedEventIDs, "err", err)
-
-			return
-		}
-	}
-
-	// send tx only if needed
-	if len(sendingEvents) > 0 {
-		if err := r.sendTx(sendingEvents); err != nil {
-			r.logger.Error("failed to send relayer tx", "block", currentBlockNumber, "events", sendingEvents, "err", err)
-		} else {
-			r.logger.Debug("relayer tx has been successfully sent", "block", currentBlockNumber, "events", sendingEvents)
-		}
-	}
 }
 
 // BridgeManager is an interface that defines functions that a bridge manager must implement
@@ -175,7 +72,7 @@ var _ BridgeManager = (*bridgeManager)(nil)
 // such as handling and executing bridge events
 type bridgeManager struct {
 	bridgeEventManager BridgeEventManager
-	stateSyncRelayer   StateSyncRelayer
+	stateSyncRelayer   BridgeEventRelayer
 
 	eventTracker       *tracker.EventTracker
 	eventTrackerConfig *eventTrackerConfig
@@ -218,10 +115,6 @@ func newBridgeManager(
 		return nil, err
 	}
 
-	if err := bridgeManager.initStateSyncRelayer(eventProvider, runtimeConfig, logger); err != nil {
-		return nil, err
-	}
-
 	if bridgeManager.eventTracker, err = bridgeManager.initTracker(runtimeConfig); err != nil {
 		return nil, fmt.Errorf("failed to init event tracker. Error: %w", err)
 	}
@@ -258,7 +151,6 @@ func (b *bridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSign
 
 // close stops ongoing go routines in the manager
 func (b *bridgeManager) Close() {
-	b.stateSyncRelayer.Close()
 	b.eventTracker.Close()
 }
 
@@ -288,39 +180,6 @@ func (b *bridgeManager) initBridgeEventManager(
 	b.bridgeEventManager = bridgeEventManager
 
 	return b.bridgeEventManager.Init()
-}
-
-// initStateSyncRelayer initializes bridge event relayer
-// if not enabled, then a dummy bridge event relayer will be used
-func (b *bridgeManager) initStateSyncRelayer(
-	eventProvider *EventProvider,
-	runtimeConfig *runtimeConfig,
-	logger hclog.Logger) error {
-	if runtimeConfig.consensusConfig.IsRelayer {
-		txRelayer, err := getBridgeTxRelayer(runtimeConfig.consensusConfig.RPCEndpoint, logger)
-		if err != nil {
-			return err
-		}
-
-		b.stateSyncRelayer = newStateSyncRelayer(
-			txRelayer,
-			runtimeConfig.State.BridgeMessageStore,
-			runtimeConfig.blockchain,
-			wallet.NewEcdsaSigner(runtimeConfig.Key),
-			&relayerConfig{
-				maxBlocksToWaitForResend: defaultMaxBlocksToWaitForResend,
-				maxAttemptsToSend:        defaultMaxAttemptsToSend,
-				maxEventsPerBatch:        defaultMaxEventsPerBatch,
-				//eventExecutionAddr:       contracts.GatewayContract,
-			},
-			logger.Named("state_sync_relayer"))
-	} else {
-		b.stateSyncRelayer = &dummyStateSyncRelayer{}
-	}
-
-	eventProvider.Subscribe(b.stateSyncRelayer)
-
-	return b.stateSyncRelayer.Init()
 }
 
 // initTracker starts a new event tracker (to receive bridge events)

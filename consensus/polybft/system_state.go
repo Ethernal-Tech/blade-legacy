@@ -33,6 +33,8 @@ type SystemState interface {
 	GetEpoch() (uint64, error)
 	// GetNextCommittedIndex retrieves next committed bridge message index, based on the chain type
 	GetNextCommittedIndex(chainID uint64, chainType ChainType) (uint64, error)
+	// GetBridgeBatchByNumber retrives bridge batch by number
+	GetBridgeBatchByNumber(numberOfBatch *big.Int) (*contractsapi.BridgeMessageBatch, error)
 }
 
 var _ SystemState = &SystemStateImpl{}
@@ -101,4 +103,21 @@ func (s *SystemStateImpl) GetNextCommittedIndex(chainID uint64, chainType ChainT
 	}
 
 	return nextCommittedIndex.Uint64() + 1, nil
+}
+
+func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (*contractsapi.BridgeMessageBatch, error) {
+	rawResult, err := s.bridgeStorageContract.Call(
+		"batches",
+		ethgo.Latest,
+		numberOfBatch)
+	if err != nil {
+		return nil, err
+	}
+
+	bridgeBatch, isOk := rawResult["0"].(*contractsapi.BridgeMessageBatch)
+	if !isOk {
+		return nil, fmt.Errorf("failed to decode bridge batch")
+	}
+
+	return bridgeBatch, nil
 }

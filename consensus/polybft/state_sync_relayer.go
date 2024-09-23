@@ -3,13 +3,19 @@ package polybft
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"net"
+	"path"
 	"strings"
 
+	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/blockchain-event-tracker/store"
+	"github.com/Ethernal-Tech/blockchain-event-tracker/tracker"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
@@ -17,123 +23,151 @@ import (
 
 var (
 	errUnknownStateSyncRelayerEvent = errors.New("unknown event from gateway contract")
-
-	bridgeMessageResultEventSignature = new(contractsapi.BridgeMessageResultEvent).Sig()
 )
 
 // StateSyncRelayer is an interface that defines functions for state sync relayer
-type StateSyncRelayer interface {
+type BridgeEventRelayer interface {
 	EventSubscriber
 	PostBlock(req *PostBlockRequest) error
-	Init() error
+	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 	Close()
 }
 
-var _ StateSyncRelayer = (*dummyStateSyncRelayer)(nil)
+var _ BridgeEventRelayer = (*dummyBridgeEventRelayer)(nil)
 
-// dummyStateSyncRelayer is a dummy implementation of a StateSyncRelayer
-type dummyStateSyncRelayer struct{}
+// dummyBridgeEventRelayer is a dummy implementation of a StateSyncRelayer
+type dummyBridgeEventRelayer struct{}
 
-func (d *dummyStateSyncRelayer) PostBlock(req *PostBlockRequest) error { return nil }
-func (d *dummyStateSyncRelayer) Init() error                           { return nil }
-func (d *dummyStateSyncRelayer) Close()                                {}
+func (d *dummyBridgeEventRelayer) PostBlock(req *PostBlockRequest) error              { return nil }
+func (d *dummyBridgeEventRelayer) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
 
 // EventSubscriber implementation
-func (d *dummyStateSyncRelayer) GetLogFilters() map[types.Address][]types.Hash {
+func (d *dummyBridgeEventRelayer) GetLogFilters() map[types.Address][]types.Hash {
 	return make(map[types.Address][]types.Hash)
 }
-func (d *dummyStateSyncRelayer) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
+func (d *dummyBridgeEventRelayer) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
 	return nil
 }
+func (d *dummyBridgeEventRelayer) Close() {}
 
-var _ StateSyncRelayer = (*stateSyncRelayerImpl)(nil)
+var _ BridgeEventRelayer = (*bridgeEventRelayerImpl)(nil)
 
-type stateSyncRelayerImpl struct {
-	*relayerEventsProcessor
+type bridgeEventRelayerImpl struct {
+	key    crypto.Key
+	logger hclog.Logger
 
-	txRelayer txrelayer.TxRelayer
-	key       crypto.Key
-	logger    hclog.Logger
+	lastValidatorSet []*contractsapi.Validator
+	bridgeBatches    []*contractsapi.BridgeMessageBatch
 
-	notifyCh chan struct{}
-	closeCh  chan struct{}
+	lastGatewayValidatorSet map[uint64][]*contractsapi.Validator
+	state                   *BridgeMessageStore
+
+	txRelayers    map[uint64]txrelayer.TxRelayer
+	runtimeConfig *runtimeConfig
+
+	eventTrackerConfigs []*eventTrackerConfig
+	bridgeConfig        map[uint64]*BridgeConfig
+	eventTrackers       []*tracker.EventTracker
 }
 
-func newStateSyncRelayer(
-	txRelayer txrelayer.TxRelayer,
-	state *BridgeMessageStore,
-	blockchain blockchainBackend,
+func newBridgeEventRelayer(
+	txRelayers map[uint64]txrelayer.TxRelayer,
+	runtimeConfig *runtimeConfig,
 	key crypto.Key,
-	config *relayerConfig,
 	logger hclog.Logger,
-) *stateSyncRelayerImpl {
-	relayer := &stateSyncRelayerImpl{
-		txRelayer: txRelayer,
-		key:       key,
-		closeCh:   make(chan struct{}),
-		notifyCh:  make(chan struct{}, 1),
-		logger:    logger,
-		relayerEventsProcessor: &relayerEventsProcessor{
-			state:      state,
-			logger:     logger,
-			config:     config,
-			blockchain: blockchain,
-		},
+	bridgeConfig *BridgeConfig,
+) *bridgeEventRelayerImpl {
+	relayer := &bridgeEventRelayerImpl{
+		key:           key,
+		logger:        logger,
+		txRelayers:    txRelayers,
+		runtimeConfig: runtimeConfig,
 	}
-
-	relayer.relayerEventsProcessor.sendTx = relayer.sendTx
 
 	return relayer
 }
 
-func (ssr *stateSyncRelayerImpl) Init() error {
-	// start consumer
-	go func() {
-		for {
-			select {
-			case <-ssr.closeCh:
-				return
-			case <-ssr.notifyCh:
-				ssr.processEvents()
-			}
+func (b *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) error {
+	var bridgeMessageResultEventSig = new(contractsapi.BridgeMessageResultEvent).Sig()
+	var gatewayNewValidatorSetEventSig = new(contractsapi.NewValidatorSetEvent).Sig()
+
+	for i, eventTrackerConfig := range b.eventTrackerConfigs {
+		store, err := store.NewBoltDBEventTrackerStore(
+			path.Join(runtimeConfig.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", i)))
+		if err != nil {
+			return err
 		}
-	}()
 
-	return nil
-}
+		eventTracker, err := tracker.NewEventTracker(
+			&tracker.EventTrackerConfig{
+				EventSubscriber:        b,
+				Logger:                 b.logger,
+				RPCEndpoint:            eventTrackerConfig.jsonrpcAddr,
+				SyncBatchSize:          eventTrackerConfig.EventTracker.SyncBatchSize,
+				NumBlockConfirmations:  eventTrackerConfig.NumBlockConfirmations,
+				NumOfBlocksToReconcile: eventTrackerConfig.NumOfBlocksToReconcile,
+				PollInterval:           eventTrackerConfig.trackerPollInterval,
+				LogFilter: map[ethgo.Address][]ethgo.Hash{
+					ethgo.Address(eventTrackerConfig.gatewayAddr): {
+						bridgeMessageResultEventSig,
+						gatewayNewValidatorSetEventSig},
+				},
+			},
+			store,
+			eventTrackerConfig.startBlock,
+		)
+		if err != nil {
+			return err
+		}
 
-func (ssr *stateSyncRelayerImpl) Close() {
-	close(ssr.closeCh)
-}
-
-func (ssr *stateSyncRelayerImpl) PostBlock(req *PostBlockRequest) error {
-	select {
-	case ssr.notifyCh <- struct{}{}:
-	default:
+		b.eventTrackers = append(b.eventTrackers, eventTracker)
 	}
 
 	return nil
 }
 
-func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
-	input, err := (&contractsapi.ReceiveBatchGatewayFn{
-		Batch: &contractsapi.BridgeMessageBatch{},
+func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
+
+	extra, err := GetIbftExtra(req.FullBlock.Block.Header.ExtraData)
+	if err != nil {
+		return err
+	}
+
+	signature, err := bls.UnmarshalSignature(extra.Committed.AggregatedSignature)
+	if err != nil {
+		return err
+	}
+
+	signatureBig, err := signature.ToBigInt()
+	if err != nil {
+		return err
+	}
+
+	input, err := (&contractsapi.CommitValidatorSetBridgeStorageFn{
+		NewValidatorSet: ber.lastValidatorSet,
+		Signature:       signatureBig,
+		Bitmap:          extra.Committed.Bitmap,
 	}).EncodeAbi()
 	if err != nil {
 		return err
 	}
 
-	txn := types.NewTx(types.NewLegacyTx(
-		types.WithFrom(ssr.key.Address()),
-		types.WithTo(&ssr.config.eventExecutionAddr),
-		types.WithGas(types.StateTransactionGasLimit),
-		types.WithInput(input),
-	))
+	for chainID, txRelayer := range ber.txRelayers {
+		if !isValidatorSetEqual(ber.lastGatewayValidatorSet[chainID], ber.lastValidatorSet) {
+			txn := types.NewTx(types.NewLegacyTx(
+				types.WithFrom(ber.key.Address()),
+				types.WithTo(&ber.bridgeConfig[chainID].ExternalGatewayAddr),
+				types.WithGas(types.StateTransactionGasLimit),
+				types.WithInput(input),
+			))
 
-	// send batchExecute state sync
-	_, err = ssr.txRelayer.SendTransaction(txn, ssr.key)
+			if _, err = txRelayer.SendTransaction(txn, ber.key); err != nil {
+				return err
+			}
+		}
+	}
 
-	return err
+	return nil
 }
 
 // EventSubscriber implementation
@@ -142,44 +176,110 @@ func (ssr stateSyncRelayerImpl) sendTx(events []*RelayerEventMetaData) error {
 // where the key is the address of contract that emits desired events,
 // and the value is a slice of signatures of events we want to get.
 // This function is the implementation of EventSubscriber interface
-func (ssr *stateSyncRelayerImpl) GetLogFilters() map[types.Address][]types.Hash {
-	// return map[types.Address][]types.Hash{
-	// 	contracts.GatewayContract: {
-	// 		types.Hash(new(contractsapi.BridgeMessageResultEvent).Sig()),
-	// 	},
-	// }
-	return nil
+func (ber *bridgeEventRelayerImpl) GetLogFilters() map[types.Address][]types.Hash {
+	logFilters := map[types.Address][]types.Hash{
+		contracts.BridgeStorageContract: {
+			types.Hash(new(contractsapi.NewBatchEvent).Sig()),
+			types.Hash(new(contractsapi.NewValidatorSetEvent).Sig()),
+		},
+	}
+
+	for _, bridgeCfg := range ber.bridgeConfig {
+		logFilters[bridgeCfg.InternalGatewayAddr] = []types.Hash{types.Hash(
+			new(contractsapi.BridgeMessageResultEvent).Sig())}
+	}
+
+	return logFilters
+
 }
 
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
-func (ssr *stateSyncRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
+func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
 	var (
 		bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
+		newBatchEvent            contractsapi.NewBatchEvent
+		newValidatorSetEvent     contractsapi.NewValidatorSetEvent
 	)
 
 	switch log.Topics[0] {
-	case bridgeMessageResultEventSignature:
-		_, err := bridgeMessageResultEvent.ParseLog(log)
+	case bridgeMessageResultEvent.Sig():
+		doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
 		if err != nil {
 			return err
 		}
 
-		eventID := bridgeMessageResultEvent.Counter.Uint64()
-
-		if bridgeMessageResultEvent.Status {
-			ssr.logger.Debug("bridge message result event has been processed", "block", header.Number, "bridgeMsgID", eventID)
-
-			return ssr.state.UpdateRelayerEvents(nil, []*RelayerEventMetaData{{EventID: eventID}}, dbTx)
+		if !doesMatch {
+			return nil
 		}
 
-		ssr.logger.Debug("bridge message result event failed to process", "block", header.Number,
-			"bridgeMsgID", eventID, "reason", string(bridgeMessageResultEvent.Message))
+		if bridgeMessageResultEvent.Status {
+			if err := ber.state.removeBridgeEventsAndProofs(&bridgeMessageResultEvent); err != nil {
+				return err
+			}
+
+		}
 
 		return nil
+	case newValidatorSetEvent.Sig():
+		ber.lastValidatorSet = newValidatorSetEvent.NewValidatorSet
+	case newBatchEvent.Sig():
+		provider, err := ber.runtimeConfig.blockchain.GetStateProviderForBlock(header)
+		if err != nil {
+			return err
+		}
 
+		systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
+
+		bridgeBatch, err := systemState.GetBridgeBatchByNumber(newBatchEvent.ID)
+		if err != nil {
+			return err
+		}
+
+		ber.bridgeBatches = append(ber.bridgeBatches, bridgeBatch)
 	default:
 		return errUnknownStateSyncRelayerEvent
+	}
+
+	return nil
+}
+
+func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
+	bridgeMessageResultEvent := &contractsapi.BridgeMessageResultEvent{}
+	gatewayNewValidatorSetEvent := &contractsapi.NewValidatorSetEvent{}
+
+	switch eventLog.Topics[0] {
+	case bridgeMessageResultEvent.Sig():
+		doesMatch, err := bridgeMessageResultEvent.ParseLog(eventLog)
+		if err != nil {
+			return err
+		}
+
+		if !doesMatch {
+			return nil
+		}
+
+		if bridgeMessageResultEvent.Status {
+			ber.state.removeBridgeEventsAndProofs(bridgeMessageResultEvent)
+		}
+	case gatewayNewValidatorSetEvent.Sig():
+		doesMatch, err := gatewayNewValidatorSetEvent.ParseLog(eventLog)
+		if err != nil {
+			return err
+		}
+
+		if !doesMatch {
+			return nil
+		}
+
+		ber.lastGatewayValidatorSet[chainID.Uint64()] = gatewayNewValidatorSetEvent.NewValidatorSet
+	}
+	return nil
+}
+
+func (ber *bridgeEventRelayerImpl) Close() {
+	for _, eventTracker := range ber.eventTrackers {
+		eventTracker.Close()
 	}
 }
 
@@ -213,4 +313,24 @@ func convertLog(log *types.Log) *ethgo.Log {
 	}
 
 	return l
+}
+
+func isValidatorSetEqual(gatewayValidatorSet, newValidatorSet []*contractsapi.Validator) bool {
+	numberOfValidator := len(gatewayValidatorSet)
+
+	if numberOfValidator != len(newValidatorSet) {
+		return false
+	}
+
+	for i, validator := range gatewayValidatorSet {
+		if validator.Address != newValidatorSet[i].Address {
+			return false
+		}
+
+		if validator.VotingPower.Cmp(newValidatorSet[i].VotingPower) != 0 {
+			return false
+		}
+	}
+
+	return true
 }

@@ -63,6 +63,43 @@ func newBridge(runtime Runtime,
 	return bridge, nil
 }
 
+// initStateSyncRelayer initializes bridge event relayer
+// if not enabled, then a dummy bridge event relayer will be used
+/* func initBridgeEventRelayer(
+	eventProvider *EventProvider,
+	runtimeConfig *runtimeConfig,
+	logger hclog.Logger) error {
+	if runtimeConfig.consensusConfig.IsRelayer {
+		txRelayerMap := make(map[uint64]txrelayer.TxRelayer)
+		for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
+			txRelayer, err := getBridgeTxRelayer(config.JSONRPCEndpoint, logger)
+			if err != nil {
+				return err
+			}
+
+			txRelayerMap[chainID] = txRelayer
+		}
+
+		bridgeEventRelayer := newBridgeEventRelayer(
+			txRelayerMap,
+			runtimeConfig,
+			wallet.NewEcdsaSigner(runtimeConfig.Key),
+			logger.Named("bridge_event_relayer"),
+			runtimeConfig.GenesisConfig.Bridge[b.chainID])
+
+		bridgeEventRelayer.initTrackers(runtimeConfig)
+
+		b.stateSyncRelayer = bridgeEventRelayer
+
+	} else {
+		b.stateSyncRelayer = &dummyBridgeEventRelayer{}
+	}
+
+	eventProvider.Subscribe(b.stateSyncRelayer)
+
+	return nil
+} */
+
 // Close calls Close on each bridge manager, which stops ongoing go routines in manager
 func (b *bridge) Close() {
 	for _, bridgeManager := range b.bridgeManagers {
