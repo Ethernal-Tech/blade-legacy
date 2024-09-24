@@ -31,6 +31,7 @@ type BridgeEventRelayer interface {
 	PostBlock(req *PostBlockRequest) error
 	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 	Close()
+	Start(runtimeCfg *runtimeConfig, eventProvider *EventProvider) error
 }
 
 var _ BridgeEventRelayer = (*dummyBridgeEventRelayer)(nil)
@@ -47,6 +48,9 @@ func (d *dummyBridgeEventRelayer) ProcessLog(header *types.Header, log *ethgo.Lo
 	return nil
 }
 func (d *dummyBridgeEventRelayer) Close() {}
+func (d *dummyBridgeEventRelayer) Start(runtimeCfg *runtimeConfig, eventProvider *EventProvider) error {
+	return nil
+}
 
 var _ BridgeEventRelayer = (*bridgeEventRelayerImpl)(nil)
 
@@ -60,8 +64,8 @@ type bridgeEventRelayerImpl struct {
 	lastGatewayValidatorSet map[uint64][]*contractsapi.Validator
 	state                   *BridgeMessageStore
 
-	txRelayers    map[uint64]txrelayer.TxRelayer
-	runtimeConfig *runtimeConfig
+	txRelayers map[uint64]txrelayer.TxRelayer
+	blockchain blockchainBackend
 
 	bridgeConfig  map[uint64]*BridgeConfig
 	eventTrackers []*tracker.EventTracker
@@ -71,7 +75,6 @@ type bridgeEventRelayerImpl struct {
 // if the node is not a relayer, it will return a dummy bridge event relayer
 func newBridgeEventRelayer(
 	runtimeConfig *runtimeConfig,
-	eventProvider *EventProvider,
 	logger hclog.Logger,
 ) (BridgeEventRelayer, error) {
 	if !runtimeConfig.consensusConfig.IsRelayer {
@@ -79,46 +82,51 @@ func newBridgeEventRelayer(
 	}
 
 	relayer := &bridgeEventRelayerImpl{
-		key:           wallet.NewEcdsaSigner(runtimeConfig.Key),
-		logger:        logger.Named("bridge-relayer"),
-		runtimeConfig: runtimeConfig,
+		key:        wallet.NewEcdsaSigner(runtimeConfig.Key),
+		logger:     logger.Named("bridge-relayer"),
+		blockchain: runtimeConfig.blockchain,
 	}
 
-	txRelayers := make(map[uint64]txrelayer.TxRelayer, len(runtimeConfig.GenesisConfig.Bridge))
-	trackers := make([]*tracker.EventTracker, 0, len(runtimeConfig.GenesisConfig.Bridge))
+	return relayer, nil
+}
+
+// Start starts the bridge relayer
+func (ber *bridgeEventRelayerImpl) Start(runtimeCfg *runtimeConfig, eventProvider *EventProvider) error {
+	txRelayers := make(map[uint64]txrelayer.TxRelayer, len(runtimeCfg.GenesisConfig.Bridge))
+	trackers := make([]*tracker.EventTracker, 0, len(runtimeCfg.GenesisConfig.Bridge))
 
 	// create tx relayer for internal chain
-	internalChainTxRelayer, err := createBridgeTxRelayer(runtimeConfig.consensusConfig.RPCEndpoint, relayer.logger)
+	internalChainTxRelayer, err := createBridgeTxRelayer(runtimeCfg.consensusConfig.RPCEndpoint, ber.logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create tx relayer for internal chain: %w", err)
+		return fmt.Errorf("failed to create tx relayer for internal chain: %w", err)
 	}
 
-	txRelayers[uint64(runtimeConfig.consensusConfig.Params.ChainID)] = internalChainTxRelayer //nolint:gosec
+	txRelayers[uint64(runtimeCfg.consensusConfig.Params.ChainID)] = internalChainTxRelayer //nolint:gosec
 
 	// create tx relayers and event trackers for external chains
-	for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
-		txRelayer, err := createBridgeTxRelayer(config.JSONRPCEndpoint, relayer.logger)
+	for chainID, config := range runtimeCfg.GenesisConfig.Bridge {
+		txRelayer, err := createBridgeTxRelayer(config.JSONRPCEndpoint, ber.logger)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		txRelayers[chainID] = txRelayer
 
-		tracker, err := relayer.startTrackerForChain(chainID, config, runtimeConfig)
+		tracker, err := ber.startTrackerForChain(chainID, config, runtimeCfg)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		trackers = append(trackers, tracker)
 	}
 
-	relayer.txRelayers = txRelayers
-	relayer.eventTrackers = trackers
+	ber.txRelayers = txRelayers
+	ber.eventTrackers = trackers
 
 	// subscribe relayer to events from the internal chain
-	eventProvider.Subscribe(relayer)
+	eventProvider.Subscribe(ber)
 
-	return relayer, nil
+	return nil
 }
 
 // startTrackerForChain starts a new instance of tracker.EventTracker
@@ -250,7 +258,7 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		newValidatorSetEvent     contractsapi.NewValidatorSetStoredEvent
 	)
 
-	provider, err := ber.runtimeConfig.blockchain.GetStateProviderForBlock(header)
+	provider, err := ber.blockchain.GetStateProviderForBlock(header)
 	if err != nil {
 		return err
 	}

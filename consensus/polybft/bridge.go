@@ -59,12 +59,16 @@ func newBridge(runtime Runtime,
 		}
 	}
 
-	relayer, err := newBridgeEventRelayer(runtimeConfig, eventProvider, logger)
+	relayer, err := newBridgeEventRelayer(runtimeConfig, logger)
 	if err != nil {
 		return nil, err
 	}
 
 	bridge.relayer = relayer
+
+	if err := relayer.Start(runtimeConfig, eventProvider); err != nil {
+		return nil, fmt.Errorf("error starting bridge event relayer, err: %w", err)
+	}
 
 	return bridge, nil
 }
