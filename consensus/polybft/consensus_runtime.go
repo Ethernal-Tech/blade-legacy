@@ -166,7 +166,7 @@ func newConsensusRuntime(log hcf.Logger, config *runtimeConfig) (*consensusRunti
 			runtime,
 			runtime.config,
 			runtime.eventProvider,
-			runtime.logger); err != nil {
+			log.Named("bridge")); err != nil {
 			return nil, err
 		}
 	} else {

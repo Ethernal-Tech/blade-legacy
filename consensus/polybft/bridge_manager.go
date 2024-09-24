@@ -89,7 +89,7 @@ func newBridgeManager(
 	gatewayAddr := chainBridgeCfg.ExternalGatewayAddr
 	bridgeManager := &bridgeManager{
 		externalChainID: externalChainID,
-		logger:          logger.Named("bridge-manager"),
+		logger:          logger.Named(fmt.Sprintf("bridge-manager-%d", externalChainID)),
 		eventTrackerConfig: &eventTrackerConfig{
 			EventTracker:        *runtimeConfig.eventTracker,
 			jsonrpcAddr:         chainBridgeCfg.JSONRPCEndpoint,

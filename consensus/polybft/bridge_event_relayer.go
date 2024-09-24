@@ -80,7 +80,7 @@ func newBridgeEventRelayer(
 
 	relayer := &bridgeEventRelayerImpl{
 		key:           wallet.NewEcdsaSigner(runtimeConfig.Key),
-		logger:        logger,
+		logger:        logger.Named("bridge-relayer"),
 		runtimeConfig: runtimeConfig,
 	}
 
@@ -88,20 +88,16 @@ func newBridgeEventRelayer(
 	trackers := make([]*tracker.EventTracker, 0, len(runtimeConfig.GenesisConfig.Bridge))
 
 	// create tx relayer for internal chain
-	internalChainTxRelayer, err := txrelayer.NewTxRelayer(
-		txrelayer.WithIPAddress(runtimeConfig.consensusConfig.RPCEndpoint),
-		txrelayer.WithWriter(logger.StandardWriter(&hclog.StandardLoggerOptions{})),
-	)
-
+	internalChainTxRelayer, err := createBridgeTxRelayer(runtimeConfig.consensusConfig.RPCEndpoint, relayer.logger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create tx relayer for internal chain: %w", err)
 	}
 
-	txRelayers[uint64(runtimeConfig.consensusConfig.Params.ChainID)] = internalChainTxRelayer
+	txRelayers[uint64(runtimeConfig.consensusConfig.Params.ChainID)] = internalChainTxRelayer //nolint:gosec
 
 	// create tx relayers and event trackers for external chains
 	for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
-		txRelayer, err := createBridgeTxRelayer(config.JSONRPCEndpoint, logger)
+		txRelayer, err := createBridgeTxRelayer(config.JSONRPCEndpoint, relayer.logger)
 		if err != nil {
 			return nil, err
 		}
