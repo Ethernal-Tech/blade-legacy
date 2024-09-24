@@ -105,11 +105,11 @@ func (ber *bridgeEventRelayerImpl) sendTx() {
 			switch event := event.(type) {
 			case *contractsapi.SignedBridgeMessageBatch:
 				if err := ber.sendBridgeMessageBatch(event); err != nil {
-					ber.logger.Error("error ocurred while sending bridge message batch transaction", "error", err)
+					ber.logger.Error("error occurred while sending bridge message batch transaction", "error", err)
 				}
 			case *contractsapi.SignedValidatorSet:
 				if err := ber.sendCommitValidatorSet(event); err != nil {
-					ber.logger.Error("error ocurred while sending commit validator set transaction", "error", err)
+					ber.logger.Error("error occurred while sending commit validator set transaction", "error", err)
 				}
 			default:
 				ber.logger.Error("unknown event type", "event", event)
@@ -219,6 +219,7 @@ func (ber *bridgeEventRelayerImpl) sendCommitValidatorSet(event *contractsapi.Si
 		if err != nil {
 			// for now just log the error and continue
 			ber.logger.Error("failed to send commit validator set transaction to internal chain", "error", err)
+
 			continue
 		}
 
@@ -278,7 +279,6 @@ func (ber *bridgeEventRelayerImpl) Start(runtimeCfg *runtimeConfig, eventProvide
 // for listening to the events from an external chain
 func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 	bridgeCfg *BridgeConfig, runtimeCfg *runtimeConfig) (*tracker.EventTracker, error) {
-
 	store, err := store.NewBoltDBEventTrackerStore(
 		path.Join(runtimeCfg.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", chainID)))
 	if err != nil {
