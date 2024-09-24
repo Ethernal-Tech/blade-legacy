@@ -42,7 +42,7 @@ var (
 	SignedBridgeMessageBatchABIType = abi.MustNewType(
 		"tuple(tuple(tuple(" +
 			"uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload" +
-			")[] messages,uint256 sourceChainId,uint256 destinationChainId) batch, uint256[2] signature, bytes)")
+			")[] messages,uint256 sourceChainId,uint256 destinationChainId) batch,uint256[2] signature,bytes bitmap)")
 	SignedValidatorABIType = abi.MustNewType(
 		"tuple(tuple(address _address,uint256[4] blsKey,uint256 votingPower)[] newValidatorSet," +
 			"uint256[2] signature, bytes bitmap)")
