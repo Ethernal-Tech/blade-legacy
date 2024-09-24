@@ -283,18 +283,6 @@ func (f *fsm) applyValidatorSetCommitTx(nextValidators validator.AccountSet, ext
 	return f.blockBuilder.WriteTx(tx)
 }
 
-// getValidatorsTransition applies delta to the current validators,
-func (f *fsm) getValidatorsTransition(delta *validator.ValidatorSetDelta) (validator.AccountSet, error) {
-	nextValidators, err := f.validators.Accounts().ApplyDelta(delta)
-	if err != nil {
-		return nil, err
-	}
-
-	f.logger.Debug("getValidatorsTransition", "Next validators", nextValidators)
-
-	return nextValidators, nil
-}
-
 // createCommitEpochTx create a StateTransaction, which invokes ValidatorSet smart contract
 // and sends all the necessary metadata to it.
 func (f *fsm) createCommitEpochTx() (*types.Transaction, error) {

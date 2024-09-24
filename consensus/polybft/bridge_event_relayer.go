@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -66,74 +67,88 @@ type bridgeEventRelayerImpl struct {
 	eventTrackers []*tracker.EventTracker
 }
 
+// newBridgeEventRelayer creates a new instance of bridge event relayer
+// if the node is not a relayer, it will return a dummy bridge event relayer
 func newBridgeEventRelayer(
 	runtimeConfig *runtimeConfig,
-	key crypto.Key,
+	eventProvider *EventProvider,
 	logger hclog.Logger,
 ) (BridgeEventRelayer, error) {
-	var relayer BridgeEventRelayer
-	txRelayerMap := make(map[uint64]txrelayer.TxRelayer)
+	if !runtimeConfig.consensusConfig.IsRelayer {
+		return &dummyBridgeEventRelayer{}, nil
+	}
+
+	relayer := &bridgeEventRelayerImpl{
+		key:           wallet.NewEcdsaSigner(runtimeConfig.Key),
+		logger:        logger,
+		runtimeConfig: runtimeConfig,
+	}
+
+	txRelayers := make(map[uint64]txrelayer.TxRelayer, len(runtimeConfig.GenesisConfig.Bridge))
+	trackers := make([]*tracker.EventTracker, 0, len(runtimeConfig.GenesisConfig.Bridge))
+
 	for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
-		txRelayer, err := getBridgeTxRelayer(config.JSONRPCEndpoint, logger)
+		txRelayer, err := createBridgeTxRelayer(config.JSONRPCEndpoint, logger)
 		if err != nil {
 			return nil, err
 		}
 
-		txRelayerMap[chainID] = txRelayer
+		txRelayers[chainID] = txRelayer
+
+		tracker, err := relayer.startTrackerForChain(chainID, config, runtimeConfig)
+		if err != nil {
+			return nil, err
+		}
+
+		trackers = append(trackers, tracker)
 	}
 
-	relayerImpl := &bridgeEventRelayerImpl{
-		key:           key,
-		logger:        logger,
-		txRelayers:    txRelayerMap,
-		runtimeConfig: runtimeConfig,
-	}
+	relayer.txRelayers = txRelayers
+	relayer.eventTrackers = trackers
 
-	if err := relayerImpl.initTrackers(runtimeConfig); err != nil {
-		return nil, err
-	}
+	eventProvider.Subscribe(relayer)
 
 	return relayer, nil
 }
-func (ber *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) error {
+
+// startTrackerForChain starts a new instance of tracker.EventTracker
+// for listening to the events from an external chain
+func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
+	bridgeCfg *BridgeConfig, runtimeCfg *runtimeConfig) (*tracker.EventTracker, error) {
 	var (
 		bridgeMessageResultEventSig    = new(contractsapi.BridgeMessageResultEvent).Sig()
 		gatewayNewValidatorSetEventSig = new(contractsapi.NewValidatorSetEvent).Sig()
 	)
 
-	for chainID, bridgeConfig := range runtimeConfig.GenesisConfig.Bridge {
-		store, err := store.NewBoltDBEventTrackerStore(
-			path.Join(runtimeConfig.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", chainID)))
-		if err != nil {
-			return err
-		}
-
-		eventTracker, err := tracker.NewEventTracker(
-			&tracker.EventTrackerConfig{
-				EventSubscriber:        ber,
-				Logger:                 ber.logger,
-				RPCEndpoint:            bridgeConfig.JSONRPCEndpoint,
-				SyncBatchSize:          runtimeConfig.eventTracker.SyncBatchSize,
-				NumBlockConfirmations:  runtimeConfig.eventTracker.NumBlockConfirmations,
-				NumOfBlocksToReconcile: runtimeConfig.eventTracker.NumOfBlocksToReconcile,
-				PollInterval:           runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
-				LogFilter: map[ethgo.Address][]ethgo.Hash{
-					ethgo.Address(bridgeConfig.ExternalGatewayAddr): {
-						bridgeMessageResultEventSig,
-						gatewayNewValidatorSetEventSig},
-				},
-			},
-			store,
-			bridgeConfig.EventTrackerStartBlocks[bridgeConfig.ExternalGatewayAddr],
-		)
-		if err != nil {
-			return err
-		}
-
-		ber.eventTrackers = append(ber.eventTrackers, eventTracker)
+	store, err := store.NewBoltDBEventTrackerStore(
+		path.Join(runtimeCfg.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", chainID)))
+	if err != nil {
+		return nil, err
 	}
 
-	return nil
+	eventTracker, err := tracker.NewEventTracker(
+		&tracker.EventTrackerConfig{
+			EventSubscriber:        ber,
+			Logger:                 ber.logger,
+			RPCEndpoint:            bridgeCfg.JSONRPCEndpoint,
+			SyncBatchSize:          runtimeCfg.eventTracker.SyncBatchSize,
+			NumBlockConfirmations:  runtimeCfg.eventTracker.NumBlockConfirmations,
+			NumOfBlocksToReconcile: runtimeCfg.eventTracker.NumOfBlocksToReconcile,
+			PollInterval:           runtimeCfg.GenesisConfig.BlockTrackerPollInterval.Duration,
+			LogFilter: map[ethgo.Address][]ethgo.Hash{
+				ethgo.Address(bridgeCfg.ExternalGatewayAddr): {
+					bridgeMessageResultEventSig,
+					gatewayNewValidatorSetEventSig},
+			},
+		},
+		store,
+		bridgeCfg.EventTrackerStartBlocks[bridgeCfg.ExternalGatewayAddr],
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return eventTracker, eventTracker.Start()
 }
 
 func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
@@ -311,7 +326,9 @@ func (ber *bridgeEventRelayerImpl) Close() {
 	}
 }
 
-func getBridgeTxRelayer(rpcEndpoint string, logger hclog.Logger) (txrelayer.TxRelayer, error) {
+// createBridgeTxRelayer creates a new instance of txrelayer.TxRelayer
+// used for sending transactions to the external chain
+func createBridgeTxRelayer(rpcEndpoint string, logger hclog.Logger) (txrelayer.TxRelayer, error) {
 	if rpcEndpoint == "" || strings.Contains(rpcEndpoint, "0.0.0.0") {
 		_, port, err := net.SplitHostPort(rpcEndpoint)
 		if err == nil {

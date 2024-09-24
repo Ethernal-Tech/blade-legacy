@@ -16,16 +16,6 @@ import (
 	bolt "go.etcd.io/bbolt"
 )
 
-const (
-	// defaultMaxBlocksToWaitForResend specifies how many blocks should be wait
-	// in order to try again to send transaction
-	defaultMaxBlocksToWaitForResend = uint64(30)
-	// defaultMaxAttemptsToSend specifies how many sending retries for one transaction
-	defaultMaxAttemptsToSend = uint64(15)
-	// defaultMaxEventsPerBatch specifies maximum events per one batchExecute tx
-	defaultMaxEventsPerBatch = uint64(10)
-)
-
 var bridgeMessageEventSig = new(contractsapi.BridgeMsgEvent).Sig()
 
 // eventTrackerConfig is a struct that holds the event tracker configuration

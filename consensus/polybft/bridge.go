@@ -3,7 +3,6 @@ package polybft
 import (
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 )
@@ -12,10 +11,10 @@ var _ Bridge = (*bridge)(nil)
 
 // bridge is a struct that manages different bridges
 type bridge struct {
-	bridgeManagers     map[uint64]BridgeManager
-	state              *State
-	internalChainID    uint64
-	bridgeEventRelayer BridgeEventRelayer
+	bridgeManagers  map[uint64]BridgeManager
+	state           *State
+	internalChainID uint64
+	relayer         BridgeEventRelayer
 }
 
 // Bridge is an interface that defines functions that a bridge must implement
@@ -62,38 +61,14 @@ func newBridge(runtime Runtime,
 		bridge.bridgeManagers[externalChainID] = bridgeManager
 	}
 
-	if err := bridge.initBridgeEventRelayer(eventProvider, runtimeConfig, logger); err != nil {
+	relayer, err := newBridgeEventRelayer(runtimeConfig, eventProvider, logger)
+	if err != nil {
 		return nil, err
 	}
 
+	bridge.relayer = relayer
+
 	return bridge, nil
-}
-
-// initBridgeEventRelayer initializes bridge event relayer
-// if not enabled, then a dummy bridge event relayer will be used
-func (b *bridge) initBridgeEventRelayer(
-	eventProvider *EventProvider,
-	runtimeConfig *runtimeConfig,
-	logger hclog.Logger) error {
-	if runtimeConfig.consensusConfig.IsRelayer {
-
-		bridgeEventRelayer, err := newBridgeEventRelayer(
-			runtimeConfig,
-			wallet.NewEcdsaSigner(runtimeConfig.Key),
-			logger.Named("bridge_event_relayer"),
-		)
-		if err != nil {
-			return err
-		}
-
-		b.bridgeEventRelayer = bridgeEventRelayer
-	} else {
-		b.bridgeEventRelayer = &dummyBridgeEventRelayer{}
-	}
-
-	eventProvider.Subscribe(b.bridgeEventRelayer)
-
-	return nil
 }
 
 // Close calls Close on each bridge manager, which stops ongoing go routines in manager
@@ -102,7 +77,7 @@ func (b *bridge) Close() {
 		bridgeManager.Close()
 	}
 
-	b.bridgeEventRelayer.Close()
+	b.relayer.Close()
 }
 
 // PostBlock is a function executed on every block finalization (either by consensus or syncer)
@@ -114,7 +89,7 @@ func (b bridge) PostBlock(req *PostBlockRequest) error {
 		}
 	}
 
-	if err := b.bridgeEventRelayer.PostBlock(req); err != nil {
+	if err := b.relayer.PostBlock(req); err != nil {
 		return err
 	}
 

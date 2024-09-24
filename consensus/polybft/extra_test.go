@@ -588,11 +588,6 @@ func Test_GetIbftExtraClean_Fail(t *testing.T) {
 }
 
 func TestBlockMetaData_Hash(t *testing.T) {
-	const (
-		chainID     = uint64(1)
-		blockNumber = uint64(27)
-	)
-
 	blockHash := types.BytesToHash(generateRandomBytes(t))
 	origBlockMeta := &BlockMetaData{
 		BlockRound:  0,
