@@ -3,6 +3,7 @@ package contractsapi
 import (
 	"math/big"
 
+	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/Ethernal-Tech/ethgo/abi"
 )
@@ -79,4 +80,15 @@ func (s *SignedValidatorSet) EncodeAbi() ([]byte, error) {
 
 func (s *SignedValidatorSet) DecodeAbi(buf []byte) error {
 	return decodeStruct(SignedValidatorABIType, buf, &s)
+}
+
+// GetValidatorsAsMap returns the new validator set as a map of address to validator
+func (c *CommitValidatorSetBridgeStorageFn) GetValidatorsAsMap() map[types.Address]*Validator {
+	validatorMap := make(map[types.Address]*Validator, len(c.NewValidatorSet))
+
+	for _, v := range c.NewValidatorSet {
+		validatorMap[v.Address] = v
+	}
+
+	return validatorMap
 }

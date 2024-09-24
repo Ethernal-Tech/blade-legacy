@@ -418,7 +418,6 @@ func TestFSM_BuildProposal_EpochEndingBlock_FailToGetNextValidatorsHash(t *testi
 	blockBuilderMock := new(blockBuilderMock)
 	blockBuilderMock.On("WriteTx", mock.Anything).Return(error(nil)).Once()
 	blockBuilderMock.On("Reset").Return(error(nil)).Once()
-	blockBuilderMock.On("Fill").Once()
 
 	fsm := &fsm{parent: parent,
 		blockBuilder:       blockBuilderMock,
@@ -766,7 +765,7 @@ func TestFSM_VerifyStateTransaction_BridgeBatches(t *testing.T) {
 
 		tx := createStateTransactionWithData(contracts.BridgeStorageContract, encodedBatch)
 		assert.ErrorContains(t, fsm.VerifyStateTransactions([]*types.Transaction{tx}),
-			"found bridge batch tx in a non-sprint block")
+			"bridge batch tx is not allowed in non-sprint block")
 	})
 
 	t.Run("two batch transactions", func(t *testing.T) {
