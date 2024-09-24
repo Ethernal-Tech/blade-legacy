@@ -72,7 +72,6 @@ var _ BridgeManager = (*bridgeManager)(nil)
 // such as handling and executing bridge events
 type bridgeManager struct {
 	bridgeEventManager BridgeEventManager
-	stateSyncRelayer   BridgeEventRelayer
 
 	eventTracker       *tracker.EventTracker
 	eventTrackerConfig *eventTrackerConfig
@@ -126,10 +125,6 @@ func newBridgeManager(
 func (b *bridgeManager) PostBlock(req *PostBlockRequest) error {
 	if err := b.bridgeEventManager.PostBlock(); err != nil {
 		return fmt.Errorf("failed to execute post block in bridge event manager. Err: %w", err)
-	}
-
-	if err := b.stateSyncRelayer.PostBlock(req); err != nil {
-		return fmt.Errorf("failed to execute post block in state sync relayer. Err: %w", err)
 	}
 
 	return nil

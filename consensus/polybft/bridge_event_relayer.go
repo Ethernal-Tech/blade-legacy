@@ -21,10 +21,10 @@ import (
 )
 
 var (
-	errUnknownStateSyncRelayerEvent = errors.New("unknown event from gateway contract")
+	errUnknownBridgeEventRelayerEvent = errors.New("unknown event from gateway contract")
 )
 
-// StateSyncRelayer is an interface that defines functions for state sync relayer
+// BridgeEventRelayer is an interface that defines functions for bridge event relayer
 type BridgeEventRelayer interface {
 	EventSubscriber
 	PostBlock(req *PostBlockRequest) error
@@ -85,11 +85,12 @@ func newBridgeEventRelayer(
 	return relayer
 }
 
-func (b *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) error {
+func (ber *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) error {
 	var bridgeMessageResultEventSig = new(contractsapi.BridgeMessageResultEvent).Sig()
+
 	var gatewayNewValidatorSetEventSig = new(contractsapi.NewValidatorSetEvent).Sig()
 
-	for i, eventTrackerConfig := range b.eventTrackerConfigs {
+	for i, eventTrackerConfig := range ber.eventTrackerConfigs {
 		store, err := store.NewBoltDBEventTrackerStore(
 			path.Join(runtimeConfig.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", i)))
 		if err != nil {
@@ -98,8 +99,8 @@ func (b *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) erro
 
 		eventTracker, err := tracker.NewEventTracker(
 			&tracker.EventTrackerConfig{
-				EventSubscriber:        b,
-				Logger:                 b.logger,
+				EventSubscriber:        ber,
+				Logger:                 ber.logger,
 				RPCEndpoint:            eventTrackerConfig.jsonrpcAddr,
 				SyncBatchSize:          eventTrackerConfig.EventTracker.SyncBatchSize,
 				NumBlockConfirmations:  eventTrackerConfig.NumBlockConfirmations,
@@ -118,7 +119,7 @@ func (b *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) erro
 			return err
 		}
 
-		b.eventTrackers = append(b.eventTrackers, eventTracker)
+		ber.eventTrackers = append(ber.eventTrackers, eventTracker)
 	}
 
 	return nil
@@ -200,7 +201,6 @@ func (ber *bridgeEventRelayerImpl) GetLogFilters() map[types.Address][]types.Has
 	}
 
 	return logFilters
-
 }
 
 // ProcessLog is the implementation of EventSubscriber interface,
@@ -211,6 +211,7 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		newBatchEvent            contractsapi.NewBatchEvent
 		newValidatorSetEvent     contractsapi.NewValidatorSetStoredEvent
 	)
+
 	provider, err := ber.runtimeConfig.blockchain.GetStateProviderForBlock(header)
 	if err != nil {
 		return err
@@ -229,11 +230,8 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 			return nil
 		}
 
-		if bridgeMessageResultEvent.Status {
-			if err := ber.state.removeBridgeEvents(&bridgeMessageResultEvent); err != nil {
-				return err
-			}
-
+		if !bridgeMessageResultEvent.Status {
+			// TO DO rollback logic
 		}
 
 		return nil
@@ -252,7 +250,7 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 
 		ber.bridgeBatches = append(ber.bridgeBatches, bridgeBatch)
 	default:
-		return errUnknownStateSyncRelayerEvent
+		return errUnknownBridgeEventRelayerEvent
 	}
 
 	return nil
@@ -276,7 +274,9 @@ func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log)
 		}
 
 		if bridgeMessageResultEvent.Status {
-			ber.state.removeBridgeEvents(bridgeMessageResultEvent)
+			if err := ber.state.removeBridgeEvents(bridgeMessageResultEvent); err != nil {
+				return err
+			}
 		}
 	case gatewayNewValidatorSetEvent.Sig():
 		doesMatch, err := gatewayNewValidatorSetEvent.ParseLog(eventLog)

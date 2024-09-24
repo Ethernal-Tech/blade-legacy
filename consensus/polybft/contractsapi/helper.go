@@ -36,15 +36,16 @@ type FunctionAbi interface {
 }
 
 var (
-	// stateSyncABIType is a specific case where we need to encode state sync event as a tuple of tuple
-	stateSyncABIType = abi.MustNewType(
-		"tuple(tuple(uint256 id, address sender, address receiver, bytes data))")
-
 	// GetCheckpointBlockABIResponse is the ABI type for getCheckpointBlock function return value
 	GetCheckpointBlockABIResponse = abi.MustNewType("tuple(bool isFound, uint256 checkpointBlock)")
 
-	SignedBridgeMessageBatchABIType = abi.MustNewType("tuple(tuple(tuple(uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload)[] messages,uint256 sourceChainId,uint256 destinationChainId) batch, uint256[2] signature, bytes)")
-	SignedValidatorABIType          = abi.MustNewType("tuple(tuple(address _address,uint256[4] blsKey,uint256 votingPower)[] newValidatorSet,uint256[2] signature, bytes bitmap)")
+	SignedBridgeMessageBatchABIType = abi.MustNewType(
+		"tuple(tuple(tuple(" +
+			"uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload" +
+			")[] messages,uint256 sourceChainId,uint256 destinationChainId) batch, uint256[2] signature, bytes)")
+	SignedValidatorABIType = abi.MustNewType(
+		"tuple(tuple(address _address,uint256[4] blsKey,uint256 votingPower)[] newValidatorSet," +
+			"uint256[2] signature, bytes bitmap)")
 )
 
 var (

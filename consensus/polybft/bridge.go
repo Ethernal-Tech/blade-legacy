@@ -66,7 +66,7 @@ func newBridge(runtime Runtime,
 	return bridge, nil
 }
 
-// initStateSyncRelayer initializes bridge event relayer
+// initBridgeEventRelayer initializes bridge event relayer
 // if not enabled, then a dummy bridge event relayer will be used
 func (b *bridge) initBridgeEventRelayer(
 	eventProvider *EventProvider,
@@ -75,6 +75,7 @@ func (b *bridge) initBridgeEventRelayer(
 	if runtimeConfig.consensusConfig.IsRelayer {
 		txRelayerMap := make(map[uint64]txrelayer.TxRelayer)
 		eventTrackerConfigs := make([]*eventTrackerConfig, 0, len(runtimeConfig.GenesisConfig.Bridge))
+
 		for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
 			txRelayer, err := getBridgeTxRelayer(config.JSONRPCEndpoint, logger)
 			if err != nil {
@@ -82,6 +83,7 @@ func (b *bridge) initBridgeEventRelayer(
 			}
 
 			txRelayerMap[chainID] = txRelayer
+
 			eventTrackerConfigs = append(eventTrackerConfigs, &eventTrackerConfig{
 				gatewayAddr:         config.ExternalGatewayAddr,
 				jsonrpcAddr:         config.JSONRPCEndpoint,
@@ -98,10 +100,11 @@ func (b *bridge) initBridgeEventRelayer(
 			eventTrackerConfigs,
 		)
 
-		bridgeEventRelayer.initTrackers(runtimeConfig)
+		if err := bridgeEventRelayer.initTrackers(runtimeConfig); err != nil {
+			return err
+		}
 
 		b.bridgeEventRelayer = bridgeEventRelayer
-
 	} else {
 		b.bridgeEventRelayer = &dummyBridgeEventRelayer{}
 	}
@@ -127,10 +130,11 @@ func (b bridge) PostBlock(req *PostBlockRequest) error {
 		}
 	}
 
-	if err := b.bridgeEventRelayer.PostBlock(req); err != nil {
-		return err
+	if b.bridgeEventRelayer != nil {
+		if err := b.bridgeEventRelayer.PostBlock(req); err != nil {
+			return err
+		}
 	}
-
 	return nil
 }
 

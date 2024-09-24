@@ -107,7 +107,8 @@ func (s *SystemStateImpl) GetNextCommittedIndex(chainID uint64, chainType ChainT
 	return nextCommittedIndex.Uint64() + 1, nil
 }
 
-func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (*contractsapi.SignedBridgeMessageBatch, error) {
+func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
+	*contractsapi.SignedBridgeMessageBatch, error) {
 	rawResult, err := s.bridgeStorageContract.Call(
 		"batches",
 		ethgo.Latest,
@@ -124,7 +125,8 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (*contr
 	return bridgeBatch, nil
 }
 
-func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int) (*contractsapi.SignedValidatorSet, error) {
+func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int) (
+	*contractsapi.SignedValidatorSet, error) {
 	rawResult, err := s.bridgeStorageContract.Call(
 		"commitedValidatorSets",
 		ethgo.Latest,

@@ -55,7 +55,7 @@ func ABITransaction(
 	return relayer.SendTransaction(tx, key)
 }
 
-// checkStateSyncResultLogs is helper function which parses given StateSyncResultEvent event's logs,
+// checkBridgeMessageResultLogs is helper function which parses given BridgeMessageResultEvent event's logs,
 // extracts status topic value and makes assertions against it.
 func checkBridgeMessageResultLogs(
 	t *testing.T,
@@ -79,11 +79,11 @@ func checkBridgeMessageResultLogs(
 	}
 }
 
-// assertStateSyncResultSuccess asserts that:
+// assertBridgeEventResultSuccess asserts that:
 // 1. there are required amount of logs,
-// 2. they are of contractsapi.StateSyncResult type
+// 2. they are of contractsapi.BridgeMessageResult type
 // 3. status is true, meaning that the state syncs were executed successfully
-func assertStateSyncResultSuccess(
+func assertBridgeEventResultSuccess(
 	t *testing.T,
 	logs []*ethgo.Log,
 	expectedCount int) {

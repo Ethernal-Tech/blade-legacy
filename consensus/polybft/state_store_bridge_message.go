@@ -18,8 +18,6 @@ var (
 	bridgeBatchBucket = []byte("bridgeBatches")
 	// bucket to store message votes (signatures)
 	messageVotesBucket = []byte("votes")
-	// bucket to store all bridge event relayer events
-	stateSyncRelayerEventsBucket = []byte("bridgeMsgRelayerEvents")
 
 	// errNotEnoughBridgeEvents error message
 	errNotEnoughBridgeEvents = errors.New("there is either a gap or not enough bridge events")
@@ -49,7 +47,7 @@ type BridgeMessageStore struct {
 func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 	var err error
 
-	var bridgeMessageBucket, bridgeBatchesBucket, stateSyncRelayerBucket *bolt.Bucket
+	var bridgeMessageBucket, bridgeBatchesBucket *bolt.Bucket
 
 	if bridgeMessageBucket, err = tx.CreateBucketIfNotExists(bridgeMessageEventsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeMessageEventsBucket), err)
@@ -57,10 +55,6 @@ func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 
 	if bridgeBatchesBucket, err = tx.CreateBucketIfNotExists(bridgeBatchBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeBatchBucket), err)
-	}
-
-	if stateSyncRelayerBucket, err = tx.CreateBucketIfNotExists(stateSyncRelayerEventsBucket); err != nil {
-		return fmt.Errorf("failed to create bucket=%s: %w", string(stateSyncRelayerEventsBucket), err)
 	}
 
 	for _, chainID := range bms.chainIDs {
@@ -72,10 +66,6 @@ func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
 
 		if _, err := bridgeBatchesBucket.CreateBucketIfNotExists(chainIDBytes); err != nil {
 			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(bridgeBatchBucket), err)
-		}
-
-		if _, err := stateSyncRelayerBucket.CreateBucketIfNotExists(chainIDBytes); err != nil {
-			return fmt.Errorf("failed to create bucket chainID=%s: %w", string(stateSyncRelayerEventsBucket), err)
 		}
 	}
 

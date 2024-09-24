@@ -154,7 +154,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		// assert that all deposits are executed successfully
 		// because of the token mapping with the first deposit
-		assertStateSyncResultSuccess(t, logs, transfersCount+1)
+		assertBridgeEventResultSuccess(t, logs, transfersCount+1)
 
 		// get child token address
 		childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
@@ -280,7 +280,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 		require.NoError(t, err)
 
 		// assert that all state syncs are executed successfully
-		assertStateSyncResultSuccess(t, logs, transfersCount)
+		assertBridgeEventResultSuccess(t, logs, transfersCount)
 	})
 }
 
@@ -390,7 +390,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 			// assert that all deposits are executed successfully.
 			// All deposits are sent using a single transaction, so arbitrary message bridge emits two state sync events:
 			// MAP_TOKEN_SIG and DEPOSIT_BATCH_SIG state sync events
-			assertStateSyncResultSuccess(t, logs, stateSyncedLogsCount)
+			assertBridgeEventResultSuccess(t, logs, stateSyncedLogsCount)
 
 			break
 		}
@@ -559,7 +559,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 			// assert that all deposits are executed successfully.
 			// All deposits are sent using a single transaction, so arbitrary message bridge emits two state sync events:
 			// MAP_TOKEN_SIG and DEPOSIT_BATCH_SIG state sync events
-			assertStateSyncResultSuccess(t, logs, stateSyncedLogsCount)
+			assertBridgeEventResultSuccess(t, logs, stateSyncedLogsCount)
 
 			break
 		}
@@ -1040,7 +1040,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 		// assert that all deposits are executed successfully
 		// (token mapping and transferCount of deposits)
-		assertStateSyncResultSuccess(t, logs, transfersCount+1)
+		assertBridgeEventResultSuccess(t, logs, transfersCount+1)
 
 		// get child token address
 		childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
@@ -1339,7 +1339,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 			if len(logs) == stateSyncedLogsCount || i == numberOfAttempts-1 {
 				// assert that all deposits are executed successfully
-				assertStateSyncResultSuccess(t, logs, stateSyncedLogsCount)
+				assertBridgeEventResultSuccess(t, logs, stateSyncedLogsCount)
 
 				break
 			}
