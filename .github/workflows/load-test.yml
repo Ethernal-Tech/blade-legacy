@@ -214,8 +214,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
-      - name: Install make and jq
-        run: sudo apt-get -y install make jq
       - name: Build Blade
         run: make build
         env:
