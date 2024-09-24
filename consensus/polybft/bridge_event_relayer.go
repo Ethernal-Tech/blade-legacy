@@ -30,7 +30,6 @@ var (
 // BridgeEventRelayer is an interface that defines functions for bridge event relayer
 type BridgeEventRelayer interface {
 	EventSubscriber
-	PostBlock(req *PostBlockRequest) error
 	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 	Close()
 	Start(runtimeCfg *runtimeConfig, eventProvider *EventProvider) error
@@ -41,7 +40,6 @@ var _ BridgeEventRelayer = (*dummyBridgeEventRelayer)(nil)
 // dummyBridgeEventRelayer is a dummy implementation of a BridgeEventRelayer
 type dummyBridgeEventRelayer struct{}
 
-func (d *dummyBridgeEventRelayer) PostBlock(req *PostBlockRequest) error              { return nil }
 func (d *dummyBridgeEventRelayer) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
 func (d *dummyBridgeEventRelayer) GetLogFilters() map[types.Address][]types.Hash {
 	return make(map[types.Address][]types.Hash)
@@ -310,12 +308,6 @@ func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 	}
 
 	return eventTracker, eventTracker.Start()
-}
-
-// PostBlock is the implementation of BridgeEventRelayer interface
-// Called at the end of each block to send the bridge batches to the external chains
-func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
-	return nil
 }
 
 // EventSubscriber implementation
