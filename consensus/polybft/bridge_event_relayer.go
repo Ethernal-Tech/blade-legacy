@@ -87,6 +87,19 @@ func newBridgeEventRelayer(
 	txRelayers := make(map[uint64]txrelayer.TxRelayer, len(runtimeConfig.GenesisConfig.Bridge))
 	trackers := make([]*tracker.EventTracker, 0, len(runtimeConfig.GenesisConfig.Bridge))
 
+	// create tx relayer for internal chain
+	internalChainTxRelayer, err := txrelayer.NewTxRelayer(
+		txrelayer.WithIPAddress(runtimeConfig.consensusConfig.RPCEndpoint),
+		txrelayer.WithWriter(logger.StandardWriter(&hclog.StandardLoggerOptions{})),
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create tx relayer for internal chain: %w", err)
+	}
+
+	txRelayers[uint64(runtimeConfig.consensusConfig.Params.ChainID)] = internalChainTxRelayer
+
+	// create tx relayers and event trackers for external chains
 	for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
 		txRelayer, err := createBridgeTxRelayer(config.JSONRPCEndpoint, logger)
 		if err != nil {
@@ -106,6 +119,7 @@ func newBridgeEventRelayer(
 	relayer.txRelayers = txRelayers
 	relayer.eventTrackers = trackers
 
+	// subscribe relayer to events from the internal chain
 	eventProvider.Subscribe(relayer)
 
 	return relayer, nil
@@ -151,6 +165,8 @@ func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 	return eventTracker, eventTracker.Start()
 }
 
+// PostBlock is the implementation of BridgeEventRelayer interface
+// Called at the end of each block to send the bridge batches to the external chains
 func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
 	for _, batch := range ber.bridgeBatches {
 		input, err := (&contractsapi.ReceiveBatchGatewayFn{
