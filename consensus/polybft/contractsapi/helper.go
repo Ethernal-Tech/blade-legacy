@@ -26,14 +26,19 @@ type EventAbi interface {
 	ParseLog(log *ethgo.Log) (bool, error)
 }
 
+// StructAbi is an interface representing a structure in contractsapi
+type StructAbi interface {
+	// DecodeAbi does abi decoding of given structure/function
+	DecodeAbi(buf []byte) error
+	// EncodeAbi does abi encoding of given structure/function
+	EncodeAbi() ([]byte, error)
+}
+
 // FunctionAbi is an interface representing a function in contractsapi
 type FunctionAbi interface {
+	StructAbi
 	// Sig returns the function ABI signature or ID (which is unique for all function types)
 	Sig() []byte
-	// DecodeAbi does abi decoding of given function
-	DecodeAbi(buf []byte) error
-	// EncodeAbi does abi encoding of given function
-	EncodeAbi() ([]byte, error)
 }
 
 var (

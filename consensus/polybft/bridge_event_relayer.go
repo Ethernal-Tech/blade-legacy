@@ -23,6 +23,8 @@ import (
 
 var (
 	errUnknownBridgeEventRelayerEvent = errors.New("unknown event from gateway contract")
+	bridgeMessageResultEventSig       = new(contractsapi.BridgeMessageResultEvent).Sig()
+	eventChBuffer                     = 100
 )
 
 // BridgeEventRelayer is an interface that defines functions for bridge event relayer
@@ -58,17 +60,19 @@ type bridgeEventRelayerImpl struct {
 	key    crypto.Key
 	logger hclog.Logger
 
-	lastValidatorSet *contractsapi.SignedValidatorSet
-	bridgeBatches    []*contractsapi.SignedBridgeMessageBatch
+	state *BridgeMessageStore
 
-	lastGatewayValidatorSet map[uint64][]*contractsapi.Validator
-	state                   *BridgeMessageStore
+	externalTxRelayers map[uint64]txrelayer.TxRelayer
+	internalTxRelayer  txrelayer.TxRelayer
+	internalChainID    *big.Int
 
-	txRelayers map[uint64]txrelayer.TxRelayer
 	blockchain blockchainBackend
 
 	bridgeConfig  map[uint64]*BridgeConfig
 	eventTrackers []*tracker.EventTracker
+
+	eventCh chan contractsapi.StructAbi
+	quitCh  chan struct{}
 }
 
 // newBridgeEventRelayer creates a new instance of bridge event relayer
@@ -82,12 +86,153 @@ func newBridgeEventRelayer(
 	}
 
 	relayer := &bridgeEventRelayerImpl{
-		key:        wallet.NewEcdsaSigner(runtimeConfig.Key),
-		logger:     logger.Named("bridge-relayer"),
-		blockchain: runtimeConfig.blockchain,
+		key:             wallet.NewEcdsaSigner(runtimeConfig.Key),
+		logger:          logger.Named("bridge-relayer"),
+		internalChainID: big.NewInt(runtimeConfig.genesisParams.ChainID),
+		blockchain:      runtimeConfig.blockchain,
+		eventCh:         make(chan contractsapi.StructAbi, eventChBuffer),
+		quitCh:          make(chan struct{}),
 	}
 
 	return relayer, nil
+}
+
+// sendTx is a goroutine that listens to the event channel and sends the appropriate transactions
+func (ber *bridgeEventRelayerImpl) sendTx() {
+	for {
+		select {
+		case <-ber.quitCh:
+			return
+		case event := <-ber.eventCh:
+			switch event := event.(type) {
+			case *contractsapi.SignedBridgeMessageBatch:
+				if err := ber.sendBridgeMessageBatch(event); err != nil {
+					ber.logger.Error("error ocurred while sending bridge message batch transaction", "error", err)
+				}
+			case *contractsapi.SignedValidatorSet:
+				if err := ber.sendCommitValidatorSet(event); err != nil {
+					ber.logger.Error("error ocurred while sending commit validator set transaction", "error", err)
+				}
+			default:
+				ber.logger.Error("unknown event type", "event", event)
+			}
+		}
+	}
+}
+
+// sendBridgeMessageBatch sends bridge message batch execute transaction to the external and internal chains
+func (ber *bridgeEventRelayerImpl) sendBridgeMessageBatch(event *contractsapi.SignedBridgeMessageBatch) error {
+	var (
+		txRelayer          = ber.internalTxRelayer
+		destinationChainID = event.Batch.DestinationChainID.Uint64()
+		to                 = ber.bridgeConfig[destinationChainID].InternalGatewayAddr
+		exists             bool
+	)
+
+	if event.Batch.DestinationChainID.Cmp(ber.internalChainID) != 0 {
+		txRelayer, exists = ber.externalTxRelayers[destinationChainID]
+		if !exists {
+			return fmt.Errorf("tx relayer for chain %d not found", destinationChainID)
+		}
+
+		to = ber.bridgeConfig[destinationChainID].ExternalGatewayAddr
+	}
+
+	input, err := (&contractsapi.ReceiveBatchGatewayFn{
+		Batch:     event.Batch,
+		Signature: event.Signature,
+		Bitmap:    event.Bitmap,
+	}).EncodeAbi()
+	if err != nil {
+		return err
+	}
+
+	txn := types.NewTx(types.NewLegacyTx(
+		types.WithFrom(ber.key.Address()),
+		types.WithTo(&to),
+		types.WithInput(input),
+	))
+
+	receipt, err := txRelayer.SendTransaction(txn, ber.key)
+	if err != nil {
+		return fmt.Errorf("failed to execute batch transaction on chain: %d, and gateway contract: %s. Error: %w",
+			destinationChainID, to, err)
+	}
+
+	ber.logger.Info("sent batch transaction",
+		"destinationChainID", destinationChainID,
+		"gatewayAddr", to,
+		"status", types.ReceiptStatus(receipt.Status),
+		"txHash", receipt.TransactionHash,
+		"blockNumber", receipt.BlockNumber,
+	)
+
+	return nil
+}
+
+// sendCommitValidatorSet sends commit validator set transaction to the external and internal chains
+func (ber *bridgeEventRelayerImpl) sendCommitValidatorSet(event *contractsapi.SignedValidatorSet) error {
+	input, err := (&contractsapi.CommitValidatorSetBridgeStorageFn{
+		NewValidatorSet: event.NewValidatorSet,
+		Signature:       event.Signature,
+		Bitmap:          event.Bitmap,
+	}).EncodeAbi()
+	if err != nil {
+		return err
+	}
+
+	for chainID, txRelayer := range ber.externalTxRelayers {
+		// send commit validator set transaction to the external chains
+		to := ber.bridgeConfig[chainID].ExternalGatewayAddr
+		txn := types.NewTx(types.NewLegacyTx(
+			types.WithFrom(ber.key.Address()),
+			types.WithTo(&to),
+			types.WithInput(input),
+		))
+
+		receipt, err := txRelayer.SendTransaction(txn, ber.key)
+		if err != nil {
+			// for now just log the error and continue
+			ber.logger.Error("failed to send commit validator set transaction to external chain",
+				"chainID", chainID, "error", err)
+
+			continue
+		}
+
+		ber.logger.Info("sent commit validator set transaction to external chain",
+			"chainID", chainID,
+			"gatewayAddr", to,
+			"status", types.ReceiptStatus(receipt.Status),
+			"txHash", receipt.TransactionHash,
+			"blockNumber", receipt.BlockNumber,
+		)
+
+		// send commit validator set transaction to the internal chain
+		// we create a new txn to force the getting of the nonce and estimation of gas,
+		// since the txn for external chain is modified by the external chain tx relayer
+		to = ber.bridgeConfig[chainID].InternalGatewayAddr
+		txn = types.NewTx(types.NewLegacyTx(
+			types.WithFrom(ber.key.Address()),
+			types.WithTo(&to),
+			types.WithInput(input),
+		))
+
+		receipt, err = ber.internalTxRelayer.SendTransaction(txn, ber.key)
+		if err != nil {
+			// for now just log the error and continue
+			ber.logger.Error("failed to send commit validator set transaction to internal chain", "error", err)
+			continue
+		}
+
+		ber.logger.Info("sent commit validator set transaction to internal chain",
+			"gatewayAddr", to,
+			"status", types.ReceiptStatus(receipt.Status),
+			"txHash", receipt.TransactionHash,
+			"blockNumber", receipt.BlockNumber,
+		)
+	}
+
+	return nil
 }
 
 // Start starts the bridge relayer
@@ -101,7 +246,7 @@ func (ber *bridgeEventRelayerImpl) Start(runtimeCfg *runtimeConfig, eventProvide
 		return fmt.Errorf("failed to create tx relayer for internal chain: %w", err)
 	}
 
-	txRelayers[uint64(runtimeCfg.consensusConfig.Params.ChainID)] = internalChainTxRelayer //nolint:gosec
+	ber.internalTxRelayer = internalChainTxRelayer
 
 	// create tx relayers and event trackers for external chains
 	for chainID, config := range runtimeCfg.GenesisConfig.Bridge {
@@ -120,11 +265,13 @@ func (ber *bridgeEventRelayerImpl) Start(runtimeCfg *runtimeConfig, eventProvide
 		trackers = append(trackers, tracker)
 	}
 
-	ber.txRelayers = txRelayers
+	ber.externalTxRelayers = txRelayers
 	ber.eventTrackers = trackers
 
 	// subscribe relayer to events from the internal chain
 	eventProvider.Subscribe(ber)
+
+	go ber.sendTx()
 
 	return nil
 }
@@ -133,10 +280,6 @@ func (ber *bridgeEventRelayerImpl) Start(runtimeCfg *runtimeConfig, eventProvide
 // for listening to the events from an external chain
 func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 	bridgeCfg *BridgeConfig, runtimeCfg *runtimeConfig) (*tracker.EventTracker, error) {
-	var (
-		bridgeMessageResultEventSig    = new(contractsapi.BridgeMessageResultEvent).Sig()
-		gatewayNewValidatorSetEventSig = new(contractsapi.NewValidatorSetEvent).Sig()
-	)
 
 	store, err := store.NewBoltDBEventTrackerStore(
 		path.Join(runtimeCfg.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", chainID)))
@@ -156,7 +299,7 @@ func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 			LogFilter: map[ethgo.Address][]ethgo.Hash{
 				ethgo.Address(bridgeCfg.ExternalGatewayAddr): {
 					bridgeMessageResultEventSig,
-					gatewayNewValidatorSetEventSig},
+				},
 			},
 		},
 		store,
@@ -172,58 +315,6 @@ func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 // PostBlock is the implementation of BridgeEventRelayer interface
 // Called at the end of each block to send the bridge batches to the external chains
 func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
-	for _, batch := range ber.bridgeBatches {
-		input, err := (&contractsapi.ReceiveBatchGatewayFn{
-			Batch:     batch.Batch,
-			Signature: batch.Signature,
-			Bitmap:    batch.Bitmap,
-		}).EncodeAbi()
-		if err != nil {
-			return err
-		}
-
-		destionationChainID := batch.Batch.DestinationChainID.Uint64()
-
-		txn := types.NewTx(types.NewLegacyTx(types.WithFrom(
-			ber.key.Address()),
-			types.WithTo(&ber.bridgeConfig[destionationChainID].InternalGatewayAddr),
-			types.WithGas(types.StateTransactionGasLimit),
-			types.WithInput(input)))
-
-		if _, err = ber.txRelayers[destionationChainID].SendTransaction(
-			txn,
-			ber.key,
-		); err != nil {
-			return err
-		}
-	}
-
-	ber.bridgeBatches = make([]*contractsapi.SignedBridgeMessageBatch, 0) // TO DO logic for resend batches
-
-	input, err := (&contractsapi.CommitValidatorSetBridgeStorageFn{
-		NewValidatorSet: ber.lastValidatorSet.NewValidatorSet,
-		Signature:       ber.lastValidatorSet.Signature,
-		Bitmap:          ber.lastValidatorSet.Bitmap,
-	}).EncodeAbi()
-	if err != nil {
-		return err
-	}
-
-	for chainID, txRelayer := range ber.txRelayers {
-		if !isValidatorSetEqual(ber.lastGatewayValidatorSet[chainID], ber.lastValidatorSet.NewValidatorSet) {
-			txn := types.NewTx(types.NewLegacyTx(
-				types.WithFrom(ber.key.Address()),
-				types.WithTo(&ber.bridgeConfig[chainID].ExternalGatewayAddr),
-				types.WithGas(types.StateTransactionGasLimit),
-				types.WithInput(input),
-			))
-
-			if _, err = txRelayer.SendTransaction(txn, ber.key); err != nil {
-				return err
-			}
-		}
-	}
-
 	return nil
 }
 
@@ -287,14 +378,16 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 			return err
 		}
 
-		ber.lastValidatorSet = newValidatorSet
+		// since commit validator set transaction is always before new batch transactions in the block
+		// the new validator set transaction will be first in the event ch buffer to be sent
+		ber.eventCh <- newValidatorSet
 	case newBatchEvent.Sig():
 		bridgeBatch, err := systemState.GetBridgeBatchByNumber(newBatchEvent.ID)
 		if err != nil {
 			return err
 		}
 
-		ber.bridgeBatches = append(ber.bridgeBatches, bridgeBatch)
+		ber.eventCh <- bridgeBatch
 	default:
 		return errUnknownBridgeEventRelayerEvent
 	}
@@ -306,7 +399,6 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 // used to handle a log with data from external chain
 func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
 	bridgeMessageResultEvent := &contractsapi.BridgeMessageResultEvent{}
-	gatewayNewValidatorSetEvent := &contractsapi.NewValidatorSetEvent{}
 
 	switch eventLog.Topics[0] {
 	case bridgeMessageResultEvent.Sig():
@@ -323,18 +415,11 @@ func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log)
 			if err := ber.state.removeBridgeEvents(bridgeMessageResultEvent); err != nil {
 				return err
 			}
+		} else {
+			// TO DO rollback logic
 		}
-	case gatewayNewValidatorSetEvent.Sig():
-		doesMatch, err := gatewayNewValidatorSetEvent.ParseLog(eventLog)
-		if err != nil {
-			return err
-		}
-
-		if !doesMatch {
-			return nil
-		}
-
-		ber.lastGatewayValidatorSet[chainID.Uint64()] = gatewayNewValidatorSetEvent.NewValidatorSet
+	default:
+		return errUnknownBridgeEventRelayerEvent
 	}
 
 	return nil
@@ -344,6 +429,8 @@ func (ber *bridgeEventRelayerImpl) Close() {
 	for _, eventTracker := range ber.eventTrackers {
 		eventTracker.Close()
 	}
+
+	close(ber.quitCh)
 }
 
 // createBridgeTxRelayer creates a new instance of txrelayer.TxRelayer
@@ -378,24 +465,4 @@ func convertLog(log *types.Log) *ethgo.Log {
 	}
 
 	return l
-}
-
-func isValidatorSetEqual(gatewayValidatorSet, newValidatorSet []*contractsapi.Validator) bool {
-	numberOfValidator := len(gatewayValidatorSet)
-
-	if numberOfValidator != len(newValidatorSet) {
-		return false
-	}
-
-	for i, validator := range gatewayValidatorSet {
-		if validator.Address != newValidatorSet[i].Address {
-			return false
-		}
-
-		if validator.VotingPower.Cmp(newValidatorSet[i].VotingPower) != 0 {
-			return false
-		}
-	}
-
-	return true
 }

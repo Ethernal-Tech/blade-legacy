@@ -15,6 +15,17 @@ const (
 	ReceiptSuccess
 )
 
+func (rs ReceiptStatus) String() string {
+	switch rs {
+	case ReceiptFailed:
+		return "failed"
+	case ReceiptSuccess:
+		return "success"
+	default:
+		return "unknown"
+	}
+}
+
 type Receipts []*Receipt
 
 type Receipt struct {
