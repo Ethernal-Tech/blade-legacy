@@ -20,7 +20,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runtime Runtime) *bridgeEventManager {
+func newTestBridgeManager(t *testing.T, key *validator.TestValidator, runtime Runtime) *bridgeEventManager {
 	t.Helper()
 
 	tmpDir, err := os.MkdirTemp("/tmp", "test-data-dir-state-sync")
@@ -31,7 +31,7 @@ func newTestBridgeEventManager(t *testing.T, key *validator.TestValidator, runti
 
 	topic := &mockTopic{}
 
-	s := newBridgeEventManager(
+	s := newBridgeManager(
 		hclog.NewNullLogger(),
 		state,
 		&bridgeEventManagerConfig{
@@ -55,7 +55,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 	t.Run("When node is validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		// there are no bridge messages
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
@@ -94,7 +94,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 	t.Run("When node is not validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
 		bridgeMessages10 := generateBridgeMessageEvents(t, 10, 0)
 
@@ -117,7 +117,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 	t.Run("Old epoch", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		s.epoch = 1
 		msg := &BridgeBatchVote{
@@ -131,7 +131,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 	t.Run("Sender is not a validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		badVal := validator.NewTestValidator(t, "a", 0)
@@ -146,7 +146,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 	t.Run("Invalid epoch", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		val := newMockMsg()
@@ -171,7 +171,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 	t.Run("Sender and signature mismatch", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		// validator signs the msg in behalf of another validator
@@ -198,7 +198,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 	t.Run("Sender votes", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 		s.validatorSet = vals.ToValidatorSet()
 
 		msg := newMockMsg()
@@ -234,7 +234,7 @@ func TestBridgeEventManager_MessagePool(t *testing.T) {
 func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	vals := validator.NewTestValidators(t, 5)
 
-	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+	s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 	s.validatorSet = vals.ToValidatorSet()
 
 	// batch is empty
@@ -300,7 +300,7 @@ func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 
 	vals := validator.NewTestValidators(t, 5)
 
-	s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+	s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 	bridgeMessageEvents := generateBridgeMessageEvents(t, bridgeMessageEventsCount, 0)
 
 	for _, event := range bridgeMessageEvents {
@@ -330,7 +330,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 	t.Run("Node is a validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
 		bridgeMsg := &contractsapi.BridgeMsgEvent{ID: bigZero, SourceChainID: big.NewInt(1), DestinationChainID: bigZero}
 		bridgeMsgData, err := bridgeMsg.Encode()
@@ -407,7 +407,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 	t.Run("Node is not a validator", func(t *testing.T) {
 		t.Parallel()
 
-		s := newTestBridgeEventManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
+		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: false})
 
 		// correct event log
 		data, err := abi.MustNewType("tuple(uint256 a, string b, string c)").Encode([]string{"1", "data2", "data3"})

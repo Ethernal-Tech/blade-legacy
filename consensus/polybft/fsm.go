@@ -52,9 +52,10 @@ var (
 	errBridgeBatchTxExists                 = errors.New("only one bridge batch tx is allowed per block")
 	errBridgeBatchTxInNonSprintBlock       = errors.New("bridge batch tx is not allowed in non-sprint block")
 	errCommitValidatorSetExists            = errors.New("only one commit validator set tx is allowed per block")
-	errCommitValidatorSetTxNotExpected     = errors.New("commit validator set tx is not expected in non epoch ending block")
-	errCommitValidatorSetTxInvalid         = errors.New("commit validator set tx is invalid")
-	errCommitValidatorSetTxDoesNotExist    = errors.New("commit validator set tx is not found in the epoch ending block" +
+	errCommitValidatorSetTxNotExpected     = errors.New("commit validator set tx is not expected " +
+		"in non epoch ending block")
+	errCommitValidatorSetTxInvalid      = errors.New("commit validator set tx is invalid")
+	errCommitValidatorSetTxDoesNotExist = errors.New("commit validator set tx is not found in the epoch ending block " +
 		"even though new validator set delta is not empty")
 )
 
@@ -692,7 +693,8 @@ func (f *fsm) verifyCommitValidatorSetTx(commitValidatorSetTx *contractsapi.Comm
 	for _, expectedValidator := range expectedValidators {
 		txValidator, exists := txValidators[expectedValidator.Address]
 		if !exists {
-			return fmt.Errorf("validator %s is missing in the commit validator set transaction", expectedValidator.Address.String())
+			return fmt.Errorf("validator %s is missing in the commit validator set transaction",
+				expectedValidator.Address.String())
 		}
 
 		if expectedValidator.VotingPower.Cmp(txValidator.VotingPower) != 0 {

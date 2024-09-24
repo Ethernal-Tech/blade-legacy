@@ -23,7 +23,6 @@ type Bridge interface {
 	PostBlock(req *PostBlockRequest) error
 	PostEpoch(req *PostEpochRequest) error
 	BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error)
-	InsertEpoch(epoch uint64, tx *bolt.Tx) error
 }
 
 var _ Bridge = (*dummyBridge)(nil)
@@ -52,13 +51,12 @@ func newBridge(runtime Runtime,
 	}
 
 	for externalChainID := range runtimeConfig.GenesisConfig.Bridge {
-		bridgeManager, err := newBridgeManager(runtime, runtimeConfig, eventProvider,
-			logger, externalChainID, internalChainID)
-		if err != nil {
-			return nil, err
-		}
-
+		bridgeManager := newBridgeManager(logger, runtimeConfig.State, &bridgeEventManagerConfig{}, runtime, externalChainID, internalChainID)
 		bridge.bridgeManagers[externalChainID] = bridgeManager
+
+		if err := bridgeManager.Start(runtimeConfig); err != nil {
+			return nil, fmt.Errorf("error starting bridge manager for chainID: %d, err: %w", externalChainID, err)
+		}
 	}
 
 	relayer, err := newBridgeEventRelayer(runtimeConfig, eventProvider, logger)
@@ -84,7 +82,7 @@ func (b *bridge) Close() {
 // and calls PostBlock in each bridge manager
 func (b bridge) PostBlock(req *PostBlockRequest) error {
 	for chainID, bridgeManager := range b.bridgeManagers {
-		if err := bridgeManager.PostBlock(req); err != nil {
+		if err := bridgeManager.PostBlock(); err != nil {
 			return fmt.Errorf("erorr bridge post block, chainID: %d, err: %w", chainID, err)
 		}
 	}
@@ -109,10 +107,6 @@ func (b *bridge) PostEpoch(req *PostEpochRequest) error {
 		}
 	}
 
-	if err := b.InsertEpoch(req.NewEpochID, req.DBTx); err != nil {
-		return fmt.Errorf("error inserting epoch to external, err: %w", err)
-	}
-
 	return nil
 }
 
@@ -130,15 +124,4 @@ func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, e
 	}
 
 	return bridgeBatches, nil
-}
-
-// InsertEpoch calls InsertEpoch in each bridge manager on chain
-func (b *bridge) InsertEpoch(epoch uint64, dbTx *bolt.Tx) error {
-	for _, brigeManager := range b.bridgeManagers {
-		if err := brigeManager.InsertEpoch(epoch, dbTx); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
