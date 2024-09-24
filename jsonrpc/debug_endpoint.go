@@ -656,8 +656,8 @@ func (d *Debug) GetRawReceipts(filter BlockNumberOrHash) (interface{}, error) {
 }
 
 // AccountRange enumerates all accounts in the given block and start point in paging request
-func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults int, nocode,
-	nostorage, incompletes bool) (interface{}, error) {
+func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults int, noCode,
+	noStorage, incompletes bool) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
@@ -676,8 +676,8 @@ func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults 
 			}
 
 			opts := &state.DumpInfo{
-				SkipCode:          nocode,
-				SkipStorage:       nostorage,
+				SkipCode:          noCode,
+				SkipStorage:       noStorage,
 				OnlyWithAddresses: !incompletes,
 				Start:             start,
 				Max:               maxResults,
@@ -693,7 +693,7 @@ func (d *Debug) AccountRange(filter BlockNumberOrHash, start []byte, maxResults 
 	)
 }
 
-// AccountRange enumerates all accounts in the given block and start point in paging request
+// DumpBlock retrieves the entire state of the database at a given block.
 func (d *Debug) DumpBlock(blockNumber BlockNumber) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),

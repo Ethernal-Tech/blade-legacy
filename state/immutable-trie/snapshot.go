@@ -74,12 +74,12 @@ func (s *Snapshot) GetCode(hash types.Hash) ([]byte, bool) {
 	return s.state.GetCode(hash)
 }
 
-func (s *Snapshot) GetTreeHash() types.Hash {
+func (s *Snapshot) GetRootHash() types.Hash {
 	tt := s.trie.Txn(s.state.storage)
-	res, err := tt.Hash()
 
+	res, err := tt.Hash()
 	if err != nil {
-		return types.Hash{}
+		return types.ZeroHash
 	}
 
 	return types.BytesToHash(res)

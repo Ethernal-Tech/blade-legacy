@@ -47,7 +47,7 @@ func (m *mockSnapshot) GetCode(hash types.Hash) ([]byte, bool) {
 	return nil, false
 }
 
-func (m *mockSnapshot) GetTreeHash() types.Hash {
+func (m *mockSnapshot) GetRootHash() types.Hash {
 	return emptyStateHash
 }
 
@@ -97,24 +97,24 @@ func TestGetDumpTree(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, addr2.Bytes(), nextKey)
-	assert.Equal(t, 1, len(dump.Accounts))
+	assert.Len(t, dump.Accounts, 1)
 
 	dumpAcc, exist := dump.Accounts[addr1]
 
 	assert.True(t, exist)
-	assert.Equal(t, dumpAcc.SecureKey, addr1.Bytes())
+	assert.Equal(t, dumpAcc.Key, addr1.Bytes())
 
 	opts.Start = nextKey
 	nextKey, err = txn.GetDumpTree(dump, opts, false)
 
 	assert.NoError(t, err)
 	assert.Equal(t, []byte(nil), nextKey)
-	assert.Equal(t, 1, len(dump.Accounts))
+	assert.Len(t, dump.Accounts, 1)
 
 	dumpAcc, exist = dump.Accounts[addr2]
 
 	assert.True(t, exist)
-	assert.Equal(t, dumpAcc.SecureKey, addr2.Bytes())
+	assert.Equal(t, dumpAcc.Key, addr2.Bytes())
 }
 
 func TestIncrNonce(t *testing.T) {

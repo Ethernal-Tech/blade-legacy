@@ -25,24 +25,23 @@ type Snapshot interface {
 
 // DumpAccount represents an account in the state.
 type DumpAccount struct {
-	Balance   string                `json:"balance"`
-	Nonce     uint64                `json:"nonce"`
-	Root      []byte                `json:"root"`
-	CodeHash  []byte                `json:"codeHash"`
-	Code      []byte                `json:"code,omitempty"`
-	Storage   map[types.Hash]string `json:"storage,omitempty"`
-	Address   types.Address         `json:"address,omitempty"` // Address only present in iterative (line-by-line) mode
-	SecureKey []byte                `json:"key,omitempty"`     // If we don't have address, we can output the key
-
+	Balance  string                `json:"balance"`
+	Nonce    uint64                `json:"nonce"`
+	Root     []byte                `json:"root"`
+	CodeHash []byte                `json:"codeHash"`
+	Code     []byte                `json:"code,omitempty"`
+	Storage  map[types.Hash]string `json:"storage,omitempty"`
+	Address  types.Address         `json:"address,omitempty"` // Address only present in iterative (line-by-line) mode
+	Key      []byte                `json:"key,omitempty"`     // If we don't have address, we can output the key
 }
 
 // Dump represents the full dump in a collected format, as one large map.
 type Dump struct {
-	Root     string                        `json:"root"`
+	Root     []byte                        `json:"root"`
 	Accounts map[types.Address]DumpAccount `json:"accounts"`
 }
 
-// DumpConfig is a set of options to control what portions of the statewill be
+// DumpConfig is a set of options to control what portions of the state will be
 // iterated and collected.
 type DumpInfo struct {
 	SkipCode          bool

@@ -148,7 +148,7 @@ func (e *Executor) GetDumpTree(dump *Dump, parentHash types.Hash,
 		return nil, err
 	}
 
-	dump.Root = snap.GetTreeHash().String()
+	dump.Root = snap.GetRootHash().Bytes()
 
 	return next, nil
 }

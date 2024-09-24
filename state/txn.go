@@ -30,7 +30,7 @@ type readSnapshot interface {
 	GetStorage(addr types.Address, root types.Hash, key types.Hash) types.Hash
 	GetAccount(addr types.Address) (*Account, error)
 	GetCode(hash types.Hash) ([]byte, bool)
-	GetTreeHash() types.Hash
+	GetRootHash() types.Hash
 }
 
 var (
@@ -110,12 +110,12 @@ func (txn *Txn) GetDumpTree(dumpObject *Dump, opts *DumpInfo, deleteEmptyObjects
 
 		addrBytes := types.BytesToAddress(k)
 		dumpAccount := DumpAccount{
-			Nonce:     a.Account.Nonce,
-			Address:   addrBytes,
-			Balance:   a.Account.Balance.String(),
-			Root:      a.Account.Root.Bytes(),
-			CodeHash:  a.Account.CodeHash,
-			SecureKey: k,
+			Nonce:    a.Account.Nonce,
+			Address:  addrBytes,
+			Balance:  a.Account.Balance.String(),
+			Root:     a.Account.Root.Bytes(),
+			CodeHash: a.Account.CodeHash,
+			Key:      k,
 		}
 
 		if !opts.SkipCode {
