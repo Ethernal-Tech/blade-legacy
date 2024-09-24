@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
-	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 )
@@ -63,6 +62,10 @@ func newBridge(runtime Runtime,
 		bridge.bridgeManagers[externalChainID] = bridgeManager
 	}
 
+	if err := bridge.initBridgeEventRelayer(eventProvider, runtimeConfig, logger); err != nil {
+		return nil, err
+	}
+
 	return bridge, nil
 }
 
@@ -73,34 +76,13 @@ func (b *bridge) initBridgeEventRelayer(
 	runtimeConfig *runtimeConfig,
 	logger hclog.Logger) error {
 	if runtimeConfig.consensusConfig.IsRelayer {
-		txRelayerMap := make(map[uint64]txrelayer.TxRelayer)
-		eventTrackerConfigs := make([]*eventTrackerConfig, 0, len(runtimeConfig.GenesisConfig.Bridge))
 
-		for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
-			txRelayer, err := getBridgeTxRelayer(config.JSONRPCEndpoint, logger)
-			if err != nil {
-				return err
-			}
-
-			txRelayerMap[chainID] = txRelayer
-
-			eventTrackerConfigs = append(eventTrackerConfigs, &eventTrackerConfig{
-				gatewayAddr:         config.ExternalGatewayAddr,
-				jsonrpcAddr:         config.JSONRPCEndpoint,
-				startBlock:          config.EventTrackerStartBlocks[config.ExternalGatewayAddr],
-				trackerPollInterval: runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
-			})
-		}
-
-		bridgeEventRelayer := newBridgeEventRelayer(
-			txRelayerMap,
+		bridgeEventRelayer, err := newBridgeEventRelayer(
 			runtimeConfig,
 			wallet.NewEcdsaSigner(runtimeConfig.Key),
 			logger.Named("bridge_event_relayer"),
-			eventTrackerConfigs,
 		)
-
-		if err := bridgeEventRelayer.initTrackers(runtimeConfig); err != nil {
+		if err != nil {
 			return err
 		}
 
@@ -119,6 +101,8 @@ func (b *bridge) Close() {
 	for _, bridgeManager := range b.bridgeManagers {
 		bridgeManager.Close()
 	}
+
+	b.bridgeEventRelayer.Close()
 }
 
 // PostBlock is a function executed on every block finalization (either by consensus or syncer)
@@ -130,10 +114,8 @@ func (b bridge) PostBlock(req *PostBlockRequest) error {
 		}
 	}
 
-	if b.bridgeEventRelayer != nil {
-		if err := b.bridgeEventRelayer.PostBlock(req); err != nil {
-			return err
-		}
+	if err := b.bridgeEventRelayer.PostBlock(req); err != nil {
+		return err
 	}
 
 	return nil

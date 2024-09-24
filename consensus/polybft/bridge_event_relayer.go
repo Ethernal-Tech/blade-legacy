@@ -62,37 +62,48 @@ type bridgeEventRelayerImpl struct {
 	txRelayers    map[uint64]txrelayer.TxRelayer
 	runtimeConfig *runtimeConfig
 
-	eventTrackerConfigs []*eventTrackerConfig
-	bridgeConfig        map[uint64]*BridgeConfig
-	eventTrackers       []*tracker.EventTracker
+	bridgeConfig  map[uint64]*BridgeConfig
+	eventTrackers []*tracker.EventTracker
 }
 
 func newBridgeEventRelayer(
-	txRelayers map[uint64]txrelayer.TxRelayer,
 	runtimeConfig *runtimeConfig,
 	key crypto.Key,
 	logger hclog.Logger,
-	eventTrackerConfigs []*eventTrackerConfig,
-) *bridgeEventRelayerImpl {
-	relayer := &bridgeEventRelayerImpl{
-		key:                 key,
-		logger:              logger,
-		txRelayers:          txRelayers,
-		runtimeConfig:       runtimeConfig,
-		eventTrackerConfigs: eventTrackerConfigs,
+) (BridgeEventRelayer, error) {
+	var relayer BridgeEventRelayer
+	txRelayerMap := make(map[uint64]txrelayer.TxRelayer)
+	for chainID, config := range runtimeConfig.GenesisConfig.Bridge {
+		txRelayer, err := getBridgeTxRelayer(config.JSONRPCEndpoint, logger)
+		if err != nil {
+			return nil, err
+		}
+
+		txRelayerMap[chainID] = txRelayer
 	}
 
-	return relayer
+	relayerImpl := &bridgeEventRelayerImpl{
+		key:           key,
+		logger:        logger,
+		txRelayers:    txRelayerMap,
+		runtimeConfig: runtimeConfig,
+	}
+
+	if err := relayerImpl.initTrackers(runtimeConfig); err != nil {
+		return nil, err
+	}
+
+	return relayer, nil
 }
-
 func (ber *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) error {
-	var bridgeMessageResultEventSig = new(contractsapi.BridgeMessageResultEvent).Sig()
+	var (
+		bridgeMessageResultEventSig    = new(contractsapi.BridgeMessageResultEvent).Sig()
+		gatewayNewValidatorSetEventSig = new(contractsapi.NewValidatorSetEvent).Sig()
+	)
 
-	var gatewayNewValidatorSetEventSig = new(contractsapi.NewValidatorSetEvent).Sig()
-
-	for i, eventTrackerConfig := range ber.eventTrackerConfigs {
+	for chainID, bridgeConfig := range runtimeConfig.GenesisConfig.Bridge {
 		store, err := store.NewBoltDBEventTrackerStore(
-			path.Join(runtimeConfig.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", i)))
+			path.Join(runtimeConfig.DataDir, fmt.Sprintf("/bridge-event-relayer%d.db", chainID)))
 		if err != nil {
 			return err
 		}
@@ -101,19 +112,19 @@ func (ber *bridgeEventRelayerImpl) initTrackers(runtimeConfig *runtimeConfig) er
 			&tracker.EventTrackerConfig{
 				EventSubscriber:        ber,
 				Logger:                 ber.logger,
-				RPCEndpoint:            eventTrackerConfig.jsonrpcAddr,
-				SyncBatchSize:          eventTrackerConfig.EventTracker.SyncBatchSize,
-				NumBlockConfirmations:  eventTrackerConfig.NumBlockConfirmations,
-				NumOfBlocksToReconcile: eventTrackerConfig.NumOfBlocksToReconcile,
-				PollInterval:           eventTrackerConfig.trackerPollInterval,
+				RPCEndpoint:            bridgeConfig.JSONRPCEndpoint,
+				SyncBatchSize:          runtimeConfig.eventTracker.SyncBatchSize,
+				NumBlockConfirmations:  runtimeConfig.eventTracker.NumBlockConfirmations,
+				NumOfBlocksToReconcile: runtimeConfig.eventTracker.NumOfBlocksToReconcile,
+				PollInterval:           runtimeConfig.GenesisConfig.BlockTrackerPollInterval.Duration,
 				LogFilter: map[ethgo.Address][]ethgo.Hash{
-					ethgo.Address(eventTrackerConfig.gatewayAddr): {
+					ethgo.Address(bridgeConfig.ExternalGatewayAddr): {
 						bridgeMessageResultEventSig,
 						gatewayNewValidatorSetEventSig},
 				},
 			},
 			store,
-			eventTrackerConfig.startBlock,
+			bridgeConfig.EventTrackerStartBlocks[bridgeConfig.ExternalGatewayAddr],
 		)
 		if err != nil {
 			return err
