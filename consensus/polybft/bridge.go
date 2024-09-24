@@ -50,8 +50,13 @@ func newBridge(runtime Runtime,
 		internalChainID: internalChainID,
 	}
 
-	for externalChainID := range runtimeConfig.GenesisConfig.Bridge {
-		bridgeManager := newBridgeManager(logger, runtimeConfig.State, &bridgeEventManagerConfig{}, runtime, externalChainID, internalChainID)
+	for externalChainID, cfg := range runtimeConfig.GenesisConfig.Bridge {
+		bridgeManager := newBridgeManager(logger, runtimeConfig.State, &bridgeEventManagerConfig{
+			bridgeCfg:         cfg,
+			topic:             runtimeConfig.bridgeTopic,
+			key:               runtimeConfig.Key,
+			maxNumberOfEvents: maxNumberOfEvents,
+		}, runtime, externalChainID, internalChainID)
 		bridge.bridgeManagers[externalChainID] = bridgeManager
 
 		if err := bridgeManager.Start(runtimeConfig); err != nil {
