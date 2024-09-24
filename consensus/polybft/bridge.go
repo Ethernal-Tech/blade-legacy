@@ -135,6 +135,7 @@ func (b bridge) PostBlock(req *PostBlockRequest) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

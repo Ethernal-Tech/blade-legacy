@@ -152,7 +152,7 @@ func (ber *bridgeEventRelayerImpl) PostBlock(req *PostBlockRequest) error {
 		}
 	}
 
-	ber.bridgeBatches = make([]*contractsapi.SignedBridgeMessageBatch, 0) //TO DO logic for resend batches
+	ber.bridgeBatches = make([]*contractsapi.SignedBridgeMessageBatch, 0) // TO DO logic for resend batches
 
 	input, err := (&contractsapi.CommitValidatorSetBridgeStorageFn{
 		NewValidatorSet: ber.lastValidatorSet.NewValidatorSet,
@@ -290,6 +290,7 @@ func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log)
 
 		ber.lastGatewayValidatorSet[chainID.Uint64()] = gatewayNewValidatorSetEvent.NewValidatorSet
 	}
+
 	return nil
 }
 
