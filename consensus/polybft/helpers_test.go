@@ -79,6 +79,19 @@ func createTestCommitEpochInput(t *testing.T, epochID uint64,
 	return commitEpoch
 }
 
+func createTestCommitValidatorSetBridgeStorageInput(t *testing.T, validatorSet []*contractsapi.Validator,
+	signature [2]*big.Int, bitmap []byte) *contractsapi.CommitValidatorSetBridgeStorageFn {
+	t.Helper()
+
+	commitValidatorSet := &contractsapi.CommitValidatorSetBridgeStorageFn{
+		NewValidatorSet: validatorSet,
+		Signature:       signature,
+		Bitmap:          bitmap,
+	}
+
+	return commitValidatorSet
+}
+
 func createTestDistributeRewardsInput(t *testing.T, epochID uint64,
 	validatorSet validator.AccountSet, epochSize uint64) *contractsapi.DistributeRewardForEpochManagerFn {
 	t.Helper()

@@ -919,8 +919,6 @@ func TestFSM_ValidateCommit_Good(t *testing.T) {
 }
 
 func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
-	t.Skip("TODO - fix this test after introducing validation of commitValidatorSet state transaction")
-
 	const (
 		accountsCount     = 5
 		parentBlockNumber = 25
@@ -956,19 +954,7 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 	commitEpochTxInput, err := commitEpoch.EncodeAbi()
 	require.NoError(t, err)
 
-	stateBlock.Block.Header.Hash = proposalHash
-	stateBlock.Block.Header.ParentHash = parent.Hash
-	stateBlock.Block.Header.Timestamp = uint64(time.Now().UTC().Unix())
-	stateBlock.Block.Transactions = []*types.Transaction{
-		createStateTransactionWithData(contracts.EpochManagerContract, commitEpochTxInput),
-	}
-
-	proposal := stateBlock.Block.MarshalRLP()
-
-	blockchainMock := new(blockchainMock)
-	blockchainMock.On("ProcessBlock", mock.Anything, mock.Anything).
-		Return(stateBlock, error(nil)).
-		Maybe()
+	validatorsForInput := make([]*contractsapi.Validator, 0)
 
 	// a new validator is added to delta which proposers block does not have
 	privateKey, err := bls.GenerateBlsKey()
@@ -982,6 +968,41 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 			IsActive:    true,
 		}},
 	}
+
+	for _, testValidator := range validators.Validators {
+		validatorsForInput = append(validatorsForInput,
+			&contractsapi.Validator{
+				Address:     testValidator.Address(),
+				VotingPower: new(big.Int).SetUint64(testValidator.VotingPower),
+				BlsKey:      testValidator.ValidatorMetadata().BlsKey.ToBigInt()})
+	}
+
+	validatorsForInput = append(validatorsForInput,
+		&contractsapi.Validator{
+			Address:     types.BytesToAddress([]byte{0, 1, 2, 3}),
+			VotingPower: big.NewInt(1),
+			BlsKey:      privateKey.PublicKey().ToBigInt()})
+
+	commitValidatorSet := createTestCommitValidatorSetBridgeStorageInput(t, validatorsForInput,
+		[2]*big.Int{big.NewInt(1), big.NewInt(2)}, big.NewInt(1).Bytes())
+
+	commitValidatorSetInput, err := commitValidatorSet.EncodeAbi()
+	require.NoError(t, err)
+
+	stateBlock.Block.Header.Hash = proposalHash
+	stateBlock.Block.Header.ParentHash = parent.Hash
+	stateBlock.Block.Header.Timestamp = uint64(time.Now().UTC().Unix())
+	stateBlock.Block.Transactions = []*types.Transaction{
+		createStateTransactionWithData(contracts.EpochManagerContract, commitEpochTxInput),
+		createStateTransactionWithData(contracts.BridgeStorageContract, commitValidatorSetInput),
+	}
+
+	proposal := stateBlock.Block.MarshalRLP()
+
+	blockchainMock := new(blockchainMock)
+	blockchainMock.On("ProcessBlock", mock.Anything, mock.Anything).
+		Return(stateBlock, error(nil)).
+		Maybe()
 
 	fsm := &fsm{
 		parent:             parent,

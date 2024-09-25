@@ -17,10 +17,11 @@ func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, 
 	sig := txData[:abiMethodIDLength]
 
 	var (
-		commitBridgeTxFn    contractsapi.CommitBatchBridgeStorageFn
-		commitEpochFn       contractsapi.CommitEpochEpochManagerFn
-		distributeRewardsFn contractsapi.DistributeRewardForEpochManagerFn
-		obj                 contractsapi.StateTransactionInput
+		commitBridgeTxFn     contractsapi.CommitBatchBridgeStorageFn
+		commitValidatorSetFn contractsapi.CommitValidatorSetBridgeStorageFn
+		commitEpochFn        contractsapi.CommitEpochEpochManagerFn
+		distributeRewardsFn  contractsapi.DistributeRewardForEpochManagerFn
+		obj                  contractsapi.StateTransactionInput
 	)
 
 	if bytes.Equal(sig, commitBridgeTxFn.Sig()) {
@@ -32,6 +33,9 @@ func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, 
 	} else if bytes.Equal(sig, distributeRewardsFn.Sig()) {
 		// distribute rewards
 		obj = &contractsapi.DistributeRewardForEpochManagerFn{}
+	} else if bytes.Equal(sig, commitValidatorSetFn.Sig()) {
+		// commit validator set
+		obj = &contractsapi.CommitValidatorSetBridgeStorageFn{}
 	} else {
 		return nil, fmt.Errorf("unknown state transaction")
 	}
