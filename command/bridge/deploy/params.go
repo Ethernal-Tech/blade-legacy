@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 )
 
 const (
@@ -38,7 +38,7 @@ func (ip *deployParams) validateFlags() error {
 		return fmt.Errorf("provided genesis path '%s' is invalid. Error: %w ", ip.genesisPath, err)
 	}
 
-	consensusCfg, err = polybft.LoadPolyBFTConfig(ip.genesisPath)
+	consensusCfg, err = polycfg.LoadPolyBFTConfig(ip.genesisPath)
 	if err != nil {
 		return err
 	}

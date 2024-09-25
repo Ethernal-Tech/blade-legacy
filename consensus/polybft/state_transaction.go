@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/bridge"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
 )
 
-const abiMethodIDLength = 4
-
 func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, error) {
-	if len(txData) < abiMethodIDLength {
+	if len(txData) < helpers.AbiMethodIDLength {
 		return nil, fmt.Errorf("state transactions have input")
 	}
 
-	sig := txData[:abiMethodIDLength]
+	sig := txData[:helpers.AbiMethodIDLength]
 
 	var (
 		commitBridgeTxFn     contractsapi.CommitBatchBridgeStorageFn
@@ -26,7 +26,7 @@ func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, 
 
 	if bytes.Equal(sig, commitBridgeTxFn.Sig()) {
 		// bridge batch
-		obj = &BridgeBatchSigned{}
+		obj = &bridge.BridgeBatchSigned{}
 	} else if bytes.Equal(sig, commitEpochFn.Sig()) {
 		// commit epoch
 		obj = &contractsapi.CommitEpochEpochManagerFn{}

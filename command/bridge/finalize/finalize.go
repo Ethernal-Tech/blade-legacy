@@ -12,7 +12,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
@@ -111,7 +111,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to read chain configuration: %w", err)
 	}
 
-	consensusConfig, err := polybft.GetPolyBFTConfig(chainConfig.Params)
+	consensusConfig, err := polycfg.GetPolyBFTConfig(chainConfig.Params)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve consensus configuration: %w", err)
 	}
@@ -200,7 +200,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 	}
 
 	chainConfig.Genesis.ExtraData = genesisExtraData
-	chainConfig.Params.Engine[polybft.ConsensusName] = consensusConfig
+	chainConfig.Params.Engine[polycfg.ConsensusName] = consensusConfig
 
 	// save updated stake and genesis extra to genesis file on disk
 	if err := helper.WriteGenesisConfigToDisk(chainConfig, params.genesisPath); err != nil {

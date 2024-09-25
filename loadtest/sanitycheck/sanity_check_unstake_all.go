@@ -3,7 +3,7 @@ package sanitycheck
 import (
 	"fmt"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/Ethernal-Tech/ethgo"
@@ -71,7 +71,7 @@ func (t *UnstakeAllTest) Run() error {
 		return err
 	}
 
-	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)
+	extra, err := polytypes.GetIbftExtra(epochEndingBlock.ExtraData)
 	if err != nil {
 		return fmt.Errorf("failed to get ibft extra data for epoch ending block. Error: %w", err)
 	}

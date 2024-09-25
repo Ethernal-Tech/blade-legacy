@@ -5,8 +5,8 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -95,7 +95,7 @@ func (t *StakeTest) Run() error {
 		return err
 	}
 
-	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)
+	extra, err := polytypes.GetIbftExtra(epochEndingBlock.ExtraData)
 	if err != nil {
 		return fmt.Errorf("failed to get ibft extra data for epoch ending block. Error: %w", err)
 	}

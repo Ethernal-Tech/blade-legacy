@@ -15,7 +15,9 @@ import (
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -161,7 +163,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		proposalQuorum = proposalQuorumMax
 	}
 
-	polyBftConfig := &polybft.PolyBFTConfig{
+	polyBftConfig := &polycfg.PolyBFT{
 		InitialValidatorSet: initialValidators,
 		BlockTime:           common.Duration{Duration: p.blockTime},
 		EpochSize:           p.epochSize,
@@ -175,7 +177,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		MaxValidatorSetSize:  p.maxNumValidators,
 		CheckpointInterval:   p.checkpointInterval,
 		WithdrawalWaitPeriod: p.withdrawalWaitPeriod,
-		RewardConfig: &polybft.RewardsConfig{
+		RewardConfig: &polycfg.Rewards{
 			TokenAddress:  rewardTokenAddr,
 			WalletAddress: walletPremineInfo.Address,
 			WalletAmount:  walletPremineInfo.Amount,
@@ -184,7 +186,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		BlockTrackerPollInterval: common.Duration{Duration: p.blockTrackerPollInterval},
 		ProxyContractsAdmin:      types.StringToAddress(p.proxyContractsAdmin),
 		BladeAdmin:               types.StringToAddress(p.bladeAdmin),
-		GovernanceConfig: &polybft.GovernanceConfig{
+		GovernanceConfig: &polycfg.Governance{
 			VotingDelay:              voteDelay,
 			VotingPeriod:             votingPeriod,
 			ProposalThreshold:        proposalThreshold,
@@ -196,7 +198,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 			ForkParamsAddr:    contracts.ForkParamsContract,
 		},
 		StakeTokenAddr: p.stakeTokenAddr,
-		Bridge:         make(map[uint64]*polybft.BridgeConfig),
+		Bridge:         make(map[uint64]*polycfg.Bridge),
 	}
 
 	// Disable london hardfork if burn contract address is not provided
@@ -296,7 +298,7 @@ func (p *genesisParams) generateChainConfig(o command.OutputFormatter) error {
 		Alloc:      allocs,
 		ExtraData:  genesisExtraData,
 		GasUsed:    command.DefaultGenesisGasUsed,
-		Mixhash:    polybft.PolyBFTMixDigest,
+		Mixhash:    polytypes.PolyBFTMixDigest,
 	}
 
 	if p.isBurnContractEnabled() {
@@ -671,7 +673,7 @@ func (p *genesisParams) isBurnContractEnabled() bool {
 
 // extractNativeTokenMetadata parses provided native token metadata (such as name, symbol and decimals count)
 func (p *genesisParams) extractNativeTokenMetadata() error {
-	tokenConfig, err := polybft.ParseRawTokenConfig(p.nativeTokenConfigRaw)
+	tokenConfig, err := polycfg.ParseRawTokenConfig(p.nativeTokenConfigRaw)
 	if err != nil {
 		return err
 	}

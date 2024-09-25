@@ -17,7 +17,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/sync/errgroup"
@@ -326,7 +326,7 @@ func (t *TestBridge) deployExternalChainContracts(genesisPath string) error {
 }
 
 // fundAddressesOnRoot sends predefined amount of tokens to external chain addresses
-func (t *TestBridge) fundAddressesOnRoot(polybftConfig polybft.PolyBFTConfig) error {
+func (t *TestBridge) fundAddressesOnRoot(polybftConfig polycfg.PolyBFT) error {
 	validatorSecrets, err := genesis.GetValidatorKeyFiles(t.clusterConfig.TmpDir, t.clusterConfig.ValidatorPrefix)
 	if err != nil {
 		return fmt.Errorf("could not get validator secrets on initial external chain funding of genesis validators: %w", err)
@@ -404,8 +404,8 @@ func (t *TestBridge) FundValidators(secretsPaths []string, amounts []*big.Int) e
 }
 
 // mintNativeRootToken mints native er20 token on root for provided validators and other accounts in premine flag
-func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tokenConfig *polybft.TokenConfig,
-	polybftConfig polybft.PolyBFTConfig) error {
+func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tokenConfig *polycfg.Token,
+	polybftConfig polycfg.PolyBFT) error {
 	if tokenConfig.IsMintable {
 		// if token is mintable, it is premined in genesis command,
 		// so we just return here
@@ -447,8 +447,8 @@ func (t *TestBridge) mintNativeRootToken(validatorAddresses []types.Address, tok
 }
 
 // premineNativeRootToken will premine token on root for every validator and other addresses in premine flag
-func (t *TestBridge) premineNativeRootToken(genesisPath string, tokenConfig *polybft.TokenConfig,
-	polybftConfig polybft.PolyBFTConfig) error {
+func (t *TestBridge) premineNativeRootToken(genesisPath string, tokenConfig *polycfg.Token,
+	polybftConfig polycfg.PolyBFT) error {
 	if tokenConfig.IsMintable {
 		// if token is mintable, it is premined in genesis command,
 		// so we just return here
@@ -550,7 +550,7 @@ func (t *TestBridge) calculatePort() uint64 {
 }
 
 // finalizeGenesis finalizes genesis on BladeManager contract on root
-func (t *TestBridge) finalizeGenesis(genesisPath string, tokenConfig *polybft.TokenConfig) error {
+func (t *TestBridge) finalizeGenesis(genesisPath string, tokenConfig *polycfg.Token) error {
 	if tokenConfig.IsMintable {
 		// we don't need to finalize anything when we have mintable (child originated) token
 		return nil

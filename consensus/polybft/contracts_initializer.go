@@ -6,6 +6,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/chain"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -20,7 +21,7 @@ const (
 	contractCallGasLimit = 100_000_000
 )
 
-func initStakeManager(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
+func initStakeManager(polyBFTConfig config.PolyBFT, transition *state.Transition) error {
 	startValidators := make([]*contractsapi.GenesisValidator, len(polyBFTConfig.InitialValidatorSet))
 
 	for i, validator := range polyBFTConfig.InitialValidatorSet {
@@ -76,7 +77,7 @@ func initStakeManager(polyBFTConfig PolyBFTConfig, transition *state.Transition)
 }
 
 // initEpochManager initializes EpochManager SC
-func initEpochManager(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
+func initEpochManager(polyBFTConfig config.PolyBFT, transition *state.Transition) error {
 	initFn := &contractsapi.InitializeEpochManagerFn{
 		NewRewardToken:   polyBFTConfig.RewardConfig.TokenAddress,
 		NewRewardWallet:  polyBFTConfig.RewardConfig.WalletAddress,
@@ -95,7 +96,7 @@ func initEpochManager(polyBFTConfig PolyBFTConfig, transition *state.Transition)
 
 // getInitERC20PredicateInput builds initialization input parameters for child chain ERC20Predicate SC
 func getInitERC20PredicateInput(
-	config *BridgeConfig,
+	config *config.Bridge,
 	internalChainMintable bool,
 	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
@@ -120,7 +121,7 @@ func getInitERC20PredicateInput(
 }
 
 // getInitERC20PredicateACLInput builds initialization input parameters for child chain ERC20PredicateAccessList SC
-func getInitERC20PredicateACLInput(config *BridgeConfig, owner types.Address,
+func getInitERC20PredicateACLInput(config *config.Bridge, owner types.Address,
 	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
 	if internalChainMintable {
@@ -151,7 +152,7 @@ func getInitERC20PredicateACLInput(config *BridgeConfig, owner types.Address,
 
 // getInitERC721PredicateInput builds initialization input parameters for child chain ERC721Predicate SC
 func getInitERC721PredicateInput(
-	config *BridgeConfig,
+	config *config.Bridge,
 	childOriginatedTokens bool,
 	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
@@ -176,7 +177,7 @@ func getInitERC721PredicateInput(
 
 // getInitERC721PredicateACLInput builds initialization input parameters
 // for child chain ERC721PredicateAccessList SC
-func getInitERC721PredicateACLInput(config *BridgeConfig, owner types.Address,
+func getInitERC721PredicateACLInput(config *config.Bridge, owner types.Address,
 	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
 	if internalChainMintable {
@@ -206,7 +207,7 @@ func getInitERC721PredicateACLInput(config *BridgeConfig, owner types.Address,
 
 // getInitERC1155PredicateInput builds initialization input parameters for child chain ERC1155Predicate SC
 func getInitERC1155PredicateInput(
-	config *BridgeConfig,
+	config *config.Bridge,
 	internalChainMintable bool,
 	destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
@@ -231,7 +232,7 @@ func getInitERC1155PredicateInput(
 
 // getInitERC1155PredicateACLInput builds initialization input parameters
 // for child chain ERC1155PredicateAccessList SC
-func getInitERC1155PredicateACLInput(config *BridgeConfig, owner types.Address,
+func getInitERC1155PredicateACLInput(config *config.Bridge, owner types.Address,
 	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
 	var params contractsapi.StateTransactionInput
 	if internalChainMintable {
@@ -260,7 +261,7 @@ func getInitERC1155PredicateACLInput(config *BridgeConfig, owner types.Address,
 }
 
 // initNetworkParamsContract initializes NetworkParams contract on child chain
-func initNetworkParamsContract(baseFeeChangeDenom uint64, cfg PolyBFTConfig,
+func initNetworkParamsContract(baseFeeChangeDenom uint64, cfg config.PolyBFT,
 	transition *state.Transition) error {
 	initFn := &contractsapi.InitializeNetworkParamsFn{
 		InitParams: &contractsapi.InitParams{
@@ -293,7 +294,7 @@ func initNetworkParamsContract(baseFeeChangeDenom uint64, cfg PolyBFTConfig,
 }
 
 // initForkParamsContract initializes ForkParams contract on child chain
-func initForkParamsContract(cfg PolyBFTConfig, transition *state.Transition) error {
+func initForkParamsContract(cfg config.PolyBFT, transition *state.Transition) error {
 	initFn := &contractsapi.InitializeForkParamsFn{
 		NewOwner: cfg.GovernanceConfig.ChildTimelockAddr,
 	}
@@ -308,7 +309,7 @@ func initForkParamsContract(cfg PolyBFTConfig, transition *state.Transition) err
 }
 
 // initChildTimelock initializes ChildTimelock contract on child chain
-func initChildTimelock(cfg PolyBFTConfig, transition *state.Transition) error {
+func initChildTimelock(cfg config.PolyBFT, transition *state.Transition) error {
 	addresses := make([]types.Address, len(cfg.InitialValidatorSet)+1)
 	// we need to add child governor to list of proposers and executors as well
 	addresses[0] = cfg.GovernanceConfig.ChildGovernorAddr
@@ -334,7 +335,7 @@ func initChildTimelock(cfg PolyBFTConfig, transition *state.Transition) error {
 }
 
 // initChildGovernor initializes ChildGovernor contract on child chain
-func initChildGovernor(cfg PolyBFTConfig, transition *state.Transition) error {
+func initChildGovernor(cfg config.PolyBFT, transition *state.Transition) error {
 	addresses := make([]types.Address, len(cfg.InitialValidatorSet))
 	for i := 0; i < len(cfg.InitialValidatorSet); i++ {
 		addresses[i] = cfg.InitialValidatorSet[i].Address
@@ -357,7 +358,7 @@ func initChildGovernor(cfg PolyBFTConfig, transition *state.Transition) error {
 }
 
 // initBridgeStorageContract initializes BridgeStorage contract on blade chain
-func initBridgeStorageContract(cfg PolyBFTConfig, transition *state.Transition) error {
+func initBridgeStorageContract(cfg config.PolyBFT, transition *state.Transition) error {
 	validators, err := getValidatorStorageValidators(cfg.InitialValidatorSet)
 	if err != nil {
 		return fmt.Errorf("error while converting validators for bridge storage contract: %w", err)
@@ -379,7 +380,7 @@ func initBridgeStorageContract(cfg PolyBFTConfig, transition *state.Transition) 
 }
 
 // initGatewayContract initializes Gateway contract on blade chain
-func initGatewayContract(cfg PolyBFTConfig, bridgeCfg *BridgeConfig,
+func initGatewayContract(cfg config.PolyBFT, bridgeCfg *config.Bridge,
 	transition *state.Transition, alloc map[types.Address]*chain.GenesisAccount) error {
 	implementationAddr := bridgeCfg.InternalGatewayAddr.IncrementBy(1)
 	if _, exists := alloc[implementationAddr]; !exists {
@@ -411,7 +412,7 @@ func initGatewayContract(cfg PolyBFTConfig, bridgeCfg *BridgeConfig,
 // initERC20ACLPredicateContract initializes ChildERC20Predicate with access list contract on blade chain
 func initERC20ACLPredicateContract(
 	transition *state.Transition,
-	bcfg *BridgeConfig,
+	bcfg *config.Bridge,
 	alloc map[types.Address]*chain.GenesisAccount,
 	owner types.Address,
 	useBridgeAllowList, useBridgeBlockList, childMintable bool,
@@ -441,7 +442,7 @@ func initERC20ACLPredicateContract(
 // initERC721ACLPredicateContract initializes ChildERC721Predicate with access list contract on blade chain
 func initERC721ACLPredicateContract(
 	transition *state.Transition,
-	bcfg *BridgeConfig,
+	bcfg *config.Bridge,
 	alloc map[types.Address]*chain.GenesisAccount,
 	owner types.Address,
 	useBridgeAllowList, useBridgeBlockList, childMintable bool,
@@ -471,7 +472,7 @@ func initERC721ACLPredicateContract(
 // initERC1155ACLPredicateContract initializes ChildERC1155Predicate with access list contract on blade chain
 func initERC1155ACLPredicateContract(
 	transition *state.Transition,
-	bcfg *BridgeConfig,
+	bcfg *config.Bridge,
 	alloc map[types.Address]*chain.GenesisAccount,
 	owner types.Address,
 	useBridgeAllowList, useBridgeBlockList, childMintable bool,
@@ -501,7 +502,7 @@ func initERC1155ACLPredicateContract(
 // initERC20PredicateContract initializes ChildERC20Predicate contract on blade chain
 func initERC20PredicateContract(
 	transition *state.Transition,
-	bcfg *BridgeConfig,
+	bcfg *config.Bridge,
 	alloc map[types.Address]*chain.GenesisAccount,
 	childMintable bool,
 	destinationChainID *big.Int,
@@ -529,7 +530,7 @@ func initERC20PredicateContract(
 // initERC721PredicateContract initializes ChildERC721Predicate contract on blade chain
 func initERC721PredicateContract(
 	transition *state.Transition,
-	bcfg *BridgeConfig,
+	bcfg *config.Bridge,
 	alloc map[types.Address]*chain.GenesisAccount,
 	childMintable bool,
 	destinationChainID *big.Int,
@@ -557,7 +558,7 @@ func initERC721PredicateContract(
 // initERC1155PredicateContract initializes ChildERC1155Predicate contract on blade chain
 func initERC1155PredicateContract(
 	transition *state.Transition,
-	bcfg *BridgeConfig,
+	bcfg *config.Bridge,
 	alloc map[types.Address]*chain.GenesisAccount,
 	childMintable bool,
 	destinationChainID *big.Int,
@@ -583,7 +584,7 @@ func initERC1155PredicateContract(
 }
 
 // mintRewardTokensToWallet mints configured amount of reward tokens to reward wallet address
-func mintRewardTokensToWallet(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
+func mintRewardTokensToWallet(polyBFTConfig config.PolyBFT, transition *state.Transition) error {
 	if isNativeRewardToken(polyBFTConfig.RewardConfig.TokenAddress) {
 		// if reward token is a native erc20 token, we don't need to mint an amount of tokens
 		// for given wallet address to it since this is done in premine
@@ -605,7 +606,7 @@ func mintRewardTokensToWallet(polyBFTConfig PolyBFTConfig, transition *state.Tra
 }
 
 // mintStakeToken mints configured amount of stake token to stake token address
-func mintStakeToken(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
+func mintStakeToken(polyBFTConfig config.PolyBFT, transition *state.Transition) error {
 	if IsNativeStakeToken(polyBFTConfig.StakeTokenAddr) {
 		return nil
 	}
@@ -632,7 +633,7 @@ func mintStakeToken(polyBFTConfig PolyBFTConfig, transition *state.Transition) e
 
 // approveEpochManagerAsSpender approves EpochManager contract as reward token spender
 // since EpochManager distributes rewards
-func approveEpochManagerAsSpender(polyBFTConfig PolyBFTConfig, transition *state.Transition) error {
+func approveEpochManagerAsSpender(polyBFTConfig config.PolyBFT, transition *state.Transition) error {
 	approveFn := &contractsapi.ApproveRootERC20Fn{
 		Spender: contracts.EpochManagerContract,
 		Amount:  polyBFTConfig.RewardConfig.WalletAmount,

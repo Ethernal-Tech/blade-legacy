@@ -16,8 +16,9 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/bridge/common"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
@@ -89,7 +90,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	validatorSrv := cluster.Servers[0]
@@ -329,7 +330,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	externalChainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
@@ -437,7 +438,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 	currentBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
 	require.NoError(t, err)
 
-	currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
+	currentExtra, err := polytypes.GetIbftExtra(currentBlock.Header.ExtraData)
 	require.NoError(t, err)
 
 	t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockMetaData.EpochNumber)
@@ -498,7 +499,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	externalChainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[bridgeOne].JSONRPCAddr()))
@@ -689,7 +690,7 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 
 	bridgeOne := 0
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	validatorSrv := cluster.Servers[0]
@@ -973,7 +974,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	validatorSrv := cluster.Servers[0]
@@ -1106,7 +1107,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		currentBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
 		require.NoError(t, err)
 
-		currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
+		currentExtra, err := polytypes.GetIbftExtra(currentBlock.Header.ExtraData)
 		require.NoError(t, err)
 
 		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockMetaData.EpochNumber)
@@ -1159,7 +1160,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
 		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
 		// this enables London (EIP-1559) fork
-		framework.WithBurnContract(&polybft.BurnContractInfo{
+		framework.WithBurnContract(&polycfg.BurnContractInfo{
 			BlockNumber: 0,
 			Address:     types.StringToAddress("0xBurnContractAddress")}),
 		framework.WithSecretsCallback(func(_ []types.Address, tcc *framework.TestClusterConfig) {
@@ -1195,7 +1196,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	bridgeCfg := polybftCfg.Bridge[chainID.Uint64()]
@@ -1295,7 +1296,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		currentBlock, err := childEthEndpoint.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
 		require.NoError(t, err)
 
-		currentExtra, err := polybft.GetIbftExtra(currentBlock.Header.ExtraData)
+		currentExtra, err := polytypes.GetIbftExtra(currentBlock.Header.ExtraData)
 		require.NoError(t, err)
 
 		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockMetaData.EpochNumber)
@@ -1431,7 +1432,7 @@ func TestE2E_Bridge_L1OriginatedNativeToken_ERC20StakingToken(t *testing.T) {
 
 	cluster.WaitForReady(t)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	// first validator server(minter)

@@ -12,8 +12,9 @@ import (
 	"strings"
 
 	"github.com/0xPolygon/polygon-edge/command"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -66,7 +67,7 @@ func verifyGenesisExistence(genesisPath string) *GenesisGenError {
 }
 
 // parseBurnContractInfo parses provided burn contract information and returns burn contract block and address
-func parseBurnContractInfo(burnContractInfoRaw string) (*polybft.BurnContractInfo, error) {
+func parseBurnContractInfo(burnContractInfoRaw string) (*polycfg.BurnContractInfo, error) {
 	// <block>:<address>[:<burn destination address>]
 	burnContractParts := strings.Split(burnContractInfoRaw, ":")
 	if len(burnContractParts) < 2 || len(burnContractParts) > 3 {
@@ -88,7 +89,7 @@ func parseBurnContractInfo(burnContractInfoRaw string) (*polybft.BurnContractInf
 	}
 
 	if len(burnContractParts) == 2 {
-		return &polybft.BurnContractInfo{
+		return &polycfg.BurnContractInfo{
 			BlockNumber:        blockNum,
 			Address:            contractAddr,
 			DestinationAddress: types.ZeroAddress,
@@ -102,7 +103,7 @@ func parseBurnContractInfo(burnContractInfoRaw string) (*polybft.BurnContractInf
 		return nil, fmt.Errorf("failed to parse burn destination address %s: %w", destinationAddrRaw, err)
 	}
 
-	return &polybft.BurnContractInfo{
+	return &polycfg.BurnContractInfo{
 		BlockNumber:        blockNum,
 		Address:            contractAddr,
 		DestinationAddress: destinationAddr,
@@ -268,7 +269,7 @@ func GenerateExtraDataPolyBft(validators []*validator.ValidatorMetadata) ([]byte
 		Removed: bitmap.Bitmap{},
 	}
 
-	extra := polybft.Extra{Validators: delta, BlockMetaData: &polybft.BlockMetaData{}}
+	extra := polytypes.Extra{Validators: delta, BlockMetaData: &polytypes.BlockMetaData{}}
 
 	return extra.MarshalRLPTo(nil), nil
 }

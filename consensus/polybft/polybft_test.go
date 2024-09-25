@@ -6,10 +6,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
+	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/bridge"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
+	polytesting "github.com/0xPolygon/polygon-edge/consensus/polybft/testing"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
+	vs "github.com/0xPolygon/polygon-edge/consensus/polybft/validator-snapshot"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/helper/progress"
 	"github.com/0xPolygon/polygon-edge/txpool"
@@ -19,7 +29,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"go.etcd.io/bbolt"
 )
 
 // the test initializes polybft and chain mock (map of headers) after which a new header is verified
@@ -37,18 +46,18 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 
 	updateHeaderExtra := func(header *types.Header,
 		validators *validator.ValidatorSetDelta,
-		parentSignature *Signature,
-		blockMeta *BlockMetaData,
-		committedAccounts []*wallet.Account) *Signature {
-		extra := &Extra{
+		parentSignature *polytypes.Signature,
+		blockMeta *polytypes.BlockMetaData,
+		committedAccounts []*wallet.Account) *polytypes.Signature {
+		extra := &polytypes.Extra{
 			Validators:    validators,
 			Parent:        parentSignature,
 			BlockMetaData: blockMeta,
-			Committed:     &Signature{},
+			Committed:     &polytypes.Signature{},
 		}
 
 		if extra.BlockMetaData == nil {
-			extra.BlockMetaData = &BlockMetaData{}
+			extra.BlockMetaData = &polytypes.BlockMetaData{}
 		}
 
 		header.ExtraData = extra.MarshalRLPTo(nil)
@@ -69,7 +78,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 	validators := validator.NewTestValidators(t, allValidatorsSize)
 
 	// create configuration
-	polyBftConfig := PolyBFTConfig{
+	polyBftConfig := config.PolyBFT{
 		InitialValidatorSet: validators.GetParamValidators(),
 		EpochSize:           fixedEpochSize,
 		SprintSize:          5,
@@ -84,7 +93,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 	accountSetParent, accountSetCurrent := accounts[:len(accounts)-1], accounts[1:]
 
 	// create header map to simulate blockchain
-	headersMap := &testHeadersMap{}
+	headersMap := &polytesting.TestHeadersMap{}
 
 	// create genesis header
 	genesisDelta, err := validator.CreateValidatorSetDelta(nil, validatorSetParent)
@@ -94,7 +103,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 	updateHeaderExtra(genesisHeader, genesisDelta, nil, nil, nil)
 
 	// add genesis header to map
-	headersMap.addHeader(genesisHeader)
+	headersMap.AddHeader(genesisHeader)
 
 	// create headers from 1 to 9
 	for i := uint64(1); i < polyBftConfig.EpochSize; i++ {
@@ -102,28 +111,31 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 		require.NoError(t, err)
 
 		header := &types.Header{Number: i}
-		updateHeaderExtra(header, delta, nil, &BlockMetaData{EpochNumber: 1}, nil)
+		updateHeaderExtra(header, delta, nil, &polytypes.BlockMetaData{EpochNumber: 1}, nil)
 
 		// add headers from 1 to 9 to map (blockchain imitation)
-		headersMap.addHeader(header)
+		headersMap.AddHeader(header)
 	}
 
 	// mock blockchain
-	blockchainMock := new(blockchainMock)
-	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headersMap.getHeader)
-	blockchainMock.On("GetHeaderByHash", mock.Anything).Return(headersMap.getHeaderByHash)
+	blockchainMock := new(polychain.BlockchainMock)
+	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headersMap.GetHeader)
+	blockchainMock.On("GetHeaderByHash", mock.Anything).Return(headersMap.GetHeaderByHash)
 
 	// create polybft with appropriate mocks
+	validatorSnapCache, err := vs.NewValidatorsSnapshotCache(
+		hclog.NewNullLogger(),
+		state.NewTestState(t),
+		blockchainMock,
+	)
+	require.NoError(t, err)
+
 	polybft := &Polybft{
 		closeCh:             make(chan struct{}),
 		logger:              hclog.NewNullLogger(),
 		genesisClientConfig: &polyBftConfig,
 		blockchain:          blockchainMock,
-		validatorsCache: newValidatorsSnapshotCache(
-			hclog.NewNullLogger(),
-			newTestState(t),
-			blockchainMock,
-		),
+		validatorsCache:     validatorSnapCache,
 		runtime: &consensusRuntime{
 			epoch: &epochMetadata{
 				CurrentClientConfig: &polyBftConfig,
@@ -139,10 +151,10 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 		Number:    polyBftConfig.EpochSize,
 		Timestamp: uint64(time.Now().UTC().Unix()),
 	}
-	parentCommitment := updateHeaderExtra(parentHeader, parentDelta, nil, &BlockMetaData{EpochNumber: 1}, accountSetParent)
+	parentCommitment := updateHeaderExtra(parentHeader, parentDelta, nil, &polytypes.BlockMetaData{EpochNumber: 1}, accountSetParent)
 
 	// add parent header to map
-	headersMap.addHeader(parentHeader)
+	headersMap.AddHeader(parentHeader)
 
 	// create current header (block 11) with all appropriate fields required for validation
 	currentDelta, err := validator.CreateValidatorSetDelta(validatorSetCurrent, validatorSetCurrent)
@@ -152,11 +164,11 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 		Number:     polyBftConfig.EpochSize + 1,
 		ParentHash: parentHeader.Hash,
 		Timestamp:  parentHeader.Timestamp + 1,
-		MixHash:    PolyBFTMixDigest,
+		MixHash:    polytypes.PolyBFTMixDigest,
 		Difficulty: 1,
 	}
 	updateHeaderExtra(currentHeader, currentDelta, nil,
-		&BlockMetaData{
+		&polytypes.BlockMetaData{
 			EpochNumber: 2,
 		}, nil)
 
@@ -165,7 +177,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 
 	// omit Parent field (parent signature) intentionally
 	updateHeaderExtra(currentHeader, currentDelta, nil,
-		&BlockMetaData{
+		&polytypes.BlockMetaData{
 			EpochNumber: 1},
 		accountSetCurrent)
 
@@ -173,46 +185,52 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 	assert.ErrorContains(t, polybft.VerifyHeader(currentHeader), "failed to verify signatures for parent of block")
 
 	updateHeaderExtra(currentHeader, currentDelta, parentCommitment,
-		&BlockMetaData{
+		&polytypes.BlockMetaData{
 			EpochNumber: 1},
 		accountSetCurrent)
 
 	assert.NoError(t, polybft.VerifyHeader(currentHeader))
 
+	validatorSnapCache, err = vs.NewValidatorsSnapshotCache(hclog.NewNullLogger(), state.NewTestState(t), blockchainMock)
+	require.NoError(t, err)
+
 	// clean validator snapshot cache (re-instantiate it), submit invalid validator set for parent signature and expect the following error
-	polybft.validatorsCache = newValidatorsSnapshotCache(hclog.NewNullLogger(), newTestState(t), blockchainMock)
-	assert.NoError(t, polybft.validatorsCache.storeSnapshot(
-		&validatorSnapshot{Epoch: 0, Snapshot: validatorSetCurrent}, nil)) // invalid validator set is submitted
-	assert.NoError(t, polybft.validatorsCache.storeSnapshot(
-		&validatorSnapshot{Epoch: 1, Snapshot: validatorSetCurrent}, nil))
+	polybft.validatorsCache = validatorSnapCache
+	assert.NoError(t, polybft.validatorsCache.StoreSnapshot(
+		&vs.ValidatorSnapshot{Epoch: 0, Snapshot: validatorSetCurrent}, nil)) // invalid validator set is submitted
+	assert.NoError(t, polybft.validatorsCache.StoreSnapshot(
+		&vs.ValidatorSnapshot{Epoch: 1, Snapshot: validatorSetCurrent}, nil))
 	assert.ErrorContains(t, polybft.VerifyHeader(currentHeader), "failed to verify signatures for parent of block")
 
 	// clean validators cache again and set valid snapshots
-	polybft.validatorsCache = newValidatorsSnapshotCache(hclog.NewNullLogger(), newTestState(t), blockchainMock)
-	assert.NoError(t, polybft.validatorsCache.storeSnapshot(
-		&validatorSnapshot{Epoch: 0, Snapshot: validatorSetParent}, nil))
-	assert.NoError(t, polybft.validatorsCache.storeSnapshot(
-		&validatorSnapshot{Epoch: 1, Snapshot: validatorSetCurrent}, nil))
+	validatorSnapCache, err = vs.NewValidatorsSnapshotCache(hclog.NewNullLogger(), state.NewTestState(t), blockchainMock)
+	require.NoError(t, err)
+
+	polybft.validatorsCache = validatorSnapCache
+	assert.NoError(t, polybft.validatorsCache.StoreSnapshot(
+		&vs.ValidatorSnapshot{Epoch: 0, Snapshot: validatorSetParent}, nil))
+	assert.NoError(t, polybft.validatorsCache.StoreSnapshot(
+		&vs.ValidatorSnapshot{Epoch: 1, Snapshot: validatorSetCurrent}, nil))
 	assert.NoError(t, polybft.VerifyHeader(currentHeader))
 
 	// add current header to the blockchain (headersMap) and try validating again
-	headersMap.addHeader(currentHeader)
+	headersMap.AddHeader(currentHeader)
 	assert.NoError(t, polybft.VerifyHeader(currentHeader))
 }
 
 func TestPolybft_Close(t *testing.T) {
 	t.Parallel()
 
-	syncer := &syncerMock{}
+	syncer := &polychain.SyncerMock{}
 	syncer.On("Close", mock.Anything).Return(error(nil)).Once()
 
 	polybft := Polybft{
 		closeCh: make(chan struct{}),
 		syncer:  syncer,
 		runtime: &consensusRuntime{
-			bridge: &dummyBridge{},
+			bridge: &bridge.DummyBridge{},
 		},
-		state: &State{db: &bbolt.DB{}},
+		state: state.NewTestState(t),
 	}
 
 	assert.NoError(t, polybft.Close())
@@ -242,7 +260,7 @@ func TestPolybft_GetSyncProgression(t *testing.T) {
 
 	result := &progress.Progression{}
 
-	syncer := &syncerMock{}
+	syncer := &polychain.SyncerMock{}
 	syncer.On("GetSyncProgression", mock.Anything).Return(result).Once()
 
 	polybft := Polybft{
@@ -295,22 +313,22 @@ func Test_GenesisPostHookFactory(t *testing.T) {
 	bridgeCfg := createTestBridgeConfig()
 	cases := []struct {
 		name            string
-		config          *PolyBFTConfig
+		config          *config.PolyBFT
 		bridgeAllowList *chain.AddressListConfig
 		expectedErr     error
 	}{
 		{
 			name: "access lists disabled",
-			config: &PolyBFTConfig{
+			config: &config.PolyBFT{
 				InitialValidatorSet: validators.GetParamValidators(),
-				Bridge:              map[uint64]*BridgeConfig{0: bridgeCfg},
+				Bridge:              map[uint64]*config.Bridge{0: bridgeCfg},
 				EpochSize:           epochSize,
-				RewardConfig:        &RewardsConfig{WalletAmount: ethgo.Ether(1000)},
-				NativeTokenConfig:   &TokenConfig{Name: "Test", Symbol: "TEST", Decimals: 18},
+				RewardConfig:        &config.Rewards{WalletAmount: ethgo.Ether(1000)},
+				NativeTokenConfig:   &config.Token{Name: "Test", Symbol: "TEST", Decimals: 18},
 				MaxValidatorSetSize: maxValidators,
 				BladeAdmin:          admin,
-				GovernanceConfig: &GovernanceConfig{
-					VotingDelay:              bigZero,
+				GovernanceConfig: &config.Governance{
+					VotingDelay:              big.NewInt(0),
 					VotingPeriod:             big.NewInt(10),
 					ProposalThreshold:        big.NewInt(25),
 					ProposalQuorumPercentage: 67,
@@ -319,16 +337,16 @@ func Test_GenesisPostHookFactory(t *testing.T) {
 		},
 		{
 			name: "access lists enabled",
-			config: &PolyBFTConfig{
+			config: &config.PolyBFT{
 				InitialValidatorSet: validators.GetParamValidators(),
-				Bridge:              map[uint64]*BridgeConfig{0: bridgeCfg},
+				Bridge:              map[uint64]*config.Bridge{0: bridgeCfg},
 				EpochSize:           epochSize,
-				RewardConfig:        &RewardsConfig{WalletAmount: ethgo.Ether(1000)},
-				NativeTokenConfig:   &TokenConfig{Name: "Test Mintable", Symbol: "TEST_MNT", Decimals: 18},
+				RewardConfig:        &config.Rewards{WalletAmount: ethgo.Ether(1000)},
+				NativeTokenConfig:   &config.Token{Name: "Test Mintable", Symbol: "TEST_MNT", Decimals: 18},
 				MaxValidatorSetSize: maxValidators,
 				BladeAdmin:          admin,
-				GovernanceConfig: &GovernanceConfig{
-					VotingDelay:              bigZero,
+				GovernanceConfig: &config.Governance{
+					VotingDelay:              big.NewInt(0),
 					VotingPeriod:             big.NewInt(10),
 					ProposalThreshold:        big.NewInt(25),
 					ProposalQuorumPercentage: 67,
@@ -347,14 +365,14 @@ func Test_GenesisPostHookFactory(t *testing.T) {
 			t.Parallel()
 
 			params := &chain.Params{
-				Engine:          map[string]interface{}{ConsensusName: tc.config},
+				Engine:          map[string]interface{}{config.ConsensusName: tc.config},
 				BridgeAllowList: tc.bridgeAllowList,
 			}
 			chainConfig := &chain.Chain{Params: params, Genesis: &chain.Genesis{Alloc: make(map[types.Address]*chain.GenesisAccount)}}
-			initHandler := GenesisPostHookFactory(chainConfig, ConsensusName)
+			initHandler := GenesisPostHookFactory(chainConfig, config.ConsensusName)
 			require.NotNil(t, initHandler)
 
-			transition := newTestTransition(t, nil)
+			transition := systemstate.NewTestTransition(t, nil)
 			if tc.expectedErr == nil {
 				require.NoError(t, initHandler(transition))
 			} else {
@@ -362,4 +380,40 @@ func Test_GenesisPostHookFactory(t *testing.T) {
 			}
 		})
 	}
+}
+
+// createTestBridgeConfig creates test bridge configuration with hard-coded addresses
+func createTestBridgeConfig() *config.Bridge {
+	return &config.Bridge{
+		ExternalGatewayAddr:                  types.StringToAddress("1"),
+		ExternalERC20PredicateAddr:           types.StringToAddress("2"),
+		ExternalMintableERC20PredicateAddr:   types.StringToAddress("3"),
+		ExternalNativeERC20Addr:              types.StringToAddress("4"),
+		ExternalERC721PredicateAddr:          types.StringToAddress("5"),
+		ExternalMintableERC721PredicateAddr:  types.StringToAddress("6"),
+		ExternalERC1155PredicateAddr:         types.StringToAddress("7"),
+		ExternalMintableERC1155PredicateAddr: types.StringToAddress("8"),
+		JSONRPCEndpoint:                      "http://localhost:8545",
+	}
+}
+
+func createSignature(t *testing.T, accounts []*wallet.Account, hash types.Hash, domain []byte) *polytypes.Signature {
+	t.Helper()
+
+	var signatures bls.Signatures
+
+	var bmp bitmap.Bitmap
+	for i, x := range accounts {
+		bmp.Set(uint64(i))
+
+		src, err := x.Bls.Sign(hash[:], domain)
+		require.NoError(t, err)
+
+		signatures = append(signatures, src)
+	}
+
+	aggs, err := signatures.Aggregate().Marshal()
+	require.NoError(t, err)
+
+	return &polytypes.Signature{AggregatedSignature: aggs, Bitmap: bmp}
 }

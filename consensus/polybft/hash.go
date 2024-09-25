@@ -3,6 +3,7 @@ package polybft
 import (
 	"sync"
 
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -17,7 +18,7 @@ func setupHeaderHashFunc() {
 		types.HeaderHash = func(h *types.Header) types.Hash {
 			// when hashing the block for signing we have to remove from
 			// the extra field the seal and committed seal items
-			extra, err := GetIbftExtraClean(h.ExtraData)
+			extra, err := polytypes.GetIbftExtraClean(h.ExtraData)
 			if err != nil {
 				return types.ZeroHash
 			}

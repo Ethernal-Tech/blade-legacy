@@ -10,7 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/0xPolygon/polygon-edge/chain"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -82,7 +84,7 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 			}
 		}
 
-		polyBFTConfig := PolyBFTConfig{
+		polyBFTConfig := config.PolyBFT{
 			InitialValidatorSet:  initValidators,
 			EpochSize:            24 * 60 * 60 / 2,
 			SprintSize:           5,
@@ -96,12 +98,12 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 			BladeAdmin:           accSet.GetAddresses()[0],
 			// use 1st account as governance address
 			Governance: currentValidators.ToValidatorSet().Accounts().GetAddresses()[0],
-			RewardConfig: &RewardsConfig{
+			RewardConfig: &config.Rewards{
 				TokenAddress:  contracts.NativeERC20TokenContract,
 				WalletAddress: walletAddress,
 				WalletAmount:  new(big.Int).SetUint64(initialBalance),
 			},
-			GovernanceConfig: &GovernanceConfig{
+			GovernanceConfig: &config.Governance{
 				VotingDelay:              big.NewInt(10),
 				VotingPeriod:             big.NewInt(10),
 				ProposalThreshold:        big.NewInt(25),
@@ -114,7 +116,7 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 			StakeTokenAddr: contracts.NativeERC20TokenContract,
 		}
 
-		transition := newTestTransition(t, alloc)
+		transition := systemstate.NewTestTransition(t, alloc)
 
 		// init NetworkParams
 		require.NoError(t, initNetworkParamsContract(2, polyBFTConfig, transition))
@@ -146,5 +148,51 @@ func TestIntegration_CommitEpoch(t *testing.T) {
 		result = transition.Call2(contracts.SystemCaller, contracts.EpochManagerContract, input, big.NewInt(0), 10000000000)
 		require.NoError(t, result.Err)
 		t.Logf("Number of validators %d on commit epoch, Gas used %+v\n", accSet.Len(), result.GasUsed)
+	}
+}
+
+func createTestCommitEpochInput(t *testing.T, epochID uint64,
+	epochSize uint64) *contractsapi.CommitEpochEpochManagerFn {
+	t.Helper()
+
+	var startBlock uint64 = 0
+	if epochID > 1 {
+		startBlock = (epochID - 1) * epochSize
+	}
+
+	commitEpoch := &contractsapi.CommitEpochEpochManagerFn{
+		ID: new(big.Int).SetUint64(epochID),
+		Epoch: &contractsapi.Epoch{
+			StartBlock: new(big.Int).SetUint64(startBlock + 1),
+			EndBlock:   new(big.Int).SetUint64(epochSize * epochID),
+			EpochRoot:  types.Hash{},
+		},
+		EpochSize: new(big.Int).SetUint64(epochSize),
+	}
+
+	return commitEpoch
+}
+
+func createTestDistributeRewardsInput(t *testing.T, epochID uint64,
+	validatorSet validator.AccountSet, epochSize uint64) *contractsapi.DistributeRewardForEpochManagerFn {
+	t.Helper()
+
+	if validatorSet == nil {
+		validatorSet = validator.NewTestValidators(t, 5).GetPublicIdentities()
+	}
+
+	uptime := make([]*contractsapi.Uptime, len(validatorSet))
+
+	for i, v := range validatorSet {
+		uptime[i] = &contractsapi.Uptime{
+			Validator:    v.Address,
+			SignedBlocks: new(big.Int).SetUint64(epochSize),
+		}
+	}
+
+	return &contractsapi.DistributeRewardForEpochManagerFn{
+		EpochID:   new(big.Int).SetUint64(epochID),
+		Uptime:    uptime,
+		EpochSize: new(big.Int).SetUint64(epochSize),
 	}
 }

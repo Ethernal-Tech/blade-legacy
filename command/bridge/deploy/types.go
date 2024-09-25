@@ -5,7 +5,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -36,10 +36,10 @@ const (
 	erc1155TemplateName          = "ERC1155Template"
 )
 
-type addressPopulator func(*polybft.BridgeConfig, []*deployContractResult)
+type addressPopulator func(*polycfg.Bridge, []*deployContractResult)
 type initializer func(command.OutputFormatter, txrelayer.TxRelayer,
 	[]*validator.GenesisValidator,
-	*polybft.BridgeConfig, crypto.Key, int64) error
+	*polycfg.Bridge, crypto.Key, int64) error
 
 // contract represents a contract to be deployed
 type contract struct {
@@ -52,7 +52,7 @@ type contract struct {
 
 // deploy deploys the contract and its proxy if it has one, and returns the deployment results
 func (c *contract) deploy(
-	bridgeCfg *polybft.BridgeConfig,
+	bridgeCfg *polycfg.Bridge,
 	txRelayer txrelayer.TxRelayer, deployerKey crypto.Key,
 	proxyAdmin types.Address) ([]*deployContractResult, error) {
 	txn := helper.CreateTransaction(types.ZeroAddress, nil, c.artifact.Bytecode, nil, true)

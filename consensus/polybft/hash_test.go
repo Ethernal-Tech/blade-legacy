@@ -5,17 +5,19 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
+	polytesting "github.com/0xPolygon/polygon-edge/consensus/polybft/testing"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_setupHeaderHashFunc(t *testing.T) {
-	extra := &Extra{
+	extra := &polytypes.Extra{
 		Validators: &validator.ValidatorSetDelta{Removed: bitmap.Bitmap{1}},
-		Parent:     createSignature(t, []*wallet.Account{generateTestAccount(t)}, types.ZeroHash, signer.DomainBridge),
-		Committed:  &Signature{},
+		Parent:     createSignature(t, []*wallet.Account{polytesting.GenerateTestAccount(t)}, types.ZeroHash, signer.DomainBridge),
+		Committed:  &polytypes.Signature{},
 	}
 
 	header := &types.Header{
@@ -27,12 +29,17 @@ func Test_setupHeaderHashFunc(t *testing.T) {
 	header.ExtraData = extra.MarshalRLPTo(nil)
 	notFullExtraHash := types.HeaderHash(header)
 
-	extra.Committed = createSignature(t, []*wallet.Account{generateTestAccount(t)}, types.ZeroHash, signer.DomainBridge)
+	extra.Committed = createSignature(t, []*wallet.Account{polytesting.GenerateTestAccount(t)}, types.ZeroHash, signer.DomainBridge)
 	header.ExtraData = extra.MarshalRLPTo(nil)
 	fullExtraHash := types.HeaderHash(header)
 
-	assert.Equal(t, notFullExtraHash, fullExtraHash)
+	require.Equal(t, notFullExtraHash, fullExtraHash)
 
 	header.ExtraData = []byte{1, 2, 3, 4, 100, 200, 255}
-	assert.Equal(t, types.ZeroHash, types.HeaderHash(header)) // to small extra data
+	require.Equal(t, types.ZeroHash, types.HeaderHash(header)) // to small extra data
+}
+
+func init() {
+	// setup custom hash header func
+	setupHeaderHashFunc()
 }

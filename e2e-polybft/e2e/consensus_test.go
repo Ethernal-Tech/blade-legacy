@@ -18,8 +18,10 @@ import (
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
@@ -174,7 +176,7 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(owner.JSONRPCAddr()))
 	require.NoError(t, err)
 
-	polybftConfig, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftConfig, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	// create the first account and extract the address
@@ -197,7 +199,7 @@ func TestE2E_Consensus_RegisterValidator(t *testing.T) {
 	genesisBlock, err := owner.JSONRPC().GetBlockByNumber(0, false)
 	require.NoError(t, err)
 
-	_, err = polybft.GetIbftExtra(genesisBlock.Header.ExtraData)
+	_, err = polytypes.GetIbftExtra(genesisBlock.Header.ExtraData)
 	require.NoError(t, err)
 
 	// owner whitelists both new validators
@@ -315,7 +317,7 @@ func TestE2E_Consensus_Validator_Unstake(t *testing.T) {
 		}),
 	)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	srv := cluster.Servers[0]
@@ -546,7 +548,7 @@ func TestE2E_Consensus_EIP1559Check(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithBridges(1),
 		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
-		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: burnContractAddr}),
+		framework.WithBurnContract(&polycfg.BurnContractInfo{BlockNumber: 0, Address: burnContractAddr}),
 		framework.WithSecretsCallback(func(a []types.Address, config *framework.TestClusterConfig) {
 			for range a {
 				config.StakeAmounts = append(config.StakeAmounts, command.DefaultPremineBalance)
@@ -692,7 +694,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 	// waiting two epochs, so that some rewards get accumulated
 	require.NoError(t, cluster.WaitForBlock(epochEndingBlock, 1*time.Minute))
 
-	queryValidators := func(handler func(idx int, validatorInfo *polybft.ValidatorInfo)) {
+	queryValidators := func(handler func(idx int, validatorInfo *systemstate.ValidatorInfo)) {
 		for i, validatorAddr := range votingPowerChangeValidators {
 			// query validator info
 			validatorInfo, err := validatorHelper.GetValidatorInfo(
@@ -707,9 +709,9 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 	bigZero := big.NewInt(0)
 
 	// validatorsMap holds only changed validators
-	validatorsMap := make(map[types.Address]*polybft.ValidatorInfo, votingPowerChanges)
+	validatorsMap := make(map[types.Address]*systemstate.ValidatorInfo, votingPowerChanges)
 
-	queryValidators(func(idx int, validator *polybft.ValidatorInfo) {
+	queryValidators(func(idx int, validator *systemstate.ValidatorInfo) {
 		t.Logf("[Validator#%d] Voting power (original)=%d, rewards=%d\n",
 			idx+1, validator.Stake, validator.WithdrawableRewards)
 
@@ -726,7 +728,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 		require.NoError(t, validatorSrv.Stake(types.ZeroAddress, validator.WithdrawableRewards))
 	})
 
-	queryValidators(func(idx int, validator *polybft.ValidatorInfo) {
+	queryValidators(func(idx int, validator *systemstate.ValidatorInfo) {
 		t.Logf("[Validator#%d] Voting power (after stake)=%d\n", idx+1, validator.Stake)
 
 		previousValidatorInfo := validatorsMap[validator.Address]
@@ -752,7 +754,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 
 		epochEndingBlock += epochSize
 
-		currentExtra, err := polybft.GetIbftExtra(latestBlock.Header.ExtraData)
+		currentExtra, err := polytypes.GetIbftExtra(latestBlock.Header.ExtraData)
 		require.NoError(t, err)
 
 		if currentExtra.Validators == nil || currentExtra.Validators.IsEmpty() {

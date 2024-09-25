@@ -6,8 +6,8 @@ import (
 	"os"
 
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -58,7 +58,8 @@ func GetAccountFromDir(accountDir string) (*wallet.Account, error) {
 
 // GetValidatorInfo queries CustomSupernetManager, StakeManager and RewardPool smart contracts
 // to retrieve validator info for given address
-func GetValidatorInfo(validatorAddr types.Address, childRelayer txrelayer.TxRelayer) (*polybft.ValidatorInfo, error) {
+func GetValidatorInfo(validatorAddr types.Address,
+	childRelayer txrelayer.TxRelayer) (*systemstate.ValidatorInfo, error) {
 	getValidatorMethod := contractsapi.StakeManager.Abi.GetMethod("getValidator")
 
 	encode, err := getValidatorMethod.Encode([]interface{}{validatorAddr})
@@ -92,7 +93,7 @@ func GetValidatorInfo(validatorAddr types.Address, childRelayer txrelayer.TxRela
 	}
 
 	//nolint:forcetypeassert
-	validatorInfo := &polybft.ValidatorInfo{
+	validatorInfo := &systemstate.ValidatorInfo{
 		Address:       validatorAddr,
 		IsActive:      innerMap["isActive"].(bool),
 		IsWhitelisted: innerMap["isWhitelisted"].(bool),

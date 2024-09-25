@@ -10,7 +10,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/server"
 	"github.com/0xPolygon/polygon-edge/types"
 )
@@ -50,14 +50,12 @@ var (
 	errInvalidEpochSize         = errors.New("epoch size must be greater than 1")
 	errRewardWalletAmountZero   = errors.New("reward wallet amount can not be zero or negative")
 	errReserveAccMustBePremined = errors.New("it is mandatory to premine reserve account (0x0 address)")
-	errBlockTrackerPollInterval = errors.New("block tracker poll interval must be greater than 0")
 	errBaseFeeChangeDenomZero   = errors.New("base fee change denominator must be greater than 0")
 	errBaseFeeEMZero            = errors.New("base fee elasticity multiplier must be greater than 0")
 	errBaseFeeZero              = errors.New("base fee  must be greater than 0")
 	errRewardWalletNotDefined   = errors.New("reward wallet address must be defined")
 	errRewardWalletZero         = errors.New("reward wallet address must not be zero address")
 	errInvalidVotingPeriod      = errors.New("voting period can not be zero")
-	errStakeTokenIsZeroAddress  = errors.New("stake token address must not be zero address")
 )
 
 type genesisParams struct {
@@ -110,7 +108,7 @@ type genesisParams struct {
 	bridgeBlockListEnabled           []string
 
 	nativeTokenConfigRaw string
-	nativeTokenConfig    *polybft.TokenConfig
+	nativeTokenConfig    *polycfg.Token
 
 	premineInfos []*helper.PremineInfo
 	stakeInfos   map[types.Address]*big.Int
@@ -303,16 +301,6 @@ func (p *genesisParams) parsePremineInfo() error {
 		}
 
 		p.premineInfos = append(p.premineInfos, premineInfo)
-	}
-
-	return nil
-}
-
-// validateBlockTrackerPollInterval validates block tracker block interval
-// which can not be 0
-func (p *genesisParams) validateBlockTrackerPollInterval() error {
-	if p.blockTrackerPollInterval == 0 {
-		return helper.ErrBlockTrackerPollInterval
 	}
 
 	return nil

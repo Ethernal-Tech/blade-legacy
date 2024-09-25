@@ -14,7 +14,7 @@ import (
 
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
@@ -380,7 +380,7 @@ func (t *TestServer) HasValidatorSealed(firstBlock, lastBlock uint64, validators
 			return false, err
 		}
 
-		extra, err := polybft.GetIbftExtra(block.Header.ExtraData)
+		extra, err := polytypes.GetIbftExtra(block.Header.ExtraData)
 		if err != nil {
 			return false, err
 		}

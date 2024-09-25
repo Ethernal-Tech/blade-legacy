@@ -6,6 +6,7 @@ import (
 	consensusDev "github.com/0xPolygon/polygon-edge/consensus/dev"
 	consensusDummy "github.com/0xPolygon/polygon-edge/consensus/dummy"
 	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft"
+	consensusPolyBFTConfig "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
 	"github.com/0xPolygon/polygon-edge/secrets"
 	"github.com/0xPolygon/polygon-edge/secrets/awsssm"
@@ -27,7 +28,7 @@ type IsL1OriginatedTokenCheck func(config *chain.Params) (bool, error)
 
 const (
 	DevConsensus     ConsensusType = "dev"
-	PolyBFTConsensus ConsensusType = consensusPolyBFT.ConsensusName
+	PolyBFTConsensus ConsensusType = consensusPolyBFTConfig.ConsensusName
 	DummyConsensus   ConsensusType = "dummy"
 )
 

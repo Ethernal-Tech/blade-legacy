@@ -11,7 +11,7 @@ import (
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
@@ -38,7 +38,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 4,
 		framework.WithEpochSize(int(epochSize)),
 		framework.WithPremine(preminedAcctOne.Address(), preminedAcctTwo.Address()),
-		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
+		framework.WithBurnContract(&polycfg.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 		framework.WithHTTPS(),
 		framework.WithTLSCertificate("/etc/ssl/certs/localhost.pem", "/etc/ssl/private/localhost.key"),
 	)

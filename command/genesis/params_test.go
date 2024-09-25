@@ -9,7 +9,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -19,13 +19,13 @@ func Test_extractNativeTokenMetadata(t *testing.T) {
 	cases := []struct {
 		name        string
 		rawConfig   string
-		expectedCfg *polybft.TokenConfig
+		expectedCfg *polycfg.Token
 		expectErr   bool
 	}{
 		{
 			name:        "default token config",
 			rawConfig:   "",
-			expectedCfg: polybft.DefaultTokenConfig,
+			expectedCfg: polycfg.DefaultTokenConfig,
 			expectErr:   false,
 		},
 		{
@@ -51,7 +51,7 @@ func Test_extractNativeTokenMetadata(t *testing.T) {
 		{
 			name:      "mintable valid config",
 			rawConfig: "MyToken:MTK:9:true",
-			expectedCfg: &polybft.TokenConfig{
+			expectedCfg: &polycfg.Token{
 				Name:       "MyToken",
 				Symbol:     "MTK",
 				Decimals:   9,
@@ -62,7 +62,7 @@ func Test_extractNativeTokenMetadata(t *testing.T) {
 		{
 			name:      "non-mintable valid config",
 			rawConfig: "MyToken:MTK:9:false:1",
-			expectedCfg: &polybft.TokenConfig{
+			expectedCfg: &polycfg.Token{
 				Name:       "MyToken",
 				Symbol:     "MTK",
 				Decimals:   9,
@@ -151,7 +151,7 @@ func Test_validatePremineInfo(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 
-			p := &genesisParams{premine: c.premineRaw, nativeTokenConfig: &polybft.TokenConfig{IsMintable: c.isTokenMintable}}
+			p := &genesisParams{premine: c.premineRaw, nativeTokenConfig: &polycfg.Token{IsMintable: c.isTokenMintable}}
 			err := p.parsePremineInfo()
 
 			if c.expectedParseErrMsg != "" {
@@ -222,7 +222,7 @@ func Test_validateRewardWallet(t *testing.T) {
 			p := &genesisParams{
 				rewardWallet:      c.rewardWallet,
 				epochReward:       c.epochReward,
-				nativeTokenConfig: &polybft.TokenConfig{},
+				nativeTokenConfig: &polycfg.Token{},
 			}
 			err := p.validateRewardWalletAndToken()
 			require.ErrorIs(t, err, c.expectValidateErr)

@@ -19,7 +19,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/genesis"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -104,7 +104,7 @@ type TestClusterConfig struct {
 	TmpDir               string
 	BlockGasLimit        uint64
 	BlockTime            time.Duration
-	BurnContract         *polybft.BurnContractInfo
+	BurnContract         *polycfg.BurnContractInfo
 	ValidatorPrefix      string
 	Binary               string
 	ValidatorSetSize     uint64
@@ -321,7 +321,7 @@ func WithBlockGasLimit(blockGasLimit uint64) ClusterOption {
 	}
 }
 
-func WithBurnContract(burnContract *polybft.BurnContractInfo) ClusterOption {
+func WithBurnContract(burnContract *polycfg.BurnContractInfo) ClusterOption {
 	return func(h *TestClusterConfig) {
 		h.BurnContract = burnContract
 	}
@@ -616,7 +616,7 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 			args = append(args, "--native-token-config", cluster.Config.NativeTokenConfigRaw)
 		}
 
-		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
+		tokenConfig, err := polycfg.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
 		require.NoError(t, err)
 
 		if len(cluster.Config.Premine) != 0 && tokenConfig.IsMintable {
@@ -760,10 +760,10 @@ func NewTestCluster(t *testing.T, validatorsCount int, opts ...ClusterOption) *T
 		err = bridge.deployExternalChainContracts(genesisPath)
 		require.NoError(t, err)
 
-		polybftConfig, err := polybft.LoadPolyBFTConfig(genesisPath)
+		polybftConfig, err := polycfg.LoadPolyBFTConfig(genesisPath)
 		require.NoError(t, err)
 
-		tokenConfig, err := polybft.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
+		tokenConfig, err := polycfg.ParseRawTokenConfig(cluster.Config.NativeTokenConfigRaw)
 		require.NoError(t, err)
 
 		// fund addresses on the bridge chain

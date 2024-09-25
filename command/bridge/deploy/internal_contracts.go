@@ -6,7 +6,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/command"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
@@ -30,12 +30,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, gatewayName),
 		hasProxy: true,
 		artifact: contractsapi.Gateway,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalGatewayAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			_ int64) error {
 			validatorSet, err := getValidatorSet(fmt, genesisValidators)
@@ -64,12 +64,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, erc20PredicateName),
 		hasProxy: true,
 		artifact: contractArtifact,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalERC20PredicateAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
@@ -109,12 +109,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, erc721PredicateName),
 		hasProxy: true,
 		artifact: contractArtifact,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalERC721PredicateAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
@@ -152,12 +152,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, erc1155PredicateName),
 		hasProxy: true,
 		artifact: contractArtifact,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalERC1155PredicateAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
@@ -195,12 +195,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, erc20MintablePredicateName),
 		hasProxy: true,
 		artifact: contractArtifact,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalMintableERC20PredicateAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
@@ -238,12 +238,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, erc721MintablePredicateName),
 		hasProxy: true,
 		artifact: contractArtifact,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalMintableERC721PredicateAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
@@ -281,12 +281,12 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 		name:     getContractName(true, erc1155MintablePredicateName),
 		hasProxy: true,
 		artifact: contractArtifact,
-		addressPopulatorFn: func(bc *polybft.BridgeConfig, dcr []*deployContractResult) {
+		addressPopulatorFn: func(bc *polycfg.Bridge, dcr []*deployContractResult) {
 			bc.InternalMintableERC1155PredicateAddr = dcr[1].Address
 		},
 		initializeFn: func(fmt command.OutputFormatter, relayer txrelayer.TxRelayer,
 			genesisValidators []*validator.GenesisValidator,
-			config *polybft.BridgeConfig,
+			config *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			var input contractsapi.FunctionAbi
@@ -320,7 +320,7 @@ func initInternalContracts(chainCfg *chain.Chain) []*contract {
 // preAllocateInternalPredicates pre-allocates internal predicates in genesis
 // if the command is run in bootstrap mode
 func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts []*contract,
-	chainCfg *chain.Chain, bridgeCfg *polybft.BridgeConfig) error {
+	chainCfg *chain.Chain, bridgeCfg *polycfg.Bridge) error {
 	predicateBaseProxyAddress := contracts.ChildBridgeContractsBaseAddress
 
 	if consensusCfg.Bridge != nil {

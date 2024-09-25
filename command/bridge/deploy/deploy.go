@@ -15,7 +15,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/command"
 	"github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	cmdHelper "github.com/0xPolygon/polygon-edge/command/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -28,11 +28,11 @@ var (
 	params deployParams
 
 	// consensusCfg contains consensus protocol configuration parameters
-	consensusCfg polybft.PolyBFTConfig
+	consensusCfg polycfg.PolyBFT
 )
 
 type deploymentResultInfo struct {
-	BridgeCfg      *polybft.BridgeConfig
+	BridgeCfg      *polycfg.Bridge
 	CommandResults []command.CommandResult
 }
 
@@ -194,7 +194,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	// write updated consensus configuration
-	chainConfig.Params.Engine[polybft.ConsensusName] = consensusCfg
+	chainConfig.Params.Engine[polycfg.ConsensusName] = consensusCfg
 
 	if err := cmdHelper.WriteGenesisConfigToDisk(chainConfig, params.genesisPath); err != nil {
 		outputter.SetError(fmt.Errorf("failed to save chain configuration bridge data: %w", err))
@@ -241,7 +241,7 @@ func deployContracts(
 
 	var (
 		internalChainID   = chainCfg.Params.ChainID
-		bridgeConfig      = &polybft.BridgeConfig{JSONRPCEndpoint: params.externalRPCAddress}
+		bridgeConfig      = &polycfg.Bridge{JSONRPCEndpoint: params.externalRPCAddress}
 		externalContracts []*contract
 		internalContracts []*contract
 	)

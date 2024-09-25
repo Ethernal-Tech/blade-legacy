@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -95,7 +95,7 @@ func (t *RegisterValidatorTest) runTest() (*wallet.Account, error) {
 		return nil, err
 	}
 
-	extra, err := polybft.GetIbftExtra(epochEndingBlock.ExtraData)
+	extra, err := polytypes.GetIbftExtra(epochEndingBlock.ExtraData)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get ibft extra data for epoch ending block. Error: %w", err)
 	}

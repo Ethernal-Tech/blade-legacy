@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/0xPolygon/polygon-edge/command/validator/helper"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/helper/common"
@@ -61,7 +62,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 	relayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(proposer.JSONRPC()))
 	require.NoError(t, err)
 
-	polybftCfg, err := polybft.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
+	polybftCfg, err := polycfg.LoadPolyBFTConfig(path.Join(cluster.Config.TmpDir, chainConfigFileName))
 	require.NoError(t, err)
 
 	executeSuccessfulProposalCycle := func(t *testing.T,
@@ -161,7 +162,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 			jsonrpc.BlockNumber(endOfPreviousEpoch), false)
 		require.NoError(t, err)
 
-		extra, err := polybft.GetIbftExtra(block.Header.ExtraData)
+		extra, err := polytypes.GetIbftExtra(block.Header.ExtraData)
 		require.NoError(t, err)
 
 		oldEpoch := extra.BlockMetaData.EpochNumber
@@ -170,7 +171,7 @@ func TestE2E_Governance_ProposeAndExecuteSimpleProposal(t *testing.T) {
 			jsonrpc.BlockNumber(endOfNewEpoch), false)
 		require.NoError(t, err)
 
-		extra, err = polybft.GetIbftExtra(block.Header.ExtraData)
+		extra, err = polytypes.GetIbftExtra(block.Header.ExtraData)
 		require.NoError(t, err)
 
 		newEpoch := extra.BlockMetaData.EpochNumber

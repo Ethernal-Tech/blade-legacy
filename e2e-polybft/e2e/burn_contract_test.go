@@ -3,7 +3,7 @@ package e2e
 import (
 	"testing"
 
-	"github.com/0xPolygon/polygon-edge/consensus/polybft"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
@@ -21,7 +21,7 @@ func TestE2E_BurnContract_Deployed(t *testing.T) {
 		framework.WithBridges(1),
 		framework.WithNativeTokenConfig(nativeTokenNonMintableConfig),
 		framework.WithTestRewardToken(),
-		framework.WithBurnContract(&polybft.BurnContractInfo{
+		framework.WithBurnContract(&polycfg.BurnContractInfo{
 			Address:            contractAddr,
 			DestinationAddress: destinationAddr,
 		}),
