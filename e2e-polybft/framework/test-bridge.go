@@ -305,7 +305,7 @@ func (t *TestBridge) SendExitTransaction(exitHelper types.Address, exitID uint64
 
 // cmdRun executes arbitrary command from the given binary
 func (t *TestBridge) cmdRun(args ...string) error {
-	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout("bridge"))
+	return runCommand(t.clusterConfig.Binary, args, t.clusterConfig.GetStdout(fmt.Sprintf("bridge-%d", t.id)))
 }
 
 // deployExternalChainContracts deploys and initializes external chain contracts
