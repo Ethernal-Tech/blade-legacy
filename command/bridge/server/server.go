@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -32,7 +33,7 @@ const (
 	gethImage        = "ethereum/client-go:v1.9.25"
 
 	defaultHostIP = "127.0.0.1"
-	defaultPort   = "8545"
+	defaultPort   = 8545
 )
 
 var (
@@ -77,7 +78,7 @@ func setFlags(cmd *cobra.Command) {
 		"custom chain id for external chain",
 	)
 
-	cmd.Flags().StringVar(
+	cmd.Flags().Uint64Var(
 		&params.port,
 		"port",
 		defaultPort,
@@ -116,7 +117,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	}
 
 	// Ping geth server to make sure everything is up and running
-	if err := PingServer(closeCh); err != nil {
+	if err := PingServer(closeCh, params.port); err != nil {
 		close(closeCh)
 
 		if ip, err := helper.ReadBridgeChainIP(params.port); err != nil {
@@ -143,7 +144,12 @@ func runCommand(cmd *cobra.Command, _ []string) {
 }
 
 func runExternalChain(ctx context.Context, outputter command.OutputFormatter, closeCh chan struct{}) error {
-	var err error
+	var (
+		err           error
+		webSocketPort = params.port + 1
+		authPort      = params.port + 2
+	)
+
 	if dockerClient, err = dockerclient.NewClientWithOpts(dockerclient.FromEnv,
 		dockerclient.WithAPIVersionNegotiation()); err != nil {
 		return err
@@ -193,6 +199,15 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 	// set chain id
 	args = append(args, "--networkid", fmt.Sprintf("%d", params.chainID))
 
+	// set http port value
+	args = append(args, "--http.port", strconv.FormatUint(params.port, 10))
+
+	// set websocket port +1 from start port value
+	args = append(args, "--ws.port", strconv.FormatUint(webSocketPort, 10))
+
+	// set authrpc port +2 from start port value
+	args = append(args, "--authrpc.port", strconv.FormatUint(authPort, 10))
+
 	config := &container.Config{
 		Image: image,
 		Cmd:   args,
@@ -215,7 +230,7 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 		}
 	}
 
-	port := nat.Port(fmt.Sprintf("%s/tcp", params.port))
+	port := nat.Port(fmt.Sprintf("%d/tcp", params.port))
 	hostConfig := &container.HostConfig{
 		Binds: []string{
 			mountDir + fmt.Sprintf(":%s", folderName),
@@ -224,7 +239,7 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 			port: []nat.PortBinding{
 				{
 					HostIP:   defaultHostIP,
-					HostPort: params.port,
+					HostPort: strconv.FormatUint(params.port, 10),
 				},
 			},
 		},
@@ -276,7 +291,7 @@ func gatherLogs(ctx context.Context, outputter command.OutputFormatter) error {
 	return nil
 }
 
-func PingServer(closeCh <-chan struct{}) error {
+func PingServer(closeCh <-chan struct{}, port uint64) error {
 	httpTimer := time.NewTimer(30 * time.Second)
 	httpClient := http.Client{
 		Timeout: 5 * time.Second,
@@ -285,7 +300,7 @@ func PingServer(closeCh <-chan struct{}) error {
 	for {
 		select {
 		case <-time.After(500 * time.Millisecond):
-			resp, err := httpClient.Post(fmt.Sprintf("http://%s:%s", defaultHostIP, params.port), "application/json", nil)
+			resp, err := httpClient.Post(fmt.Sprintf("http://%s:%d", defaultHostIP, port), "application/json", nil)
 			if err == nil {
 				return resp.Body.Close()
 			}

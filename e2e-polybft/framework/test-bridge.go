@@ -56,7 +56,7 @@ func (t *TestBridge) Start() error {
 		"server",
 		"--data-dir", t.clusterConfig.Dir(fmt.Sprintf("test-external-chain-%d", t.id)),
 		"--chain-id", strconv.FormatUint(t.id, 10),
-		"--port", t.calculatePort(),
+		"--port", strconv.FormatUint(t.calculatePort(), 10),
 	}
 
 	stdout := t.clusterConfig.GetStdout(fmt.Sprintf("bridge-%d", t.id))
@@ -68,7 +68,7 @@ func (t *TestBridge) Start() error {
 
 	t.node = bridgeNode
 
-	if err = server.PingServer(nil); err != nil {
+	if err = server.PingServer(nil, t.calculatePort()); err != nil {
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (t *TestBridge) Stop() {
 }
 
 func (t *TestBridge) JSONRPCAddr() string {
-	return fmt.Sprintf("http://%s:%s", hostIP, t.calculatePort())
+	return fmt.Sprintf("http://%s:%d", hostIP, t.calculatePort())
 }
 
 func (t *TestBridge) WaitUntil(pollFrequency, timeout time.Duration, handler func() (bool, error)) error {
@@ -543,8 +543,10 @@ func (t *TestBridge) premineNativeRootToken(genesisPath string, tokenConfig *pol
 	return g.Wait()
 }
 
-func (t *TestBridge) calculatePort() string {
-	return strconv.FormatUint(initialPortForBridge+t.id-1, 10)
+// calculatePort calculate port for specific bridge
+// each bridge uses 3 ports the next starting port is 3 higher
+func (t *TestBridge) calculatePort() uint64 {
+	return initialPortForBridge + (t.id-1)*3
 }
 
 // finalizeGenesis finalizes genesis on BladeManager contract on root

@@ -106,7 +106,7 @@ func GetBridgeChainID() (string, error) {
 }
 
 // ReadBridgeChainIP returns ip address of bridge
-func ReadBridgeChainIP(port string) (string, error) {
+func ReadBridgeChainIP(port uint64) (string, error) {
 	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return "", fmt.Errorf("external chain id error: %w", err)
@@ -122,11 +122,11 @@ func ReadBridgeChainIP(port string) (string, error) {
 		return "", fmt.Errorf("external chain ip error: %w", err)
 	}
 
-	portMapKey := fmt.Sprintf("%s/tcp", port)
+	portMapKey := fmt.Sprintf("%d/tcp", port)
 
 	ports, ok := inspect.HostConfig.PortBindings[nat.Port(portMapKey)]
 	if !ok || len(ports) == 0 {
-		return "", fmt.Errorf("port %s is not bound with localhost", port)
+		return "", fmt.Errorf("port %d is not bound with localhost", port)
 	}
 
 	return fmt.Sprintf("http://%s:%s", ports[0].HostIP, ports[0].HostPort), nil

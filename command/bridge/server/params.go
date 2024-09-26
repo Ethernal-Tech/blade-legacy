@@ -9,5 +9,5 @@ type serverParams struct {
 	dataDir   string
 	noConsole bool
 	chainID   uint64
-	port      string
+	port      uint64
 }
