@@ -26,7 +26,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/blockchain/storagev2/memory"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
-	consensusPolyBFT "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
+	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
@@ -278,7 +278,7 @@ func NewServer(config *Config) (*Server, error) {
 	var initialStateRoot = types.ZeroHash
 
 	if ConsensusType(engineName) == PolyBFTConsensus {
-		polyBFTConfig, err := consensusPolyBFT.GetPolyBFTConfig(config.Chain.Params)
+		polyBFTConfig, err := polycfg.GetPolyBFTConfig(config.Chain.Params)
 		if err != nil {
 			return nil, err
 		}
