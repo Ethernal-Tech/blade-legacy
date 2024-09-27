@@ -3,6 +3,7 @@ package state
 import (
 	"github.com/0xPolygon/polygon-edge/blockchain"
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
 	bolt "go.etcd.io/bbolt"
@@ -129,7 +130,7 @@ func (e *EventProvider) getEventsFromReceipts(blockHeader *types.Header,
 
 			for logFilter, subscribers := range logFilters {
 				if log.Topics[0] == logFilter {
-					convertedLog := convertLog(log)
+					convertedLog := helpers.ConvertLog(log)
 					for _, subscriber := range subscribers {
 						if err := e.subscribers[subscriber].ProcessLog(blockHeader, convertedLog, dbTx); err != nil {
 							return err
@@ -168,21 +169,4 @@ func (r *receiptsGetter) getReceiptsFromBlocksRange(from, to uint64,
 	}
 
 	return nil
-}
-
-// convertLog converts types.Log to ethgo.Log
-func convertLog(log *types.Log) *ethgo.Log {
-	l := &ethgo.Log{
-		Address: ethgo.Address(log.Address),
-		Data:    make([]byte, len(log.Data)),
-		Topics:  make([]ethgo.Hash, len(log.Topics)),
-	}
-
-	copy(l.Data, log.Data)
-
-	for i, topic := range log.Topics {
-		l.Topics[i] = ethgo.Hash(topic)
-	}
-
-	return l
 }

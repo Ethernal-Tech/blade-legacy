@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/0xPolygon/polygon-edge/blockchain"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
 	polytesting "github.com/0xPolygon/polygon-edge/consensus/polybft/testing"
@@ -410,6 +412,83 @@ func TestValidatorsSnapshotCache_HugeBuild(t *testing.T) {
 	epochValIndexes, ok = epochValidators[99991/epochSize+1]
 	require.True(t, ok)
 	require.True(t, allValidators[epochValIndexes.firstValIndex:epochValIndexes.lastValIndex].Equals(snapshot))
+}
+
+func TestHelpers_isEpochEndingBlock_DeltaNotEmpty(t *testing.T) {
+	t.Parallel()
+
+	validators := validator.NewTestValidators(t, 3).GetPublicIdentities()
+
+	bitmap := bitmap.Bitmap{}
+	bitmap.Set(0)
+
+	delta := &validator.ValidatorSetDelta{
+		Added:   validators[1:],
+		Removed: bitmap,
+	}
+
+	extra := &polytypes.Extra{Validators: delta}
+	blockNumber := uint64(20)
+
+	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, new(polychain.BlockchainMock))
+	require.NoError(t, err)
+	require.True(t, isEndOfEpoch)
+}
+
+func TestHelpers_isEpochEndingBlock_NoBlock(t *testing.T) {
+	t.Parallel()
+
+	blockchainMock := new(polychain.BlockchainMock)
+	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(&types.Header{}, false)
+
+	extra := &polytypes.Extra{Validators: &validator.ValidatorSetDelta{}}
+	blockNumber := uint64(20)
+
+	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, blockchainMock)
+	require.ErrorIs(t, blockchain.ErrNoBlock, err)
+	require.False(t, isEndOfEpoch)
+}
+
+func TestHelpers_isEpochEndingBlock_EpochsNotTheSame(t *testing.T) {
+	t.Parallel()
+
+	blockchainMock := new(polychain.BlockchainMock)
+
+	nextBlockExtra := &polytypes.Extra{Validators: &validator.ValidatorSetDelta{}, BlockMetaData: &polytypes.BlockMetaData{EpochNumber: 3}}
+	nextBlock := &types.Header{
+		Number:    21,
+		ExtraData: nextBlockExtra.MarshalRLPTo(nil),
+	}
+
+	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(nextBlock, true)
+
+	extra := &polytypes.Extra{Validators: &validator.ValidatorSetDelta{}, BlockMetaData: &polytypes.BlockMetaData{EpochNumber: 2}}
+	blockNumber := uint64(20)
+
+	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, blockchainMock)
+	require.NoError(t, err)
+	require.True(t, isEndOfEpoch)
+}
+
+func TestHelpers_isEpochEndingBlock_EpochsAreTheSame(t *testing.T) {
+	t.Parallel()
+
+	blockchainMock := new(polychain.BlockchainMock)
+
+	nextBlockExtra := &polytypes.Extra{Validators: &validator.ValidatorSetDelta{}, BlockMetaData: &polytypes.BlockMetaData{EpochNumber: 2}}
+	nextBlock := &types.Header{
+		Number:    16,
+		ExtraData: nextBlockExtra.MarshalRLPTo(nil),
+	}
+
+	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(nextBlock, true)
+
+	extra := &polytypes.Extra{Validators: &validator.ValidatorSetDelta{}, BlockMetaData: &polytypes.BlockMetaData{EpochNumber: 2}}
+	blockNumber := uint64(15)
+
+	isEndOfEpoch, err := isEpochEndingBlock(blockNumber, extra, blockchainMock)
+	require.NoError(t, err)
+	require.False(t, isEndOfEpoch)
 }
 
 func createHeaders(t *testing.T, headersMap *polytesting.TestHeadersMap,

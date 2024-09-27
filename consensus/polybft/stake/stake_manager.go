@@ -14,13 +14,16 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
+	"github.com/Ethernal-Tech/ethgo/abi"
 	"github.com/Ethernal-Tech/ethgo/contract"
 	"github.com/hashicorp/go-hclog"
 	bolt "go.etcd.io/bbolt"
 )
 
 var (
-	bigZero                     = big.NewInt(0)
+	bigZero          = big.NewInt(0)
+	validatorTypeABI = abi.MustNewType("tuple(uint256[4] blsKey," +
+		"uint256 stake, bool isWhitelisted, bool isActive)")
 	errUnknownStakeManagerEvent = errors.New("unknown event from stake manager contract")
 	// error returned if full validator set does not exists in db
 	errNoFullValidatorSet = errors.New("full validator set not in db")
@@ -63,7 +66,7 @@ var _ StakeManager = (*stakeManager)(nil)
 // and calculates updated validator set based on changed stake
 type stakeManager struct {
 	logger                   hclog.Logger
-	state                    *StakeStore
+	state                    *stakeStore
 	stakeManagerContractAddr types.Address
 	polybftBackend           polytypes.Polybft
 	blockchain               polychain.Blockchain
@@ -83,6 +86,16 @@ func NewStakeManager(
 		return nil, err
 	}
 
+	return newStakeManager(logger, stakeStore, stakeManagerAddr, blockchain, polybftBackend, dbTx)
+}
+
+func newStakeManager(logger hclog.Logger,
+	stakeStore *stakeStore,
+	stakeManagerAddr types.Address,
+	blockchain polychain.Blockchain,
+	polybftBackend polytypes.Polybft,
+	dbTx *bolt.Tx,
+) (StakeManager, error) {
 	sm := &stakeManager{
 		logger:                   logger,
 		state:                    stakeStore,

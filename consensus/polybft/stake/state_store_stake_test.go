@@ -14,7 +14,7 @@ import (
 )
 
 // newTestState creates new instance of state used by tests.
-func newTestState(tb testing.TB) *StakeStore {
+func newTestState(tb testing.TB) *stakeStore {
 	tb.Helper()
 
 	dir := fmt.Sprintf("/tmp/consensus-temp_%v", time.Now().UTC().Format(time.RFC3339Nano))

@@ -5,6 +5,7 @@ import (
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/Ethernal-Tech/ethgo"
 )
 
 const AbiMethodIDLength = 4
@@ -22,4 +23,21 @@ func GetBlockData(blockNumber uint64, blockchainBackend polychain.Blockchain) (*
 	}
 
 	return blockHeader, blockExtra, nil
+}
+
+// ConvertLog converts types.Log to ethgo.Log
+func ConvertLog(log *types.Log) *ethgo.Log {
+	l := &ethgo.Log{
+		Address: ethgo.Address(log.Address),
+		Data:    make([]byte, len(log.Data)),
+		Topics:  make([]ethgo.Hash, len(log.Topics)),
+	}
+
+	copy(l.Data, log.Data)
+
+	for i, topic := range log.Topics {
+		l.Topics[i] = ethgo.Hash(topic)
+	}
+
+	return l
 }
