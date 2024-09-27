@@ -66,12 +66,12 @@ type BridgeManagerStore struct {
 	chainIDs []uint64
 }
 
-func newBridgeManagerStore(db *bolt.DB, chainIDs []uint64) (*BridgeManagerStore, error) {
+func newBridgeManagerStore(db *bolt.DB, dbTx *bolt.Tx, chainIDs []uint64) (*BridgeManagerStore, error) {
 	var err error
 
 	store := &BridgeManagerStore{db: db, chainIDs: chainIDs}
 
-	return store, store.db.Update(func(tx *bolt.Tx) error {
+	initFn := func(tx *bolt.Tx) error {
 		var bridgeMessageBucket, bridgeBatchesBucket, epochBucket *bolt.Bucket
 
 		if bridgeMessageBucket, err = tx.CreateBucketIfNotExists(bridgeMessageEventsBucket); err != nil {
@@ -103,7 +103,15 @@ func newBridgeManagerStore(db *bolt.DB, chainIDs []uint64) (*BridgeManagerStore,
 		}
 
 		return nil
-	})
+	}
+
+	if dbTx == nil {
+		err = db.Update(initFn)
+	} else {
+		err = initFn(dbTx)
+	}
+
+	return store, err
 }
 
 // insertBridgeMessageEvent inserts a new bridge message event to state event bucket in db

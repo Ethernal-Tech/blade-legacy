@@ -57,7 +57,8 @@ func NewBridge(runtime Runtime,
 	bridgeTopic Topic,
 	eventProvider *state.EventProvider,
 	blockchain polychain.Blockchain,
-	logger hclog.Logger) (Bridge, error) {
+	logger hclog.Logger,
+	dbTx *bolt.Tx) (Bridge, error) {
 	if len(runtimeConfig.GenesisConfig.Bridge) == 0 {
 		return &DummyBridge{}, nil
 	}
@@ -70,7 +71,7 @@ func NewBridge(runtime Runtime,
 		chainIDs = append(chainIDs, chainID)
 	}
 
-	store, err := newBridgeManagerStore(state.DB(), chainIDs)
+	store, err := newBridgeManagerStore(state.DB(), dbTx, chainIDs)
 	if err != nil {
 		return nil, fmt.Errorf("error creating bridge manager store, err: %w", err)
 	}

@@ -25,32 +25,26 @@ type ProposerSnapshotStore struct {
 	db *bolt.DB
 }
 
-// initialize creates necessary buckets in DB if they don't already exist
-func newProposerSnapshotStore(db *bolt.DB) (*ProposerSnapshotStore, error) {
-	var store *ProposerSnapshotStore
-
-	err := db.Update(func(tx *bolt.Tx) error {
-		s, err := newProposerSnapshotStoreWithDB(db, tx)
-		if err != nil {
-			return err
-		}
-
-		store = s
-
-		return nil
-	})
-
-	return store, err
-}
-
-func newProposerSnapshotStoreWithDB(db *bolt.DB, dbTx *bolt.Tx) (*ProposerSnapshotStore, error) {
+func newProposerSnapshotStore(db *bolt.DB, dbTx *bolt.Tx) (*ProposerSnapshotStore, error) {
 	store := &ProposerSnapshotStore{db: db}
 
-	if _, err := dbTx.CreateBucketIfNotExists(proposerSnapshotBucket); err != nil {
-		return nil, fmt.Errorf("failed to create bucket=%s: %w", string(proposerSnapshotBucket), err)
+	initFn := func(tx *bolt.Tx) error {
+		if _, err := tx.CreateBucketIfNotExists(proposerSnapshotBucket); err != nil {
+			return fmt.Errorf("failed to create bucket=%s: %w", string(proposerSnapshotBucket), err)
+		}
+
+		return nil
 	}
 
-	return store, nil
+	var err error
+
+	if dbTx == nil {
+		err = db.Update(initFn)
+	} else {
+		err = initFn(dbTx)
+	}
+
+	return store, err
 }
 
 // getProposerSnapshot gets latest proposer snapshot

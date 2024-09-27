@@ -18,31 +18,26 @@ type StakeStore struct {
 	db *bolt.DB
 }
 
-func newStakeStore(db *bolt.DB) (*StakeStore, error) {
-	var store *StakeStore
-
-	err := db.Update(func(tx *bolt.Tx) error {
-		s, err := newStakeStoreWithTx(db, tx)
-		if err != nil {
-			return err
-		}
-
-		store = s
-
-		return nil
-	})
-
-	return store, err
-}
-
-func newStakeStoreWithTx(db *bolt.DB, dbTx *bolt.Tx) (*StakeStore, error) {
+func newStakeStore(db *bolt.DB, dbTx *bolt.Tx) (*StakeStore, error) {
 	store := &StakeStore{db: db}
 
-	if _, err := dbTx.CreateBucketIfNotExists(validatorSetBucket); err != nil {
-		return nil, fmt.Errorf("failed to create bucket=%s: %w", string(validatorSetBucket), err)
+	initFn := func(tx *bolt.Tx) error {
+		if _, err := tx.CreateBucketIfNotExists(validatorSetBucket); err != nil {
+			return fmt.Errorf("failed to create bucket=%s: %w", string(validatorSetBucket), err)
+		}
+
+		return nil
 	}
 
-	return store, nil
+	var err error
+
+	if dbTx == nil {
+		err = db.Update(initFn)
+	} else {
+		err = initFn(dbTx)
+	}
+
+	return store, err
 }
 
 // insertFullValidatorSet inserts full validator set to its bucket (or updates it if exists)

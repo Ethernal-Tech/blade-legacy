@@ -111,7 +111,7 @@ func NewGovernanceManager(genesisParams *chain.Params,
 	state *state.State,
 	blockhain polychain.Blockchain,
 	dbTx *bolt.Tx) (GovernanceManager, error) {
-	store, err := newGovernanceStoreWithTx(state.DB(), dbTx)
+	store, err := newGovernanceStore(state.DB(), dbTx)
 	if err != nil {
 		return nil, fmt.Errorf("could not create governance store. Error: %w", err)
 	}

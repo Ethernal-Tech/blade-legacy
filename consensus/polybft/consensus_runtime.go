@@ -173,7 +173,7 @@ func newConsensusRuntime(log hcf.Logger, config *config.Runtime,
 		bridgeTopic,
 		runtime.eventProvider,
 		runtime.blockchain,
-		log.Named("bridge")); err != nil {
+		log.Named("bridge"), dbTx); err != nil {
 		return nil, err
 	}
 

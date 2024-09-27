@@ -41,7 +41,7 @@ func newTestState(tb testing.TB) *GovernanceStore {
 		tb.Fatal(err)
 	}
 
-	governanceStore, err := newGovernanceStore(db)
+	governanceStore, err := newGovernanceStore(db, nil)
 	if err != nil {
 		tb.Fatal(err)
 	}

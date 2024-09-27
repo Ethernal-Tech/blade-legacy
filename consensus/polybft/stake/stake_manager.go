@@ -78,7 +78,7 @@ func NewStakeManager(
 	polybftBackend polytypes.Polybft,
 	dbTx *bolt.Tx,
 ) (StakeManager, error) {
-	stakeStore, err := newStakeStoreWithTx(state.DB(), dbTx)
+	stakeStore, err := newStakeStore(state.DB(), dbTx)
 	if err != nil {
 		return nil, err
 	}

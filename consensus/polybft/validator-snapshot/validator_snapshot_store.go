@@ -155,6 +155,17 @@ func (s *validatorSnapshotStore) cleanValidatorSnapshotsFromDB(epoch uint64, dbT
 	return cleanFn(dbTx)
 }
 
+// validatorSnapshotsDBStats returns stats of validators snapshot bucket in db
+func (s *validatorSnapshotStore) validatorSnapshotsDBStats() (*bolt.BucketStats, error) {
+	return state.BucketStats(validatorSnapshotsBucket, s.db)
+}
+
+// beginDBTransaction creates and begins a transaction on BoltDB
+// Note that transaction needs to be manually rollback or committed
+func (s *validatorSnapshotStore) beginDBTransaction(isWriteTx bool) (*bolt.Tx, error) {
+	return s.db.Begin(isWriteTx)
+}
+
 // removeAllValidatorSnapshots drops a validator snapshot bucket and re-creates it in bolt database
 func (s *validatorSnapshotStore) removeAllValidatorSnapshots() error {
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -172,15 +183,4 @@ func (s *validatorSnapshotStore) removeAllValidatorSnapshots() error {
 
 		return nil
 	})
-}
-
-// validatorSnapshotsDBStats returns stats of validators snapshot bucket in db
-func (s *validatorSnapshotStore) validatorSnapshotsDBStats() (*bolt.BucketStats, error) {
-	return state.BucketStats(validatorSnapshotsBucket, s.db)
-}
-
-// beginDBTransaction creates and begins a transaction on BoltDB
-// Note that transaction needs to be manually rollback or committed
-func (s *validatorSnapshotStore) beginDBTransaction(isWriteTx bool) (*bolt.Tx, error) {
-	return s.db.Begin(isWriteTx)
 }

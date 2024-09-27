@@ -181,7 +181,7 @@ type ProposerCalculator struct {
 func NewProposerCalculator(cfg *config.Runtime, logger hclog.Logger,
 	state *state.State, backend polytypes.Polybft, blockchain polychain.Blockchain,
 	dbTx *bolt.Tx) (*ProposerCalculator, error) {
-	proposerStore, err := newProposerSnapshotStoreWithDB(state.DB(), dbTx)
+	proposerStore, err := newProposerSnapshotStore(state.DB(), dbTx)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create proposer snapshot store: %w", err)
 	}
@@ -216,7 +216,7 @@ func NewProposerCalculator(cfg *config.Runtime, logger hclog.Logger,
 func NewProposerCalculatorFromSnapshot(pcs *ProposerSnapshot, config *config.Runtime,
 	state *state.State, backend polytypes.Polybft, blockchain polychain.Blockchain,
 	logger hclog.Logger) (*ProposerCalculator, error) {
-	store, err := newProposerSnapshotStore(state.DB())
+	store, err := newProposerSnapshotStore(state.DB(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create proposer snapshot store: %w", err)
 	}

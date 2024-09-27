@@ -35,7 +35,7 @@ func newTestState(tb testing.TB) *StakeStore {
 		tb.Fatal(err)
 	}
 
-	stakeSTore, err := newStakeStore(db)
+	stakeSTore, err := newStakeStore(db, nil)
 	if err != nil {
 		tb.Fatal(err)
 	}

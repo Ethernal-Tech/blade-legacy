@@ -35,27 +35,10 @@ type GovernanceStore struct {
 	db *bolt.DB
 }
 
-func newGovernanceStore(db *bolt.DB) (*GovernanceStore, error) {
-	var store *GovernanceStore
-
-	err := db.Update(func(tx *bolt.Tx) error {
-		s, err := newGovernanceStoreWithTx(db, tx)
-		if err != nil {
-			return err
-		}
-
-		store = s
-
-		return nil
-	})
-
-	return store, err
-}
-
-func newGovernanceStoreWithTx(db *bolt.DB, dbTx *bolt.Tx) (*GovernanceStore, error) {
+func newGovernanceStore(db *bolt.DB, dbTx *bolt.Tx) (*GovernanceStore, error) {
 	store := &GovernanceStore{db: db}
 
-	createBucketsFn := func(tx *bolt.Tx) error {
+	initFn := func(tx *bolt.Tx) error {
 		if _, err := tx.CreateBucketIfNotExists(networkParamsEventsBucket); err != nil {
 			return fmt.Errorf("failed to create bucket=%s: %w",
 				string(networkParamsEventsBucket), err)
@@ -74,17 +57,15 @@ func newGovernanceStoreWithTx(db *bolt.DB, dbTx *bolt.Tx) (*GovernanceStore, err
 		return nil
 	}
 
+	var err error
+
 	if dbTx == nil {
-		if err := db.Update(createBucketsFn); err != nil {
-			return nil, err
-		}
+		err = db.Update(initFn)
 	} else {
-		if err := createBucketsFn(dbTx); err != nil {
-			return nil, err
-		}
+		err = initFn(dbTx)
 	}
 
-	return store, nil
+	return store, err
 }
 
 // insertGovernanceEvent inserts governance event to bolt db

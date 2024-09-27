@@ -57,7 +57,7 @@ func newTestState(t *testing.T) *BridgeManagerStore {
 		chainIds = append(chainIds, i)
 	}
 
-	store, err := newBridgeManagerStore(db, chainIds)
+	store, err := newBridgeManagerStore(db, nil, chainIds)
 	if err != nil {
 		t.Fatal(err)
 	}
