@@ -1,0 +1,180 @@
+@startuml
+namespace network {
+    class Config << (S,Aquamarine) >> {
+        + NoDiscover bool
+        + Addr *net.TCPAddr
+        + NatAddr net.IP
+        + DNS multiaddr.Multiaddr
+        + DataDir string
+        + MaxPeers int64
+        + MaxInboundPeers int64
+        + MaxOutboundPeers int64
+        + Chain *chain.Chain
+        + SecretsManager secrets.SecretsManager
+        + GossipMessageSize int
+
+    }
+    class ConnectionInfo << (S,Aquamarine) >> {
+        - inboundConnectionCount int64
+        - outboundConnectionCount int64
+        - pendingInboundConnectionCount int64
+        - pendingOutboundConnectionCount int64
+        - maxInboundConnectionCount int64
+        - maxOutboundConnectionCount int64
+
+        - incInboundConnCount(delta int64) 
+        - incPendingInboundConnCount(delta int64) 
+        - incPendingOutboundConnCount(delta int64) 
+        - incOutboundConnCount(delta int64) 
+        - maxOutboundConnCount() int64
+        - maxInboundConnCount() int64
+
+        + GetInboundConnCount() int64
+        + GetOutboundConnCount() int64
+        + GetPendingInboundConnCount() int64
+        + GetPendingOutboundConnCount() int64
+        + HasFreeOutboundConn() bool
+        + HasFreeInboundConn() bool
+        + UpdateConnCountByDirection(delta int64, direction network.Direction) 
+        + UpdatePendingConnCountByDirection(delta int64, direction network.Direction) 
+        + HasFreeConnectionSlot(direction network.Direction) bool
+
+    }
+    class CreateServerParams << (S,Aquamarine) >> {
+        + ConfigCallback <font color=blue>func</font>(*Config) 
+        + ServerCallback <font color=blue>func</font>(*Server) 
+        + Logger hclog.Logger
+
+    }
+    class PeerConnInfo << (S,Aquamarine) >> {
+        - connDirections <font color=blue>map</font>[network.Direction]bool
+        - protocolStreams <font color=blue>map</font>[string]*grpc.ClientConn
+
+        + Info peer.AddrInfo
+
+        - addProtocolStream(protocol string, stream *grpc.ClientConn) 
+        - removeProtocolStream(protocol string) error
+        - getProtocolStream(protocol string) *grpc.ClientConn
+
+    }
+    interface Protocol  {
+        + Client( network.Stream) (*grpc.ClientConn, error)
+        + Handler() <font color=blue>func</font>(network.Stream) 
+
+    }
+    class Server << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - config *Config
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - host host.Host
+        - addrs []multiaddr.Multiaddr
+        - peers <font color=blue>map</font>[peer.ID]*PeerConnInfo
+        - peersLock sync.Mutex
+        - dialQueue *dial.DialQueue
+        - discovery *discovery.DiscoveryService
+        - protocols <font color=blue>map</font>[string]Protocol
+        - protocolsLock sync.Mutex
+        - secretsManager secrets.SecretsManager
+        - ps *go-libp2p-pubsub.PubSub
+        - emitterPeerEvent event.Emitter
+        - connectionCounts *ConnectionInfo
+        - temporaryDials sync.Map
+        - bootnodes *bootnodesWrapper
+
+        - setupBootnodes() error
+        - keepAliveMinimumPeerConnections() 
+        - runDial() 
+        - numPeers() int64
+        - hasPeer(peerID peer.ID) bool
+        - removePeer(peerID peer.ID) 
+        - removePeerInfo(peerID peer.ID) *PeerConnInfo
+        - updateBootnodeConnCount(peerID peer.ID, delta int64) 
+        - joinPeer(peerInfo *peer.AddrInfo) 
+        - wrapStream(id string, handle <font color=blue>func</font>(network.Stream) ) 
+        - addToDialQueue(addr *peer.AddrInfo, priority common.DialPriority) 
+        - emitEvent(peerID peer.ID, peerEventType event.PeerEventType) 
+        - updateConnCountMetrics(direction network.Direction) 
+        - updatePendingConnCountMetrics(direction network.Direction) 
+        - getProtoStream(protocol string, peerID peer.ID) *grpc.ClientConn
+        - setupDiscovery() error
+        - registerDiscoveryService(discovery *discovery.DiscoveryService) 
+        - addPeerInfo(id peer.ID, direction network.Direction) bool
+        - setupIdentity() error
+        - registerIdentityService(identityService *identity.IdentityService) 
+
+        + NewTopic(protoID string, obj proto.Message) (*Topic, error)
+        + HasFreeConnectionSlot(direction network.Direction) bool
+        + Start() error
+        + Peers() []*PeerConnInfo
+        + IsConnected(peerID peer.ID) bool
+        + GetProtocols(peerID peer.ID) ([]string, error)
+        + DisconnectFromPeer(peer peer.ID, reason string) 
+        + JoinPeer(rawPeerMultiaddr string) error
+        + Close() error
+        + NewProtoConnection(protocol string, peerID peer.ID) (*grpc.ClientConn, error)
+        + NewStream(proto string, id peer.ID) (network.Stream, error)
+        + RegisterProtocol(id string, p Protocol) 
+        + AddrInfo() *peer.AddrInfo
+        + Subscribe(ctx context.Context, handler <font color=blue>func</font>(*event.PeerEvent) ) error
+        + SubscribeCh(ctx context.Context) (<font color=blue>chan</font> *event.PeerEvent, error)
+        + GetRandomBootnode() *peer.AddrInfo
+        + GetBootnodeConnCount() int64
+        + NewDiscoveryClient(peerID peer.ID) (proto.DiscoveryClient, error)
+        + SaveProtocolStream(protocol string, stream *grpc.ClientConn, peerID peer.ID) 
+        + CloseProtocolStream(protocol string, peerID peer.ID) error
+        + AddToPeerStore(peerInfo *peer.AddrInfo) 
+        + RemoveFromPeerStore(peerInfo *peer.AddrInfo) 
+        + GetPeerInfo(peerID peer.ID) *peer.AddrInfo
+        + GetRandomPeer() *peer.ID
+        + FetchOrSetTemporaryDial(peerID peer.ID, newValue bool) bool
+        + RemoveTemporaryDial(peerID peer.ID) 
+        + TemporaryDialPeer(peerAddrInfo *peer.AddrInfo) 
+        + NewIdentityClient(peerID peer.ID) (proto.IdentityClient, error)
+        + AddPeer(id peer.ID, direction network.Direction) 
+        + UpdatePendingConnCount(delta int64, direction network.Direction) 
+        + EmitEvent(event *event.PeerEvent) 
+        + IsTemporaryDial(peerID peer.ID) bool
+        + GetPeerDistance(peerID peer.ID) *big.Int
+
+    }
+    class Slots << (S,Aquamarine) >> {
+        + Take(ctx context.Context) bool
+        + Release() 
+
+    }
+    class Topic << (S,Aquamarine) >> {
+        - logger hclog.Logger
+        - topic *go-libp2p-pubsub.Topic
+        - typ reflect.Type
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - closed atomic.Bool
+        - waitGroup sync.WaitGroup
+
+        - createObj() proto.Message
+        - readLoop(sub *go-libp2p-pubsub.Subscription, handler <font color=blue>func</font>(<font color=blue>interface</font>{}, peer.ID) ) 
+
+        + Close() 
+        + Publish(obj proto.Message) error
+        + Subscribe(handler <font color=blue>func</font>(<font color=blue>interface</font>{}, peer.ID) ) error
+
+    }
+    class bootnodesWrapper << (S,Aquamarine) >> {
+        - bootnodeArr []*peer.AddrInfo
+        - bootnodesMap <font color=blue>map</font>[peer.ID]*peer.AddrInfo
+        - bootnodeConnCount int64
+
+        - isBootnode(nodeID peer.ID) bool
+        - getBootnodeConnCount() int64
+        - increaseBootnodeConnCount(delta int64) 
+        - getBootnodes() []*peer.AddrInfo
+        - getBootnodeCount() int
+        - hasBootnodes() bool
+
+    }
+    class network.Slots << (T, #FF7700) >>  {
+    }
+}
+
+
+"network.<font color=blue>chan</font> <font color=blue>struct</font>{}" #.. "network.Slots"
+@enduml

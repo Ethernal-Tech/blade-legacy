@@ -1,0 +1,46 @@
+@startuml
+namespace discovery {
+    class DiscoveryService << (S,Aquamarine) >> {
+        - baseServer networkingServer
+        - logger hclog.Logger
+        - routingTable *go-libp2p-kbucket.RoutingTable
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+
+        - addToTable(node *peer.AddrInfo) error
+        - addPeersToTable(nodeAddrStrs []string) 
+        - attemptToFindPeers(peerID peer.ID) error
+        - findPeersCall(peerID peer.ID, shouldCloseConn bool) ([]string, error)
+        - startDiscovery() 
+        - regularPeerDiscovery() 
+        - bootnodePeerDiscovery() 
+
+        + Start() 
+        + Close() 
+        + RoutingTableSize() int
+        + RoutingTablePeers() []peer.ID
+        + HandleNetworkEvent(peerEvent *event.PeerEvent) 
+        + ConnectToBootnodes(bootnodes []*peer.AddrInfo) 
+        + FindPeers(ctx context.Context, req *proto.FindPeersReq) (*proto.FindPeersResp, error)
+
+    }
+    interface networkingServer  {
+        + GetRandomBootnode() *peer.AddrInfo
+        + GetBootnodeConnCount() int64
+        + NewDiscoveryClient(peerID peer.ID) (proto.DiscoveryClient, error)
+        + CloseProtocolStream(protocol string, peerID peer.ID) error
+        + DisconnectFromPeer(peerID peer.ID, reason string) 
+        + AddToPeerStore(peerInfo *peer.AddrInfo) 
+        + RemoveFromPeerStore(peerInfo *peer.AddrInfo) 
+        + GetPeerInfo(peerID peer.ID) *peer.AddrInfo
+        + GetRandomPeer() *peer.ID
+        + FetchOrSetTemporaryDial(peerID peer.ID, newValue bool) bool
+        + RemoveTemporaryDial(peerID peer.ID) 
+        + TemporaryDialPeer(peerAddrInfo *peer.AddrInfo) 
+        + HasFreeConnectionSlot(direction network.Direction) bool
+
+    }
+}
+"proto.UnimplementedDiscoveryServer" *-- "discovery.DiscoveryService"
+
+
+@enduml

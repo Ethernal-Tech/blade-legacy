@@ -1,0 +1,441 @@
+@startuml
+namespace proto {
+    class ChattyRequest << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Message string
+        + Count int32
+
+        - validate(all bool) error
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetMessage() string
+        + GetCount() int32
+        + Validate() error
+        + ValidateAll() error
+
+    }
+    class ChattyRequestMultiError << (S,Aquamarine) >> {
+        + Error() string
+        + AllErrors() []error
+
+    }
+    class ChattyRequestValidationError << (S,Aquamarine) >> {
+        - field string
+        - reason string
+        - cause error
+        - key bool
+
+        + Field() string
+        + Reason() string
+        + Cause() error
+        + Key() bool
+        + ErrorName() string
+        + Error() string
+
+    }
+    interface DiscoveryClient  {
+        + FindPeers(ctx context.Context, in *FindPeersReq, opts ...grpc.CallOption) (*FindPeersResp, error)
+
+    }
+    interface DiscoveryServer  {
+        - mustEmbedUnimplementedDiscoveryServer() 
+
+        + FindPeers( context.Context,  *FindPeersReq) (*FindPeersResp, error)
+
+    }
+    class FindPeersReq << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Key string
+        + Count int64
+
+        - validate(all bool) error
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetKey() string
+        + GetCount() int64
+        + Validate() error
+        + ValidateAll() error
+
+    }
+    class FindPeersReqMultiError << (S,Aquamarine) >> {
+        + Error() string
+        + AllErrors() []error
+
+    }
+    class FindPeersReqValidationError << (S,Aquamarine) >> {
+        - field string
+        - reason string
+        - cause error
+        - key bool
+
+        + Field() string
+        + Reason() string
+        + Cause() error
+        + Key() bool
+        + ErrorName() string
+        + Error() string
+
+    }
+    class FindPeersResp << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Nodes []string
+
+        - validate(all bool) error
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetNodes() []string
+        + Validate() error
+        + ValidateAll() error
+
+    }
+    class FindPeersRespMultiError << (S,Aquamarine) >> {
+        + Error() string
+        + AllErrors() []error
+
+    }
+    class FindPeersRespValidationError << (S,Aquamarine) >> {
+        - field string
+        - reason string
+        - cause error
+        - key bool
+
+        + Field() string
+        + Reason() string
+        + Cause() error
+        + Key() bool
+        + ErrorName() string
+        + Error() string
+
+    }
+    class GenericMessage << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Message string
+
+        - validate(all bool) error
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetMessage() string
+        + Validate() error
+        + ValidateAll() error
+
+    }
+    class GenericMessageMultiError << (S,Aquamarine) >> {
+        + Error() string
+        + AllErrors() []error
+
+    }
+    class GenericMessageValidationError << (S,Aquamarine) >> {
+        - field string
+        - reason string
+        - cause error
+        - key bool
+
+        + Field() string
+        + Reason() string
+        + Cause() error
+        + Key() bool
+        + ErrorName() string
+        + Error() string
+
+    }
+    interface IdentityClient  {
+        + Hello(ctx context.Context, in *Status, opts ...grpc.CallOption) (*Status, error)
+
+    }
+    interface IdentityServer  {
+        - mustEmbedUnimplementedIdentityServer() 
+
+        + Hello( context.Context,  *Status) (*Status, error)
+
+    }
+    class Status << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Metadata <font color=blue>map</font>[string]string
+        + Keys []*Status_Key
+        + Chain int64
+        + Genesis string
+        + TemporaryDial bool
+
+        - validate(all bool) error
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetMetadata() <font color=blue>map</font>[string]string
+        + GetKeys() []*Status_Key
+        + GetChain() int64
+        + GetGenesis() string
+        + GetTemporaryDial() bool
+        + Validate() error
+        + ValidateAll() error
+
+    }
+    class StatusMultiError << (S,Aquamarine) >> {
+        + Error() string
+        + AllErrors() []error
+
+    }
+    class StatusValidationError << (S,Aquamarine) >> {
+        - field string
+        - reason string
+        - cause error
+        - key bool
+
+        + Field() string
+        + Reason() string
+        + Cause() error
+        + Key() bool
+        + ErrorName() string
+        + Error() string
+
+    }
+    class Status_Key << (S,Aquamarine) >> {
+        - state protoimpl.MessageState
+        - sizeCache protoimpl.SizeCache
+        - unknownFields protoimpl.UnknownFields
+
+        + Signature string
+        + Message string
+
+        - validate(all bool) error
+
+        + Reset() 
+        + String() string
+        + ProtoMessage() 
+        + ProtoReflect() protoreflect.Message
+        + Descriptor() ([]byte, []int)
+        + GetSignature() string
+        + GetMessage() string
+        + Validate() error
+        + ValidateAll() error
+
+    }
+    class Status_KeyMultiError << (S,Aquamarine) >> {
+        + Error() string
+        + AllErrors() []error
+
+    }
+    class Status_KeyValidationError << (S,Aquamarine) >> {
+        - field string
+        - reason string
+        - cause error
+        - key bool
+
+        + Field() string
+        + Reason() string
+        + Cause() error
+        + Key() bool
+        + ErrorName() string
+        + Error() string
+
+    }
+    interface TestServiceClient  {
+        + SayHello(ctx context.Context, in *GenericMessage, opts ...grpc.CallOption) (*GenericMessage, error)
+        + GetChattyServer(ctx context.Context, in *ChattyRequest, opts ...grpc.CallOption) (TestService_GetChattyServerClient, error)
+        + GetChattyClient(ctx context.Context, opts ...grpc.CallOption) (TestService_GetChattyClientClient, error)
+        + GetChattyBidi(ctx context.Context, opts ...grpc.CallOption) (TestService_GetChattyBidiClient, error)
+
+    }
+    interface TestServiceServer  {
+        - mustEmbedUnimplementedTestServiceServer() 
+
+        + SayHello( context.Context,  *GenericMessage) (*GenericMessage, error)
+        + GetChattyServer( *ChattyRequest,  TestService_GetChattyServerServer) error
+        + GetChattyClient( TestService_GetChattyClientServer) error
+        + GetChattyBidi( TestService_GetChattyBidiServer) error
+
+    }
+    interface TestService_GetChattyBidiClient  {
+        + Send( *GenericMessage) error
+        + Recv() (*GenericMessage, error)
+
+    }
+    interface TestService_GetChattyBidiServer  {
+        + Send( *GenericMessage) error
+        + Recv() (*GenericMessage, error)
+
+    }
+    interface TestService_GetChattyClientClient  {
+        + Send( *GenericMessage) error
+        + CloseAndRecv() (*GenericMessage, error)
+
+    }
+    interface TestService_GetChattyClientServer  {
+        + SendAndClose( *GenericMessage) error
+        + Recv() (*GenericMessage, error)
+
+    }
+    interface TestService_GetChattyServerClient  {
+        + Recv() (*GenericMessage, error)
+
+    }
+    interface TestService_GetChattyServerServer  {
+        + Send( *GenericMessage) error
+
+    }
+    class UnimplementedDiscoveryServer << (S,Aquamarine) >> {
+        - mustEmbedUnimplementedDiscoveryServer() 
+
+        + FindPeers( context.Context,  *FindPeersReq) (*FindPeersResp, error)
+
+    }
+    class UnimplementedIdentityServer << (S,Aquamarine) >> {
+        - mustEmbedUnimplementedIdentityServer() 
+
+        + Hello( context.Context,  *Status) (*Status, error)
+
+    }
+    class UnimplementedTestServiceServer << (S,Aquamarine) >> {
+        - mustEmbedUnimplementedTestServiceServer() 
+
+        + SayHello( context.Context,  *GenericMessage) (*GenericMessage, error)
+        + GetChattyServer( *ChattyRequest,  TestService_GetChattyServerServer) error
+        + GetChattyClient( TestService_GetChattyClientServer) error
+        + GetChattyBidi( TestService_GetChattyBidiServer) error
+
+    }
+    interface UnsafeDiscoveryServer  {
+        - mustEmbedUnimplementedDiscoveryServer() 
+
+    }
+    interface UnsafeIdentityServer  {
+        - mustEmbedUnimplementedIdentityServer() 
+
+    }
+    interface UnsafeTestServiceServer  {
+        - mustEmbedUnimplementedTestServiceServer() 
+
+    }
+    class discoveryClient << (S,Aquamarine) >> {
+        - cc grpc.ClientConnInterface
+
+        + FindPeers(ctx context.Context, in *FindPeersReq, opts ...grpc.CallOption) (*FindPeersResp, error)
+
+    }
+    class identityClient << (S,Aquamarine) >> {
+        - cc grpc.ClientConnInterface
+
+        + Hello(ctx context.Context, in *Status, opts ...grpc.CallOption) (*Status, error)
+
+    }
+    class proto.ChattyRequestMultiError << (T, #FF7700) >>  {
+    }
+    class proto.FindPeersReqMultiError << (T, #FF7700) >>  {
+    }
+    class proto.FindPeersRespMultiError << (T, #FF7700) >>  {
+    }
+    class proto.GenericMessageMultiError << (T, #FF7700) >>  {
+    }
+    class proto.StatusMultiError << (T, #FF7700) >>  {
+    }
+    class proto.Status_KeyMultiError << (T, #FF7700) >>  {
+    }
+    class testServiceClient << (S,Aquamarine) >> {
+        - cc grpc.ClientConnInterface
+
+        + SayHello(ctx context.Context, in *GenericMessage, opts ...grpc.CallOption) (*GenericMessage, error)
+        + GetChattyServer(ctx context.Context, in *ChattyRequest, opts ...grpc.CallOption) (TestService_GetChattyServerClient, error)
+        + GetChattyClient(ctx context.Context, opts ...grpc.CallOption) (TestService_GetChattyClientClient, error)
+        + GetChattyBidi(ctx context.Context, opts ...grpc.CallOption) (TestService_GetChattyBidiClient, error)
+
+    }
+    class testServiceGetChattyBidiClient << (S,Aquamarine) >> {
+        + Send(m *GenericMessage) error
+        + Recv() (*GenericMessage, error)
+
+    }
+    class testServiceGetChattyBidiServer << (S,Aquamarine) >> {
+        + Send(m *GenericMessage) error
+        + Recv() (*GenericMessage, error)
+
+    }
+    class testServiceGetChattyClientClient << (S,Aquamarine) >> {
+        + Send(m *GenericMessage) error
+        + CloseAndRecv() (*GenericMessage, error)
+
+    }
+    class testServiceGetChattyClientServer << (S,Aquamarine) >> {
+        + SendAndClose(m *GenericMessage) error
+        + Recv() (*GenericMessage, error)
+
+    }
+    class testServiceGetChattyServerClient << (S,Aquamarine) >> {
+        + Recv() (*GenericMessage, error)
+
+    }
+    class testServiceGetChattyServerServer << (S,Aquamarine) >> {
+        + Send(m *GenericMessage) error
+
+    }
+}
+"grpc.ClientStream" *-- "proto.testServiceGetChattyBidiClient"
+"grpc.ServerStream" *-- "proto.testServiceGetChattyBidiServer"
+"grpc.ClientStream" *-- "proto.testServiceGetChattyClientClient"
+"grpc.ServerStream" *-- "proto.testServiceGetChattyClientServer"
+"grpc.ClientStream" *-- "proto.testServiceGetChattyServerClient"
+"grpc.ServerStream" *-- "proto.testServiceGetChattyServerServer"
+
+"proto.DiscoveryServer" <|-- "proto.UnimplementedDiscoveryServer"
+"proto.UnsafeDiscoveryServer" <|-- "proto.UnimplementedDiscoveryServer"
+"proto.IdentityServer" <|-- "proto.UnimplementedIdentityServer"
+"proto.UnsafeIdentityServer" <|-- "proto.UnimplementedIdentityServer"
+"proto.TestServiceServer" <|-- "proto.UnimplementedTestServiceServer"
+"proto.UnsafeTestServiceServer" <|-- "proto.UnimplementedTestServiceServer"
+"proto.DiscoveryClient" <|-- "proto.discoveryClient"
+"proto.IdentityClient" <|-- "proto.identityClient"
+"proto.TestServiceClient" <|-- "proto.testServiceClient"
+"proto.TestService_GetChattyBidiClient" <|-- "proto.testServiceGetChattyBidiClient"
+"proto.TestService_GetChattyBidiServer" <|-- "proto.testServiceGetChattyBidiClient"
+"proto.TestService_GetChattyServerClient" <|-- "proto.testServiceGetChattyBidiClient"
+"proto.TestService_GetChattyServerServer" <|-- "proto.testServiceGetChattyBidiClient"
+"proto.TestService_GetChattyBidiClient" <|-- "proto.testServiceGetChattyBidiServer"
+"proto.TestService_GetChattyBidiServer" <|-- "proto.testServiceGetChattyBidiServer"
+"proto.TestService_GetChattyServerClient" <|-- "proto.testServiceGetChattyBidiServer"
+"proto.TestService_GetChattyServerServer" <|-- "proto.testServiceGetChattyBidiServer"
+"proto.TestService_GetChattyClientClient" <|-- "proto.testServiceGetChattyClientClient"
+"proto.TestService_GetChattyServerServer" <|-- "proto.testServiceGetChattyClientClient"
+"proto.TestService_GetChattyClientServer" <|-- "proto.testServiceGetChattyClientServer"
+"proto.TestService_GetChattyServerClient" <|-- "proto.testServiceGetChattyClientServer"
+"proto.TestService_GetChattyServerClient" <|-- "proto.testServiceGetChattyServerClient"
+"proto.TestService_GetChattyServerServer" <|-- "proto.testServiceGetChattyServerServer"
+
+"__builtin__.[]error" #.. "proto.ChattyRequestMultiError"
+"__builtin__.[]error" #.. "proto.FindPeersReqMultiError"
+"__builtin__.[]error" #.. "proto.FindPeersRespMultiError"
+"__builtin__.[]error" #.. "proto.GenericMessageMultiError"
+"__builtin__.[]error" #.. "proto.StatusMultiError"
+"__builtin__.[]error" #.. "proto.Status_KeyMultiError"
+@enduml

@@ -1,0 +1,35 @@
+@startuml
+namespace identity {
+    class IdentityService << (S,Aquamarine) >> {
+        - pendingPeerConnections sync.Map
+        - logger hclog.Logger
+        - baseServer networkingServer
+        - chainID int64
+        - hostID peer.ID
+
+        - hasPendingStatus(id peer.ID) bool
+        - removePendingStatus(peerID peer.ID) 
+        - addPendingStatus(id peer.ID, direction network.Direction) 
+        - disconnectFromPeer(peerID peer.ID, reason string) 
+        - handleConnected(peerID peer.ID, direction network.Direction) error
+        - constructStatus(peerID peer.ID) *proto.Status
+
+        + GetNotifyBundle() *network.NotifyBundle
+        + Hello(_ context.Context, req *proto.Status) (*proto.Status, error)
+
+    }
+    interface networkingServer  {
+        + NewIdentityClient(peerID peer.ID) (proto.IdentityClient, error)
+        + DisconnectFromPeer(peerID peer.ID, reason string) 
+        + AddPeer(id peer.ID, direction network.Direction) 
+        + UpdatePendingConnCount(delta int64, direction network.Direction) 
+        + EmitEvent(event *event.PeerEvent) 
+        + IsTemporaryDial(peerID peer.ID) bool
+        + HasFreeConnectionSlot(direction network.Direction) bool
+
+    }
+}
+"proto.UnimplementedIdentityServer" *-- "identity.IdentityService"
+
+
+@enduml

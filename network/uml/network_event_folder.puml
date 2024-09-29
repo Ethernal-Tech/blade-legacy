@@ -1,0 +1,18 @@
+@startuml
+namespace event {
+    class PeerEvent << (S,Aquamarine) >> {
+        + PeerID peer.ID
+        + Type PeerEventType
+
+    }
+    class PeerEventType << (S,Aquamarine) >> {
+        + String() string
+
+    }
+    class event.PeerEventType << (T, #FF7700) >>  {
+    }
+}
+
+
+"__builtin__.uint" #.. "event.PeerEventType"
+@enduml

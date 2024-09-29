@@ -1,0 +1,9 @@
+@startuml
+namespace common {
+    class common.DialPriority << (T, #FF7700) >>  {
+    }
+}
+
+
+"__builtin__.uint64" #.. "common.DialPriority"
+@enduml

@@ -1,0 +1,37 @@
+@startuml
+namespace grpc {
+    class Context << (S,Aquamarine) >> {
+        + PeerID peer.ID
+
+    }
+    class GrpcStream << (S,Aquamarine) >> {
+        - ctx context.Context
+        - streamCh <font color=blue>chan</font> network.Stream
+        - grpcServer *grpc.Server
+
+        + Client(stream network.Stream) (*grpc.ClientConn, error)
+        + Serve() 
+        + Handler() <font color=blue>func</font>(network.Stream) 
+        + RegisterService(sd *grpc.ServiceDesc, ss <font color=blue>interface</font>{}) 
+        + GrpcServer() *grpc.Server
+        + Accept() (net.Conn, error)
+        + Addr() net.Addr
+        + Close() error
+
+    }
+    class streamConn << (S,Aquamarine) >> {
+        + LocalAddr() net.Addr
+        + RemoteAddr() net.Addr
+
+    }
+    class wrapLibp2pAddr << (S,Aquamarine) >> {
+        - id peer.ID
+
+    }
+}
+"context.Context" *-- "grpc.Context"
+"network.Stream" *-- "grpc.streamConn"
+"net.Addr" *-- "grpc.wrapLibp2pAddr"
+
+
+@enduml

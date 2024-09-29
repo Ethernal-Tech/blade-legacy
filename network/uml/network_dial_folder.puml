@@ -1,0 +1,41 @@
+@startuml
+namespace dial {
+    class DialQueue << (S,Aquamarine) >> {
+        - heap dialQueueImpl
+        - tasks <font color=blue>map</font>[peer.ID]*DialTask
+        - updateCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+        - closeCh <font color=blue>chan</font> <font color=blue>struct</font>{}
+
+        - addTaskImpl(addrInfo *peer.AddrInfo, priority common.DialPriority) bool
+
+        + Close() 
+        + Wait(ctx context.Context) bool
+        + PopTask() *DialTask
+        + DeleteTask(peer peer.ID) 
+        + AddTask(addrInfo *peer.AddrInfo, priority common.DialPriority) 
+
+    }
+    class DialTask << (S,Aquamarine) >> {
+        - index int
+        - addrInfo *peer.AddrInfo
+        - priority uint64
+
+        + GetAddrInfo() *peer.AddrInfo
+
+    }
+    class dial.dialQueueImpl << (T, #FF7700) >>  {
+    }
+    class dialQueueImpl << (S,Aquamarine) >> {
+        + Len() int
+        + Less(i int, j int) bool
+        + Swap(i int, j int) 
+        + Push(x <font color=blue>interface</font>{}) 
+        + Pop() <font color=blue>interface</font>{}
+
+    }
+}
+"sync.Mutex" *-- "dial.DialQueue"
+
+
+"dial.[]*DialTask" #.. "dial.dialQueueImpl"
+@enduml
