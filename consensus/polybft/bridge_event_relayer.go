@@ -23,8 +23,8 @@ import (
 
 var (
 	errUnknownBridgeEventRelayerEvent = errors.New("unknown event from gateway contract")
-	bridgeMessageResultEventSig       = new(contractsapi.BridgeMessageResultEvent).Sig()
-	eventChBuffer                     = 100
+
+	eventChBuffer = 100
 )
 
 // BridgeEventRelayer is an interface that defines functions for bridge event relayer
@@ -319,14 +319,14 @@ func (ber *bridgeEventRelayerImpl) startTrackerForChain(chainID uint64,
 func (ber *bridgeEventRelayerImpl) GetLogFilters() map[types.Address][]types.Hash {
 	logFilters := map[types.Address][]types.Hash{
 		contracts.BridgeStorageContract: {
-			types.Hash(new(contractsapi.NewBatchEvent).Sig()),
-			types.Hash(new(contractsapi.NewValidatorSetEvent).Sig()),
+			types.Hash(newBatchEventSig),
+			types.Hash(newValidatorSetEventSig),
 		},
 	}
 
 	for _, bridgeCfg := range ber.bridgeConfig {
-		logFilters[bridgeCfg.InternalGatewayAddr] = []types.Hash{types.Hash(
-			new(contractsapi.BridgeMessageResultEvent).Sig())}
+		logFilters[bridgeCfg.InternalGatewayAddr] = []types.Hash{
+			types.Hash(bridgeMessageResultEventSig)}
 	}
 
 	return logFilters
@@ -335,12 +335,6 @@ func (ber *bridgeEventRelayerImpl) GetLogFilters() map[types.Address][]types.Has
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
-	var (
-		bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
-		newBatchEvent            contractsapi.NewBatchEvent
-		newValidatorSetEvent     contractsapi.NewValidatorSetStoredEvent
-	)
-
 	provider, err := ber.blockchain.GetStateProviderForBlock(header)
 	if err != nil {
 		return err
@@ -349,7 +343,9 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 	systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
 
 	switch log.Topics[0] {
-	case bridgeMessageResultEvent.Sig():
+	case bridgeMessageResultEventSig:
+		var bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
+
 		doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
 		if err != nil {
 			return err
@@ -364,7 +360,18 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		}
 
 		return nil
-	case newValidatorSetEvent.Sig():
+	case newValidatorSetEventSig:
+		var newValidatorSetEvent contractsapi.NewValidatorSetStoredEvent
+
+		doesMatch, err := newValidatorSetEvent.ParseLog(log)
+		if err != nil {
+			return err
+		}
+
+		if !doesMatch {
+			return nil
+		}
+
 		newValidatorSet, err := systemState.GetValidatorSetByNumber(newValidatorSetEvent.ID)
 		if err != nil {
 			return err
@@ -373,7 +380,18 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		// since commit validator set transaction is always before new batch transactions in the block
 		// the new validator set transaction will be first in the event ch buffer to be sent
 		ber.eventCh <- newValidatorSet
-	case newBatchEvent.Sig():
+	case newBatchEventSig:
+		var newBatchEvent contractsapi.NewBatchEvent
+
+		doesMatch, err := newBatchEvent.ParseLog(log)
+		if err != nil {
+			return err
+		}
+
+		if !doesMatch {
+			return nil
+		}
+
 		bridgeBatch, err := systemState.GetBridgeBatchByNumber(newBatchEvent.ID)
 		if err != nil {
 			return err
@@ -390,10 +408,10 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 // AddLog is EventTracker implementation
 // used to handle a log with data from external chain
 func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log) error {
-	bridgeMessageResultEvent := &contractsapi.BridgeMessageResultEvent{}
-
 	switch eventLog.Topics[0] {
-	case bridgeMessageResultEvent.Sig():
+	case bridgeMessageResultEventSig:
+		var bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
+
 		doesMatch, err := bridgeMessageResultEvent.ParseLog(eventLog)
 		if err != nil {
 			return err

@@ -29,7 +29,12 @@ import (
 
 var (
 	errUnknownBridgeEvent = errors.New("unknown bridge event")
-	bridgeMessageEventSig = new(contractsapi.BridgeMsgEvent).Sig()
+
+	// Bridge events signatures
+	bridgeMessageEventSig       = new(contractsapi.BridgeMsgEvent).Sig()
+	bridgeMessageResultEventSig = new(contractsapi.BridgeMessageResultEvent).Sig()
+	newBatchEventSig            = new(contractsapi.NewBatchEvent).Sig()
+	newValidatorSetEventSig     = new(contractsapi.NewValidatorSetEvent).Sig()
 )
 
 type Runtime interface {
@@ -622,28 +627,20 @@ func (b *bridgeEventManager) multicast(msg interface{}) {
 // and the value is a slice of signatures of events we want to get.
 // This function is the implementation of EventSubscriber interface
 func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
-	var (
-		bridgeMessageResult contractsapi.BridgeMessageResultEvent
-		bridgeMsg           contractsapi.BridgeMsgEvent
-	)
-
 	return map[types.Address][]types.Hash{
 		b.config.bridgeCfg.InternalGatewayAddr: {
-			types.Hash(bridgeMsg.Sig()),
-			types.Hash(bridgeMessageResult.Sig())},
+			types.Hash(bridgeMessageEventSig),
+			types.Hash(bridgeMessageResultEventSig)},
 	}
 }
 
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
-	var (
-		bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
-		bridgeMsgEvent           contractsapi.BridgeMsgEvent
-	)
-
 	switch log.Topics[0] {
-	case bridgeMessageResultEvent.Sig():
+	case bridgeMessageResultEventSig:
+		var bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
+
 		doesMatch, err := bridgeMessageResultEvent.ParseLog(log)
 		if err != nil {
 			return err
@@ -654,17 +651,19 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 		}
 
 		if bridgeMessageResultEvent.Status {
-			return b.state.BridgeMessageStore.removeBridgeEvents(&bridgeMessageResultEvent)
+			return b.state.BridgeMessageStore.removeBridgeEvents(bridgeMessageResultEvent)
 		}
 
 		return nil
-	case bridgeMsgEvent.Sig():
+	case bridgeMessageEventSig:
+		var bridgeMsgEvent contractsapi.BridgeMsgEvent
+
 		doesMatch, err := bridgeMsgEvent.ParseLog(log)
 		if err != nil {
 			return err
 		}
 
-		if !doesMatch || b.externalChainID != bridgeMessageResultEvent.DestinationChainID.Uint64() {
+		if !doesMatch || b.externalChainID != bridgeMsgEvent.DestinationChainID.Uint64() {
 			return nil
 		}
 

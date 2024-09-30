@@ -344,12 +344,8 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, bridgeEvents, 0)
 
-		var bridgeMessageEvent contractsapi.BridgeMsgEvent
-
-		bridgeMessageEventID := bridgeMessageEvent.Sig()
-
 		// log with the bridge message topic but incorrect content
-		require.Error(t, s.AddLog(big.NewInt(1), &ethgo.Log{Topics: []ethgo.Hash{bridgeMessageEventID}, Data: bridgeMsgData}))
+		require.Error(t, s.AddLog(big.NewInt(1), &ethgo.Log{Topics: []ethgo.Hash{bridgeMessageEventSig}, Data: bridgeMsgData}))
 		bridgeEvents, err = s.state.BridgeMessageStore.list()
 
 		require.NoError(t, err)
@@ -361,7 +357,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 
 		goodLog := &ethgo.Log{
 			Topics: []ethgo.Hash{
-				bridgeMessageEventID,
+				bridgeMessageEventSig,
 				ethgo.BytesToHash([]byte{0x0}), // bridge message index 0
 				ethgo.ZeroHash,
 				ethgo.ZeroHash,
@@ -440,14 +436,15 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 func createTestLogForBridgeMessageResultEvent(t *testing.T, bridgeMessageEventID uint64) *ethgo.Log {
 	t.Helper()
 
-	var bridgeMessageResultEvent *contractsapi.BridgeMessageResultEvent
-
 	data, err := abi.MustNewType("tuple(uint256 a, string b, string c)").Encode([]string{"1", "data2", "data3"})
 	require.NoError(t, err)
 
 	return &ethgo.Log{
-		Topics: []ethgo.Hash{bridgeMessageResultEvent.Sig(), ethgo.BytesToHash(common.EncodeUint64ToBytes(bridgeMessageEventID)), ethgo.BytesToHash(common.EncodeUint64ToBytes(1))},
-		Data:   data,
+		Topics: []ethgo.Hash{
+			bridgeMessageResultEventSig,
+			ethgo.BytesToHash(common.EncodeUint64ToBytes(bridgeMessageEventID)),
+			ethgo.BytesToHash(common.EncodeUint64ToBytes(1))},
+		Data: data,
 	}
 }
 
