@@ -45,9 +45,10 @@ type BridgeMessageStore struct {
 
 // initialize creates necessary buckets in DB if they don't already exist
 func (bms *BridgeMessageStore) initialize(tx *bolt.Tx) error {
-	var err error
-
-	var bridgeMessageBucket, bridgeBatchesBucket *bolt.Bucket
+	var (
+		err                                      error
+		bridgeMessageBucket, bridgeBatchesBucket *bolt.Bucket
+	)
 
 	if bridgeMessageBucket, err = tx.CreateBucketIfNotExists(bridgeMessageEventsBucket); err != nil {
 		return fmt.Errorf("failed to create bucket=%s: %w", string(bridgeMessageEventsBucket), err)

@@ -181,7 +181,8 @@ func (ber *bridgeEventRelayerImpl) sendCommitValidatorSet(event *contractsapi.Si
 
 	for chainID, txRelayer := range ber.externalTxRelayers {
 		// send commit validator set transaction to the external chains
-		to := ber.bridgeConfig[chainID].ExternalGatewayAddr
+		bridgeCfg := ber.bridgeConfig[chainID]
+		to := bridgeCfg.ExternalGatewayAddr
 		txn := types.NewTx(types.NewLegacyTx(
 			types.WithFrom(ber.key.Address()),
 			types.WithTo(&to),
@@ -197,7 +198,7 @@ func (ber *bridgeEventRelayerImpl) sendCommitValidatorSet(event *contractsapi.Si
 			continue
 		}
 
-		ber.logger.Info("sent commit validator set transaction to external chain",
+		ber.logger.Debug("sent commit validator set transaction to external chain",
 			"chainID", chainID,
 			"gatewayAddr", to,
 			"status", types.ReceiptStatus(receipt.Status),
@@ -223,7 +224,7 @@ func (ber *bridgeEventRelayerImpl) sendCommitValidatorSet(event *contractsapi.Si
 			continue
 		}
 
-		ber.logger.Info("sent commit validator set transaction to internal chain",
+		ber.logger.Debug("sent commit validator set transaction to internal chain",
 			"gatewayAddr", to,
 			"status", types.ReceiptStatus(receipt.Status),
 			"txHash", receipt.TransactionHash,
@@ -335,13 +336,6 @@ func (ber *bridgeEventRelayerImpl) GetLogFilters() map[types.Address][]types.Has
 // ProcessLog is the implementation of EventSubscriber interface,
 // used to handle a log defined in GetLogFilters, provided by event provider
 func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.Log, dbTx *bolt.Tx) error {
-	provider, err := ber.blockchain.GetStateProviderForBlock(header)
-	if err != nil {
-		return err
-	}
-
-	systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
-
 	switch log.Topics[0] {
 	case bridgeMessageResultEventSig:
 		var bridgeMessageResultEvent contractsapi.BridgeMessageResultEvent
@@ -372,6 +366,13 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 			return nil
 		}
 
+		provider, err := ber.blockchain.GetStateProviderForBlock(header)
+		if err != nil {
+			return err
+		}
+
+		systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
+
 		newValidatorSet, err := systemState.GetValidatorSetByNumber(newValidatorSetEvent.ID)
 		if err != nil {
 			return err
@@ -391,6 +392,13 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		if !doesMatch {
 			return nil
 		}
+
+		provider, err := ber.blockchain.GetStateProviderForBlock(header)
+		if err != nil {
+			return err
+		}
+
+		systemState := NewSystemState(contracts.EpochManagerContract, contracts.BridgeStorageContract, provider)
 
 		bridgeBatch, err := systemState.GetBridgeBatchByNumber(newBatchEvent.ID)
 		if err != nil {
