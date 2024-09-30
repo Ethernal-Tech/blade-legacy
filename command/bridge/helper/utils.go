@@ -14,7 +14,7 @@ import (
 
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
-	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	polybftWallet "github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -154,7 +154,7 @@ func GetECDSAKey(privateKey, accountDir, accountConfig string) (crypto.Key, erro
 // GetValidatorInfo queries SupernetManager smart contract on root
 // and retrieves validator info for given address
 func GetValidatorInfo(validatorAddr types.Address, supernetManagerAddr, stakeManagerAddr types.Address,
-	txRelayer txrelayer.TxRelayer) (*systemstate.ValidatorInfo, error) {
+	txRelayer txrelayer.TxRelayer) (*validator.ValidatorInfo, error) {
 	caller := contracts.SystemCaller
 	getValidatorMethod := contractsapi.StakeManager.Abi.GetMethod("stakeOf")
 
@@ -189,7 +189,7 @@ func GetValidatorInfo(validatorAddr types.Address, supernetManagerAddr, stakeMan
 	}
 
 	//nolint:forcetypeassert
-	validatorInfo := &systemstate.ValidatorInfo{
+	validatorInfo := &validator.ValidatorInfo{
 		Address:       validatorAddr,
 		IsActive:      innerMap["isActive"].(bool),
 		IsWhitelisted: innerMap["isWhitelisted"].(bool),

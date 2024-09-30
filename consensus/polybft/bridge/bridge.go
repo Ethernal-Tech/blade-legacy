@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// topic is an interface for p2p message gossiping
+// Topic is an interface for p2p message gossiping
 type Topic interface {
 	Publish(obj proto.Message) error
 	Subscribe(handler func(obj interface{}, from peer.ID)) error
@@ -50,7 +50,7 @@ func (d *DummyBridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSign
 }
 func (d *DummyBridge) InsertEpoch(epoch uint64, tx *bolt.Tx) error { return nil }
 
-// newBridge creates a new instance of bridge
+// NewBridge creates a new instance of bridge
 func NewBridge(runtime Runtime,
 	state *state.State,
 	runtimeConfig *config.Runtime,

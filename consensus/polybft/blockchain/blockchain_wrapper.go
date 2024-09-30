@@ -1,9 +1,7 @@
 package blockchain
 
 import (
-	"errors"
 	"fmt"
-	"math/big"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -15,16 +13,11 @@ import (
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
-	"github.com/Ethernal-Tech/ethgo"
 	"github.com/Ethernal-Tech/ethgo/contract"
 )
 
 const (
 	consensusSource = "consensus"
-)
-
-var (
-	errSendTxnUnsupported = errors.New("system state does not support send transactions")
 )
 
 var _ Blockchain = &BlockchainWrapper{}
@@ -101,12 +94,12 @@ func (p *BlockchainWrapper) GetStateProviderForBlock(header *types.Header) (cont
 		return nil, err
 	}
 
-	return NewStateProvider(transition), nil
+	return systemstate.NewStateProvider(transition), nil
 }
 
 // GetStateProvider returns a reference to make queries to the provided state
 func (p *BlockchainWrapper) GetStateProvider(transition *state.Transition) contract.Provider {
-	return NewStateProvider(transition)
+	return systemstate.NewStateProvider(transition)
 }
 
 // GetHeaderByNumber is an implementation of blockchainBackend interface
@@ -154,43 +147,9 @@ func (p *BlockchainWrapper) UnubscribeEvents(subscription blockchain.Subscriptio
 }
 
 func (p *BlockchainWrapper) GetChainID() uint64 {
-	return uint64(p.blockchain.Config().ChainID)
+	return uint64(p.blockchain.Config().ChainID) //nolint:gosec
 }
 
 func (p *BlockchainWrapper) GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error) {
 	return p.blockchain.GetReceiptsByHash(hash)
-}
-
-var _ contract.Provider = &stateProvider{}
-
-type stateProvider struct {
-	transition *state.Transition
-}
-
-// NewStateProvider initializes EVM against given state and chain config and returns stateProvider instance
-// which is an abstraction for smart contract calls
-func NewStateProvider(transition *state.Transition) contract.Provider {
-	return &stateProvider{transition: transition}
-}
-
-// Call implements the contract.Provider interface to make contract calls directly to the state
-func (s *stateProvider) Call(addr ethgo.Address, input []byte, opts *contract.CallOpts) ([]byte, error) {
-	result := s.transition.Call2(
-		contracts.SystemCaller,
-		types.Address(addr),
-		input,
-		big.NewInt(0),
-		10000000,
-	)
-	if result.Failed() {
-		return nil, result.Err
-	}
-
-	return result.ReturnValue, nil
-}
-
-// Txn is part of the contract.Provider interface to make Ethereum transactions. We disable this function
-// since the system state does not make any transaction
-func (s *stateProvider) Txn(_ ethgo.Address, _ ethgo.Key, _ []byte) (contract.Txn, error) {
-	return nil, errSendTxnUnsupported
 }

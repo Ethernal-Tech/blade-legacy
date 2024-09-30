@@ -33,12 +33,12 @@ func newTestState(tb testing.TB) *ProposerSnapshotStore {
 		tb.Fatal(err)
 	}
 
-	stakeSTore, err := newProposerSnapshotStore(db, nil)
+	proposerSnapshotStore, err := newProposerSnapshotStore(db, nil)
 	if err != nil {
 		tb.Fatal(err)
 	}
 
-	return stakeSTore
+	return proposerSnapshotStore
 }
 
 func TestState_getProposerSnapshot_writeProposerSnapshot(t *testing.T) {

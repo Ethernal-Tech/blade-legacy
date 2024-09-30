@@ -15,16 +15,24 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+// BlockBuilder is an interface that defines functions used for block building
 type BlockBuilder interface {
+	// Reset initializes block builder before adding transactions and actual block building
 	Reset() error
+	// WriteTx applies given transaction to the state.
+	// if transaction apply fails, it reverts the saved snapshot.
 	WriteTx(*types.Transaction) error
+	// Fill fills the block with transactions from the txpool
 	Fill()
+	// Block returns the built block if nil, it is not built yet
 	Build(func(h *types.Header)) (*types.FullBlock, error)
+	// GetState returns Transition reference
 	GetState() *state.Transition
+	// Receipts returns the collection of transaction receipts for given block
 	Receipts() []*types.Receipt
 }
 
-// blockchain is an interface that wraps the methods called on blockchain
+// Blockchain is an interface that wraps the functions called on blockchain
 type Blockchain interface {
 	// CurrentHeader returns the header of blockchain block head
 	CurrentHeader() *types.Header
@@ -67,16 +75,27 @@ type Blockchain interface {
 	GetReceiptsByHash(hash types.Hash) ([]*types.Receipt, error)
 }
 
+// TxPool is an interface that defines functions used for transaction pool
 type TxPool interface {
+	// Prepare prepares the tx pool for the next block
 	Prepare()
+	// Length returns the number of transactions in the pool
 	Length() uint64
+	// Peek returns the next transaction in the pool
 	Peek() *types.Transaction
+	// Pop removes the transaction from the pool
 	Pop(*types.Transaction)
+	// Drop removes the transaction from the pool
 	Drop(*types.Transaction)
+	// Demote demotes the transaction
 	Demote(*types.Transaction)
+	// SetSealing sets the sealing (isValidator) flag in tx pool
 	SetSealing(bool)
+	// ResetWithBlock resets the tx pool with the given block
 	ResetWithBlock(*types.Block)
+	// ReinsertProposed reinserts the proposed transaction
 	ReinsertProposed()
+	// ClearProposed clears the proposed transaction
 	ClearProposed()
 }
 

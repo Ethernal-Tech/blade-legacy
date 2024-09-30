@@ -32,6 +32,7 @@ import (
 
 var (
 	errUnknownBridgeEvent = errors.New("unknown bridge event")
+	errQuorumNotReached   = errors.New("quorum not reached for batch")
 
 	// Bridge events signatures
 	bridgeMessageEventSig       = new(contractsapi.BridgeMsgEvent).Sig()

@@ -20,8 +20,8 @@ import (
 	validatorHelper "github.com/0xPolygon/polygon-edge/command/validator/helper"
 	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
-	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
@@ -694,7 +694,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 	// waiting two epochs, so that some rewards get accumulated
 	require.NoError(t, cluster.WaitForBlock(epochEndingBlock, 1*time.Minute))
 
-	queryValidators := func(handler func(idx int, validatorInfo *systemstate.ValidatorInfo)) {
+	queryValidators := func(handler func(idx int, validatorInfo *validator.ValidatorInfo)) {
 		for i, validatorAddr := range votingPowerChangeValidators {
 			// query validator info
 			validatorInfo, err := validatorHelper.GetValidatorInfo(
@@ -709,9 +709,9 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 	bigZero := big.NewInt(0)
 
 	// validatorsMap holds only changed validators
-	validatorsMap := make(map[types.Address]*systemstate.ValidatorInfo, votingPowerChanges)
+	validatorsMap := make(map[types.Address]*validator.ValidatorInfo, votingPowerChanges)
 
-	queryValidators(func(idx int, validator *systemstate.ValidatorInfo) {
+	queryValidators(func(idx int, validator *validator.ValidatorInfo) {
 		t.Logf("[Validator#%d] Voting power (original)=%d, rewards=%d\n",
 			idx+1, validator.Stake, validator.WithdrawableRewards)
 
@@ -728,7 +728,7 @@ func TestE2E_Consensus_ChangeVotingPowerByStakingPendingRewards(t *testing.T) {
 		require.NoError(t, validatorSrv.Stake(types.ZeroAddress, validator.WithdrawableRewards))
 	})
 
-	queryValidators(func(idx int, validator *systemstate.ValidatorInfo) {
+	queryValidators(func(idx int, validator *validator.ValidatorInfo) {
 		t.Logf("[Validator#%d] Voting power (after stake)=%d\n", idx+1, validator.Stake)
 
 		previousValidatorInfo := validatorsMap[validator.Address]

@@ -6,7 +6,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 )
 
-// RuntimeConfig is a struct that holds configuration data for given consensus runtime
+// Runtime is a struct that holds configuration data for given consensus runtime
 type Runtime struct {
 	ChainParams     *chain.Params
 	GenesisConfig   *PolyBFT
