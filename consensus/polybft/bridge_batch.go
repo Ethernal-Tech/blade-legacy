@@ -121,21 +121,19 @@ func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 	signature0 := commit.Signature[0].Bytes()
 	signature1 := commit.Signature[1].Bytes()
 	halfSignatureSize := bls.SignatureSize / 2
+	signature := make([]byte, bls.SignatureSize)
 
-	// Pad portions of signature with zeroes in case it is not required size
 	if len(signature0) < halfSignatureSize {
-		paddedSignature0 := make([]byte, halfSignatureSize-len(signature0))
-		signature0 = append(paddedSignature0, signature0...)
+		copy(signature[halfSignatureSize-len(signature0):halfSignatureSize], signature0)
+	} else {
+		copy(signature[:halfSignatureSize], signature0)
 	}
 
 	if len(signature1) < halfSignatureSize {
-		paddedSignature1 := make([]byte, halfSignatureSize-len(signature1))
-		signature1 = append(paddedSignature1, signature1...)
+		copy(signature[bls.SignatureSize-len(signature1):], signature1)
+	} else {
+		copy(signature[halfSignatureSize:], signature1)
 	}
-
-	signature := make([]byte, 0, bls.SignatureSize)
-	signature = append(signature, signature0...)
-	signature = append(signature, signature1...)
 
 	*bbs = BridgeBatchSigned{
 		MessageBatch: commit.Batch,
