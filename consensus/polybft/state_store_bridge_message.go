@@ -88,12 +88,12 @@ func (bms *BridgeMessageStore) insertBridgeMessageEvent(event *contractsapi.Brid
 
 // removeBridgeEvents removes bridge events and their proofs from the buckets in db
 func (bms *BridgeMessageStore) removeBridgeEvents(
-	bridgeMessageEventIDs *contractsapi.BridgeMessageResultEvent) error {
+	bridgeMessageResult *contractsapi.BridgeMessageResultEvent) error {
 	return bms.db.Update(func(tx *bolt.Tx) error {
 		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).
-			Bucket(common.EncodeUint64ToBytes(bridgeMessageEventIDs.SourceChainID.Uint64()))
+			Bucket(common.EncodeUint64ToBytes(bridgeMessageResult.SourceChainID.Uint64()))
 
-		bridgeMessageID := bridgeMessageEventIDs.Counter.Uint64()
+		bridgeMessageID := bridgeMessageResult.Counter.Uint64()
 		bridgeMessageEventIDKey := common.EncodeUint64ToBytes(bridgeMessageID)
 
 		if err := eventsBucket.Delete(bridgeMessageEventIDKey); err != nil {
