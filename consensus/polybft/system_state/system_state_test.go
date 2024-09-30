@@ -17,20 +17,19 @@ import (
 )
 
 func TestSystemState_GetNextCommittedIndex(t *testing.T) {
-	t.Skip()
 	t.Parallel()
 
 	var sideChainBridgeABI, _ = abi.NewMethod(
-		"function setNextCommittedIndex(uint256 _index) public payable",
+		"function setCurrentCommittedIndex(uint256 _chainId, uint256 _index) public payable",
 	)
 
 	cc := &testutil.Contract{}
 	cc.AddCallback(func() string {
 		return `
-		uint256 public lastCommittedId;
+		mapping(uint256 => uint256) public lastCommitted;
 		
-		function setNextCommittedIndex(uint256 _index) public payable {
-			lastCommittedId = _index;
+		function setCurrentCommittedIndex(uint256 _chainId, uint256 _index) public payable {
+			lastCommitted[_chainId] = _index;
 		}`
 	})
 
@@ -53,7 +52,7 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 	systemState := NewSystemState(contracts.EpochManagerContract, result.Address, provider)
 
 	expectedNextCommittedIndex := uint64(45)
-	input, err := sideChainBridgeABI.Encode([1]interface{}{expectedNextCommittedIndex})
+	input, err := sideChainBridgeABI.Encode([2]interface{}{0, expectedNextCommittedIndex})
 	assert.NoError(t, err)
 
 	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
