@@ -2,6 +2,7 @@
 package deploy
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/chain"
@@ -335,10 +336,11 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 	lastAddress := predicateBaseProxyAddress
 	for _, contract := range internalContracts {
 		proxyAddress, implAddress := generateInternalContractAndProxyAddress(lastAddress)
+		proxyName := contract.constructProxyName()
 
 		contract.addressPopulatorFn(bridgeCfg, []*deployContractResult{
 			newDeployContractsResult(contract.name, false, implAddress, ethgo.ZeroHash, 0),
-			newDeployContractsResult(contract.constructProxyName(), true, proxyAddress, ethgo.ZeroHash, 0),
+			newDeployContractsResult(proxyName, true, proxyAddress, ethgo.ZeroHash, 0),
 		})
 
 		chainCfg.Genesis.Alloc[implAddress] = &chain.GenesisAccount{
@@ -347,6 +349,14 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 		}
 
 		lastAddress = proxyAddress
+
+		if err := writeInternalContractPreallocate(o, proxyName, proxyAddress, types.Address{}); err != nil {
+			return err
+		}
+
+		if err := writeInternalContractPreallocate(o, contract.name, implAddress, proxyAddress); err != nil {
+			return err
+		}
 	}
 
 	if _, err := o.Write([]byte("[BRIDGE - DEPLOY] Internal predicates pre-allocated in bootstrap mode\n")); err != nil {
@@ -356,10 +366,21 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 	return nil
 }
 
+// writeInternalContractPreallocate writes the internal contract preallocation output
+func writeInternalContractPreallocate(o command.OutputFormatter, contractName string,
+	implAddr types.Address, proxyAddr types.Address) error {
+	if _, err := o.Write([]byte(fmt.Sprintf("[BRIDGE - DEPLOY] Preallocated %s on address: %s\n",
+		contractName, implAddr.String()))); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // generateInternalContractAndProxyAddress generates the internal contract and proxy addresses
 func generateInternalContractAndProxyAddress(lastAddress types.Address) (types.Address, types.Address) {
 	proxyAddress := lastAddress.IncrementBy(10)
-	implAddress := lastAddress.IncrementBy(1)
+	implAddress := proxyAddress.IncrementBy(1)
 
 	return proxyAddress, implAddress
 }

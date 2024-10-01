@@ -111,5 +111,5 @@ func getContractName(isInternal bool, input string) string {
 		prefix = internalPrefix
 	}
 
-	return fmt.Sprintf("%s%s%s", prefix, input, proxySuffix)
+	return fmt.Sprintf("%s%s", prefix, input)
 }
