@@ -181,7 +181,7 @@ func (b *bridge) PostEpoch(req *oracle.PostEpochRequest) error {
 
 // BridgeBatch returns the pending signed bridge batches as a list of signed bridge batches
 func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error) {
-	bridgeBatches := make([]*BridgeBatchSigned, 0, len(b.bridgeManagers))
+	bridgeBatches := make([]*BridgeBatchSigned, 0)
 
 	for chainID, bridgeManager := range b.bridgeManagers {
 		bridgeBatch, err := bridgeManager.BridgeBatch(pendingBlockNumber)
@@ -189,7 +189,9 @@ func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, e
 			return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
 		}
 
-		bridgeBatches = append(bridgeBatches, bridgeBatch)
+		if bridgeBatch != nil {
+			bridgeBatches = append(bridgeBatches, bridgeBatch)
+		}
 	}
 
 	return bridgeBatches, nil
