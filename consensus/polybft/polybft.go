@@ -138,18 +138,7 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 			initialTotalSupply.Add(initialTotalSupply, alloc.Balance)
 		}
 
-		proxyAddrMapping := contracts.GetProxyImplementationMapping()
-
-		burnContractAddress, isBurnContractSet := getBurnContractAddress(cfg, polyBFTConfig)
-		if isBurnContractSet {
-			proxyAddrMapping[contracts.DefaultBurnContract] = burnContractAddress
-		}
-
-		if _, ok := cfg.Genesis.Alloc[contracts.RewardTokenContract]; ok {
-			proxyAddrMapping[contracts.RewardTokenContract] = contracts.RewardTokenContractV1
-		}
-
-		if err = initProxies(transition, polyBFTConfig.ProxyContractsAdmin, proxyAddrMapping); err != nil {
+		if err = initProxies(transition, cfg, polyBFTConfig); err != nil {
 			return err
 		}
 
@@ -225,42 +214,42 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 					// initialize ChildERC20PredicateAccessList SC
 					if err = initERC20ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
-						"ChildERC20PredicateAccessList"); err != nil {
+						"InternalERC20Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC721PredicateAccessList SC
 					if err = initERC721ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
-						"ChildERC721PredicateAccessList"); err != nil {
+						"InternalERC721Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC1155PredicateAccessList SC
 					if err = initERC1155ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
-						"ChildERC1155PredicateAccessList"); err != nil {
+						"InternalERC1155Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC20PredicateAccessList SC
 					if err = initERC20ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
-						"RootERC20PredicateAccessList"); err != nil {
+						"InternalERC20MintablePredicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC721PredicateAccessList SC
 					if err = initERC721ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
-						"RootERC721PredicateAccessList"); err != nil {
+						"InternalERC721MintablePredicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC1155PredicateAccessList SC
 					if err = initERC1155ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
-						"RootERC1155PredicateAccessList"); err != nil {
+						"InternalERC1155MintablePredicate"); err != nil {
 						return err
 					}
 				}
@@ -275,37 +264,37 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 
 					// initialize ChildERC20Predicate SC
 					if err = initERC20PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
-						false, destChainIDBig, "ChildERC20Predicate"); err != nil {
+						false, destChainIDBig, "InternalERC20Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC721Predicate SC
 					if err = initERC721PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
-						false, destChainIDBig, "ChildERC721Predicate"); err != nil {
+						false, destChainIDBig, "InternalERC721Predicate"); err != nil {
 						return err
 					}
 
 					// initialize ChildERC1155Predicate SC
 					if err = initERC1155PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
-						false, destChainIDBig, "ChildERC1155Predicate"); err != nil {
+						false, destChainIDBig, "InternalERC1155Predicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC20Predicate SC
 					if err = initERC20PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
-						true, destChainIDBig, "RootERC20Predicate"); err != nil {
+						true, destChainIDBig, "InternalERC20MintablePredicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC721Predicate SC
 					if err = initERC721PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
-						true, destChainIDBig, "RootERC721Predicate"); err != nil {
+						true, destChainIDBig, "InternalERC721MintablePredicate"); err != nil {
 						return err
 					}
 
 					// initialize RootMintableERC1155Predicate SC
 					if err = initERC1155PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
-						true, destChainIDBig, "RootERC1155Predicate"); err != nil {
+						true, destChainIDBig, "InternalERC1155MintablePredicate"); err != nil {
 						return err
 					}
 				}
@@ -358,6 +347,8 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 				contracts.NativeERC20TokenContract, input, "NativeERC20", transition); err != nil {
 				return err
 			}
+
+			burnContractAddress, isBurnContractSet := getBurnContractAddress(cfg, polyBFTConfig)
 
 			// initialize EIP1559Burn SC
 			if isBurnContractSet {
@@ -789,9 +780,39 @@ func (p *Polybft) FilterExtra(extra []byte) ([]byte, error) {
 }
 
 // initProxies initializes proxy contracts, that allow upgradeability of contracts implementation
-func initProxies(transition *state.Transition, admin types.Address,
-	proxyToImplMap map[types.Address]types.Address) error {
-	for proxyAddress, implAddress := range proxyToImplMap {
+func initProxies(transition *state.Transition, chainCfg *chain.Chain, polybftCfg config.PolyBFT) error {
+	admin := polybftCfg.ProxyContractsAdmin
+
+	proxyAddrMapping := contracts.GetProxyImplementationMapping()
+
+	burnContractAddress, isBurnContractSet := getBurnContractAddress(chainCfg, polybftCfg)
+	if isBurnContractSet {
+		proxyAddrMapping[contracts.DefaultBurnContract] = burnContractAddress
+	}
+
+	if _, ok := chainCfg.Genesis.Alloc[contracts.RewardTokenContract]; ok {
+		proxyAddrMapping[contracts.RewardTokenContract] = contracts.RewardTokenContractV1
+	}
+
+	if polybftCfg.IsBridgeEnabled() {
+		// init proxies for each bridge as well (but only for bridges deployed on bootstrap)
+		for _, bridgeCfg := range polybftCfg.Bridge {
+			// if the first address implementaiton exists in pre-alloc map, all of them do
+			if _, exists := chainCfg.Genesis.Alloc[bridgeCfg.InternalGatewayAddr.IncrementBy(1)]; !exists {
+				continue
+			}
+
+			proxyAddrMapping[bridgeCfg.InternalGatewayAddr] = bridgeCfg.InternalGatewayAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalERC20PredicateAddr] = bridgeCfg.InternalERC20PredicateAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalERC721PredicateAddr] = bridgeCfg.InternalERC721PredicateAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalERC1155PredicateAddr] = bridgeCfg.InternalERC1155PredicateAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalMintableERC20PredicateAddr] = bridgeCfg.InternalMintableERC20PredicateAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalMintableERC721PredicateAddr] = bridgeCfg.InternalMintableERC721PredicateAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalMintableERC1155PredicateAddr] = bridgeCfg.InternalMintableERC1155PredicateAddr.IncrementBy(1)
+		}
+	}
+
+	for proxyAddress, implAddress := range proxyAddrMapping {
 		protectSetupProxyFn := &contractsapi.ProtectSetUpProxyGenesisProxyFn{Initiator: contracts.SystemCaller}
 
 		proxyInput, err := protectSetupProxyFn.EncodeAbi()
