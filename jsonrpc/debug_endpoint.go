@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -54,6 +55,13 @@ type debugBlockchainStore interface {
 
 	// GetPendingTx returns the transaction by hash in the TxPool (pending txn) [Thread-safe]
 	GetPendingTx(txHash types.Hash) (*types.Transaction, bool)
+
+	// Has returns true if the DB does contains the given key.
+	Has(hashRoot types.Hash) bool
+
+	// Get gets the value for the given key. It returns ErrNotFound if the
+	// DB does not contains the key.
+	Get(codeHas types.Hash) ([]byte, error)
 
 	// GetIteratorDumpTree returns a set of accounts based on the given criteria and depends on the starting element.
 	GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error)
@@ -719,6 +727,85 @@ func (d *Debug) DumpBlock(blockNumber BlockNumber) (interface{}, error) {
 			}
 
 			return dump, nil
+		},
+	)
+}
+
+// GetAccessibleState returns the first number where the node has accessible
+// state on disk. Note this being the post-state of that block and the pre-state
+// of the next block.
+// The (from, to) parameters are the sequence of blocks to search, which can go
+// either forwards or backwards
+func (d *Debug) GetAccessibleState(from, to BlockNumber) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			getBlockNumber := func(num BlockNumber) (int64, error) {
+				n, err := GetNumericBlockNumber(num, d.store)
+				if err != nil {
+					return 0, fmt.Errorf("failed to get block number: %w", err)
+				}
+
+				if n > math.MaxInt64 {
+					return 0, fmt.Errorf("block number %d overflows int64", n)
+				}
+
+				return int64(n), nil
+			}
+
+			// Get start and end block numbers
+			start, err := getBlockNumber(from)
+			if err != nil {
+				return 0, err
+			}
+
+			end, err := getBlockNumber(to)
+			if err != nil {
+				return 0, err
+			}
+
+			if start == end {
+				return 0, fmt.Errorf("'from' and 'to' block numbers must be different")
+			}
+
+			delta := int64(1)
+			if start > end {
+				delta = -1
+			}
+
+			for i := start; i != end; i += delta {
+				if i < 0 {
+					return 0, fmt.Errorf("block number overflow: %d", i)
+				}
+
+				blockNum := uint64(i)
+				h, ok := d.store.GetHeaderByNumber(blockNum)
+
+				if !ok {
+					return 0, fmt.Errorf("missing header for block number %d", i)
+				}
+
+				if d.store.Has(h.StateRoot) {
+					return blockNum, nil
+				}
+			}
+
+			// No state found
+			return 0, errors.New("no accessible state found between the given block numbers")
+		},
+	)
+}
+
+// DbGet returns the raw value of a key stored in the database.
+//
+//nolint:stylecheck
+func (d *Debug) DbGet(key string) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			hash := types.StringToHash(key)
+
+			return d.store.Get(hash)
 		},
 	)
 }

@@ -36,6 +36,7 @@ type Storage interface {
 	Batch() Batch
 	SetCode(hash types.Hash, code []byte) error
 	GetCode(hash types.Hash) ([]byte, bool)
+	Has(k []byte) (bool, error)
 
 	Close() error
 }
@@ -93,6 +94,19 @@ func (kv *KVStorage) Get(k []byte) ([]byte, bool, error) {
 	return data, true, nil
 }
 
+func (kv *KVStorage) Has(k []byte) (bool, error) {
+	ok, err := kv.db.Has(k, nil)
+	if err != nil {
+		if err.Error() == levelDBNotFoundMsg {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return ok, nil
+}
+
 func (kv *KVStorage) Close() error {
 	return kv.db.Close()
 }
@@ -143,6 +157,15 @@ func (m *memStorage) Get(p []byte) ([]byte, bool, error) {
 	}
 
 	return v, true, nil
+}
+
+func (m *memStorage) Has(p []byte) (bool, error) {
+	m.l.Lock()
+	defer m.l.Unlock()
+
+	_, ok := m.db[hex.EncodeToHex(p)]
+
+	return ok, nil
 }
 
 func (m *memStorage) SetCode(hash types.Hash, code []byte) error {

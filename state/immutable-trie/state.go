@@ -54,6 +54,27 @@ func (s *State) GetCode(hash types.Hash) ([]byte, bool) {
 	return s.storage.GetCode(hash)
 }
 
+func (s *State) Has(hash types.Hash) bool {
+	if hash == types.EmptyCodeHash {
+		return false
+	}
+
+	ok, err := s.storage.Has(hash.Bytes())
+	if err != nil {
+		return false
+	}
+
+	return ok
+}
+
+func (s *State) Get(hash types.Hash) ([]byte, bool, error) {
+	if hash == types.EmptyCodeHash {
+		return nil, false, nil
+	}
+
+	return s.storage.Get(hash.Bytes())
+}
+
 // newTrieAt returns trie with root and if necessary locks state on a trie level
 func (s *State) newTrieAt(root types.Hash) (*Trie, error) {
 	if root == types.EmptyRootHash {

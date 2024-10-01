@@ -39,6 +39,15 @@ func (m *memoryDB) Get(t uint8, k []byte) ([]byte, bool, error) {
 	return v, true, nil
 }
 
+func (m *memoryDB) Has(t uint8, k []byte) (bool, error) {
+	_, ok := m.db[t].kv[hex.EncodeToHex(k)]
+	if !ok {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 func (m *memoryDB) Close() error {
 	return nil
 }

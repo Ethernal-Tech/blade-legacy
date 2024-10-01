@@ -10,6 +10,7 @@ import (
 type Database interface {
 	Close() error
 	Get(t uint8, k []byte) ([]byte, bool, error)
+	Has(t uint8, k []byte) (bool, error)
 	NewBatch() Batch
 }
 

@@ -178,6 +178,26 @@ func (db *MdbxDB) Get(t uint8, k []byte) ([]byte, bool, error) {
 	return data, true, nil
 }
 
+func (db *MdbxDB) Has(t uint8, k []byte) (bool, error) {
+	tx, err := db.env.BeginTxn(nil, mdbx.Readonly)
+	defer tx.Abort()
+
+	if err != nil {
+		return false, err
+	}
+
+	_, err = tx.Get(db.dbi[t], k)
+	if err != nil {
+		if err.Error() == "key not found" {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return true, nil
+}
+
 // Close closes the mdbx storage instance
 func (db *MdbxDB) Close() error {
 	db.env.Close()
