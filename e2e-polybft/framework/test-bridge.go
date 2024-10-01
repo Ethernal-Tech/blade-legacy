@@ -316,6 +316,7 @@ func (t *TestBridge) deployExternalChainContracts(genesisPath string) error {
 		"--proxy-contracts-admin", t.clusterConfig.GetProxyContractsAdmin(),
 		"--genesis", genesisPath,
 		"--test",
+		"--bootstrap",
 	}
 
 	if err := t.cmdRun(args...); err != nil {
