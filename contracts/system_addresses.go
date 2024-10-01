@@ -97,7 +97,6 @@ func GetProxyImplementationMapping() map[types.Address]types.Address {
 		ForkParamsContract:       ForkParamsContractV1,
 		ChildTimelockContract:    ChildTimelockContractV1,
 		ChildGovernorContract:    ChildGovernorContractV1,
-		BridgeStorageContract:    BridgeStorageContractV1,
 		BLS256Contract:           BLS256ContractV1,
 	}
 }
