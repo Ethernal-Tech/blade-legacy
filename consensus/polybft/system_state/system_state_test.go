@@ -78,9 +78,9 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, currentExternalCommitIntex+1, nextExternalCommittedIndex)
 
-	// nextInternalCommittedIndex, err := systemState.GetNextCommittedIndex(0, Internal)
-	// assert.NoError(t, err)
-	// assert.Equal(t, currentInternalCommitIntex+1, nextInternalCommittedIndex)
+	nextInternalCommittedIndex, err := systemState.GetNextCommittedIndex(0, Internal)
+	assert.NoError(t, err)
+	assert.Equal(t, currentInternalCommitIntex+1, nextInternalCommittedIndex)
 }
 
 func TestSystemState_GetEpoch(t *testing.T) {
