@@ -183,22 +183,20 @@ func (bms *BridgeManagerStore) getBridgeMessageEventsForBridgeBatch(
 
 	getFn := func(tx *bolt.Tx) error {
 		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(sourceChainID))
-		if bucket != nil {
-			for i := fromIndex; i <= toIndex; i++ {
-				v := bucket.Get(common.EncodeUint64ToBytes(i))
-				if v == nil {
-					return errNotEnoughBridgeEvents
-				}
+		for i := fromIndex; i <= toIndex; i++ {
+			v := bucket.Get(common.EncodeUint64ToBytes(i))
+			if v == nil {
+				return errNotEnoughBridgeEvents
+			}
 
-				var event *contractsapi.BridgeMsgEvent
-				if err := json.Unmarshal(v, &event); err != nil {
-					return err
-				}
+			var event *contractsapi.BridgeMsgEvent
+			if err := json.Unmarshal(v, &event); err != nil {
+				return err
+			}
 
-				if destinationChainID == 0 ||
-					event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
-					events = append(events, event)
-				}
+			if destinationChainID == 0 ||
+				event.DestinationChainID.Cmp(new(big.Int).SetUint64(destinationChainID)) == 0 {
+				events = append(events, event)
 			}
 		}
 
