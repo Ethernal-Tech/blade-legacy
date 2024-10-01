@@ -348,6 +348,11 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 			Code:    contract.artifact.DeployedBytecode,
 		}
 
+		chainCfg.Genesis.Alloc[proxyAddress] = &chain.GenesisAccount{
+			Balance: bigZero,
+			Code:    contractsapi.GenesisProxy.DeployedBytecode,
+		}
+
 		lastAddress = proxyAddress
 
 		if err := writeInternalContractPreallocate(o, proxyName, proxyAddress, types.Address{}); err != nil {
