@@ -35,10 +35,10 @@ var (
 	errQuorumNotReached   = errors.New("quorum not reached for batch")
 
 	// Bridge events signatures
-	bridgeMessageEventSig       = new(contractsapi.BridgeMsgEvent).Sig()
-	bridgeMessageResultEventSig = new(contractsapi.BridgeMessageResultEvent).Sig()
-	newBatchEventSig            = new(contractsapi.NewBatchEvent).Sig()
-	newValidatorSetEventSig     = new(contractsapi.NewValidatorSetEvent).Sig()
+	bridgeMessageEventSig         = new(contractsapi.BridgeMsgEvent).Sig()
+	bridgeMessageResultEventSig   = new(contractsapi.BridgeMessageResultEvent).Sig()
+	newBatchEventSig              = new(contractsapi.NewBatchEvent).Sig()
+	newValidatorSetStoredEventSig = new(contractsapi.NewValidatorSetStoredEvent).Sig()
 )
 
 const maxNumberOfBatchEvents = 10

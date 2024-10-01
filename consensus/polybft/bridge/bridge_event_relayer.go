@@ -326,7 +326,7 @@ func (ber *bridgeEventRelayerImpl) GetLogFilters() map[types.Address][]types.Has
 	logFilters := map[types.Address][]types.Hash{
 		contracts.BridgeStorageContract: {
 			types.Hash(newBatchEventSig),
-			types.Hash(newValidatorSetEventSig),
+			types.Hash(newValidatorSetStoredEventSig),
 		},
 	}
 
@@ -359,7 +359,7 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 		}
 
 		return nil
-	case newValidatorSetEventSig:
+	case newValidatorSetStoredEventSig:
 		var newValidatorSetEvent contractsapi.NewValidatorSetStoredEvent
 
 		doesMatch, err := newValidatorSetEvent.ParseLog(log)
