@@ -63,8 +63,6 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
-require github.com/cenkalti/backoff/v4 v4.3.0 // indirect
-
 require (
 	cloud.google.com/go/auth v0.9.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.4 // indirect
@@ -94,6 +92,7 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.5 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clbanning/mxj/v2 v2.5.5 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
