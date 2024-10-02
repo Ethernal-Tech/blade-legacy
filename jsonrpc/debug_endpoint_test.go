@@ -1476,6 +1476,130 @@ func TestDumpBlock(t *testing.T) {
 	}
 }
 
+func TestGetAccessibleState(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		start, end BlockNumber
+		store      *debugEndpointMockStore
+		result     interface{}
+		returnErr  string
+		err        bool
+	}{
+		{
+			name:      "GetNumericBlockNumberNotValid",
+			start:     BlockNumber(-5),
+			end:       BlockNumber(-5),
+			store:     &debugEndpointMockStore{},
+			returnErr: "failed to get block number",
+			result:    0,
+			err:       true,
+		},
+		{
+			name:  "BlockNotDifferent",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   *LatestBlockNumberOrHash.BlockNumber,
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+			},
+
+			returnErr: "'from' and 'to' block numbers must be different",
+			result:    0,
+			err:       true,
+		},
+		{
+			name:  "HeaderNotFound",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   BlockNumber(testHeader10.Number),
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return nil, false
+				},
+			},
+
+			returnErr: "missing header for block number",
+			result:    0,
+			err:       true,
+		},
+		{
+			name:  "resultNotFound",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   BlockNumber(testHeader10.Number),
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return testLatestBlock.Header, true
+				},
+
+				hasFn: func(hash types.Hash) bool {
+					return false
+				},
+			},
+
+			returnErr: "no accessible state found between the given block numbers",
+			result:    0,
+			err:       true,
+		},
+
+		{
+			name:  "resultsValid",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   BlockNumber(testHeader10.Number),
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return testLatestBlock.Header, true
+				},
+
+				hasFn: func(hash types.Hash) bool {
+					return true
+				},
+			},
+
+			returnErr: "",
+			result:    uint64(testLatestBlock.Header.Number),
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.GetAccessibleState(test.start, test.end)
+
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func Test_newTracer(t *testing.T) {
 	t.Parallel()
 

@@ -708,21 +708,21 @@ func (j *jsonRPCHub) GetStorage(stateRoot types.Hash, addr types.Address, slot t
 }
 
 func (j *jsonRPCHub) Get(rootHash types.Hash) ([]byte, error) {
-    snap, err := j.state.NewSnapshotAt(rootHash)
-    if err != nil {
-        return nil, fmt.Errorf("failed to create snapshot at root hash: %w", err)
-    }
+	snap, err := j.state.NewSnapshotAt(rootHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create snapshot at root hash: %w", err)
+	}
 
-    data, ok, err := snap.Get(rootHash)
-    if err != nil {
-        return nil, fmt.Errorf("failed to get data for root hash: %w", err)
-    }
+	data, ok, err := snap.Get(rootHash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data for root hash: %w", err)
+	}
 
-    if !ok {
-        return nil, fmt.Errorf("data not found for root hash: %s", rootHash.String())
-    }
+	if !ok {
+		return nil, fmt.Errorf("data not found for root hash: %s", rootHash.String())
+	}
 
-    return data, nil
+	return data, nil
 }
 
 func (j *jsonRPCHub) GetCode(root types.Hash, addr types.Address) ([]byte, error) {
