@@ -780,6 +780,7 @@ func (d *Debug) GetAccessibleState(from, to BlockNumber) (interface{}, error) {
 
 				blockNum := uint64(i)
 				h, ok := d.store.GetHeaderByNumber(blockNum)
+
 				if !ok {
 					return 0, fmt.Errorf("missing header for block number %d", i)
 				}

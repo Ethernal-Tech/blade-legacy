@@ -1574,7 +1574,7 @@ func TestGetAccessibleState(t *testing.T) {
 			},
 
 			returnErr: "",
-			result:    uint64(testLatestBlock.Header.Number),
+			result:    testLatestBlock.Header.Number,
 			err:       false,
 		},
 	}
