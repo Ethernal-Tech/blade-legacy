@@ -28,6 +28,7 @@ type debugEndpointMockStore struct {
 	getBlockByHashFn      func(types.Hash, bool) (*types.Block, bool)
 	getBlockByNumberFn    func(uint64, bool) (*types.Block, bool)
 	traceBlockFn          func(*types.Block, tracer.Tracer) ([]interface{}, error)
+	intermediateRootsFn   func(*types.Block, tracer.Tracer) ([]interface{}, error)
 	traceTxnFn            func(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
 	traceCallFn           func(*types.Transaction, *types.Header, tracer.Tracer) (interface{}, error)
 	getNonceFn            func(types.Address) uint64
@@ -72,6 +73,10 @@ func (s *debugEndpointMockStore) GetBlockByNumber(num uint64, full bool) (*types
 
 func (s *debugEndpointMockStore) TraceBlock(block *types.Block, tracer tracer.Tracer) ([]interface{}, error) {
 	return s.traceBlockFn(block, tracer)
+}
+
+func (s *debugEndpointMockStore) IntermediateRoots(block *types.Block, tracer tracer.Tracer) ([]interface{}, error) {
+	return s.intermediateRootsFn(block, tracer)
 }
 
 func (s *debugEndpointMockStore) TraceTxn(block *types.Block, targetTx types.Hash, tracer tracer.Tracer) (interface{}, error) {

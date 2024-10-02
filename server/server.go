@@ -825,6 +825,53 @@ func (j *jsonRPCHub) TraceBlock(
 	return results, nil
 }
 
+// IntermediateRoots executes a block (bad- or canon- or side-), and returns a list
+// of intermediate roots: the stateroot after each transaction.
+func (j *jsonRPCHub) IntermediateRoots(
+	block *types.Block,
+	tracer tracer.Tracer,
+) ([]interface{}, error) {
+	if block.Number() == 0 {
+		return nil, errors.New("genesis block can't have transaction")
+	}
+
+	parentHeader, ok := j.GetHeaderByHash(block.ParentHash())
+	if !ok {
+		return nil, errors.New("parent header not found")
+	}
+
+	blockCreator, err := j.GetConsensus().GetBlockCreator(block.Header)
+	if err != nil {
+		return nil, err
+	}
+
+	transition, err := j.BeginTxn(parentHeader.StateRoot, block.Header, blockCreator)
+	if err != nil {
+		return nil, err
+	}
+
+	transition.SetTracer(tracer)
+
+	roots := make([]interface{}, len(block.Transactions))
+
+	for idx, tx := range block.Transactions {
+		tracer.Clear()
+
+		if _, err := transition.Apply(tx); err != nil {
+			return roots, err
+		}
+
+		_, h, err := transition.Commit()
+		if err != nil {
+			return roots, fmt.Errorf("failed to commit the state changes: %w", err)
+		}
+
+		roots[idx] = h
+	}
+
+	return roots, nil
+}
+
 // TraceTxn traces a transaction in the block, associated with the given hash
 func (j *jsonRPCHub) TraceTxn(
 	block *types.Block,
