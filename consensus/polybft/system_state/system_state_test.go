@@ -134,7 +134,7 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
                 emit BatchCreated(batches[_num].bitmap, batches[_num].signature);
 			}
 
-            function getbatch(uint256 _num) public view returns (SignedBridgeMessageBatch memory) {
+            function getCommittedBatch(uint256 _num) public view returns (SignedBridgeMessageBatch memory) {
                 return batches[_num];
             }
 		`
