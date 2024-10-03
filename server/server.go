@@ -707,19 +707,16 @@ func (j *jsonRPCHub) GetStorage(stateRoot types.Hash, addr types.Address, slot t
 	return res.Bytes(), nil
 }
 
-func (j *jsonRPCHub) Get(rootHash types.Hash) ([]byte, error) {
-	snap, err := j.state.NewSnapshotAt(rootHash)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create snapshot at root hash: %w", err)
-	}
+func (j *jsonRPCHub) Get(key string) ([]byte, error) {
+	hash := types.StringToHash(key)
 
-	data, ok, err := snap.Get(rootHash)
+	data, ok, err := j.state.Get(hash)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get data for root hash: %w", err)
 	}
 
 	if !ok {
-		return nil, fmt.Errorf("data not found for root hash: %s", rootHash.String())
+		return nil, fmt.Errorf("data not found for root hash: %s", hash.String())
 	}
 
 	return data, nil
@@ -741,12 +738,7 @@ func (j *jsonRPCHub) GetCode(root types.Hash, addr types.Address) ([]byte, error
 
 // Has returns true if the DB does contains the given key.
 func (j *jsonRPCHub) Has(rootHash types.Hash) bool {
-	snap, err := j.state.NewSnapshotAt(rootHash)
-	if err != nil {
-		return false
-	}
-
-	return snap.Has(rootHash)
+	return j.state.Has(rootHash)
 }
 
 // DumpTree retrieves accounts based on the specified criteria for the given block.

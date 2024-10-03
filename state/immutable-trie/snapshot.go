@@ -74,10 +74,6 @@ func (s *Snapshot) GetCode(hash types.Hash) ([]byte, bool) {
 	return s.state.GetCode(hash)
 }
 
-func (s *Snapshot) Has(hash types.Hash) bool {
-	return s.state.Has(hash)
-}
-
 func (s *Snapshot) Get(hash types.Hash) ([]byte, bool, error) {
 	return s.state.storage.Get(hash.Bytes())
 }

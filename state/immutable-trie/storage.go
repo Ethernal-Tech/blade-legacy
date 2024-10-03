@@ -33,10 +33,10 @@ type Batch interface {
 type Storage interface {
 	Put(k, v []byte) error
 	Get(k []byte) ([]byte, bool, error)
+	Has(k []byte) (bool, error)
 	Batch() Batch
 	SetCode(hash types.Hash, code []byte) error
 	GetCode(hash types.Hash) ([]byte, bool)
-	Has(k []byte) (bool, error)
 
 	Close() error
 }

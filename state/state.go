@@ -15,6 +15,8 @@ type State interface {
 	NewSnapshotAt(types.Hash) (Snapshot, error)
 	NewSnapshot() Snapshot
 	GetCode(hash types.Hash) ([]byte, bool)
+	Get(hash types.Hash) ([]byte, bool, error)
+	Has(hash types.Hash) bool
 }
 
 type Snapshot interface {

@@ -61,7 +61,7 @@ type debugBlockchainStore interface {
 
 	// Get gets the value for the given key. It returns ErrNotFound if the
 	// DB does not contains the key.
-	Get(codeHas types.Hash) ([]byte, error)
+	Get(key string) ([]byte, error)
 
 	// GetIteratorDumpTree returns a set of accounts based on the given criteria and depends on the starting element.
 	GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error)
@@ -803,9 +803,7 @@ func (d *Debug) DbGet(key string) (interface{}, error) {
 	return d.throttling.AttemptRequest(
 		context.Background(),
 		func() (interface{}, error) {
-			hash := types.StringToHash(key)
-
-			return d.store.Get(hash)
+			return d.store.Get(key)
 		},
 	)
 }

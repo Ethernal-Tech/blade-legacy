@@ -73,23 +73,6 @@ func (l *levelDB) Get(t uint8, k []byte) ([]byte, bool, error) {
 	return data, true, nil
 }
 
-// Get retrieves the key-value pair in leveldb storage
-func (l *levelDB) Has(t uint8, k []byte) (bool, error) {
-	mc := tableMapper[t]
-	k = append(k, mc...)
-
-	ok, err := l.db.Has(k, nil)
-	if err != nil {
-		if err.Error() == "leveldb: not found" {
-			return false, nil
-		}
-
-		return false, err
-	}
-
-	return ok, nil
-}
-
 // Close closes the leveldb storage instance
 func (l *levelDB) Close() error {
 	return l.db.Close()
