@@ -110,6 +110,7 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 		"batches",
 		ethgo.Latest,
 		numberOfBatch)
+	fmt.Println(rawResult)
 	if err != nil {
 		return nil, err
 	}

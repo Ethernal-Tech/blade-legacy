@@ -83,6 +83,92 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 	assert.Equal(t, currentInternalCommitIntex+1, nextInternalCommittedIndex)
 }
 
+func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
+	t.Parallel()
+
+	setEpochMethod, err := abi.NewMethod("function setBridgeMessage(uint256 _num) public payable")
+	require.NoError(t, err)
+
+	cc := &testutil.Contract{}
+	cc.AddCallback(func() string {
+		return `
+            event BatchCreated(
+                bytes bitmap,
+                uint256[2] signatures
+            );
+
+			struct BridgeMessage {
+    			uint256 id;
+				uint256 sourceChainId;
+				uint256 destinationChainId;
+				address sender;
+				address receiver;
+				bytes payload;
+			}
+
+			struct BridgeMessageBatch {
+    			BridgeMessage[] messages;
+    			uint256 sourceChainId;
+    			uint256 destinationChainId;
+			}
+
+			struct SignedBridgeMessageBatch {
+    			BridgeMessageBatch batch;
+    			uint256[2] signature;
+    			bytes bitmap;
+			}
+
+			mapping(uint256 => SignedBridgeMessageBatch) public batches;
+			
+			function setBridgeMessage(uint256 _num) public payable {
+                SignedBridgeMessageBatch storage signedBatch = batches[_num];
+                signedBatch.batch.messages.push(BridgeMessage(15, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b1"));
+                signedBatch.batch.messages.push(BridgeMessage(16, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b2"));
+                signedBatch.batch.messages.push(BridgeMessage(17, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b3"));
+                signedBatch.batch.sourceChainId = 2;
+                signedBatch.batch.destinationChainId = 3;
+                signedBatch.signature = [uint256(300), uint256(200)];
+                signedBatch.bitmap = "smth";
+                batches[_num] = signedBatch;
+                
+                emit BatchCreated(batches[_num].bitmap, batches[_num].signature);
+			}
+
+            function getbatch(uint256 _num) public view returns (SignedBridgeMessageBatch memory) {
+                return batches[_num];
+            }
+		`
+	})
+
+	solcContract, err := cc.Compile()
+	require.NoError(t, err)
+
+	bin, err := hex.DecodeString(solcContract.Bin)
+	require.NoError(t, err)
+
+	transition := NewTestTransition(t, nil)
+
+	// deploy a contract
+	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
+	assert.NoError(t, result.Err)
+
+	provider := &stateProvider{
+		transition: transition,
+	}
+
+	systemState := NewSystemState(types.ZeroAddress, result.Address, provider)
+
+	input, err := setEpochMethod.Encode([1]interface{}{24})
+	require.NoError(t, err)
+
+	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
+	require.NoError(t, err)
+
+	msg, err := systemState.GetBridgeBatchByNumber(big.NewInt(24))
+	require.NoError(t, err)
+	require.Equal(t, 3, msg.Bitmap)
+}
+
 func TestSystemState_GetEpoch(t *testing.T) {
 	t.Skip()
 	t.Parallel()
