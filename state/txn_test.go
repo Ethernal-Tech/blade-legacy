@@ -47,14 +47,6 @@ func (m *mockSnapshot) GetCode(hash types.Hash) ([]byte, bool) {
 	return nil, false
 }
 
-func (m *mockSnapshot) Has(hash types.Hash) bool {
-	return false
-}
-
-func (m *mockSnapshot) Get(hash types.Hash) ([]byte, bool, error) {
-	return nil, false, nil
-}
-
 func (m *mockSnapshot) GetRootHash() types.Hash {
 	return emptyStateHash
 }
