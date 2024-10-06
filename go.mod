@@ -2,7 +2,7 @@ module github.com/0xPolygon/polygon-edge
 
 go 1.21
 
-replace github.com/Ethernal-Tech/ethgo => ../ethgo
+//replace github.com/Ethernal-Tech/ethgo => ../ethgo
 
 require (
 	cloud.google.com/go/secretmanager v1.13.5
