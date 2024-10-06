@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
@@ -86,7 +87,7 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	t.Parallel()
 
-	setEpochMethod, err := abi.NewMethod("function setBridgeMessage(uint256 _num) public payable")
+	method, err := abi.NewMethod("function setBridgeMessage(uint256 _num) public payable")
 	require.NoError(t, err)
 
 	cc := &testutil.Contract{}
@@ -158,15 +159,45 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 
 	systemState := NewSystemState(types.ZeroAddress, result.Address, provider)
 
-	input, err := setEpochMethod.Encode([1]interface{}{24})
+	input, err := method.Encode([1]interface{}{24})
 	require.NoError(t, err)
 
 	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
 	require.NoError(t, err)
 
-	msg, err := systemState.GetBridgeBatchByNumber(big.NewInt(24))
+	sbmb, err := systemState.GetBridgeBatchByNumber(big.NewInt(24))
 	require.NoError(t, err)
-	require.Equal(t, 3, msg.Bitmap)
+
+	require.Equal(t, big.NewInt(3), sbmb.Batch.DestinationChainID)
+	require.Equal(t, big.NewInt(2), sbmb.Batch.SourceChainID)
+
+	require.EqualValues(t, &contractsapi.BridgeMessage{
+		ID:                 big.NewInt(15),
+		SourceChainID:      big.NewInt(2),
+		DestinationChainID: big.NewInt(3),
+		Sender:             [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		Receiver:           [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		Payload:            []byte("b1"),
+	}, sbmb.Batch.Messages[0])
+	require.EqualValues(t, &contractsapi.BridgeMessage{
+		ID:                 big.NewInt(16),
+		SourceChainID:      big.NewInt(2),
+		DestinationChainID: big.NewInt(3),
+		Sender:             [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		Receiver:           [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		Payload:            []byte("b2"),
+	}, sbmb.Batch.Messages[1])
+	require.EqualValues(t, &contractsapi.BridgeMessage{
+		ID:                 big.NewInt(17),
+		SourceChainID:      big.NewInt(2),
+		DestinationChainID: big.NewInt(3),
+		Sender:             [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		Receiver:           [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		Payload:            []byte("b3"),
+	}, sbmb.Batch.Messages[2])
+
+	require.Equal(t, [2]*big.Int{big.NewInt(300), big.NewInt(200)}, sbmb.Signature)
+	require.Equal(t, []byte("smth"), sbmb.Bitmap)
 }
 
 func TestSystemState_GetEpoch(t *testing.T) {

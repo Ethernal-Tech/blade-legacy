@@ -110,17 +110,36 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 		"getCommittedBatch",
 		ethgo.Latest,
 		numberOfBatch)
-	fmt.Println(rawResult)
 	if err != nil {
 		return nil, err
 	}
+	rawResult = rawResult["0"].(map[string]interface{})
 
-	bridgeBatch, isOk := rawResult["0"].(*contractsapi.SignedBridgeMessageBatch)
-	if !isOk {
-		return nil, fmt.Errorf("failed to decode bridge batch")
+	sbmb := &contractsapi.SignedBridgeMessageBatch{}
+	signatures := rawResult["signature"].([2]*big.Int)
+	sbmb.Signature = signatures
+	bitmap := rawResult["bitmap"].([]uint8)
+	sbmb.Bitmap = bitmap
+	batch := rawResult["batch"].(map[string]interface{})
+	messages := batch["messages"].([]map[string]interface{})
+	bridgeMessages := []*contractsapi.BridgeMessage{}
+	for _, message := range messages {
+		bridgeMessages = append(bridgeMessages, &contractsapi.BridgeMessage{
+			ID:                 message["id"].(*big.Int),
+			SourceChainID:      message["sourceChainId"].(*big.Int),
+			DestinationChainID: message["destinationChainId"].(*big.Int),
+			Sender:             types.Address(message["sender"].(ethgo.Address)),
+			Receiver:           types.Address(message["receiver"].(ethgo.Address)),
+			Payload:            message["payload"].([]byte),
+		})
 	}
+	bmb := &contractsapi.BridgeMessageBatch{}
+	bmb.Messages = bridgeMessages
+	bmb.SourceChainID = batch["sourceChainId"].(*big.Int)
+	bmb.DestinationChainID = batch["destinationChainId"].(*big.Int)
+	sbmb.Batch = bmb
 
-	return bridgeBatch, nil
+	return sbmb, nil
 }
 
 func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int) (
