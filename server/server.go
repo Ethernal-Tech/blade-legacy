@@ -479,7 +479,7 @@ type txpoolHub struct {
 
 // getAccountImpl is used for fetching account state from both TxPool and JSON-RPC
 func getAccountImpl(state state.State, root types.Hash, addr types.Address) (*state.Account, error) {
-	snap, err := state.NewSnapshotAt(root)
+	snap, err := state.NewSnapshot(root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get snapshot for root '%s': %w", root, err)
 	}
@@ -697,7 +697,7 @@ func (j *jsonRPCHub) GetStorage(stateRoot types.Hash, addr types.Address, slot t
 		return nil, err
 	}
 
-	snap, err := j.state.NewSnapshotAt(stateRoot)
+	snap, err := j.state.NewSnapshot(stateRoot)
 	if err != nil {
 		return nil, err
 	}

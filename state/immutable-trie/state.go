@@ -25,14 +25,19 @@ func NewState(storage Storage) *State {
 	return s
 }
 
-func (s *State) NewSnapshot() state.Snapshot {
-	return &Snapshot{state: s, trie: s.newTrie()}
-}
+func (s *State) NewSnapshot(root types.Hash) (state.Snapshot, error) {
+	var (
+		t   *Trie
+		err error
+	)
 
-func (s *State) NewSnapshotAt(root types.Hash) (state.Snapshot, error) {
-	t, err := s.newTrieAt(root)
-	if err != nil {
-		return nil, err
+	if root != types.ZeroHash {
+		t, err = s.newTrieAt(root)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		t = s.newTrie()
 	}
 
 	return &Snapshot{state: s, trie: t}, nil

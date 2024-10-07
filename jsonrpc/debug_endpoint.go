@@ -791,7 +791,7 @@ func (d *Debug) GetAccessibleState(from, to BlockNumber) (interface{}, error) {
 			}
 
 			// No state found
-			return 0, errors.New("no accessible state found between the given block numbers")
+			return 0, fmt.Errorf("no accessible state found between the block numbers %d and %d", start, end)
 		},
 	)
 }

@@ -11,11 +11,49 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
+// State represents an interface for interacting with a state that can be
+// snapshotted, queried for data, and checked for existence of specific items.
 type State interface {
-	NewSnapshotAt(types.Hash) (Snapshot, error)
-	NewSnapshot() Snapshot
+
+	// NewSnapshot creates a new state snapshot based on the provided root hash.
+	// This can be useful to capture a point-in-time view of the state.
+	//
+	// Parameters:
+	// - rootHash: The hash representing the root state.
+	//
+	// Returns:
+	// - Snapshot: The newly created snapshot of the state.
+	// - error: An error if the snapshot could not be created.
+	NewSnapshot(rootHash types.Hash) (Snapshot, error)
+
+	// GetCode retrieves the bytecode associated with a specific code hash.
+	//
+	// Parameters:
+	// - hash: The hash of the code.
+	//
+	// Returns:
+	// - []byte: The bytecode corresponding to the hash.
+	// - bool: A boolean indicating whether the code exists.
 	GetCode(hash types.Hash) ([]byte, bool)
+
+	// Get retrieves the value associated with a specific key (hash).
+	//
+	// Parameters:
+	// - hash: The hash of the item being queried.
+	//
+	// Returns:
+	// - []byte: The value stored at the given hash.
+	// - bool: A boolean indicating whether the value exists.
+	// - error: An error if there was a problem retrieving the value.
 	Get(hash types.Hash) ([]byte, bool, error)
+
+	// Has checks whether a specific item exists in the state by its hash.
+	//
+	// Parameters:
+	// - hash: The hash of the item to check.
+	//
+	// Returns:
+	// - bool: A boolean indicating whether the item exists.
 	Has(hash types.Hash) bool
 }
 

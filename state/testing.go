@@ -37,7 +37,7 @@ type PreState struct {
 // PreStates is a set of pre states
 type PreStates map[types.Address]*PreState
 
-type buildPreState func(p PreStates) Snapshot
+type buildPreState func(p PreStates) (Snapshot, error)
 
 // TestState tests a set of tests on a state
 func TestState(t *testing.T, buildPreState buildPreState) {
@@ -124,7 +124,8 @@ func TestState(t *testing.T, buildPreState buildPreState) {
 func testDeleteCommonStateRoot(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 	txn := newTxn(snap)
 
 	txn.SetNonce(addr1, 1)
@@ -164,7 +165,9 @@ func testDeleteCommonStateRoot(t *testing.T, buildPreState buildPreState) {
 func testWriteState(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
+
 	txn := newTxn(snap)
 
 	txn.SetState(addr1, hash1, hash1)
@@ -187,7 +190,9 @@ func testWriteState(t *testing.T, buildPreState buildPreState) {
 func testWriteEmptyState(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 	// Create account and write empty state
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
+
 	txn := newTxn(snap)
 
 	// Without EIP150 the data is added
@@ -202,7 +207,9 @@ func testWriteEmptyState(t *testing.T, buildPreState buildPreState) {
 	txn = newTxn(snap)
 	assert.True(t, txn.Exist(addr1))
 
-	snap = buildPreState(nil)
+	snap, err = buildPreState(nil)
+	require.NoError(t, err)
+
 	txn = newTxn(snap)
 
 	// With EIP150 the empty data is removed
@@ -222,7 +229,8 @@ func testUpdateStateWithEmpty(t *testing.T, buildPreState buildPreState, deleteE
 	t.Helper()
 
 	// If the state (in prestate) is updated to empty it should be removed
-	snap := buildPreState(defaultPreState)
+	snap, err := buildPreState(defaultPreState)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.SetState(addr1, hash1, hash0)
@@ -268,7 +276,8 @@ func testSuicideAccountInPreState(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 
 	// Suicide an account created in the prestate
-	snap := buildPreState(defaultPreState)
+	snap, err := buildPreState(defaultPreState)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.Suicide(addr1)
@@ -286,7 +295,8 @@ func testSuicideAccountInPreState(t *testing.T, buildPreState buildPreState) {
 func testSuicideAccount(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 	// Create a new account and suicide it
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.SetState(addr1, hash1, hash1)
@@ -308,7 +318,8 @@ func testSuicideAccount(t *testing.T, buildPreState buildPreState) {
 func testSuicideAccountWithData(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 	// Data (nonce, balance, code) from a suicided account should be empty
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 
@@ -343,7 +354,8 @@ func testSuicideAccountWithData(t *testing.T, buildPreState buildPreState) {
 func testSuicideCoinbase(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 	// Suicide the coinbase of the block
-	snap := buildPreState(defaultPreState)
+	snap, err := buildPreState(defaultPreState)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.Suicide(addr1)
@@ -361,7 +373,8 @@ func testSuicideCoinbase(t *testing.T, buildPreState buildPreState) {
 func testSuicideWithIntermediateCommit(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 
-	snap := buildPreState(defaultPreState)
+	snap, err := buildPreState(defaultPreState)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.SetNonce(addr1, 10)
@@ -372,7 +385,7 @@ func testSuicideWithIntermediateCommit(t *testing.T, buildPreState buildPreState
 	assert.NoError(t, txn.CleanDeleteObjects(true))
 	assert.Equal(t, uint64(0), txn.GetNonce(addr1))
 
-	_, err := txn.Commit(true)
+	_, err = txn.Commit(true)
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(0), txn.GetNonce(addr1))
 }
@@ -381,14 +394,15 @@ func testRestartRefunds(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 	// refunds are only valid per single txn so after each
 	// intermediateCommit they have to be restarted
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 
 	txn.AddRefund(1000)
 	assert.Equal(t, uint64(1000), txn.GetRefund())
 
-	_, err := txn.Commit(false)
+	_, err = txn.Commit(false)
 	assert.NoError(t, err)
 
 	// refund should be empty after the commit
@@ -404,7 +418,8 @@ func testChangePrestateAccountBalanceToZero(t *testing.T, buildPreState buildPre
 		},
 	}
 
-	snap := buildPreState(preState)
+	snap, err := buildPreState(preState)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.SetBalance(addr1, big.NewInt(0))
@@ -422,7 +437,8 @@ func testChangePrestateAccountBalanceToZero(t *testing.T, buildPreState buildPre
 func testChangeAccountBalanceToZero(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 	// If the balance of the account changes to zero the account is deleted
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.SetBalance(addr1, big.NewInt(10))
@@ -443,7 +459,8 @@ func testGetCodeEmptyCodeHash(t *testing.T, buildPreState buildPreState) {
 
 	// If empty code hash is passed, it is considered as a valid case,
 	// and in that case we are not retrieving it from the storage.
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 
 	code, ok := snap.GetCode(types.EmptyCodeHash)
 	assert.True(t, ok)
@@ -454,7 +471,8 @@ func testSetAndGetCode(t *testing.T, buildPreState buildPreState) {
 	t.Helper()
 
 	testCode := []byte{0x2, 0x4, 0x6, 0x8}
-	snap := buildPreState(nil)
+	snap, err := buildPreState(nil)
+	require.NoError(t, err)
 
 	txn := newTxn(snap)
 	txn.SetCode(addr1, testCode)
