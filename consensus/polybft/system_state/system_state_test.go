@@ -200,8 +200,77 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	require.Equal(t, []byte("smth"), sbmb.Bitmap)
 }
 
+func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
+	t.Parallel()
+
+	method, err := abi.NewMethod("function setValidatorSet(uint256 _num) public payable")
+	require.NoError(t, err)
+
+	cc := &testutil.Contract{}
+	cc.AddCallback(func() string {
+		return `
+			struct Validator {
+				address _address;
+				uint256[4] blsKey;
+				uint256 votingPower;
+			}
+
+			struct SignedValidatorSet {
+				Validator[] newValidatorSet;
+				uint256[2] signature;
+				bytes bitmap;
+			}
+
+			mapping(uint256 => SignedValidatorSet) public commitedValidatorSets;
+			
+			function setValidatorSet(uint256 _num) public payable {
+                SignedValidatorSet storage signedSet = commitedValidatorSets[_num];
+                signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(100)));
+                signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(200)));
+                signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(300)));
+                signedSet.signature = [uint256(300), uint256(200)];
+                signedSet.bitmap = "smth";
+                commitedValidatorSets[_num] = signedSet;
+			}
+
+            function getCommittedValidatorSet(uint256 _num) public view returns (SignedValidatorSet memory) {
+                return commitedValidatorSets[_num];
+            }
+		`
+	})
+
+	solcContract, err := cc.Compile()
+	require.NoError(t, err)
+
+	bin, err := hex.DecodeString(solcContract.Bin)
+	require.NoError(t, err)
+
+	transition := NewTestTransition(t, nil)
+
+	// deploy a contract
+	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
+	assert.NoError(t, result.Err)
+
+	provider := &stateProvider{
+		transition: transition,
+	}
+
+	systemState := NewSystemState(types.ZeroAddress, result.Address, provider)
+
+	input, err := method.Encode([1]interface{}{24})
+	require.NoError(t, err)
+
+	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
+	require.NoError(t, err)
+
+	svs, err := systemState.GetValidatorSetByNumber(big.NewInt(24))
+	require.NoError(t, err)
+
+	require.Equal(t, [2]*big.Int{big.NewInt(300), big.NewInt(200)}, svs.Signature)
+	require.Equal(t, []byte("smth"), svs.Bitmap)
+}
+
 func TestSystemState_GetEpoch(t *testing.T) {
-	t.Skip()
 	t.Parallel()
 
 	setEpochMethod, err := abi.NewMethod("function setEpoch(uint256 _epochId) public payable")
