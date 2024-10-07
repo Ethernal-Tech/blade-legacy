@@ -1505,6 +1505,10 @@ func TestGetAccessibleState(t *testing.T) {
 				headerFn: func() *types.Header {
 					return testLatestBlock.Header
 				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return nil, false
+				},
 			},
 
 			returnErr: "'from' and 'to' block numbers must be different",
