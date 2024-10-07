@@ -26,6 +26,7 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 	}
 
 	var scAbi, err = abi.NewABIFromList(methods)
+
 	require.NoError(t, err)
 
 	cc := &testutil.Contract{}

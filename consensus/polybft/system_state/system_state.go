@@ -113,28 +113,92 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 	if err != nil {
 		return nil, err
 	}
-	rawResult = rawResult["0"].(map[string]interface{})
+
+	decErr := fmt.Errorf("failed to decode")
+
+	rawResult, ok := rawResult["0"].(map[string]interface{})
+	if !ok {
+		return nil, decErr
+	}
 
 	sbmb := &contractsapi.SignedBridgeMessageBatch{}
-	sbmb.Signature = rawResult["signature"].([2]*big.Int)
-	sbmb.Bitmap = rawResult["bitmap"].([]uint8)
-	batch := rawResult["batch"].(map[string]interface{})
-	messages := batch["messages"].([]map[string]interface{})
+
+	sbmb.Signature, ok = rawResult["signature"].([2]*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
+	sbmb.Bitmap, ok = rawResult["bitmap"].([]uint8)
+	if !ok {
+		return nil, decErr
+	}
+
+	batch, ok := rawResult["batch"].(map[string]interface{})
+	if !ok {
+		return nil, decErr
+	}
+
+	messages, ok := batch["messages"].([]map[string]interface{})
+	if !ok {
+		return nil, decErr
+	}
+
 	bridgeMessages := []*contractsapi.BridgeMessage{}
+
 	for _, message := range messages {
+		id, ok := message["id"].(*big.Int)
+		if !ok {
+			return nil, decErr
+		}
+
+		sourceChainID, ok := message["sourceChainId"].(*big.Int)
+		if !ok {
+			return nil, decErr
+		}
+
+		destinationChainID, ok := message["destinationChainId"].(*big.Int)
+		if !ok {
+			return nil, decErr
+		}
+
+		sender, ok := message["sender"].(ethgo.Address)
+		if !ok {
+			return nil, decErr
+		}
+
+		receiver, ok := message["receiver"].(ethgo.Address)
+		if !ok {
+			return nil, decErr
+		}
+
+		payload, ok := message["payload"].([]byte)
+		if !ok {
+			return nil, decErr
+		}
+
 		bridgeMessages = append(bridgeMessages, &contractsapi.BridgeMessage{
-			ID:                 message["id"].(*big.Int),
-			SourceChainID:      message["sourceChainId"].(*big.Int),
-			DestinationChainID: message["destinationChainId"].(*big.Int),
-			Sender:             types.Address(message["sender"].(ethgo.Address)),
-			Receiver:           types.Address(message["receiver"].(ethgo.Address)),
-			Payload:            message["payload"].([]byte),
+			ID:                 id,
+			SourceChainID:      sourceChainID,
+			DestinationChainID: destinationChainID,
+			Sender:             types.Address(sender),
+			Receiver:           types.Address(receiver),
+			Payload:            payload,
 		})
 	}
+
 	bmb := &contractsapi.BridgeMessageBatch{}
 	bmb.Messages = bridgeMessages
-	bmb.SourceChainID = batch["sourceChainId"].(*big.Int)
-	bmb.DestinationChainID = batch["destinationChainId"].(*big.Int)
+
+	bmb.SourceChainID, ok = batch["sourceChainId"].(*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
+	bmb.DestinationChainID, ok = batch["destinationChainId"].(*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
 	sbmb.Batch = bmb
 
 	return sbmb, nil
@@ -150,19 +214,56 @@ func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int)
 	if err != nil {
 		return nil, err
 	}
-	rawResult = rawResult["0"].(map[string]interface{})
+
+	decErr := fmt.Errorf("failed to decode")
+
+	rawResult, ok := rawResult["0"].(map[string]interface{})
+	if !ok {
+		return nil, decErr
+	}
 
 	svs := &contractsapi.SignedValidatorSet{}
-	svs.Signature = rawResult["signature"].([2]*big.Int)
-	svs.Bitmap = rawResult["bitmap"].([]uint8)
+
+	svs.Signature, ok = rawResult["signature"].([2]*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
+	svs.Bitmap, ok = rawResult["bitmap"].([]uint8)
+	if !ok {
+		return nil, decErr
+	}
+
 	validatorSet := []*contractsapi.Validator{}
-	for _, validator := range rawResult["newValidatorSet"].([]map[string]interface{}) {
+
+	validators, ok := rawResult["newValidatorSet"].([]map[string]interface{})
+	if !ok {
+		return nil, decErr
+	}
+
+	for _, validator := range validators {
+		address, ok := validator["_address"].(ethgo.Address)
+		if !ok {
+			return nil, decErr
+		}
+
+		keys, ok := validator["blsKey"].([4]*big.Int)
+		if !ok {
+			return nil, decErr
+		}
+
+		power, ok := validator["votingPower"].(*big.Int)
+		if !ok {
+			return nil, decErr
+		}
+
 		validatorSet = append(validatorSet, &contractsapi.Validator{
-			Address:     types.Address(validator["_address"].(ethgo.Address)),
-			BlsKey:      validator["blsKey"].([4]*big.Int),
-			VotingPower: validator["votingPower"].(*big.Int),
+			Address:     types.Address(address),
+			BlsKey:      keys,
+			VotingPower: power,
 		})
 	}
+
 	svs.NewValidatorSet = validatorSet
 
 	return svs, nil
