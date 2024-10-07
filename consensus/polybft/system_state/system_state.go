@@ -152,13 +152,22 @@ func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int)
 	if err != nil {
 		return nil, err
 	}
+	rawResult = rawResult["0"].(map[string]interface{})
 
-	validatorSet, isOk := rawResult["0"].(*contractsapi.SignedValidatorSet)
-	if !isOk {
-		return nil, fmt.Errorf("failed to decode bridge batch")
+	svs := &contractsapi.SignedValidatorSet{}
+	svs.Signature = rawResult["signature"].([2]*big.Int)
+	svs.Bitmap = rawResult["bitmap"].([]uint8)
+	validatorSet := []*contractsapi.Validator{}
+	for _, validator := range rawResult["newValidatorSet"].([]map[string]interface{}) {
+		validatorSet = append(validatorSet, &contractsapi.Validator{
+			Address:     types.Address(validator["_address"].(ethgo.Address)),
+			BlsKey:      validator["blsKey"].([4]*big.Int),
+			VotingPower: validator["votingPower"].(*big.Int),
+		})
 	}
+	svs.NewValidatorSet = validatorSet
 
-	return validatorSet, err
+	return svs, nil
 }
 
 var _ contract.Provider = &stateProvider{}
