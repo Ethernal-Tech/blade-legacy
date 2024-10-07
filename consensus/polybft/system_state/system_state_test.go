@@ -51,7 +51,6 @@ func TestSystemState_GetNextCommittedIndex(t *testing.T) {
 
 	transition := NewTestTransition(t, nil)
 
-	// deploy a contract
 	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
@@ -149,7 +148,6 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 
 	transition := NewTestTransition(t, nil)
 
-	// deploy a contract
 	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
@@ -247,7 +245,6 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 
 	transition := NewTestTransition(t, nil)
 
-	// deploy a contract
 	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
@@ -265,6 +262,22 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 
 	svs, err := systemState.GetValidatorSetByNumber(big.NewInt(24))
 	require.NoError(t, err)
+
+	require.EqualValues(t, &contractsapi.Validator{
+		Address:     [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
+		VotingPower: big.NewInt(100),
+	}, svs.NewValidatorSet[0])
+	require.EqualValues(t, &contractsapi.Validator{
+		Address:     [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
+		VotingPower: big.NewInt(200),
+	}, svs.NewValidatorSet[1])
+	require.EqualValues(t, &contractsapi.Validator{
+		Address:     [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
+		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
+		VotingPower: big.NewInt(300),
+	}, svs.NewValidatorSet[2])
 
 	require.Equal(t, [2]*big.Int{big.NewInt(300), big.NewInt(200)}, svs.Signature)
 	require.Equal(t, []byte("smth"), svs.Bitmap)
@@ -295,7 +308,6 @@ func TestSystemState_GetEpoch(t *testing.T) {
 
 	transition := NewTestTransition(t, nil)
 
-	// deploy a contract
 	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 

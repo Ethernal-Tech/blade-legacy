@@ -116,10 +116,8 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 	rawResult = rawResult["0"].(map[string]interface{})
 
 	sbmb := &contractsapi.SignedBridgeMessageBatch{}
-	signatures := rawResult["signature"].([2]*big.Int)
-	sbmb.Signature = signatures
-	bitmap := rawResult["bitmap"].([]uint8)
-	sbmb.Bitmap = bitmap
+	sbmb.Signature = rawResult["signature"].([2]*big.Int)
+	sbmb.Bitmap = rawResult["bitmap"].([]uint8)
 	batch := rawResult["batch"].(map[string]interface{})
 	messages := batch["messages"].([]map[string]interface{})
 	bridgeMessages := []*contractsapi.BridgeMessage{}
