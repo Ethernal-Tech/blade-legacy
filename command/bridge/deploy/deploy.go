@@ -361,7 +361,7 @@ func deployContracts(
 
 // initContract initializes arbitrary contract with given parameters deployed on a given address
 func initContract(cmdOutput command.OutputFormatter, txRelayer txrelayer.TxRelayer,
-	initInputFn contractsapi.StateTransactionInput, contractAddr types.Address,
+	initInputFn contractsapi.ABIEncoder, contractAddr types.Address,
 	contractName string, deployerKey crypto.Key) error {
 	input, err := initInputFn.EncodeAbi()
 	if err != nil {

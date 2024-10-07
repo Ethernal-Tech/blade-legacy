@@ -99,7 +99,7 @@ func getInitERC20PredicateInput(
 	config *config.Bridge,
 	internalChainMintable bool,
 	destinationChainID *big.Int) ([]byte, error) {
-	var params contractsapi.StateTransactionInput
+	var params contractsapi.ABIEncoder
 	if internalChainMintable {
 		params = &contractsapi.InitializeRootERC20PredicateFn{
 			NewGateway:                  config.InternalGatewayAddr,
@@ -123,7 +123,7 @@ func getInitERC20PredicateInput(
 // getInitERC20PredicateACLInput builds initialization input parameters for child chain ERC20PredicateAccessList SC
 func getInitERC20PredicateACLInput(config *config.Bridge, owner types.Address,
 	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
-	var params contractsapi.StateTransactionInput
+	var params contractsapi.ABIEncoder
 	if internalChainMintable {
 		params = &contractsapi.InitializeRootMintableERC20PredicateACLFn{
 			NewGateway:             config.InternalGatewayAddr,
@@ -155,7 +155,7 @@ func getInitERC721PredicateInput(
 	config *config.Bridge,
 	childOriginatedTokens bool,
 	destinationChainID *big.Int) ([]byte, error) {
-	var params contractsapi.StateTransactionInput
+	var params contractsapi.ABIEncoder
 	if childOriginatedTokens {
 		params = &contractsapi.InitializeRootERC721PredicateFn{
 			NewGateway:                  config.InternalGatewayAddr,
@@ -179,7 +179,7 @@ func getInitERC721PredicateInput(
 // for child chain ERC721PredicateAccessList SC
 func getInitERC721PredicateACLInput(config *config.Bridge, owner types.Address,
 	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
-	var params contractsapi.StateTransactionInput
+	var params contractsapi.ABIEncoder
 	if internalChainMintable {
 		params = &contractsapi.InitializeRootMintableERC721PredicateACLFn{
 			NewGateway:              config.InternalGatewayAddr,
@@ -210,7 +210,7 @@ func getInitERC1155PredicateInput(
 	config *config.Bridge,
 	internalChainMintable bool,
 	destinationChainID *big.Int) ([]byte, error) {
-	var params contractsapi.StateTransactionInput
+	var params contractsapi.ABIEncoder
 	if internalChainMintable {
 		params = &contractsapi.InitializeRootERC1155PredicateFn{
 			NewGateway:                  config.InternalGatewayAddr,
@@ -234,7 +234,7 @@ func getInitERC1155PredicateInput(
 // for child chain ERC1155PredicateAccessList SC
 func getInitERC1155PredicateACLInput(config *config.Bridge, owner types.Address,
 	useAllowList, useBlockList, internalChainMintable bool, destinationChainID *big.Int) ([]byte, error) {
-	var params contractsapi.StateTransactionInput
+	var params contractsapi.ABIEncoder
 	if internalChainMintable {
 		params = &contractsapi.InitializeRootMintableERC1155PredicateACLFn{
 			NewGateway:               config.InternalGatewayAddr,

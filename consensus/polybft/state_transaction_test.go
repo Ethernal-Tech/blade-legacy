@@ -34,7 +34,7 @@ func TestStateTransaction_Signature(t *testing.T) {
 func TestStateTransaction_Encoding(t *testing.T) {
 	t.Parallel()
 
-	cases := []contractsapi.StateTransactionInput{
+	cases := []contractsapi.ABIEncoder{
 		&contractsapi.CommitEpochEpochManagerFn{
 			ID: big.NewInt(1),
 			Epoch: &contractsapi.Epoch{
@@ -53,7 +53,7 @@ func TestStateTransaction_Encoding(t *testing.T) {
 
 		// use reflection to create another type and decode
 		val := reflect.New(reflect.TypeOf(c).Elem()).Interface()
-		obj, ok := val.(contractsapi.StateTransactionInput)
+		obj, ok := val.(contractsapi.ABIEncoder)
 		assert.True(t, ok)
 
 		err = obj.DecodeAbi(res)

@@ -8,8 +8,8 @@ import (
 	"github.com/Ethernal-Tech/ethgo/abi"
 )
 
-// StateTransactionInput is an abstraction for different state transaction inputs
-type StateTransactionInput interface {
+// ABIEncoder declares functions that are encoding and decoding data to/from ABI format
+type ABIEncoder interface {
 	// EncodeAbi contains logic for encoding arbitrary data into ABI format
 	EncodeAbi() ([]byte, error)
 	// DecodeAbi contains logic for decoding given ABI data
@@ -26,17 +26,9 @@ type EventAbi interface {
 	ParseLog(log *ethgo.Log) (bool, error)
 }
 
-// StructAbi is an interface representing a structure in contractsapi
-type StructAbi interface {
-	// DecodeAbi does abi decoding of given structure/function
-	DecodeAbi(buf []byte) error
-	// EncodeAbi does abi encoding of given structure/function
-	EncodeAbi() ([]byte, error)
-}
-
 // FunctionAbi is an interface representing a function in contractsapi
 type FunctionAbi interface {
-	StructAbi
+	ABIEncoder
 	// Sig returns the function ABI signature or ID (which is unique for all function types)
 	Sig() []byte
 }
@@ -55,8 +47,8 @@ var (
 )
 
 var (
-	_ StateTransactionInput = &CommitEpochEpochManagerFn{}
-	_ StateTransactionInput = &DistributeRewardForEpochManagerFn{}
+	_ ABIEncoder = &CommitEpochEpochManagerFn{}
+	_ ABIEncoder = &DistributeRewardForEpochManagerFn{}
 )
 
 type SignedBridgeMessageBatch struct {

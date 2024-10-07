@@ -57,7 +57,7 @@ func (pbb *PendingBridgeBatch) Hash() (types.Hash, error) {
 	return crypto.Keccak256Hash(data), nil
 }
 
-var _ contractsapi.StateTransactionInput = &BridgeBatchSigned{}
+var _ contractsapi.ABIEncoder = &BridgeBatchSigned{}
 
 // BridgeBatchSigned encapsulates bridge batch with aggregated signatures
 type BridgeBatchSigned struct {
