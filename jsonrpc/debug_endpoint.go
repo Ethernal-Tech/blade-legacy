@@ -765,6 +765,19 @@ func (d *Debug) GetAccessibleState(from, to BlockNumber) (interface{}, error) {
 			}
 
 			if start == end {
+				if start < 0 {
+					return 0, fmt.Errorf("block number overflow: %d", start)
+				}
+
+				blockStart := uint64(start)
+
+				h, ok := d.store.GetHeaderByNumber(blockStart)
+				if ok {
+					if d.store.Has(h.StateRoot) {
+						return blockStart, nil
+					}
+				}
+
 				return 0, fmt.Errorf("'from' and 'to' block numbers must be different")
 			}
 
