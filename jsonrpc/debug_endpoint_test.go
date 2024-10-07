@@ -1549,7 +1549,7 @@ func TestGetAccessibleState(t *testing.T) {
 				},
 			},
 
-			returnErr: "no accessible state found between the given block numbers",
+			returnErr: "no accessible state found between the block numbers 100 and 10",
 			result:    0,
 			err:       true,
 		},
