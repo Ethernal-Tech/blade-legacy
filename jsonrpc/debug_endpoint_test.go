@@ -23,6 +23,8 @@ type debugEndpointMockStore struct {
 	getReceiptsByHashFn   func(types.Hash) ([]*types.Receipt, error)
 	readTxLookupFn        func(types.Hash) (uint64, bool)
 	getPendingTxFn        func(types.Hash) (*types.Transaction, bool)
+	hasFn                 func(types.Hash) bool
+	getFn                 func(string) ([]byte, error)
 	getIteratorDumpTreeFn func(*types.Block, *state.DumpInfo) (*state.IteratorDump, error)
 	dumpTreeFn            func(*types.Block, *state.DumpInfo) (*state.Dump, error)
 	getBlockByHashFn      func(types.Hash, bool) (*types.Block, bool)
@@ -53,6 +55,14 @@ func (s *debugEndpointMockStore) ReadTxLookup(txnHash types.Hash) (uint64, bool)
 
 func (s *debugEndpointMockStore) GetPendingTx(txHash types.Hash) (*types.Transaction, bool) {
 	return s.getPendingTxFn(txHash)
+}
+
+func (s *debugEndpointMockStore) Has(hash types.Hash) bool {
+	return s.hasFn(hash)
+}
+
+func (s *debugEndpointMockStore) Get(key string) ([]byte, error) {
+	return s.getFn(key)
 }
 
 func (s *debugEndpointMockStore) GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error) {
@@ -1459,6 +1469,134 @@ func TestDumpBlock(t *testing.T) {
 			endpoint := NewDebug(test.store, 100000)
 
 			res, err := endpoint.DumpBlock(test.blockNumber)
+
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetAccessibleState(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		start, end BlockNumber
+		store      *debugEndpointMockStore
+		result     interface{}
+		returnErr  string
+		err        bool
+	}{
+		{
+			name:      "GetNumericBlockNumberNotValid",
+			start:     BlockNumber(-5),
+			end:       BlockNumber(-5),
+			store:     &debugEndpointMockStore{},
+			returnErr: "failed to get block number",
+			result:    0,
+			err:       true,
+		},
+		{
+			name:  "BlockNotDifferent",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   *LatestBlockNumberOrHash.BlockNumber,
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return nil, false
+				},
+			},
+
+			returnErr: "'from' and 'to' block numbers must be different",
+			result:    0,
+			err:       true,
+		},
+		{
+			name:  "HeaderNotFound",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   BlockNumber(testHeader10.Number),
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return nil, false
+				},
+			},
+
+			returnErr: "missing header for block number",
+			result:    0,
+			err:       true,
+		},
+		{
+			name:  "resultNotFound",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   BlockNumber(testHeader10.Number),
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return testLatestBlock.Header, true
+				},
+
+				hasFn: func(hash types.Hash) bool {
+					return false
+				},
+			},
+
+			returnErr: "no accessible state found between the block numbers 100 and 10",
+			result:    0,
+			err:       true,
+		},
+
+		{
+			name:  "resultsValid",
+			start: *LatestBlockNumberOrHash.BlockNumber,
+			end:   BlockNumber(testHeader10.Number),
+
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return testLatestBlock.Header
+				},
+
+				getHeaderByNumberFn: func(num uint64) (*types.Header, bool) {
+					return testLatestBlock.Header, true
+				},
+
+				hasFn: func(hash types.Hash) bool {
+					return true
+				},
+			},
+
+			returnErr: "",
+			result:    testLatestBlock.Header.Number,
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.GetAccessibleState(test.start, test.end)
 
 			require.Equal(t, test.result, res)
 

@@ -189,7 +189,10 @@ func stringToInt64T(t testing.TB, str string) int64 {
 
 func buildState(allocs map[types.Address]*chain.GenesisAccount) (state.State, state.Snapshot, types.Hash, error) {
 	s := itrie.NewState(itrie.NewMemoryStorage())
-	snap := s.NewSnapshot()
+	snap, err := s.NewSnapshot(types.ZeroHash)
+	if err != nil {
+		return nil, nil, types.ZeroHash, err
+	}
 
 	txn := state.NewTxn(snap)
 

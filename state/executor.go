@@ -62,17 +62,7 @@ func NewExecutor(config *chain.Params, s State, logger hclog.Logger) *Executor {
 func (e *Executor) WriteGenesis(
 	alloc map[types.Address]*chain.GenesisAccount,
 	initialStateRoot types.Hash) (types.Hash, error) {
-	var (
-		snap Snapshot
-		err  error
-	)
-
-	if initialStateRoot == types.ZeroHash {
-		snap = e.state.NewSnapshot()
-	} else {
-		snap, err = e.state.NewSnapshotAt(initialStateRoot)
-	}
-
+	snap, err := e.state.NewSnapshot(initialStateRoot)
 	if err != nil {
 		return types.Hash{}, err
 	}
@@ -124,12 +114,6 @@ func (e *Executor) WriteGenesis(
 	return types.BytesToHash(root), nil
 }
 
-type BlockResult struct {
-	Root     types.Hash
-	Receipts []*types.Receipt
-	TotalGas uint64
-}
-
 // GetDumpTree function returns accounts based on the selected criteria.
 func (e *Executor) GetDumpTree(dump *Dump, parentHash types.Hash,
 	block *types.Block, opts *DumpInfo) ([]byte, error) {
@@ -143,7 +127,7 @@ func (e *Executor) GetDumpTree(dump *Dump, parentHash types.Hash,
 		return nil, err
 	}
 
-	snap, err := e.state.NewSnapshotAt(block.Header.StateRoot)
+	snap, err := e.state.NewSnapshot(block.Header.StateRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -214,16 +198,6 @@ func (e *Executor) ProcessBlock(
 	return txn, nil
 }
 
-// StateAt returns snapshot at given root
-func (e *Executor) State() State {
-	return e.state
-}
-
-// StateAt returns snapshot at given root
-func (e *Executor) StateAt(root types.Hash) (Snapshot, error) {
-	return e.state.NewSnapshotAt(root)
-}
-
 // GetForksInTime returns the active forks at the given block height
 func (e *Executor) GetForksInTime(blockNumber uint64) chain.ForksInTime {
 	return e.config.Forks.At(blockNumber)
@@ -236,7 +210,7 @@ func (e *Executor) BeginTxn(
 ) (*Transition, error) {
 	forkConfig := e.config.Forks.At(header.Number)
 
-	snap, err := e.state.NewSnapshotAt(parentRoot)
+	snap, err := e.state.NewSnapshot(parentRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -1204,37 +1178,6 @@ func (t *Transition) Callx(c *runtime.Contract, h runtime.Host) *runtime.Executi
 	return t.applyCall(c, c.Type, h)
 }
 
-// SetAccountDirectly sets an account to the given address
-// NOTE: SetAccountDirectly changes the world state without a transaction
-func (t *Transition) SetAccountDirectly(addr types.Address, account *chain.GenesisAccount) error {
-	if t.AccountExists(addr) {
-		return fmt.Errorf("can't add account to %+v because an account exists already", addr)
-	}
-
-	t.state.SetCode(addr, account.Code)
-
-	for key, value := range account.Storage {
-		t.state.SetStorage(addr, key, value, &t.config)
-	}
-
-	t.state.SetBalance(addr, account.Balance)
-	t.state.SetNonce(addr, account.Nonce)
-
-	return nil
-}
-
-// SetCodeDirectly sets new code into the account with the specified address
-// NOTE: SetCodeDirectly changes the world state without a transaction
-func (t *Transition) SetCodeDirectly(addr types.Address, code []byte) error {
-	if !t.AccountExists(addr) {
-		return fmt.Errorf("account doesn't exist at %s", addr)
-	}
-
-	t.state.SetCode(addr, code)
-
-	return nil
-}
-
 // SetNonPayable deactivates the check of tx cost against tx executor balance.
 func (t *Transition) SetNonPayable(nonPayable bool) {
 	t.ctx.NonPayable = nonPayable
@@ -1389,10 +1332,6 @@ func (t *Transition) captureCallEnd(c *runtime.Contract, result *runtime.Executi
 		result.ReturnValue,
 		result.Err,
 	)
-}
-
-func (t *Transition) AddToJournal(j runtime.JournalEntry) {
-	t.journal.Append(j)
 }
 
 func (t *Transition) Snapshot() int {

@@ -479,7 +479,7 @@ type txpoolHub struct {
 
 // getAccountImpl is used for fetching account state from both TxPool and JSON-RPC
 func getAccountImpl(state state.State, root types.Hash, addr types.Address) (*state.Account, error) {
-	snap, err := state.NewSnapshotAt(root)
+	snap, err := state.NewSnapshot(root)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get snapshot for root '%s': %w", root, err)
 	}
@@ -697,7 +697,7 @@ func (j *jsonRPCHub) GetStorage(stateRoot types.Hash, addr types.Address, slot t
 		return nil, err
 	}
 
-	snap, err := j.state.NewSnapshotAt(stateRoot)
+	snap, err := j.state.NewSnapshot(stateRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -705,6 +705,21 @@ func (j *jsonRPCHub) GetStorage(stateRoot types.Hash, addr types.Address, slot t
 	res := snap.GetStorage(addr, account.Root, slot)
 
 	return res.Bytes(), nil
+}
+
+func (j *jsonRPCHub) Get(key string) ([]byte, error) {
+	hash := types.StringToHash(key)
+
+	data, ok, err := j.state.Get(hash)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get data for root hash: %w", err)
+	}
+
+	if !ok {
+		return nil, fmt.Errorf("data not found for root hash: %s", hash.String())
+	}
+
+	return data, nil
 }
 
 func (j *jsonRPCHub) GetCode(root types.Hash, addr types.Address) ([]byte, error) {
@@ -719,6 +734,11 @@ func (j *jsonRPCHub) GetCode(root types.Hash, addr types.Address) ([]byte, error
 	}
 
 	return code, nil
+}
+
+// Has returns true if the DB does contains the given key.
+func (j *jsonRPCHub) Has(rootHash types.Hash) bool {
+	return j.state.Has(rootHash)
 }
 
 // DumpTree retrieves accounts based on the specified criteria for the given block.

@@ -25,14 +25,19 @@ func NewState(storage Storage) *State {
 	return s
 }
 
-func (s *State) NewSnapshot() state.Snapshot {
-	return &Snapshot{state: s, trie: s.newTrie()}
-}
+func (s *State) NewSnapshot(root types.Hash) (state.Snapshot, error) {
+	var (
+		t   *Trie
+		err error
+	)
 
-func (s *State) NewSnapshotAt(root types.Hash) (state.Snapshot, error) {
-	t, err := s.newTrieAt(root)
-	if err != nil {
-		return nil, err
+	if root != types.ZeroHash {
+		t, err = s.newTrieAt(root)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		t = s.newTrie()
 	}
 
 	return &Snapshot{state: s, trie: t}, nil
@@ -52,6 +57,27 @@ func (s *State) GetCode(hash types.Hash) ([]byte, bool) {
 	}
 
 	return s.storage.GetCode(hash)
+}
+
+func (s *State) Has(hash types.Hash) bool {
+	if hash == types.EmptyCodeHash {
+		return false
+	}
+
+	ok, err := s.storage.Has(hash.Bytes())
+	if err != nil {
+		return false
+	}
+
+	return ok
+}
+
+func (s *State) Get(hash types.Hash) ([]byte, bool, error) {
+	if hash == types.EmptyCodeHash {
+		return nil, false, nil
+	}
+
+	return s.storage.Get(hash.Bytes())
 }
 
 // newTrieAt returns trie with root and if necessary locks state on a trie level
