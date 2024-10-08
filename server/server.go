@@ -850,7 +850,7 @@ func (j *jsonRPCHub) TraceBlock(
 func (j *jsonRPCHub) IntermediateRoots(
 	block *types.Block,
 	tracer tracer.Tracer,
-) ([]interface{}, error) {
+) ([]types.Hash, error) {
 	if block.Number() == 0 {
 		return nil, errors.New("genesis block can't have transaction")
 	}
@@ -872,18 +872,18 @@ func (j *jsonRPCHub) IntermediateRoots(
 
 	transition.SetTracer(tracer)
 
-	roots := make([]interface{}, len(block.Transactions))
+	roots := make([]types.Hash, len(block.Transactions))
 
 	for idx, tx := range block.Transactions {
 		tracer.Clear()
 
 		if _, err := transition.Apply(tx); err != nil {
-			return roots, err
+			return nil, err
 		}
 
 		_, h, err := transition.Commit()
 		if err != nil {
-			return roots, fmt.Errorf("failed to commit the state changes: %w", err)
+			return nil, fmt.Errorf("failed to commit the state changes: %w", err)
 		}
 
 		roots[idx] = h

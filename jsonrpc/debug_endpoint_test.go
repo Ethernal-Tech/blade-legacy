@@ -30,7 +30,7 @@ type debugEndpointMockStore struct {
 	getBlockByHashFn      func(types.Hash, bool) (*types.Block, bool)
 	getBlockByNumberFn    func(uint64, bool) (*types.Block, bool)
 	traceBlockFn          func(*types.Block, tracer.Tracer) ([]interface{}, error)
-	intermediateRootsFn   func(*types.Block, tracer.Tracer) ([]interface{}, error)
+	intermediateRootsFn   func(*types.Block, tracer.Tracer) ([]types.Hash, error)
 	traceTxnFn            func(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
 	traceCallFn           func(*types.Transaction, *types.Header, tracer.Tracer) (interface{}, error)
 	getNonceFn            func(types.Address) uint64
@@ -85,7 +85,7 @@ func (s *debugEndpointMockStore) TraceBlock(block *types.Block, tracer tracer.Tr
 	return s.traceBlockFn(block, tracer)
 }
 
-func (s *debugEndpointMockStore) IntermediateRoots(block *types.Block, tracer tracer.Tracer) ([]interface{}, error) {
+func (s *debugEndpointMockStore) IntermediateRoots(block *types.Block, tracer tracer.Tracer) ([]types.Hash, error) {
 	return s.intermediateRootsFn(block, tracer)
 }
 
@@ -1597,6 +1597,98 @@ func TestGetAccessibleState(t *testing.T) {
 			endpoint := NewDebug(test.store, 100000)
 
 			res, err := endpoint.GetAccessibleState(test.start, test.end)
+
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestIntermediateRoots(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		blockHash types.Hash
+		config    *TraceConfig
+		store     *debugEndpointMockStore
+		result    interface{}
+		returnErr string
+		err       bool
+	}{
+		{
+			name:      "BlockByHashNotFound",
+			blockHash: testLatestBlock.Hash(),
+			config:    &TraceConfig{},
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					require.Equal(t, testLatestBlock.Hash(), hash)
+					require.True(t, full)
+
+					return nil, false
+				},
+			},
+
+			returnErr: "not found",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:      "intermediateRootsNotValid",
+			blockHash: testLatestBlock.Hash(),
+			config:    &TraceConfig{},
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+				intermediateRootsFn: func(block *types.Block, tracer tracer.Tracer) ([]types.Hash, error) {
+					require.Equal(t, block.Hash(), testLatestBlock.Hash())
+
+					return []types.Hash{}, fmt.Errorf("roots not valid")
+				},
+			},
+
+			returnErr: "roots not valid",
+			result:    []types.Hash{},
+			err:       true,
+		},
+
+		{
+			name:      "resultsValid",
+			blockHash: testLatestBlock.Hash(),
+			config:    &TraceConfig{},
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+				intermediateRootsFn: func(block *types.Block, tracer tracer.Tracer) ([]types.Hash, error) {
+					require.Equal(t, block.Hash(), testLatestBlock.Hash())
+
+					return []types.Hash{block.Hash()}, nil
+				},
+			},
+
+			returnErr: "",
+			result:    []types.Hash{testLatestBlock.Hash()},
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+
+			res, err := endpoint.IntermediateRoots(test.blockHash, test.config)
 
 			require.Equal(t, test.result, res)
 

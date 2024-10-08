@@ -80,7 +80,7 @@ type debugBlockchainStore interface {
 
 	// IntermediateRoots executes a block (bad- or canon- or side-), and returns a list
 	// of intermediate roots: the stateroot after each transaction.
-	IntermediateRoots(*types.Block, tracer.Tracer) ([]interface{}, error)
+	IntermediateRoots(*types.Block, tracer.Tracer) ([]types.Hash, error)
 
 	// TraceTxn traces a transaction in the block, associated with the given hash
 	TraceTxn(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
