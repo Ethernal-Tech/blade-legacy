@@ -3,7 +3,7 @@ package polybft
 import (
 	"time"
 
-	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

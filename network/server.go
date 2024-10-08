@@ -10,7 +10,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/network/common"
 	"github.com/0xPolygon/polygon-edge/network/dial"
 	"github.com/0xPolygon/polygon-edge/network/discovery"
-	"github.com/armon/go-metrics"
+	"github.com/hashicorp/go-metrics"
 	"github.com/libp2p/go-libp2p"
 	"github.com/libp2p/go-libp2p/p2p/security/noise"
 	rawGrpc "google.golang.org/grpc"

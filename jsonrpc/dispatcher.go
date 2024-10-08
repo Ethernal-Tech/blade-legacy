@@ -12,8 +12,8 @@ import (
 	"unicode"
 
 	"github.com/0xPolygon/polygon-edge/accounts"
-	"github.com/armon/go-metrics"
 	"github.com/hashicorp/go-hclog"
+	"github.com/hashicorp/go-metrics"
 	jsonIter "github.com/json-iterator/go"
 )
 
