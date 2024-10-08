@@ -93,13 +93,13 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	cc := &testutil.Contract{}
 	cc.AddCallback(func() string {
 		return `
-            event BatchCreated(
-                bytes bitmap,
-                uint256[2] signatures
-            );
+			event BatchCreated(
+				bytes bitmap,
+				uint256[2] signatures
+			);
 
 			struct BridgeMessage {
-    			uint256 id;
+				uint256 id;
 				uint256 sourceChainId;
 				uint256 destinationChainId;
 				address sender;
@@ -108,36 +108,36 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 			}
 
 			struct BridgeMessageBatch {
-    			BridgeMessage[] messages;
-    			uint256 sourceChainId;
-    			uint256 destinationChainId;
+				BridgeMessage[] messages;
+				uint256 sourceChainId;
+				uint256 destinationChainId;
 			}
 
 			struct SignedBridgeMessageBatch {
-    			BridgeMessageBatch batch;
-    			uint256[2] signature;
-    			bytes bitmap;
+				BridgeMessageBatch batch;
+				uint256[2] signature;
+				bytes bitmap;
 			}
 
 			mapping(uint256 => SignedBridgeMessageBatch) public batches;
 			
 			function setBridgeMessage(uint256 _num) public payable {
-                SignedBridgeMessageBatch storage signedBatch = batches[_num];
-                signedBatch.batch.messages.push(BridgeMessage(15, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b1"));
-                signedBatch.batch.messages.push(BridgeMessage(16, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b2"));
-                signedBatch.batch.messages.push(BridgeMessage(17, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b3"));
-                signedBatch.batch.sourceChainId = 2;
-                signedBatch.batch.destinationChainId = 3;
-                signedBatch.signature = [uint256(300), uint256(200)];
-                signedBatch.bitmap = "smth";
-                batches[_num] = signedBatch;
-                
-                emit BatchCreated(batches[_num].bitmap, batches[_num].signature);
+				SignedBridgeMessageBatch storage signedBatch = batches[_num];
+				signedBatch.batch.messages.push(BridgeMessage(15, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b1"));
+				signedBatch.batch.messages.push(BridgeMessage(16, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b2"));
+				signedBatch.batch.messages.push(BridgeMessage(17, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b3"));
+				signedBatch.batch.sourceChainId = 2;
+				signedBatch.batch.destinationChainId = 3;
+				signedBatch.signature = [uint256(300), uint256(200)];
+				signedBatch.bitmap = "smth";
+				batches[_num] = signedBatch;
+
+				emit BatchCreated(batches[_num].bitmap, batches[_num].signature);
 			}
 
-            function getCommittedBatch(uint256 _num) public view returns (SignedBridgeMessageBatch memory) {
-                return batches[_num];
-            }
+			function getCommittedBatch(uint256 _num) public view returns (SignedBridgeMessageBatch memory) {
+				return batches[_num];
+			}
 		`
 	})
 
@@ -223,18 +223,18 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 			mapping(uint256 => SignedValidatorSet) public commitedValidatorSets;
 			
 			function setValidatorSet(uint256 _num) public payable {
-                SignedValidatorSet storage signedSet = commitedValidatorSets[_num];
-                signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(100)));
-                signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(200)));
-                signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(300)));
-                signedSet.signature = [uint256(300), uint256(200)];
-                signedSet.bitmap = "smth";
-                commitedValidatorSets[_num] = signedSet;
+				SignedValidatorSet storage signedSet = commitedValidatorSets[_num];
+				signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(100)));
+				signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(200)));
+				signedSet.newValidatorSet.push(Validator(0x518489F9ed41Fc35BCD23407C484F31897067ff0, [uint256(1), uint256(2), uint256(3), uint256(4)], uint256(300)));
+				signedSet.signature = [uint256(300), uint256(200)];
+				signedSet.bitmap = "smth";
+				commitedValidatorSets[_num] = signedSet;
 			}
 
-            function getCommittedValidatorSet(uint256 _num) public view returns (SignedValidatorSet memory) {
-                return commitedValidatorSets[_num];
-            }
+			function getCommittedValidatorSet(uint256 _num) public view returns (SignedValidatorSet memory) {
+				return commitedValidatorSets[_num];
+			}
 		`
 	})
 
