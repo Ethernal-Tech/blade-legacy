@@ -1687,9 +1687,7 @@ func TestIntermediateRoots(t *testing.T) {
 			t.Parallel()
 
 			endpoint := NewDebug(test.store, 100000)
-
 			res, err := endpoint.IntermediateRoots(test.blockHash, test.config)
-
 			require.Equal(t, test.result, res)
 
 			if test.err {

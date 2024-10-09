@@ -845,8 +845,8 @@ func (j *jsonRPCHub) TraceBlock(
 	return results, nil
 }
 
-// IntermediateRoots executes a block (bad- or canon- or side-), and returns a list
-// of intermediate roots: the stateroot after each transaction.
+// IntermediateRoots executes a block, and returns a list
+// of intermediate roots: the state root after each transaction.
 func (j *jsonRPCHub) IntermediateRoots(
 	block *types.Block,
 	tracer tracer.Tracer,
@@ -860,12 +860,9 @@ func (j *jsonRPCHub) IntermediateRoots(
 		return nil, errors.New("parent header not found")
 	}
 
-	blockCreator, err := j.GetConsensus().GetBlockCreator(block.Header)
-	if err != nil {
-		return nil, err
-	}
+	blockProposer := types.BytesToAddress(block.Header.Miner)
 
-	transition, err := j.BeginTxn(parentHeader.StateRoot, block.Header, blockCreator)
+	transition, err := j.BeginTxn(parentHeader.StateRoot, block.Header, blockProposer)
 	if err != nil {
 		return nil, err
 	}

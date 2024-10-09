@@ -78,8 +78,8 @@ type debugBlockchainStore interface {
 	// TraceBlock traces all transactions in the given block
 	TraceBlock(*types.Block, tracer.Tracer) ([]interface{}, error)
 
-	// IntermediateRoots executes a block (bad- or canon- or side-), and returns a list
-	// of intermediate roots: the stateroot after each transaction.
+	// IntermediateRoots executes a block, and returns a list
+	// of intermediate roots: the state root after each transaction.
 	IntermediateRoots(*types.Block, tracer.Tracer) ([]types.Hash, error)
 
 	// TraceTxn traces a transaction in the block, associated with the given hash
@@ -735,8 +735,8 @@ func (d *Debug) DumpBlock(blockNumber BlockNumber) (interface{}, error) {
 	)
 }
 
-// IntermediateRoots executes a block (bad- or canon- or side-), and returns a list
-// of intermediate roots: the stateroot after each transaction.
+// IntermediateRoots executes a block, and returns a list
+// of intermediate roots: the state root after each transaction.
 func (d *Debug) IntermediateRoots(
 	blockHash types.Hash,
 	config *TraceConfig,
