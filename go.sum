@@ -44,8 +44,8 @@ github.com/DataDog/sketches-go v1.4.5 h1:ki7VfeNz7IcNafq7yI/j5U/YCkO3LJiMDtXz9OM
 github.com/DataDog/sketches-go v1.4.5/go.mod h1:7Y8GN8Jf66DLyDhc94zuWA3uHEt/7ttt8jHOBWWrSOg=
 github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240826082740-e815142d7bf9 h1:ymhDu9QbUFb1ajSLsJjh/SHbQjLIWKSYuRrw7DMHsic=
 github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240826082740-e815142d7bf9/go.mod h1:csuByxgtqkcFqtzU650asqwZIg+gBHBtLjr1BikQLSc=
-github.com/Ethernal-Tech/ethgo v0.0.0-20241010115131-e94345958a6a h1:3fSyGFI/RPHclw7l7DdxQQGena7cYUEzkyXTOQjbOyk=
-github.com/Ethernal-Tech/ethgo v0.0.0-20241010115131-e94345958a6a/go.mod h1:v7GqFurzLpsPLu9HJrzR0kQo2orB5m3Lfc05dP5/BUA=
+github.com/Ethernal-Tech/ethgo v0.0.0-20241010134950-4f2bae28a51e h1:x5WnaOn5k8cirWxU9awywoW/WUHT2iMpyZBSZxSVjRc=
+github.com/Ethernal-Tech/ethgo v0.0.0-20241010134950-4f2bae28a51e/go.mod h1:v7GqFurzLpsPLu9HJrzR0kQo2orB5m3Lfc05dP5/BUA=
 github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04 h1:DGIOHe3qAeU+mrRLNJ83mJWyH1t5SqN8XvTrwBUAXK4=
 github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04/go.mod h1:vwaNJ2xOVILZoOcD6CxswTg8XOCDvIhcRIp8xanmS3s=
 github.com/Microsoft/go-winio v0.5.0/go.mod h1:JPGBdM1cNvN/6ISo+n8V5iA4v8pBzdOpzfwIujj1a84=

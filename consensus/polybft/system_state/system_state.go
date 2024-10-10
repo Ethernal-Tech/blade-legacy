@@ -104,73 +104,44 @@ func (s *SystemStateImpl) GetNextCommittedIndex(chainID uint64, chainType ChainT
 	return nextCommittedIndex.Uint64() + 1, nil
 }
 
-func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
-	*contractsapi.SignedBridgeMessageBatch, error) {
-	rawResult, err := s.bridgeStorageContract.Call(
-		"getCommittedBatch",
-		ethgo.Latest,
-		numberOfBatch)
+func (s *SystemStateImpl) GetBridgeBatchByNumber(batchID *big.Int) (*contractsapi.SignedBridgeMessageBatch, error) {
+	funcName := "getCommittedBatch"
+
+	getCommittedBatchFn := s.bridgeStorageContract.GetABI().GetMethod(funcName)
+	if getCommittedBatchFn == nil {
+		return nil, fmt.Errorf("failed to resolve %s function", funcName)
+	}
+
+	rawResult, err := s.bridgeStorageContract.CallInternal(getCommittedBatchFn, ethgo.Latest, batchID)
 	if err != nil {
 		return nil, err
 	}
 
-	decErr := fmt.Errorf("failed to decode")
-
-	rawResult, ok := rawResult["0"].(map[string]interface{})
-	if !ok {
-		return nil, decErr
-	}
-
 	sbmb := &contractsapi.SignedBridgeMessageBatch{}
-
-	sbmb.RootHash, ok = rawResult["rootHash"].([32]byte)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb.StartID, ok = rawResult["startId"].(*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb.EndID, ok = rawResult["endId"].(*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb.SourceChainID, ok = rawResult["sourceChainId"].(*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb.DestinationChainID, ok = rawResult["destinationChainId"].(*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb.Signature, ok = rawResult["signature"].([2]*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb.Bitmap, ok = rawResult["bitmap"].([]byte)
-	if !ok {
-		return nil, decErr
+	// Skip the first 32 bytes (most probably due to the dynamic types in the tuple/struct)
+	if err := sbmb.DecodeAbi(rawResult[types.StorageSlotSize:]); err != nil {
+		return nil, err
 	}
 
 	return sbmb, nil
 }
 
-func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int) (
-	*contractsapi.SignedValidatorSet, error) {
-	svs := &contractsapi.SignedValidatorSet{}
-	err := s.bridgeStorageContract.CallWithDecode(
-		"getCommittedValidatorSet",
-		ethgo.Latest,
-		svs,
-		numberOfValidatorSet,
-	)
+func (s *SystemStateImpl) GetValidatorSetByNumber(validatorSetID *big.Int) (*contractsapi.SignedValidatorSet, error) {
+	funcName := "getCommittedValidatorSet"
+
+	getCommittedValSetFn := s.bridgeStorageContract.GetABI().GetMethod(funcName)
+	if getCommittedValSetFn == nil {
+		return nil, fmt.Errorf("failed to resolve %s function", funcName)
+	}
+
+	rawResult, err := s.bridgeStorageContract.CallInternal(getCommittedValSetFn, ethgo.Latest, validatorSetID)
 	if err != nil {
+		return nil, err
+	}
+
+	svs := &contractsapi.SignedValidatorSet{}
+	// Skip the first 32 bytes (most probably due to the dynamic types in the tuple/struct)
+	if err := svs.DecodeAbi(rawResult[types.StorageSlotSize:]); err != nil {
 		return nil, err
 	}
 

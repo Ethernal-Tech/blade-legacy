@@ -134,19 +134,19 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
-	provider := &stateProvider{
-		transition: transition,
-	}
+	provider := &stateProvider{transition: transition}
 
 	systemState := NewSystemState(types.ZeroAddress, result.Address, provider)
 
-	input, err := method.Encode([1]interface{}{24})
+	batchID := big.NewInt(24)
+
+	input, err := method.Encode([1]interface{}{batchID})
 	require.NoError(t, err)
 
 	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
 	require.NoError(t, err)
 
-	sbmb, err := systemState.GetBridgeBatchByNumber(big.NewInt(24))
+	sbmb, err := systemState.GetBridgeBatchByNumber(batchID)
 	require.NoError(t, err)
 
 	require.EqualValues(t, &contractsapi.SignedBridgeMessageBatch{
@@ -241,9 +241,7 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 	result := transition.Create2(types.ZeroAddress, bytecode, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
-	provider := &stateProvider{
-		transition: transition,
-	}
+	provider := &stateProvider{transition: transition}
 
 	systemState := NewSystemState(types.ZeroAddress, result.Address, provider)
 
@@ -261,21 +259,24 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 	svs, err := systemState.GetValidatorSetByNumber(validatorSetID)
 	require.NoError(t, err)
 
-	require.Equal(t, &contractsapi.Validator{
-		Address:     types.StringToAddress("0x518489F9ed41Fc35BCD23407C484F31897067ff0"),
-		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
-		VotingPower: big.NewInt(100),
-	}, svs.NewValidatorSet[0])
-	require.Equal(t, &contractsapi.Validator{
-		Address:     types.StringToAddress("0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6"),
-		BlsKey:      [4]*big.Int{big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8)},
-		VotingPower: big.NewInt(200),
-	}, svs.NewValidatorSet[1])
-	require.Equal(t, &contractsapi.Validator{
-		Address:     types.StringToAddress("0x0bb7AA0b4FdC2D2862c088424260e99ed6299148"),
-		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
-		VotingPower: big.NewInt(300),
-	}, svs.NewValidatorSet[2])
+	require.Equal(t,
+		&contractsapi.Validator{
+			Address:     types.StringToAddress("0x518489F9ed41Fc35BCD23407C484F31897067ff0"),
+			BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
+			VotingPower: big.NewInt(100),
+		}, svs.NewValidatorSet[0])
+	require.Equal(t,
+		&contractsapi.Validator{
+			Address:     types.StringToAddress("0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6"),
+			BlsKey:      [4]*big.Int{big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8)},
+			VotingPower: big.NewInt(200),
+		}, svs.NewValidatorSet[1])
+	require.Equal(t,
+		&contractsapi.Validator{
+			Address:     types.StringToAddress("0x0bb7AA0b4FdC2D2862c088424260e99ed6299148"),
+			BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
+			VotingPower: big.NewInt(300),
+		}, svs.NewValidatorSet[2])
 
 	require.Equal(t, [2]*big.Int{big.NewInt(300), big.NewInt(200)}, svs.Signature)
 	require.Equal(t, []byte("smth"), svs.Bitmap)

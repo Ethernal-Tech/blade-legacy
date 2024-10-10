@@ -16,7 +16,8 @@ const (
 	HashLength    = 32
 	AddressLength = 20
 
-	SignatureSize = 4
+	SignatureSize   = 4
+	StorageSlotSize = 32
 )
 
 var (
