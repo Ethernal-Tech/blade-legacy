@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/secretmanager v1.14.1
 	github.com/0xPolygon/go-ibft v0.4.1-0.20240621090555-e81a63ff50d7
 	github.com/Ethernal-Tech/blockchain-event-tracker v0.0.0-20240826082740-e815142d7bf9
-	github.com/Ethernal-Tech/ethgo v0.0.0-20241010134950-4f2bae28a51e
+	github.com/Ethernal-Tech/ethgo v0.0.0-20241010145140-a2a8f592a8c7
 	github.com/Ethernal-Tech/merkle-tree v0.0.0-20231213143318-4db9da419e04
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.0.10
 	github.com/alibabacloud-go/oos-20190601/v4 v4.2.2
