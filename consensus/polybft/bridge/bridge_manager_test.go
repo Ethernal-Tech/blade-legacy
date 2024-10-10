@@ -107,10 +107,9 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 		}
 
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
-		length := len(s.pendingBridgeBatches[0].BridgeMessageBatch.Messages)
 		require.Len(t, s.pendingBridgeBatches, 1)
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(4), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(4), s.pendingBridgeBatches[0].BridgeBatch.EndID.Uint64())
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].Epoch)
 
 		// add the next 5 bridge messages, at that point, so that it generates a larger batch
@@ -119,10 +118,9 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 		}
 
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
-		length = len(s.pendingBridgeBatches[1].BridgeMessageBatch.Messages)
 		require.Len(t, s.pendingBridgeBatches, 2)
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(9), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(9), s.pendingBridgeBatches[1].BridgeBatch.EndID.Uint64())
 		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].Epoch)
 
 		// the message was sent
@@ -282,7 +280,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 
 	s.pendingBridgeBatches = []*PendingBridgeBatch{
 		{
-			BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
+			BridgeBatch: &contractsapi.BridgeBatch{
 				SourceChainID:      big.NewInt(1),
 				DestinationChainID: big.NewInt(0),
 			},
@@ -408,9 +406,8 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, bridgeEvents, 1)
 		require.Len(t, s.pendingBridgeBatches, 1)
-		length := len(s.pendingBridgeBatches[0].BridgeMessageBatch.Messages)
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].BridgeBatch.EndID.Uint64())
 
 		// add one more log to have a minimum batch
 		goodLog2 := goodLog.Copy()
@@ -418,9 +415,8 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog2))
 
 		require.Len(t, s.pendingBridgeBatches, 2)
-		length = len(s.pendingBridgeBatches[1].BridgeMessageBatch.Messages)
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[1].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(1), s.pendingBridgeBatches[1].BridgeBatch.EndID.Uint64())
 
 		// add two more logs to have larger batch
 		goodLog3 := goodLog.Copy()
@@ -431,11 +427,9 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x3}) // bridgeMsg event index 3
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog4))
 
-		length = len(s.pendingBridgeBatches[3].BridgeMessageBatch.Messages)
-
 		require.Len(t, s.pendingBridgeBatches, 4)
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[3].BridgeMessageBatch.Messages[0].ID.Uint64())
-		require.Equal(t, uint64(3), s.pendingBridgeBatches[3].BridgeMessageBatch.Messages[length-1].ID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatches[3].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(3), s.pendingBridgeBatches[3].BridgeBatch.EndID.Uint64())
 	})
 
 	t.Run("Node is not a validator", func(t *testing.T) {

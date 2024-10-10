@@ -251,17 +251,9 @@ func (bms *BridgeManagerStore) insertBridgeBatchMessage(signedBridgeBatch *Bridg
 			return err
 		}
 
-		length := len(signedBridgeBatch.MessageBatch.Messages)
-
-		var lastID = uint64(0)
-
-		if length > 0 {
-			lastID = signedBridgeBatch.MessageBatch.Messages[length-1].ID.Uint64()
-		}
-
 		if err := tx.Bucket(bridgeBatchBucket).
-			Bucket(common.EncodeUint64ToBytes(signedBridgeBatch.MessageBatch.SourceChainID.Uint64())).Put(
-			common.EncodeUint64ToBytes(lastID), raw); err != nil {
+			Bucket(common.EncodeUint64ToBytes(signedBridgeBatch.BridgeBatch.SourceChainID.Uint64())).Put(
+			common.EncodeUint64ToBytes(signedBridgeBatch.BridgeBatch.EndID.Uint64()), raw); err != nil {
 			return err
 		}
 

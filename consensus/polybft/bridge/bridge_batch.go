@@ -9,12 +9,13 @@ import (
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/types"
+	merkle "github.com/Ethernal-Tech/merkle-tree"
 )
 
 // PendingBridgeBatch holds pending bridge batch for epoch
 type PendingBridgeBatch struct {
-	*contractsapi.BridgeMessageBatch
-	Epoch uint64
+	BridgeBatch *contractsapi.BridgeBatch
+	Epoch       uint64
 }
 
 // NewPendingBridgeBatch creates a new PendingBridgeBatch object
@@ -36,20 +37,26 @@ func NewPendingBridgeBatch(epoch uint64,
 			DestinationChainID: bridgeEvent.DestinationChainID}
 	}
 
-	firstBridgeEvent := bridgeEvents[0]
+	tree, err := createMerkleTree(messages)
+	if err != nil {
+		return nil, err
+	}
 
 	return &PendingBridgeBatch{
-		BridgeMessageBatch: &contractsapi.BridgeMessageBatch{
-			Messages:           messages,
-			DestinationChainID: firstBridgeEvent.DestinationChainID,
-			SourceChainID:      firstBridgeEvent.SourceChainID},
+		BridgeBatch: &contractsapi.BridgeBatch{
+			RootHash:           types.Hash(tree.Hash()),
+			StartID:            messages[0].ID,
+			EndID:              messages[len(messages)-1].ID,
+			SourceChainID:      messages[0].SourceChainID,
+			DestinationChainID: messages[0].SourceChainID,
+		},
 		Epoch: epoch,
 	}, nil
 }
 
 // Hash calculates hash value for PendingBridgeBatch object.
 func (pbb *PendingBridgeBatch) Hash() (types.Hash, error) {
-	data, err := pbb.BridgeMessageBatch.EncodeAbi()
+	data, err := pbb.BridgeBatch.EncodeAbi()
 	if err != nil {
 		return types.ZeroHash, err
 	}
@@ -61,13 +68,13 @@ var _ contractsapi.StateTransactionInput = &BridgeBatchSigned{}
 
 // BridgeBatchSigned encapsulates bridge batch with aggregated signatures
 type BridgeBatchSigned struct {
-	MessageBatch *contractsapi.BridgeMessageBatch
+	BridgeBatch  *contractsapi.BridgeBatch
 	AggSignature polytypes.Signature
 }
 
 // Hash calculates hash value for BridgeBatchSigned object.
 func (bbs *BridgeBatchSigned) Hash() (types.Hash, error) {
-	data, err := bbs.MessageBatch.EncodeAbi()
+	data, err := bbs.BridgeBatch.EncodeAbi()
 	if err != nil {
 		return types.ZeroHash, err
 	}
@@ -77,13 +84,8 @@ func (bbs *BridgeBatchSigned) Hash() (types.Hash, error) {
 
 // ContainsBridgeMessage checks if BridgeBatchSigned contains given bridge message event
 func (bbs *BridgeBatchSigned) ContainsBridgeMessage(bridgeMessageID uint64) bool {
-	length := len(bbs.MessageBatch.Messages)
-	if length == 0 {
-		return false
-	}
-
-	return bbs.MessageBatch.Messages[0].ID.Uint64() <= bridgeMessageID &&
-		bbs.MessageBatch.Messages[length-1].ID.Uint64() >= bridgeMessageID
+	return bbs.BridgeBatch.StartID.Uint64() <= bridgeMessageID &&
+		bbs.BridgeBatch.EndID.Uint64() >= bridgeMessageID
 }
 
 // EncodeAbi contains logic for encoding arbitrary data into ABI format
@@ -99,9 +101,15 @@ func (bbs *BridgeBatchSigned) EncodeAbi() ([]byte, error) {
 	}
 
 	commit := &contractsapi.CommitBatchBridgeStorageFn{
-		Batch:     bbs.MessageBatch,
-		Signature: signature,
-		Bitmap:    bbs.AggSignature.Bitmap,
+		Batch: &contractsapi.SignedBridgeMessageBatch{
+			RootHash:           bbs.BridgeBatch.RootHash,
+			StartID:            bbs.BridgeBatch.StartID,
+			EndID:              bbs.BridgeBatch.EndID,
+			SourceChainID:      bbs.BridgeBatch.SourceChainID,
+			DestinationChainID: bbs.BridgeBatch.DestinationChainID,
+			Signature:          signature,
+			Bitmap:             bbs.AggSignature.Bitmap,
+		},
 	}
 
 	return commit.EncodeAbi()
@@ -120,8 +128,8 @@ func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 		return err
 	}
 
-	signature0 := commit.Signature[0].Bytes()
-	signature1 := commit.Signature[1].Bytes()
+	signature0 := commit.Batch.Signature[0].Bytes()
+	signature1 := commit.Batch.Signature[1].Bytes()
 	halfSignatureSize := bls.SignatureSize / 2
 	signature := make([]byte, bls.SignatureSize)
 
@@ -138,12 +146,36 @@ func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 	}
 
 	*bbs = BridgeBatchSigned{
-		MessageBatch: commit.Batch,
+		BridgeBatch: &contractsapi.BridgeBatch{
+			RootHash:           commit.Batch.RootHash,
+			StartID:            commit.Batch.StartID,
+			EndID:              commit.Batch.EndID,
+			SourceChainID:      commit.Batch.SourceChainID,
+			DestinationChainID: commit.Batch.DestinationChainID,
+		},
 		AggSignature: polytypes.Signature{
 			AggregatedSignature: signature,
-			Bitmap:              commit.Bitmap,
+			Bitmap:              commit.Batch.Bitmap,
 		},
 	}
 
 	return nil
+}
+
+// createMerkleTree creates a merkle tree from provided state sync events
+// if only one state sync event is provided, a second, empty leaf will be added to merkle tree
+// so that we can have a commitment with a single state sync event
+func createMerkleTree(bridgeMessages []*contractsapi.BridgeMessage) (*merkle.MerkleTree, error) {
+	stateSyncData := make([][]byte, len(bridgeMessages))
+
+	for i, bm := range bridgeMessages {
+		data, err := bm.EncodeAbi()
+		if err != nil {
+			return nil, err
+		}
+
+		stateSyncData[i] = data
+	}
+
+	return merkle.NewMerkleTree(stateSyncData)
 }
