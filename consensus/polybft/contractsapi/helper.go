@@ -77,7 +77,7 @@ func (s *SignedValidatorSet) EncodeAbi() ([]byte, error) {
 }
 
 func (s *SignedValidatorSet) DecodeAbi(buf []byte) error {
-	return decodeStruct(SignedValidatorABIType, buf, &s)
+	return decodeStruct(SignedValidatorABIType, buf, s)
 }
 
 // GetValidatorsAsMap returns the new validator set as a map of address to validator

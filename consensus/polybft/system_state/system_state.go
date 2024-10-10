@@ -163,65 +163,16 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 
 func (s *SystemStateImpl) GetValidatorSetByNumber(numberOfValidatorSet *big.Int) (
 	*contractsapi.SignedValidatorSet, error) {
-	rawResult, err := s.bridgeStorageContract.Call(
+	svs := &contractsapi.SignedValidatorSet{}
+	err := s.bridgeStorageContract.CallWithDecode(
 		"getCommittedValidatorSet",
 		ethgo.Latest,
+		svs,
 		numberOfValidatorSet,
 	)
 	if err != nil {
 		return nil, err
 	}
-
-	decErr := fmt.Errorf("failed to decode")
-
-	rawResult, ok := rawResult["0"].(map[string]interface{})
-	if !ok {
-		return nil, decErr
-	}
-
-	svs := &contractsapi.SignedValidatorSet{}
-
-	svs.Signature, ok = rawResult["signature"].([2]*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	svs.Bitmap, ok = rawResult["bitmap"].([]uint8)
-	if !ok {
-		return nil, decErr
-	}
-
-	validatorSet := []*contractsapi.Validator{}
-
-	validators, ok := rawResult["newValidatorSet"].([]map[string]interface{})
-	if !ok {
-		return nil, decErr
-	}
-
-	for _, validator := range validators {
-		address, ok := validator["_address"].(ethgo.Address)
-		if !ok {
-			return nil, decErr
-		}
-
-		keys, ok := validator["blsKey"].([4]*big.Int)
-		if !ok {
-			return nil, decErr
-		}
-
-		power, ok := validator["votingPower"].(*big.Int)
-		if !ok {
-			return nil, decErr
-		}
-
-		validatorSet = append(validatorSet, &contractsapi.Validator{
-			Address:     types.Address(address),
-			BlsKey:      keys,
-			VotingPower: power,
-		})
-	}
-
-	svs.NewValidatorSet = validatorSet
 
 	return svs, nil
 }
