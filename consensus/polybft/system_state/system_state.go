@@ -191,8 +191,13 @@ func NewStateProvider(transition *state.Transition) contract.Provider {
 
 // Call implements the contract.Provider interface to make contract calls directly to the state
 func (s *stateProvider) Call(addr ethgo.Address, input []byte, opts *contract.CallOpts) ([]byte, error) {
+	caller := contracts.SystemCaller
+	if opts != nil {
+		caller = types.Address(opts.From)
+	}
+
 	result := s.transition.Call2(
-		contracts.SystemCaller,
+		caller,
 		types.Address(addr),
 		input,
 		big.NewInt(0),

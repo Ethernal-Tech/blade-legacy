@@ -165,17 +165,17 @@ func Test_Temporary(t *testing.T) {
 
 	svs := &contractsapi.SignedValidatorSet{
 		NewValidatorSet: []*contractsapi.Validator{
-			&contractsapi.Validator{
+			{
 				Address:     types.StringToAddress("0x518489F9ed41Fc35BCD23407C484F31897067ff0"),
 				BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
 				VotingPower: big.NewInt(100),
 			},
-			&contractsapi.Validator{
+			{
 				Address:     types.StringToAddress("0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6"),
 				BlsKey:      [4]*big.Int{big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8)},
 				VotingPower: big.NewInt(200),
 			},
-			&contractsapi.Validator{
+			{
 				Address:     types.StringToAddress("0x0bb7AA0b4FdC2D2862c088424260e99ed6299148"),
 				BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
 				VotingPower: big.NewInt(300),
@@ -196,9 +196,6 @@ func Test_Temporary(t *testing.T) {
 
 func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 	t.Parallel()
-
-	method, err := abi.NewMethod("function setValidatorSet(uint256 _num) public payable")
-	require.NoError(t, err)
 
 	cc := &testutil.Contract{}
 	cc.AddCallback(func() string {
@@ -236,12 +233,12 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 	solcContract, err := cc.Compile()
 	require.NoError(t, err)
 
-	bin, err := hex.DecodeString(solcContract.Bin)
+	bytecode, err := hex.DecodeString(solcContract.Bin)
 	require.NoError(t, err)
 
 	transition := NewTestTransition(t, nil)
 
-	result := transition.Create2(types.Address{}, bin, big.NewInt(0), 1000000000)
+	result := transition.Create2(types.ZeroAddress, bytecode, big.NewInt(0), 1000000000)
 	assert.NoError(t, result.Err)
 
 	provider := &stateProvider{
@@ -252,26 +249,29 @@ func TestSystemState_GetValidatorSetByNumber(t *testing.T) {
 
 	validatorSetID := big.NewInt(1)
 
-	input, err := method.Encode([1]interface{}{validatorSetID})
+	setValidatorSetFn, err := abi.NewMethod("function setValidatorSet(uint256 _num) public payable")
 	require.NoError(t, err)
 
-	_, err = provider.Call(ethgo.Address(result.Address), input, &contract.CallOpts{})
+	input, err := setValidatorSetFn.Encode([1]interface{}{validatorSetID})
+	require.NoError(t, err)
+
+	_, err = provider.Call(ethgo.Address(result.Address), input, nil)
 	require.NoError(t, err)
 
 	svs, err := systemState.GetValidatorSetByNumber(validatorSetID)
 	require.NoError(t, err)
 
-	require.EqualValues(t, &contractsapi.Validator{
+	require.Equal(t, &contractsapi.Validator{
 		Address:     types.StringToAddress("0x518489F9ed41Fc35BCD23407C484F31897067ff0"),
 		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
 		VotingPower: big.NewInt(100),
 	}, svs.NewValidatorSet[0])
-	require.EqualValues(t, &contractsapi.Validator{
+	require.Equal(t, &contractsapi.Validator{
 		Address:     types.StringToAddress("0x85dA99c8a7C2C95964c8EfD687E95E632Fc533D6"),
 		BlsKey:      [4]*big.Int{big.NewInt(5), big.NewInt(6), big.NewInt(7), big.NewInt(8)},
 		VotingPower: big.NewInt(200),
 	}, svs.NewValidatorSet[1])
-	require.EqualValues(t, &contractsapi.Validator{
+	require.Equal(t, &contractsapi.Validator{
 		Address:     types.StringToAddress("0x0bb7AA0b4FdC2D2862c088424260e99ed6299148"),
 		BlsKey:      [4]*big.Int{big.NewInt(1), big.NewInt(2), big.NewInt(3), big.NewInt(4)},
 		VotingPower: big.NewInt(300),
