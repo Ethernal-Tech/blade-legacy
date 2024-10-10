@@ -149,6 +149,49 @@ func (txn *Txn) GetDumpTree(dumpObject *Dump, opts *DumpInfo, deleteEmptyObjects
 	return nextKey, nil
 }
 
+// StorageRangeAt returns the storage at the given block height and transaction index.
+func (txn *Txn) StorageRangeAt(storageRangeResult *StorageRangeResult, addr *types.Address,
+	keyStart []byte, maxResult int) error {
+	object, exists := txn.getStateObject(*addr)
+	if !exists {
+		return fmt.Errorf("the state object is not available")
+	}
+
+	storageRangeResult.Storage = make(storageMap)
+	hasStartKey := len(keyStart) > 0
+
+	object.Txn.Root().Walk(func(k []byte, v interface{}) bool {
+		if k == nil || v == nil {
+			return false
+		}
+
+		if hasStartKey {
+			if !bytes.Equal(keyStart, k) {
+				return false
+			}
+
+			hasStartKey = false
+		}
+
+		if maxResult > 0 && len(storageRangeResult.Storage) >= maxResult {
+			storageRangeResult.NextKey = k
+
+			return true
+		}
+
+		bytesValue, ok := v.([]byte)
+		if !ok {
+			return false
+		}
+
+		storageRangeResult.Storage[types.BytesToHash(k)] = storageEntry{k, types.BytesToHash(bytesValue)}
+
+		return false
+	})
+
+	return nil
+}
+
 // Snapshot takes a snapshot at this point in time
 func (txn *Txn) Snapshot() int {
 	t := txn.txn.CommitOnly()

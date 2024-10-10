@@ -326,6 +326,12 @@ func NewTransition(logger hclog.Logger, config chain.ForksInTime, snap Snapshot,
 	}
 }
 
+// StorageRangeAt returns the storage at the given block height and transaction index.
+func (t *Transition) StorageRangeAt(storageRangeResult *StorageRangeResult,
+	addr *types.Address, keyStart []byte, maxResult int) error {
+	return t.state.StorageRangeAt(storageRangeResult, addr, keyStart, maxResult)
+}
+
 func (t *Transition) WithStateOverride(override types.StateOverride) error {
 	for addr, o := range override {
 		if o.State != nil && o.StateDiff != nil {

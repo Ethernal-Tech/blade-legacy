@@ -97,6 +97,19 @@ type IteratorDump struct {
 	Next []byte `json:"next,omitempty"` // nil if no more accounts
 }
 
+// StorageRangeResult is the result of a debug_storageRangeAt API call.
+type StorageRangeResult struct {
+	Storage storageMap `json:"storage"`
+	NextKey []byte     `json:"nextKey"` // nil if Storage includes the last key in the trie.
+}
+
+type storageMap map[types.Hash]storageEntry
+
+type storageEntry struct {
+	Key   []byte     `json:"key"`
+	Value types.Hash `json:"value"`
+}
+
 // Account is the account reference in the ethereum state
 type Account struct {
 	Nonce    uint64

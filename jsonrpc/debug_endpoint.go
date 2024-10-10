@@ -82,6 +82,10 @@ type debugBlockchainStore interface {
 	// of intermediate roots: the state root after each transaction.
 	IntermediateRoots(*types.Block, tracer.Tracer) ([]types.Hash, error)
 
+	// StorageRangeAt returns the storage at the given block height and transaction index.
+	StorageRangeAt(storageRangeResult *state.StorageRangeResult, block *types.Block,
+		addr *types.Address, keyStart []byte, txIndex, maxResult int) error
+
 	// TraceTxn traces a transaction in the block, associated with the given hash
 	TraceTxn(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
 
@@ -851,6 +855,26 @@ func (d *Debug) DbGet(key string) (interface{}, error) {
 		context.Background(),
 		func() (interface{}, error) {
 			return d.store.Get(key)
+		},
+	)
+}
+
+// StorageRangeAt returns the storage at the given block height and transaction index.
+func (d *Debug) StorageRangeAt(blockHash types.Hash, txIndex int, contractAddress types.Address,
+	keyStart []byte, maxResult int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			storageRangeResult := state.StorageRangeResult{}
+
+			block, ok := d.store.GetBlockByHash(blockHash, true)
+			if !ok {
+				return nil, fmt.Errorf("block %s not found", blockHash)
+			}
+
+			err := d.store.StorageRangeAt(&storageRangeResult, block, &contractAddress, keyStart, txIndex, maxResult)
+
+			return storageRangeResult, err
 		},
 	)
 }
