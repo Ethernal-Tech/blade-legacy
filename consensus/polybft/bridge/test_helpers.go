@@ -71,8 +71,8 @@ func CreateTestBridgeBatchMessage(t *testing.T, numberOfMessages, firstIndex uin
 	t.Helper()
 
 	msg := contractsapi.BridgeBatch{
-		StartID:            big.NewInt(int64(firstIndex)),
-		EndID:              big.NewInt(int64(firstIndex + numberOfMessages)),
+		StartID:            new(big.Int).SetUint64(firstIndex),
+		EndID:              new(big.Int).SetUint64(firstIndex + numberOfMessages),
 		SourceChainID:      big.NewInt(1),
 		DestinationChainID: big.NewInt(0),
 	}
