@@ -48,7 +48,7 @@ func NewPendingBridgeBatch(epoch uint64,
 			StartID:            messages[0].ID,
 			EndID:              messages[len(messages)-1].ID,
 			SourceChainID:      messages[0].SourceChainID,
-			DestinationChainID: messages[0].SourceChainID,
+			DestinationChainID: messages[0].DestinationChainID,
 		},
 		Epoch: epoch,
 	}, nil

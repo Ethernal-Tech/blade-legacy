@@ -109,7 +109,7 @@ func (ber *bridgeEventRelayerImpl) sendTx() {
 		case event := <-ber.eventCh:
 			switch event := event.(type) {
 			case *contractsapi.SignedBridgeMessageBatch:
-				if err := ber.sendBridgeMessageBatch(event); err != nil {
+				if err := ber.sendSignedBridgeMessageBatch(event); err != nil {
 					ber.logger.Error("error occurred while sending bridge message batch transaction", "error", err)
 				}
 			case *contractsapi.SignedValidatorSet:
@@ -123,8 +123,8 @@ func (ber *bridgeEventRelayerImpl) sendTx() {
 	}
 }
 
-// sendBridgeMessageBatch sends bridge message batch execute transaction to the external and internal chains
-func (ber *bridgeEventRelayerImpl) sendBridgeMessageBatch(event *contractsapi.SignedBridgeMessageBatch) error {
+// sendSignedBridgeMessageBatch sends bridge message batch execute transaction to the external and internal chains
+func (ber *bridgeEventRelayerImpl) sendSignedBridgeMessageBatch(event *contractsapi.SignedBridgeMessageBatch) error {
 	var (
 		txRelayer          = ber.internalTxRelayer
 		destinationChainID = event.DestinationChainID.Uint64()
