@@ -93,46 +93,28 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	cc := &testutil.Contract{}
 	cc.AddCallback(func() string {
 		return `
-			event BatchCreated(
-				bytes bitmap,
-				uint256[2] signatures
-			);
-
-			struct BridgeMessage {
-				uint256 id;
-				uint256 sourceChainId;
-				uint256 destinationChainId;
-				address sender;
-				address receiver;
-				bytes payload;
-			}
-
-			struct BridgeMessageBatch {
-				BridgeMessage[] messages;
-				uint256 sourceChainId;
-				uint256 destinationChainId;
-			}
-
 			struct SignedBridgeMessageBatch {
-				BridgeMessageBatch batch;
-				uint256[2] signature;
-				bytes bitmap;
+    			bytes32 rootHash;
+    			uint256 startId;
+    			uint256 endId;
+    			uint256 sourceChainId;
+    			uint256 destinationChainId;
+    			uint256[2] signature;
+    			bytes bitmap;
 			}
 
 			mapping(uint256 => SignedBridgeMessageBatch) public batches;
 			
 			function setBridgeMessage(uint256 _num) public payable {
 				SignedBridgeMessageBatch storage signedBatch = batches[_num];
-				signedBatch.batch.messages.push(BridgeMessage(15, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b1"));
-				signedBatch.batch.messages.push(BridgeMessage(16, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b2"));
-				signedBatch.batch.messages.push(BridgeMessage(17, 2, 3, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, 0x518489F9ed41Fc35BCD23407C484F31897067ff0, "b3"));
-				signedBatch.batch.sourceChainId = 2;
-				signedBatch.batch.destinationChainId = 3;
+				signedBatch.rootHash = 0x1555ad6149fc39abc7852aad5c3df6b9df7964ac90ffbbcf6206b1eda846c881;
+				signedBatch.startId = 1;
+				signedBatch.endId = 5;
+				signedBatch.sourceChainId = 2;
+				signedBatch.destinationChainId = 3;
 				signedBatch.signature = [uint256(300), uint256(200)];
 				signedBatch.bitmap = "smth";
 				batches[_num] = signedBatch;
-
-				emit BatchCreated(batches[_num].bitmap, batches[_num].signature);
 			}
 
 			function getCommittedBatch(uint256 _num) public view returns (SignedBridgeMessageBatch memory) {
@@ -167,36 +149,15 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	sbmb, err := systemState.GetBridgeBatchByNumber(big.NewInt(24))
 	require.NoError(t, err)
 
-	require.Equal(t, big.NewInt(3), sbmb.DestinationChainID)
-	require.Equal(t, big.NewInt(2), sbmb.SourceChainID)
-
-	/* 	require.EqualValues(t, &contractsapi.BridgeMessage{
-	   		ID:                 big.NewInt(15),
-	   		SourceChainID:      big.NewInt(2),
-	   		DestinationChainID: big.NewInt(3),
-	   		Sender:             [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
-	   		Receiver:           [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
-	   		Payload:            []byte("b1"),
-	   	}, sbmb.Batch.Messages[0])
-	   	require.EqualValues(t, &contractsapi.BridgeMessage{
-	   		ID:                 big.NewInt(16),
-	   		SourceChainID:      big.NewInt(2),
-	   		DestinationChainID: big.NewInt(3),
-	   		Sender:             [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
-	   		Receiver:           [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
-	   		Payload:            []byte("b2"),
-	   	}, sbmb.Batch.Messages[1])
-	   	require.EqualValues(t, &contractsapi.BridgeMessage{
-	   		ID:                 big.NewInt(17),
-	   		SourceChainID:      big.NewInt(2),
-	   		DestinationChainID: big.NewInt(3),
-	   		Sender:             [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
-	   		Receiver:           [20]byte{0x51, 0x84, 0x89, 0xF9, 0xed, 0x41, 0xFc, 0x35, 0xBC, 0xD2, 0x34, 0x07, 0xC4, 0x84, 0xF3, 0x18, 0x97, 0x06, 0x7f, 0xf0},
-	   		Payload:            []byte("b3"),
-	   	}, sbmb.Batch.Messages[2]) */
-
-	require.Equal(t, [2]*big.Int{big.NewInt(300), big.NewInt(200)}, sbmb.Signature)
-	require.Equal(t, []byte("smth"), sbmb.Bitmap)
+	require.EqualValues(t, &contractsapi.SignedBridgeMessageBatch{
+		RootHash:           types.StringToHash("0x1555ad6149fc39abc7852aad5c3df6b9df7964ac90ffbbcf6206b1eda846c881"),
+		StartID:            big.NewInt(1),
+		EndID:              big.NewInt(5),
+		SourceChainID:      big.NewInt(2),
+		DestinationChainID: big.NewInt(3),
+		Signature:          [2]*big.Int{big.NewInt(300), big.NewInt(200)},
+		Bitmap:             []byte("smth"),
+	}, sbmb)
 }
 
 func TestSystemState_GetValidatorSetByNumber(t *testing.T) {

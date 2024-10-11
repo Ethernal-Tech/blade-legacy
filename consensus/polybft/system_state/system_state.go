@@ -123,82 +123,40 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 
 	sbmb := &contractsapi.SignedBridgeMessageBatch{}
 
+	sbmb.RootHash, ok = rawResult["rootHash"].([32]byte)
+	if !ok {
+		return nil, decErr
+	}
+
+	sbmb.StartID, ok = rawResult["startId"].(*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
+	sbmb.EndID, ok = rawResult["endId"].(*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
+	sbmb.SourceChainID, ok = rawResult["sourceChainId"].(*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
+	sbmb.DestinationChainID, ok = rawResult["destinationChainId"].(*big.Int)
+	if !ok {
+		return nil, decErr
+	}
+
 	sbmb.Signature, ok = rawResult["signature"].([2]*big.Int)
 	if !ok {
 		return nil, decErr
 	}
 
-	sbmb.Bitmap, ok = rawResult["bitmap"].([]uint8)
+	sbmb.Bitmap, ok = rawResult["bitmap"].([]byte)
 	if !ok {
 		return nil, decErr
 	}
-
-	batch, ok := rawResult["batch"].(map[string]interface{})
-	if !ok {
-		return nil, decErr
-	}
-
-	messages, ok := batch["messages"].([]map[string]interface{})
-	if !ok {
-		return nil, decErr
-	}
-
-	bridgeMessages := []*contractsapi.BridgeMessage{}
-
-	for _, message := range messages {
-		id, ok := message["id"].(*big.Int)
-		if !ok {
-			return nil, decErr
-		}
-
-		sourceChainID, ok := message["sourceChainId"].(*big.Int)
-		if !ok {
-			return nil, decErr
-		}
-
-		destinationChainID, ok := message["destinationChainId"].(*big.Int)
-		if !ok {
-			return nil, decErr
-		}
-
-		sender, ok := message["sender"].(ethgo.Address)
-		if !ok {
-			return nil, decErr
-		}
-
-		receiver, ok := message["receiver"].(ethgo.Address)
-		if !ok {
-			return nil, decErr
-		}
-
-		payload, ok := message["payload"].([]byte)
-		if !ok {
-			return nil, decErr
-		}
-
-		bridgeMessages = append(bridgeMessages, &contractsapi.BridgeMessage{
-			ID:                 id,
-			SourceChainID:      sourceChainID,
-			DestinationChainID: destinationChainID,
-			Sender:             types.Address(sender),
-			Receiver:           types.Address(receiver),
-			Payload:            payload,
-		})
-	}
-
-	bmb := &contractsapi.SignedBridgeMessageBatch{}
-
-	bmb.SourceChainID, ok = batch["sourceChainId"].(*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	bmb.DestinationChainID, ok = batch["destinationChainId"].(*big.Int)
-	if !ok {
-		return nil, decErr
-	}
-
-	sbmb = bmb
 
 	return sbmb, nil
 }
