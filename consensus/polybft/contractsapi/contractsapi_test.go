@@ -12,15 +12,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type method interface {
-	EncodeAbi() ([]byte, error)
-	DecodeAbi(buf []byte) error
-}
-
 func TestEncoding_Method(t *testing.T) {
 	t.Parallel()
 
-	cases := []method{
+	cases := []ABIEncoder{
 		// empty commit epoch
 		&CommitEpochEpochManagerFn{
 			ID: big.NewInt(1),
@@ -38,7 +33,7 @@ func TestEncoding_Method(t *testing.T) {
 
 		// use reflection to create another type and decode
 		val := reflect.New(reflect.TypeOf(c).Elem()).Interface()
-		obj, ok := val.(method)
+		obj, ok := val.(ABIEncoder)
 		require.True(t, ok)
 
 		err = obj.DecodeAbi(res)

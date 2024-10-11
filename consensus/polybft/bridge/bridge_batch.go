@@ -14,8 +14,8 @@ import (
 
 // PendingBridgeBatch holds pending bridge batch for epoch
 type PendingBridgeBatch struct {
-	BridgeBatch *contractsapi.BridgeBatch
-	Epoch       uint64
+	*contractsapi.BridgeBatch
+	Epoch uint64
 }
 
 // NewPendingBridgeBatch creates a new PendingBridgeBatch object
@@ -68,7 +68,7 @@ var _ contractsapi.ABIEncoder = &BridgeBatchSigned{}
 
 // BridgeBatchSigned encapsulates bridge batch with aggregated signatures
 type BridgeBatchSigned struct {
-	BridgeBatch  *contractsapi.BridgeBatch
+	*contractsapi.BridgeBatch
 	AggSignature polytypes.Signature
 }
 

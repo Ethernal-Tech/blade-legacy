@@ -73,7 +73,7 @@ type bridgeEventRelayerImpl struct {
 	bridgeConfig  map[uint64]*config.Bridge
 	eventTrackers []*tracker.EventTracker
 
-	eventCh chan contractsapi.StructAbi
+	eventCh chan contractsapi.ABIEncoder
 	quitCh  chan struct{}
 }
 
@@ -93,7 +93,7 @@ func newBridgeEventRelayer(
 		logger:          logger.Named("bridge-relayer"),
 		internalChainID: big.NewInt(runtimeConfig.ChainParams.ChainID),
 		blockchain:      blockchain,
-		eventCh:         make(chan contractsapi.StructAbi, eventChBuffer),
+		eventCh:         make(chan contractsapi.ABIEncoder, eventChBuffer),
 		quitCh:          make(chan struct{}),
 	}
 
