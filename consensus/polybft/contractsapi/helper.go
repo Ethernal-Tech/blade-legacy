@@ -26,7 +26,6 @@ type EventAbi interface {
 	ParseLog(log *ethgo.Log) (bool, error)
 }
 
-// StructAbi is an interface representing a structure in contractsap
 // FunctionAbi is an interface representing a function in contractsapi
 type FunctionAbi interface {
 	ABIEncoder
