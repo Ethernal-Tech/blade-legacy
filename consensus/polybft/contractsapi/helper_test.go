@@ -22,11 +22,6 @@ func TestEncoding_SignedTypes(t *testing.T) {
 			Signature:       [2]*big.Int{big.NewInt(1), big.NewInt(2)},
 			Bitmap:          big.NewInt(1).Bytes(),
 		},
-		&SignedBridgeMessageBatch{
-			Batch:     &BridgeMessageBatch{Messages: []*BridgeMessage{}, SourceChainID: big.NewInt(1), DestinationChainID: big.NewInt(2)},
-			Signature: [2]*big.Int{big.NewInt(1), big.NewInt(2)},
-			Bitmap:    big.NewInt(1).Bytes(),
-		},
 	}
 
 	for _, c := range cases {

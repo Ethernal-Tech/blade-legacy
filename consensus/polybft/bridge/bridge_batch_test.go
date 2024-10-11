@@ -44,7 +44,7 @@ func TestBridgeBatch_BridgeBatchEncodeDecode(t *testing.T) {
 	blsKey2, err := bls.GenerateBlsKey()
 	require.NoError(t, err)
 
-	data, err := pendingBridgeBatch.BridgeMessageBatch.EncodeAbi()
+	data, err := pendingBridgeBatch.BridgeBatch.EncodeAbi()
 	require.NoError(t, err)
 
 	signature1, err := blsKey1.Sign(data, TestDomain)
@@ -59,7 +59,7 @@ func TestBridgeBatch_BridgeBatchEncodeDecode(t *testing.T) {
 	require.NoError(t, err)
 
 	expectedSignedBridgeBatchMsg := &BridgeBatchSigned{
-		MessageBatch: pendingBridgeBatch.BridgeMessageBatch,
+		BridgeBatch: pendingBridgeBatch.BridgeBatch,
 		AggSignature: polytypes.Signature{
 			Bitmap:              []byte{5, 1},
 			AggregatedSignature: aggSig,
@@ -71,11 +71,9 @@ func TestBridgeBatch_BridgeBatchEncodeDecode(t *testing.T) {
 
 	var actualSignedBridgeBatchMsg BridgeBatchSigned
 
-	numberOfMessages := len(expectedSignedBridgeBatchMsg.MessageBatch.Messages)
-
 	require.NoError(t, actualSignedBridgeBatchMsg.DecodeAbi(inputData))
-	require.Equal(t, *expectedSignedBridgeBatchMsg.MessageBatch.Messages[0].ID, *actualSignedBridgeBatchMsg.MessageBatch.Messages[0].ID)
-	require.Equal(t, *expectedSignedBridgeBatchMsg.MessageBatch.Messages[numberOfMessages-1].ID, *actualSignedBridgeBatchMsg.MessageBatch.Messages[numberOfMessages-1].ID)
+	require.Equal(t, expectedSignedBridgeBatchMsg.BridgeBatch.StartID.Uint64(), actualSignedBridgeBatchMsg.BridgeBatch.StartID.Uint64())
+	require.Equal(t, expectedSignedBridgeBatchMsg.BridgeBatch.EndID.Uint64(), actualSignedBridgeBatchMsg.BridgeBatch.EndID.Uint64())
 	require.Equal(t, expectedSignedBridgeBatchMsg.AggSignature, actualSignedBridgeBatchMsg.AggSignature)
 }
 
@@ -83,7 +81,9 @@ func newTestBridgeBatchSigned(t *testing.T, sourceChainID, destinationChainID ui
 	t.Helper()
 
 	return &BridgeBatchSigned{
-		MessageBatch: &contractsapi.BridgeMessageBatch{
+		BridgeBatch: &contractsapi.BridgeBatch{
+			StartID:            big.NewInt(1),
+			EndID:              big.NewInt(2),
 			SourceChainID:      new(big.Int).SetUint64(sourceChainID),
 			DestinationChainID: new(big.Int).SetUint64(destinationChainID),
 		},

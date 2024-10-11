@@ -1916,45 +1916,28 @@ func (i *InitializeBridgeStorageFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(BridgeStorage.Abi.Methods["initialize"], buf, i)
 }
 
-type BridgeMessage struct {
-	ID                 *big.Int      `abi:"id"`
-	SourceChainID      *big.Int      `abi:"sourceChainId"`
-	DestinationChainID *big.Int      `abi:"destinationChainId"`
-	Sender             types.Address `abi:"sender"`
-	Receiver           types.Address `abi:"receiver"`
-	Payload            []byte        `abi:"payload"`
+type SignedBridgeMessageBatch struct {
+	RootHash           types.Hash  `abi:"rootHash"`
+	StartID            *big.Int    `abi:"startId"`
+	EndID              *big.Int    `abi:"endId"`
+	SourceChainID      *big.Int    `abi:"sourceChainId"`
+	DestinationChainID *big.Int    `abi:"destinationChainId"`
+	Signature          [2]*big.Int `abi:"signature"`
+	Bitmap             []byte      `abi:"bitmap"`
 }
 
-var BridgeMessageABIType = abi.MustNewType("tuple(uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload)")
+var SignedBridgeMessageBatchABIType = abi.MustNewType("tuple(bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId,uint256[2] signature,bytes bitmap)")
 
-func (b *BridgeMessage) EncodeAbi() ([]byte, error) {
-	return BridgeMessageABIType.Encode(b)
+func (s *SignedBridgeMessageBatch) EncodeAbi() ([]byte, error) {
+	return SignedBridgeMessageBatchABIType.Encode(s)
 }
 
-func (b *BridgeMessage) DecodeAbi(buf []byte) error {
-	return decodeStruct(BridgeMessageABIType, buf, &b)
-}
-
-type BridgeMessageBatch struct {
-	Messages           []*BridgeMessage `abi:"messages"`
-	SourceChainID      *big.Int         `abi:"sourceChainId"`
-	DestinationChainID *big.Int         `abi:"destinationChainId"`
-}
-
-var BridgeMessageBatchABIType = abi.MustNewType("tuple(tuple(uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload)[] messages,uint256 sourceChainId,uint256 destinationChainId)")
-
-func (b *BridgeMessageBatch) EncodeAbi() ([]byte, error) {
-	return BridgeMessageBatchABIType.Encode(b)
-}
-
-func (b *BridgeMessageBatch) DecodeAbi(buf []byte) error {
-	return decodeStruct(BridgeMessageBatchABIType, buf, &b)
+func (s *SignedBridgeMessageBatch) DecodeAbi(buf []byte) error {
+	return decodeStruct(SignedBridgeMessageBatchABIType, buf, &s)
 }
 
 type CommitBatchBridgeStorageFn struct {
-	Batch     *BridgeMessageBatch `abi:"batch"`
-	Signature [2]*big.Int         `abi:"signature"`
-	Bitmap    []byte              `abi:"bitmap"`
+	Batch *SignedBridgeMessageBatch `abi:"batch"`
 }
 
 func (c *CommitBatchBridgeStorageFn) Sig() []byte {
@@ -2077,10 +2060,29 @@ func (i *InitializeGatewayFn) DecodeAbi(buf []byte) error {
 	return decodeMethod(Gateway.Abi.Methods["initialize"], buf, i)
 }
 
+type BridgeMessage struct {
+	ID                 *big.Int      `abi:"id"`
+	SourceChainID      *big.Int      `abi:"sourceChainId"`
+	DestinationChainID *big.Int      `abi:"destinationChainId"`
+	Sender             types.Address `abi:"sender"`
+	Receiver           types.Address `abi:"receiver"`
+	Payload            []byte        `abi:"payload"`
+}
+
+var BridgeMessageABIType = abi.MustNewType("tuple(uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload)")
+
+func (b *BridgeMessage) EncodeAbi() ([]byte, error) {
+	return BridgeMessageABIType.Encode(b)
+}
+
+func (b *BridgeMessage) DecodeAbi(buf []byte) error {
+	return decodeStruct(BridgeMessageABIType, buf, &b)
+}
+
 type ReceiveBatchGatewayFn struct {
-	Batch     *BridgeMessageBatch `abi:"batch"`
-	Signature [2]*big.Int         `abi:"signature"`
-	Bitmap    []byte              `abi:"bitmap"`
+	Batch     []*BridgeMessage `abi:"batch"`
+	Signature [2]*big.Int      `abi:"signature"`
+	Bitmap    []byte           `abi:"bitmap"`
 }
 
 func (r *ReceiveBatchGatewayFn) Sig() []byte {

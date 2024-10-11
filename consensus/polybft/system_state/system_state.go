@@ -186,8 +186,7 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 		})
 	}
 
-	bmb := &contractsapi.BridgeMessageBatch{}
-	bmb.Messages = bridgeMessages
+	bmb := &contractsapi.SignedBridgeMessageBatch{}
 
 	bmb.SourceChainID, ok = batch["sourceChainId"].(*big.Int)
 	if !ok {
@@ -199,7 +198,7 @@ func (s *SystemStateImpl) GetBridgeBatchByNumber(numberOfBatch *big.Int) (
 		return nil, decErr
 	}
 
-	sbmb.Batch = bmb
+	sbmb = bmb
 
 	return sbmb, nil
 }

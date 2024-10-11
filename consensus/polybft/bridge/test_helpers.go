@@ -27,7 +27,7 @@ func BuildBridgeBatchAndBridgeEvents(t *testing.T, bridgeMessageCount int,
 	blsKey, err := bls.GenerateBlsKey()
 	require.NoError(t, err)
 
-	data, err := pendingBridgeBatch.BridgeMessageBatch.EncodeAbi()
+	data, err := pendingBridgeBatch.BridgeBatch.EncodeAbi()
 	require.NoError(t, err)
 
 	signature, err := blsKey.Sign(data, TestDomain)
@@ -39,7 +39,7 @@ func BuildBridgeBatchAndBridgeEvents(t *testing.T, bridgeMessageCount int,
 	require.NoError(t, err)
 
 	bridgeBatchSigned := &BridgeBatchSigned{
-		MessageBatch: pendingBridgeBatch.BridgeMessageBatch,
+		BridgeBatch: pendingBridgeBatch.BridgeBatch,
 		AggSignature: polytypes.Signature{
 			AggregatedSignature: aggSig,
 			Bitmap:              []byte{},
@@ -70,20 +70,9 @@ func generateBridgeMessageEvents(t *testing.T, eventsCount int, startIdx uint64)
 func CreateTestBridgeBatchMessage(t *testing.T, numberOfMessages, firstIndex uint64) *BridgeBatchSigned {
 	t.Helper()
 
-	messages := make([]*contractsapi.BridgeMessage, numberOfMessages)
-
-	for i := firstIndex; i < firstIndex+numberOfMessages; i++ {
-		messages[i-firstIndex] = &contractsapi.BridgeMessage{
-			ID:                 new(big.Int).SetUint64(i),
-			SourceChainID:      big.NewInt(1),
-			DestinationChainID: big.NewInt(0),
-			Sender:             types.Address{},
-			Receiver:           types.Address{},
-			Payload:            []byte{}}
-	}
-
-	msg := contractsapi.BridgeMessageBatch{
-		Messages:           messages,
+	msg := contractsapi.BridgeBatch{
+		StartID:            big.NewInt(int64(firstIndex)),
+		EndID:              big.NewInt(int64(firstIndex + numberOfMessages)),
 		SourceChainID:      big.NewInt(1),
 		DestinationChainID: big.NewInt(0),
 	}
@@ -102,7 +91,7 @@ func CreateTestBridgeBatchMessage(t *testing.T, numberOfMessages, firstIndex uin
 	require.NoError(t, err)
 
 	return &BridgeBatchSigned{
-		MessageBatch: &msg,
+		BridgeBatch:  &msg,
 		AggSignature: polytypes.Signature{AggregatedSignature: aggSig},
 	}
 }

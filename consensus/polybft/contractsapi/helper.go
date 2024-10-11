@@ -26,6 +26,14 @@ type EventAbi interface {
 	ParseLog(log *ethgo.Log) (bool, error)
 }
 
+// StructAbi is an interface representing a structure in contractsapi
+type StructAbi interface {
+	// DecodeAbi does abi decoding of given structure/function
+	DecodeAbi(buf []byte) error
+	// EncodeAbi does abi encoding of given structure/function
+	EncodeAbi() ([]byte, error)
+}
+
 // FunctionAbi is an interface representing a function in contractsapi
 type FunctionAbi interface {
 	ABIEncoder
@@ -37,10 +45,9 @@ var (
 	// GetCheckpointBlockABIResponse is the ABI type for getCheckpointBlock function return value
 	GetCheckpointBlockABIResponse = abi.MustNewType("tuple(bool isFound, uint256 checkpointBlock)")
 
-	SignedBridgeMessageBatchABIType = abi.MustNewType(
-		"tuple(tuple(tuple(" +
-			"uint256 id,uint256 sourceChainId,uint256 destinationChainId,address sender,address receiver,bytes payload" +
-			")[] messages,uint256 sourceChainId,uint256 destinationChainId) batch,uint256[2] signature,bytes bitmap)")
+	BridgeBatchABIType = abi.MustNewType(
+		"tuple(bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId)")
+
 	SignedValidatorABIType = abi.MustNewType(
 		"tuple(tuple(address _address,uint256[4] blsKey,uint256 votingPower)[] newValidatorSet," +
 			"uint256[2] signature, bytes bitmap)")
@@ -51,18 +58,20 @@ var (
 	_ ABIEncoder = &DistributeRewardForEpochManagerFn{}
 )
 
-type SignedBridgeMessageBatch struct {
-	Batch     *BridgeMessageBatch `abi:"batch"`
-	Signature [2]*big.Int         `abi:"signature"`
-	Bitmap    []byte              `abi:"bitmap"`
+type BridgeBatch struct {
+	RootHash           types.Hash `abi:"rootHash"`
+	StartID            *big.Int   `abi:"startId"`
+	EndID              *big.Int   `abi:"endId"`
+	SourceChainID      *big.Int   `abi:"sourceChainId"`
+	DestinationChainID *big.Int   `abi:"destinationChainId"`
 }
 
-func (s *SignedBridgeMessageBatch) EncodeAbi() ([]byte, error) {
-	return SignedBridgeMessageBatchABIType.Encode(s)
+func (b *BridgeBatch) EncodeAbi() ([]byte, error) {
+	return BridgeBatchABIType.Encode(b)
 }
 
-func (s *SignedBridgeMessageBatch) DecodeAbi(buf []byte) error {
-	return decodeStruct(SignedBridgeMessageBatchABIType, buf, &s)
+func (b *BridgeBatch) DecodeAbi(buf []byte) error {
+	return decodeStruct(BridgeBatchABIType, buf, &b)
 }
 
 type SignedValidatorSet struct {

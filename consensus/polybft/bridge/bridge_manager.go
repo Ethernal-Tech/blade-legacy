@@ -341,15 +341,14 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 	for i := len(b.pendingBridgeBatches) - 1; i >= 0; i-- {
 		pendingBatch := b.pendingBridgeBatches[i]
 		aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, pendingBatch)
-		numberOfMessages := len(pendingBatch.Messages)
 
 		if err != nil {
 			if errors.Is(err, errQuorumNotReached) {
 				// a valid case, batch has no quorum, we should not return an error
-				if numberOfMessages > 0 {
+				if pendingBatch.BridgeBatch.EndID.Uint64()-pendingBatch.BridgeBatch.StartID.Uint64() > 0 {
 					b.logger.Debug("can not submit a batch, quorum not reached",
-						"from", pendingBatch.BridgeMessageBatch.Messages[0].ID.Uint64(),
-						"to", pendingBatch.BridgeMessageBatch.Messages[numberOfMessages-1].ID.Uint64())
+						"from", pendingBatch.BridgeBatch.StartID.Uint64(),
+						"to", pendingBatch.BridgeBatch.EndID.Uint64())
 				}
 
 				continue
@@ -359,7 +358,7 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 		}
 
 		largestBridgeBatch = &BridgeBatchSigned{
-			MessageBatch: pendingBatch.BridgeMessageBatch,
+			BridgeBatch:  pendingBatch.BridgeBatch,
 			AggSignature: aggregatedSignature,
 		}
 
@@ -391,7 +390,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 	votes, err := b.state.getMessageVotes(
 		pendingBridgeBatch.Epoch,
 		bridgeBatchHash.Bytes(),
-		pendingBridgeBatch.SourceChainID.Uint64())
+		pendingBridgeBatch.BridgeBatch.SourceChainID.Uint64())
 	if err != nil {
 		return polytypes.Signature{}, err
 	}
@@ -532,7 +531,7 @@ func (b *bridgeEventManager) buildBridgeBatch(
 
 	if len(b.pendingBridgeBatches) > 0 &&
 		b.pendingBridgeBatches[len(b.pendingBridgeBatches)-1].
-			BridgeMessageBatch.Messages[0].ID.
+			BridgeBatch.StartID.
 			Cmp(bridgeMessageEvents[len(bridgeMessageEvents)-1].ID) >= 0 {
 		// already built a bridge batch of this size which is pending to be submitted
 		b.lock.RUnlock()
@@ -588,12 +587,11 @@ func (b *bridgeEventManager) buildBridgeBatch(
 		DestinationChainID: destinationChainID,
 	})
 
-	numberOfMessages := len(pendingBridgeBatch.BridgeMessageBatch.Messages)
-	if numberOfMessages > 0 {
+	if pendingBridgeBatch.BridgeBatch.EndID.Uint64()-pendingBridgeBatch.BridgeBatch.StartID.Uint64() > 0 {
 		b.logger.Debug(
 			"[buildBridgeBatch] build batch",
-			"from", pendingBridgeBatch.BridgeMessageBatch.Messages[0].ID.Uint64(),
-			"to", pendingBridgeBatch.BridgeMessageBatch.Messages[numberOfMessages-1].ID.Uint64(),
+			"from", pendingBridgeBatch.BridgeBatch.StartID.Uint64(),
+			"to", pendingBridgeBatch.BridgeBatch.EndID.Uint64(),
 		)
 	}
 

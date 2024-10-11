@@ -12,10 +12,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type method interface {
+	EncodeAbi() ([]byte, error)
+	DecodeAbi(buf []byte) error
+}
+
 func TestEncoding_Method(t *testing.T) {
 	t.Parallel()
 
-	cases := []ABIEncoder{
+	cases := []method{
 		// empty commit epoch
 		&CommitEpochEpochManagerFn{
 			ID: big.NewInt(1),
@@ -33,7 +38,7 @@ func TestEncoding_Method(t *testing.T) {
 
 		// use reflection to create another type and decode
 		val := reflect.New(reflect.TypeOf(c).Elem()).Interface()
-		obj, ok := val.(ABIEncoder)
+		obj, ok := val.(method)
 		require.True(t, ok)
 
 		err = obj.DecodeAbi(res)
@@ -45,16 +50,19 @@ func TestEncoding_Method(t *testing.T) {
 func TestEncoding_Struct(t *testing.T) {
 	t.Parallel()
 
-	bridgeBatch := BridgeMessageBatch{
-		Messages:           []*BridgeMessage{},
+	bridgeBatch := SignedBridgeMessageBatch{
+		RootHash:           types.ZeroHash,
+		StartID:            big.NewInt(25),
+		EndID:              big.NewInt(35),
 		SourceChainID:      big.NewInt(1),
 		DestinationChainID: big.NewInt(0),
+		Signature:          [2]*big.Int{big.NewInt(1), big.NewInt(2)},
 	}
 
 	encoding, err := bridgeBatch.EncodeAbi()
 	require.NoError(t, err)
 
-	var bridgeBatchDecoded BridgeMessageBatch
+	var bridgeBatchDecoded SignedBridgeMessageBatch
 
 	require.NoError(t, bridgeBatchDecoded.DecodeAbi(encoding))
 	require.Equal(t, bridgeBatch.SourceChainID, bridgeBatchDecoded.SourceChainID)

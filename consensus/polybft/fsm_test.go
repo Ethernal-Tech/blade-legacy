@@ -1451,9 +1451,7 @@ func TestFSM_DecodeBridgeBatchStateTxs(t *testing.T) {
 	decodedBridgeBatchMsg, ok := decodedData.(*bridge.BridgeBatchSigned)
 	require.True(t, ok)
 
-	numberOfMessages := len(signedBridgeBatch.MessageBatch.Messages)
-
-	require.Equal(t, signedBridgeBatch.MessageBatch.Messages[numberOfMessages-1].ID, decodedBridgeBatchMsg.MessageBatch.Messages[numberOfMessages-1].ID)
+	require.Equal(t, signedBridgeBatch.BridgeBatch.EndID, decodedBridgeBatchMsg.BridgeBatch.EndID)
 	require.Equal(t, signedBridgeBatch.AggSignature, decodedBridgeBatchMsg.AggSignature)
 }
 
@@ -1621,7 +1619,7 @@ func createTestBridgeBatch(t *testing.T, accounts []*wallet.Account) *bridge.Bri
 	assert.NoError(t, err)
 
 	return &bridge.BridgeBatchSigned{
-		MessageBatch: newPendingBridgeBatch.BridgeMessageBatch,
+		BridgeBatch:  newPendingBridgeBatch.BridgeBatch,
 		AggSignature: signature,
 	}
 }
