@@ -21,7 +21,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-const newRewardLookbackSize = uint64(1)
+const rewardLookbackSize = uint64(1)
 
 var (
 	errUnknownGovernanceEvent = errors.New("unknown event from governance")
@@ -32,11 +32,6 @@ var (
 // should happen in given block
 func isRewardDistributionBlock(isFirstBlockOfEpoch bool, pendingBlockNumber uint64) bool {
 	return isFirstBlockOfEpoch && pendingBlockNumber > 1
-}
-
-// getLookbackSizeForRewardDistribution returns lookback size for reward distribution
-func getLookbackSizeForRewardDistribution() uint64 {
-	return newRewardLookbackSize
 }
 
 // GovernanceManager interface provides functions for handling governance events

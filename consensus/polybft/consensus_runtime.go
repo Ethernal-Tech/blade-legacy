@@ -658,12 +658,10 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 		}
 	}
 
-	lookbackSize := getLookbackSizeForRewardDistribution()
-
 	// calculate uptime for blocks from previous epoch that were not processed in previous uptime
 	// since we can not calculate uptime for the last block in epoch (because of parent signatures)
-	if blockHeader.Number > lookbackSize {
-		for i := uint64(0); i < lookbackSize; i++ {
+	if blockHeader.Number > rewardLookbackSize {
+		for i := uint64(0); i < rewardLookbackSize; i++ {
 			validators, err := c.config.polybftBackend.GetValidators(blockHeader.Number-2, nil)
 			if err != nil {
 				return nil, err
