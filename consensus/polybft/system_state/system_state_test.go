@@ -160,7 +160,7 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
 	}, sbmb)
 }
 
-func Test_Temporary(t *testing.T) {
+func TestSystemState_EncodeAndDecodeStructWithDinamicValues(t *testing.T) {
 	t.Parallel()
 
 	svs := &contractsapi.SignedValidatorSet{
@@ -187,7 +187,6 @@ func Test_Temporary(t *testing.T) {
 
 	rawSvs, err := svs.EncodeAbi()
 	require.NoError(t, err)
-	t.Log(rawSvs)
 
 	tmp := &contractsapi.SignedValidatorSet{}
 	require.NoError(t, tmp.DecodeAbi(rawSvs))
