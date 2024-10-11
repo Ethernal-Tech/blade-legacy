@@ -21,10 +21,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/types"
 )
 
-const (
-	oldRewardLookbackSize = uint64(2) // number of blocks to calculate commit epoch info from the previous epoch
-	newRewardLookbackSize = uint64(1)
-)
+const newRewardLookbackSize = uint64(1)
 
 var (
 	errUnknownGovernanceEvent = errors.New("unknown event from governance")
@@ -33,26 +30,13 @@ var (
 
 // isRewardDistributionBlock indicates if reward distribution transaction
 // should happen in given block
-// if governance fork is enabled, reward distribution is only present on the first block of epoch
-// and if we are not at the start of chain
-// if governance fork is not enabled, reward distribution is only present at the epoch ending block
-func isRewardDistributionBlock(forks *chain.Forks, isFirstBlockOfEpoch, isEndOfEpoch bool,
-	pendingBlockNumber uint64) bool {
-	if forks.IsActive(chain.Governance, pendingBlockNumber) {
-		return isFirstBlockOfEpoch && pendingBlockNumber > 1
-	}
-
-	return isEndOfEpoch
+func isRewardDistributionBlock(isFirstBlockOfEpoch bool, pendingBlockNumber uint64) bool {
+	return isFirstBlockOfEpoch && pendingBlockNumber > 1
 }
 
 // getLookbackSizeForRewardDistribution returns lookback size for reward distribution
-// based on if governance fork is enabled or not
-func getLookbackSizeForRewardDistribution(forks *chain.Forks, blockNumber uint64) uint64 {
-	if forks.IsActive(chain.Governance, blockNumber) {
-		return newRewardLookbackSize
-	}
-
-	return oldRewardLookbackSize
+func getLookbackSizeForRewardDistribution() uint64 {
+	return newRewardLookbackSize
 }
 
 // GovernanceManager interface provides functions for handling governance events

@@ -607,7 +607,7 @@ func TestConsensusRuntime_calculateCommitEpochInput_SecondEpoch(t *testing.T) {
 	}
 
 	distributeRewardsInput, err := consensusRuntime.calculateDistributeRewardsInput(
-		true, false,
+		true,
 		lastBuiltBlock.Number+1,
 		lastBuiltBlock, consensusRuntime.epoch.Number)
 	assert.NoError(t, err)

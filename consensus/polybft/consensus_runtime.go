@@ -460,7 +460,7 @@ func (c *consensusRuntime) FSM() error {
 		}
 	}
 
-	ff.distributeRewardsInput, err = c.calculateDistributeRewardsInput(isFirstBlockOfEpoch, isEndOfEpoch,
+	ff.distributeRewardsInput, err = c.calculateDistributeRewardsInput(isFirstBlockOfEpoch,
 		pendingBlockNumber, parent, epoch.Number)
 	if err != nil {
 		return fmt.Errorf("cannot calculate uptime info: %w", err)
@@ -587,12 +587,12 @@ func createCommitEpochInput(
 
 // calculateDistributeRewardsInput calculates distribute rewards input data
 func (c *consensusRuntime) calculateDistributeRewardsInput(
-	isFirstBlockOfEpoch, isEndOfEpoch bool,
+	isFirstBlockOfEpoch bool,
 	pendingBlockNumber uint64,
 	lastFinalizedBlock *types.Header,
 	epochID uint64,
 ) (*contractsapi.DistributeRewardForEpochManagerFn, error) {
-	if !isRewardDistributionBlock(c.config.Forks, isFirstBlockOfEpoch, isEndOfEpoch, pendingBlockNumber) {
+	if !isRewardDistributionBlock(isFirstBlockOfEpoch, pendingBlockNumber) {
 		// we don't have to distribute rewards at this block
 		return nil, nil
 	}
@@ -658,7 +658,7 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 		}
 	}
 
-	lookbackSize := getLookbackSizeForRewardDistribution(c.config.Forks, pendingBlockNumber)
+	lookbackSize := getLookbackSizeForRewardDistribution()
 
 	// calculate uptime for blocks from previous epoch that were not processed in previous uptime
 	// since we can not calculate uptime for the last block in epoch (because of parent signatures)
