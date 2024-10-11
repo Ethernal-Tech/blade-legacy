@@ -162,9 +162,9 @@ func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 	return nil
 }
 
-// createMerkleTree creates a merkle tree from provided state sync events
-// if only one state sync event is provided, a second, empty leaf will be added to merkle tree
-// so that we can have a commitment with a single state sync event
+// createMerkleTree creates a merkle tree from provided bridge messages
+// if only one bridge message is provided, a second, empty leaf will be added to merkle tree
+// so that we can have a batch with a single bridge message event
 func createMerkleTree(bridgeMessages []*contractsapi.BridgeMessage) (*merkle.MerkleTree, error) {
 	stateSyncData := make([][]byte, len(bridgeMessages))
 
