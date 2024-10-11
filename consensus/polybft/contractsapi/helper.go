@@ -45,7 +45,8 @@ var (
 	// GetCheckpointBlockABIResponse is the ABI type for getCheckpointBlock function return value
 	GetCheckpointBlockABIResponse = abi.MustNewType("tuple(bool isFound, uint256 checkpointBlock)")
 
-	BridgeBatchABIType = abi.MustNewType("tuple(bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId)")
+	BridgeBatchABIType = abi.MustNewType(
+		"tuple(bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId)")
 
 	SignedValidatorABIType = abi.MustNewType(
 		"tuple(tuple(address _address,uint256[4] blsKey,uint256 votingPower)[] newValidatorSet," +

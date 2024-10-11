@@ -142,7 +142,8 @@ func (ber *bridgeEventRelayerImpl) sendBridgeMessageBatch(event *contractsapi.Si
 		to = ber.bridgeConfig[destinationChainID].ExternalGatewayAddr
 	}
 
-	events, err := ber.state.getBridgeMessageEventsForBridgeBatch(event.StartID.Uint64(), event.EndID.Uint64(), nil, sourceChainID, destinationChainID)
+	events, err := ber.state.getBridgeMessageEventsForBridgeBatch(
+		event.StartID.Uint64(), event.EndID.Uint64(), nil, sourceChainID, destinationChainID)
 	if err != nil {
 		return err
 	}
