@@ -636,21 +636,25 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 			p.logger.Debug("dynamic tx is undepriced because no fee cap or tip cap is set",
 				"baseFee", baseFee,
 				"priceLimit", p.priceLimit)
+
 			return ErrUnderpriced
 		}
 
 		if tx.GasFeeCap().BitLen() > 256 {
 			metrics.IncrCounter([]string{txPoolMetrics, "fee_cap_too_high_dynamic_tx"}, 1)
+
 			return ErrFeeCapVeryHigh
 		}
 
 		if tx.GasTipCap().BitLen() > 256 {
 			metrics.IncrCounter([]string{txPoolMetrics, "tip_too_high_dynamic_tx"}, 1)
+
 			return ErrTipVeryHigh
 		}
 
 		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "tip_above_fee_cap_dynamic_tx"}, 1)
+
 			return ErrTipAboveFeeCap
 		}
 
@@ -661,6 +665,7 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 				"gasFeeCap", tx.GasFeeCap().String(),
 				"baseFee", baseFee,
 				"priceLimit", p.priceLimit)
+
 			return ErrUnderpriced
 		}
 
@@ -672,6 +677,7 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 				"gasPrice", tx.GasPrice().String(),
 				"baseFee", baseFee,
 				"priceLimit", p.priceLimit)
+
 			return ErrUnderpriced
 		}
 	}
