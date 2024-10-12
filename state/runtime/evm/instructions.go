@@ -40,7 +40,7 @@ var bufPool = sync.Pool{
 	},
 }
 
-func min(i, j uint64) uint64 {
+func less(i, j uint64) uint64 {
 	if i < j {
 		return i
 	}
@@ -735,9 +735,9 @@ func (c *state) setBytes(dst, input []byte, size uint64, dataOffset uint256.Int)
 	}
 
 	inputSize := uint64(len(input))
-	begin := min(dataOffset.Uint64(), inputSize)
+	begin := less(dataOffset.Uint64(), inputSize)
 
-	copySize := min(size, inputSize-begin)
+	copySize := less(size, inputSize-begin)
 	if copySize > 0 {
 		copy(dst, input[begin:begin+copySize])
 	}

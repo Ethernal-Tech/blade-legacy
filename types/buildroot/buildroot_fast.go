@@ -7,14 +7,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
 )
 
-func min(i, j int) int {
-	if i < j {
-		return i
-	}
-
-	return j
-}
-
 var fastHasherPool sync.Pool
 
 func acquireFastHasher() *FastHasher {
