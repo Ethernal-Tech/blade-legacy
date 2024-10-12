@@ -42,6 +42,9 @@ linters-settings:
     settings:
       ruleguard:
         rules: "./gorules/rules.go"
+  gosec:
+     excludes:
+      - G115  # Potential integer overflow when converting between integer types
 
 issues:
   exclude-dirs:
