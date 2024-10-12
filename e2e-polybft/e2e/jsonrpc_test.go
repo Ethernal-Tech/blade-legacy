@@ -542,7 +542,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		setValueFn := contractsapi.TestSimple.Abi.GetMethod("setValue")
 
 		newVal := big.NewInt(1)
-
 		input, err := setValueFn.Encode([]interface{}{newVal})
 		require.NoError(t, err)
 
@@ -552,7 +551,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 		storageRangeAt, err = ethClient.StorageRangeAt(types.Hash(txn.Receipt().BlockHash), 0, target, []byte{}, 10)
 		require.NoError(t, err)
 		require.Len(t, storageRangeAt.Storage, 1)
-
 	})
 }
 

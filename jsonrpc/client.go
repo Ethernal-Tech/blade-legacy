@@ -333,7 +333,8 @@ func (e *EthClient) StorageRangeAt(blockHash types.Hash, txIndex int, contractAd
 	keyStart []byte, maxResult int) (state.StorageRangeResult, error) {
 	var out state.StorageRangeResult
 
-	if err := e.client.Call("debug_storageRangeAt", &out, blockHash, txIndex, contractAddress, keyStart, maxResult); err != nil {
+	if err := e.client.Call("debug_storageRangeAt", &out, blockHash, txIndex, contractAddress,
+		keyStart, maxResult); err != nil {
 		return state.StorageRangeResult{}, err
 	}
 
