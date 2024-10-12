@@ -677,6 +677,7 @@ func (p *Polybft) startConsensusProtocol() {
 		case <-sequenceCh:
 		case <-p.closeCh:
 			p.logger.Debug("stoping sequence", "block number", latestHeader.Number+1)
+
 			if isValidator {
 				stopSequence()
 			}
@@ -772,6 +773,7 @@ func (p *Polybft) SetBlockTime(blockTime time.Duration) {
 	// if block time is greater than default base round timeout,
 	// set base round timeout as twice the block time
 	syncerBlockTimeout := blockTime * 10
+
 	if blockTime >= core.DefaultBaseRoundTimeout {
 		p.ibft.SetBaseRoundTimeout(blockTime * baseRoundTimeoutScaleFactor)
 		syncerBlockTimeout *= baseRoundTimeoutScaleFactor

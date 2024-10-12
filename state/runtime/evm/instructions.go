@@ -397,7 +397,8 @@ func opSload(c *state) {
 
 	var gas uint64
 
-	if c.config.Berlin {
+	switch {
+	case c.config.Berlin:
 		storageKey := uint256ToHash(loc)
 		if _, slotPresent := c.host.ContainsAccessListSlot(c.msg.Address, storageKey); !slotPresent {
 			gas = ColdStorageReadCostEIP2929
@@ -406,12 +407,12 @@ func opSload(c *state) {
 		} else {
 			gas = WarmStorageReadCostEIP2929
 		}
-	} else if c.config.Istanbul {
+	case c.config.Istanbul:
 		// eip-1884
 		gas = 800
-	} else if c.config.EIP150 {
+	case c.config.EIP150:
 		gas = 200
-	} else {
+	default:
 		gas = 50
 	}
 
@@ -537,14 +538,16 @@ func opBalance(c *state) {
 	addr, _ := c.popAddr()
 
 	var gas uint64
-	if c.config.Berlin {
+
+	switch {
+	case c.config.Berlin:
 		gas = c.calculateGasForEIP2929(addr)
-	} else if c.config.Istanbul {
+	case c.config.Istanbul:
 		// eip-1884
 		gas = 700
-	} else if c.config.EIP150 {
+	case c.config.EIP150:
 		gas = 400
-	} else {
+	default:
 		gas = 20
 	}
 
@@ -1043,7 +1046,7 @@ func opSwap(n int) instruction {
 }
 
 func opLog(size int) instruction {
-	size = size - 1
+	size--
 
 	return func(c *state) {
 		if c.inStaticCall() {
@@ -1062,6 +1065,7 @@ func opLog(size int) instruction {
 		mSize := c.pop()
 
 		topics := make([]types.Hash, size)
+
 		for i := 0; i < size; i++ {
 			v := c.pop()
 			topics[i] = uint256ToHash(&v)
@@ -1294,7 +1298,7 @@ func (c *state) buildCallContract(op OpCode) (*runtime.Contract, uint64, uint64,
 
 	if c.config.EIP150 {
 		availableGas := c.gas - gasCost
-		availableGas = availableGas - availableGas/64
+		availableGas -= availableGas / 64
 
 		if !ok || availableGas < initialGas.Uint64() {
 			gas = availableGas
@@ -1307,6 +1311,7 @@ func (c *state) buildCallContract(op OpCode) (*runtime.Contract, uint64, uint64,
 
 			return nil, 0, 0, nil
 		}
+
 		gas = initialGas.Uint64()
 	}
 

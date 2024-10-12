@@ -507,7 +507,7 @@ func TestExtra_InitGenesisValidatorsDelta(t *testing.T) {
 
 		for _, val := range vals.Validators {
 			delta.Added[i] = &validator.ValidatorMetadata{
-				Address:     types.Address(val.Account.Ecdsa.Address()),
+				Address:     val.Account.Ecdsa.Address(),
 				BlsKey:      val.Account.Bls.PublicKey(),
 				VotingPower: new(big.Int).SetUint64(val.VotingPower),
 			}
@@ -579,7 +579,6 @@ func Test_GetIbftExtraClean(t *testing.T) {
 
 	extraTwo := &Extra{}
 	require.NoError(t, extraTwo.UnmarshalRLP(extraClean))
-	require.True(t, extra.Validators.Equals(extra.Validators))
 	require.Equal(t, extra.Checkpoint.BlockRound, extraTwo.Checkpoint.BlockRound)
 	require.Equal(t, extra.Checkpoint.EpochNumber, extraTwo.Checkpoint.EpochNumber)
 	require.Equal(t, extra.Checkpoint.CurrentValidatorsHash, extraTwo.Checkpoint.CurrentValidatorsHash)

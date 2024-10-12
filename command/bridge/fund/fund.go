@@ -147,7 +147,7 @@ func runCommand(cmd *cobra.Command, _ []string) {
 				}
 
 				results[i] = &result{
-					ValidatorAddr: types.Address(fundAddr),
+					ValidatorAddr: fundAddr,
 					TxHash:        types.Hash(receipt.TransactionHash),
 				}
 			}

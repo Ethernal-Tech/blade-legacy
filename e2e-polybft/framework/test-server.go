@@ -142,7 +142,7 @@ func NewTestServer(t *testing.T, clusterConfig *TestClusterConfig,
 	srv := &TestServer{
 		t:             t,
 		clusterConfig: clusterConfig,
-		address:       types.Address(key.Address()),
+		address:       key.Address(),
 		config:        config,
 	}
 	srv.Start()

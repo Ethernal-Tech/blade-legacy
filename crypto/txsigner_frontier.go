@@ -49,7 +49,7 @@ func (signer *FrontierSigner) Hash(tx *types.Transaction) types.Hash {
 		hashPreimage.Set(RLP.NewNull())
 	} else {
 		// RLP(nonce, gasPrice, gas, to, -, -)
-		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
+		hashPreimage.Set(RLP.NewCopyBytes(tx.To().Bytes()))
 	}
 
 	// RLP(nonce, gasPrice, gas, to, value, -)
@@ -114,7 +114,7 @@ func (signer *FrontierSigner) signTxInternal(tx *types.Transaction,
 	return tx, nil
 }
 
-func (f *FrontierSigner) SignTxWithCallback(
+func (signer *FrontierSigner) SignTxWithCallback(
 	tx *types.Transaction,
 	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
@@ -122,14 +122,14 @@ func (f *FrontierSigner) SignTxWithCallback(
 	}
 
 	tx = tx.Copy()
-	h := f.Hash(tx)
+	h := signer.Hash(tx)
 
 	signature, err := signFn(h)
 	if err != nil {
 		return nil, err
 	}
 
-	tx.SplitToRawSignatureValues(signature, f.calculateV(signature[64]))
+	tx.SplitToRawSignatureValues(signature, signer.calculateV(signature[64]))
 
 	return tx, nil
 }

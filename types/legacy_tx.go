@@ -172,7 +172,7 @@ func (tx *LegacyTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	return vv
 }
 
-func (tx *LegacyTx) copy() TxData { //nolint:dupl
+func (tx *LegacyTx) copy() TxData {
 	cpy := NewLegacyTx()
 
 	if tx.gasPrice() != nil {

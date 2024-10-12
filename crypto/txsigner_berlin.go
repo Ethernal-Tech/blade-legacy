@@ -60,7 +60,7 @@ func (signer *BerlinSigner) Hash(tx *types.Transaction) types.Hash {
 		hashPreimage.Set(RLP.NewNull())
 	} else {
 		// RLP(chainId, nonce, gasPrice, gas, to, -, -, -)
-		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
+		hashPreimage.Set(RLP.NewCopyBytes(tx.To().Bytes()))
 	}
 
 	// RLP(chainId, nonce, gasPrice, gas, to, value, -, -)

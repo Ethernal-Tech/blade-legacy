@@ -141,7 +141,7 @@ func (m *memStorage) Put(p []byte, v []byte) error {
 	defer m.l.Unlock()
 
 	buf := make([]byte, len(v))
-	copy(buf[:], v[:])
+	copy(buf, v)
 	m.db[hex.EncodeToHex(p)] = buf
 
 	return nil
@@ -194,7 +194,7 @@ func (m *memBatch) Put(p, v []byte) {
 	defer m.l.Unlock()
 
 	buf := make([]byte, len(v))
-	copy(buf[:], v[:])
+	copy(buf, v)
 	(*m.db)[hex.EncodeToHex(p)] = buf
 }
 

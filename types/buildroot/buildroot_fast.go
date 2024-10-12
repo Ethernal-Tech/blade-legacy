@@ -291,7 +291,7 @@ func (f *FastHasher) marshalRlpSize(dst []byte, size uint64, short, long byte) [
 	buf := make([]byte, 8)
 	intSize := intsize(size)
 
-	binary.BigEndian.PutUint64(buf[:], size)
+	binary.BigEndian.PutUint64(buf, size)
 
 	dst = append(dst, long+byte(intSize))
 	dst = append(dst, buf[8-intSize:]...)

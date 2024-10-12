@@ -401,7 +401,7 @@ func (c *consensusRuntime) FSM() error {
 
 	blockBuilder, err := c.config.blockchain.NewBlockBuilder(
 		parent,
-		types.Address(c.config.Key.Address()),
+		c.config.Key.Address(),
 		c.config.txPool,
 		epoch.CurrentClientConfig.BlockTime.Duration,
 		c.logger,
@@ -1014,6 +1014,7 @@ func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.V
 // RoundStarts represents the round start callback
 func (c *consensusRuntime) RoundStarts(view *proto.View) error {
 	c.logger.Info("RoundStarts", "height", view.Height, "round", view.Round)
+
 	if view.Round > 0 {
 		c.config.txPool.ReinsertProposed()
 	} else {

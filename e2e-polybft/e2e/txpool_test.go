@@ -25,7 +25,7 @@ func TestE2E_TxPool_Transfer(t *testing.T) {
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithPremine(types.Address(sender.Address())),
+		framework.WithPremine(sender.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 	)
 	defer cluster.Stop()
@@ -111,7 +111,7 @@ func TestE2E_TxPool_Transfer_Linear(t *testing.T) {
 
 	// first account should have some matics premined
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithPremine(types.Address(premine.Address())),
+		framework.WithPremine(premine.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 	)
 	defer cluster.Stop()
@@ -201,7 +201,7 @@ func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
 	require.NoError(t, err)
 
 	cluster := framework.NewTestCluster(t, 4,
-		framework.WithPremine(types.Address(sidechainKey.Address())),
+		framework.WithPremine(sidechainKey.Address()),
 	)
 	defer cluster.Stop()
 
@@ -218,7 +218,8 @@ func TestE2E_TxPool_TransactionWithHeaderInstructions(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
-	receipt, err = ABITransaction(relayer, sidechainKey, contractsapi.TestWriteBlockMetadata, types.Address(receipt.ContractAddress), "init", []interface{}{})
+	receipt, err = ABITransaction(relayer, sidechainKey, contractsapi.TestWriteBlockMetadata,
+		types.Address(receipt.ContractAddress), "init", []interface{}{})
 	require.NoError(t, err)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
@@ -250,7 +251,7 @@ func TestE2E_TxPool_BroadcastTransactions(t *testing.T) {
 
 	// First account should have some matics premined
 	cluster := framework.NewTestCluster(t, 5,
-		framework.WithPremine(types.Address(sender.Address())),
+		framework.WithPremine(sender.Address()),
 		framework.WithBurnContract(&polybft.BurnContractInfo{BlockNumber: 0, Address: types.ZeroAddress}),
 	)
 	defer cluster.Stop()
@@ -330,7 +331,6 @@ func sendTransaction(t *testing.T, client *jsonrpc.EthClient, sender crypto.Key,
 	require.NoError(t, err)
 
 	txnRlp := signedTxn.MarshalRLPTo(nil)
-	require.NoError(t, err)
 
 	_, err = client.SendRawTransaction(txnRlp)
 	require.NoError(t, err)

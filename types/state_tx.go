@@ -188,7 +188,7 @@ func (tx *StateTx) marshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 	return vv
 }
 
-func (tx *StateTx) copy() TxData { //nolint:dupl
+func (tx *StateTx) copy() TxData {
 	cpy := NewStateTx()
 
 	if tx.gasPrice() != nil {

@@ -162,7 +162,7 @@ func TestPolybft_VerifyHeader(t *testing.T) {
 			NextValidatorsHash:    types.StringToHash("Bar"),
 		}, nil)
 
-	currentHeader.Hash[0] = currentHeader.Hash[0] + 1
+	currentHeader.Hash[0]++
 	assert.ErrorContains(t, polybft.VerifyHeader(currentHeader), "invalid header hash")
 
 	// omit Parent field (parent signature) intentionally

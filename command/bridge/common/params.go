@@ -93,7 +93,6 @@ func (p *BridgeParams) RegisterCommonFlags(cmd *cobra.Command) {
 		txrelayer.DefaultTimeoutTransactions,
 		cmdHelper.TxTimeoutDesc,
 	)
-
 }
 
 func (p *BridgeParams) Validate() error {
@@ -295,7 +294,7 @@ func (r *BridgeTxResult) GetOutput() string {
 	}
 
 	if r.ChildTokenAddr != nil {
-		vals = append(vals, fmt.Sprintf("Child Token Address|%s", (*r.ChildTokenAddr).String()))
+		vals = append(vals, fmt.Sprintf("Child Token Address|%s", r.ChildTokenAddr.String()))
 	}
 
 	_, _ = buffer.WriteString(fmt.Sprintf("\n[%s]\n", r.Title))

@@ -367,21 +367,25 @@ func (txn *Txn) SetStorage(
 	if original == value {
 		if original == types.ZeroHash { // reset to original nonexistent slot (2.2.2.1)
 			// Storage was used as memory (allocation and deallocation occurred within the same contract)
-			if config.Berlin {
+			switch {
+			case config.Berlin:
 				// Refund: SstoreSetGasEIP2200 - WarmStorageReadCostEIP2929
 				txn.AddRefund(19900)
-			} else if config.Istanbul {
+			case config.Istanbul:
 				txn.AddRefund(19200)
-			} else {
+			default:
 				txn.AddRefund(19800)
 			}
 		} else { // reset to original existing slot (2.2.2.2)
-			if config.Berlin {
+			switch {
+			case config.Berlin:
 				// Refund: SstoreResetGasEIP2200 - ColdStorageReadCostEIP2929 - WarmStorageReadCostEIP2929
 				txn.AddRefund(2800)
-			} else if config.Istanbul {
+
+			case config.Istanbul:
 				txn.AddRefund(4200)
-			} else {
+
+			default:
 				txn.AddRefund(4800)
 			}
 		}
@@ -724,21 +728,19 @@ func (txn *Txn) Commit(deleteEmptyObjects bool) ([]*Object, error) {
 		}
 		if a.Deleted {
 			obj.Deleted = true
-		} else {
-			if a.Txn != nil {
-				a.Txn.Root().Walk(func(k []byte, v interface{}) bool {
-					store := &StorageObject{Key: k}
-					if v == nil {
-						store.Deleted = true
-					} else {
-						store.Val = v.([]byte) //nolint:forcetypeassert
-					}
+		} else if a.Txn != nil {
+			a.Txn.Root().Walk(func(k []byte, v interface{}) bool {
+				store := &StorageObject{Key: k}
+				if v == nil {
+					store.Deleted = true
+				} else {
+					store.Val = v.([]byte) //nolint:forcetypeassert
+				}
 
-					obj.Storage = append(obj.Storage, store)
+				obj.Storage = append(obj.Storage, store)
 
-					return false
-				})
-			}
+				return false
+			})
 		}
 
 		objs = append(objs, obj)

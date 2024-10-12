@@ -17,6 +17,7 @@ func TestThrottling(t *testing.T) {
 	const maxRequests = 5
 
 	var requests atomic.Int32
+
 	var attempts = []struct {
 		duration time.Duration
 		delay    time.Duration
@@ -56,6 +57,7 @@ func TestThrottling(t *testing.T) {
 			if requests.Add(1) > maxRequests {
 				isError = true
 			}
+
 			res, err := th.AttemptRequest(context.Background(), sfn(value, duration))
 
 			requests.Add(-1)

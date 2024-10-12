@@ -41,6 +41,7 @@ func TestContentEndpoint(t *testing.T) {
 
 		result, err := txPoolEndpoint.Content()
 		require.NoError(t, err)
+
 		response := result.(ContentResponse)
 
 		assert.Equal(t, 1, len(response.Pending))

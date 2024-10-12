@@ -32,7 +32,7 @@ func TestE2E_Migration(t *testing.T) {
 	initialBalance := ethgo.Ether(10)
 	srvs := framework.NewTestServers(t, 1, func(config *framework.TestServerConfig) {
 		config.SetConsensus(framework.ConsensusDev)
-		config.Premine(types.Address(userAddr), initialBalance)
+		config.Premine(userAddr, initialBalance)
 	})
 
 	srv := srvs[0]
@@ -86,7 +86,7 @@ func TestE2E_Migration(t *testing.T) {
 	require.NotNil(t, receipt)
 	require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
-	deployedContractBalance := receipt.ContractAddress
+	deployedContractAddr := receipt.ContractAddress
 
 	initReceipt, err := ABITransaction(relayer, userKey, contractsapi.TestWriteBlockMetadata, types.Address(receipt.ContractAddress), "init")
 	if err != nil {
@@ -112,7 +112,7 @@ func TestE2E_Migration(t *testing.T) {
 
 	path := filepath.Join(srvs[0].Config.RootDir, "trie")
 	srvs[0].Stop()
-	//hack for db closing. leveldb allow only one connection
+	// hack for db closing. leveldb allow only one connection
 	time.Sleep(time.Second)
 
 	tmpDir := t.TempDir()
@@ -140,7 +140,7 @@ func TestE2E_Migration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	require.Equal(t, types.Hash(stateRoot), copiedStateRoot)
+	require.Equal(t, stateRoot, copiedStateRoot)
 
 	err = db.Close()
 	if err != nil {
@@ -151,7 +151,7 @@ func TestE2E_Migration(t *testing.T) {
 		frameworkpolybft.WithNonValidators(2),
 		frameworkpolybft.WithValidatorSnapshot(5),
 		frameworkpolybft.WithTestRewardToken(),
-		frameworkpolybft.WithGenesisState(tmpDir, types.Hash(stateRoot)),
+		frameworkpolybft.WithGenesisState(tmpDir, stateRoot),
 	)
 	defer cluster.Stop()
 
@@ -170,7 +170,7 @@ func TestE2E_Migration(t *testing.T) {
 	require.Equal(t, balanceSender, senderBalanceAfterMigration)
 	require.Equal(t, balanceReceiver, receiverBalanceAfterMigration)
 
-	deployedCode, err := cluster.Servers[0].JSONRPC().GetCode(types.Address(deployedContractBalance), jsonrpc.LatestBlockNumberOrHash)
+	deployedCode, err := cluster.Servers[0].JSONRPC().GetCode(types.Address(deployedContractAddr), jsonrpc.LatestBlockNumberOrHash)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -178,18 +178,18 @@ func TestE2E_Migration(t *testing.T) {
 	require.Equal(t, deployedCode, *common.EncodeBytes(contractsapi.TestWriteBlockMetadata.DeployedBytecode))
 	require.NoError(t, cluster.WaitForBlock(10, 1*time.Minute))
 
-	//stop last node of validator and non-validator
+	// stop last node of validator and non-validator
 	cluster.Servers[4].Stop()
 	cluster.Servers[6].Stop()
 
 	require.NoError(t, cluster.WaitForBlock(15, time.Minute))
 
-	//wait sync of that nodes
+	// wait sync of that nodes
 	cluster.Servers[4].Start()
 	cluster.Servers[6].Start()
 	require.NoError(t, cluster.WaitForBlock(20, time.Minute))
 
-	//stop all nodes
+	// stop all nodes
 	for i := range cluster.Servers {
 		cluster.Servers[i].Stop()
 	}

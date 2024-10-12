@@ -69,13 +69,14 @@ func subMul(x, a, b, c *big.Int) *big.Int {
 }
 
 func multComplexity(x *big.Int) *big.Int {
-	if x.Cmp(big64) <= 0 {
+	switch {
+	case x.Cmp(big64) <= 0:
 		// x ** x
 		x.Mul(x, x)
-	} else if x.Cmp(big1024) <= 0 {
+	case x.Cmp(big1024) <= 0:
 		// x ** 2 // 4 + 96 * x - 3072
 		x = subMul(x, big4, big96, big3072)
-	} else {
+	default:
 		// x ** 2 // 16 + 480 * x - 199680
 		x = subMul(x, big16, big480, big199680)
 	}
@@ -123,7 +124,7 @@ func (m *modExp) gas(input []byte, config *chain.ForksInTime) uint64 {
 		gasCost.Set(baseLen)
 	}
 
-	//EIP-2565 gas cost calculation
+	// EIP-2565 gas cost calculation
 	if config.Berlin {
 		// EIP-2565 has three changes
 		// 1. Different multComplexity (inlined here)

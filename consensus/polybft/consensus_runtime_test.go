@@ -379,8 +379,8 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 	assert.False(t, runtime.fsm.isEndOfSprint)
 	assert.Equal(t, lastBlock.Number, runtime.fsm.parent.Number)
 
-	address := types.Address(runtime.config.Key.Address())
-	assert.True(t, runtime.fsm.ValidatorSet().Includes(address))
+	localAddr := runtime.config.Key.Address()
+	assert.True(t, runtime.fsm.ValidatorSet().Includes(localAddr))
 
 	assert.NotNil(t, runtime.fsm.blockBuilder)
 	assert.NotNil(t, runtime.fsm.backend)
