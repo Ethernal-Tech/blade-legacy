@@ -26,7 +26,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v6.1.1
         with:
-          args: --timeout 10m --verbose
+          args: --timeout 10m --verbose --whole-files
       - name: Lint Failed
         if: failure()
         id: lint_failure

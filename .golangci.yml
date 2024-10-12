@@ -1,9 +1,4 @@
 # This file configures github.com/golangci/golangci-lint.
-
-run:
-  timeout: 3m
-  tests: true
-
 linters:
   disable-all: true
   enable:
@@ -49,7 +44,6 @@ linters-settings:
         rules: "./gorules/rules.go"
 
 issues:
-  new-from-rev: origin/develop # report only new issues with reference to develop branch
   exclude-dirs:
     - tests
   exclude-rules:
