@@ -154,7 +154,7 @@ func (txn *Txn) StorageRangeAt(storageRangeResult *StorageRangeResult, addr *typ
 	keyStart []byte, maxResult int) error {
 	object, exists := txn.getStateObject(*addr)
 	if !exists {
-		return fmt.Errorf("the state object is not available")
+		return nil
 	}
 
 	storageRangeResult.Storage = make(storageMap)

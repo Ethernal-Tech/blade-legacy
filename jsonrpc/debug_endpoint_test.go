@@ -1521,7 +1521,7 @@ func TestGetAccessibleState(t *testing.T) {
 				},
 			},
 
-			returnErr: "'from' and 'to' block numbers must be different",
+			returnErr: "no accessible state found on the block",
 			result:    0,
 			err:       true,
 		},

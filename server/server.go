@@ -797,9 +797,15 @@ func (j *jsonRPCHub) StorageRangeAt(storageRangeResult *state.StorageRangeResult
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	tx := block.Transactions[txIndex]
-	if _, err := transition.Apply(tx); err != nil {
-		return fmt.Errorf("failed to apply transaction %d: %w", txIndex, err)
+	for idx, tx := range block.Transactions {
+		// Execute transactions without tracer until reaching the target transaction
+		if _, err := transition.Apply(tx); err != nil {
+			return fmt.Errorf("failed to apply transaction %d: %w", txIndex, err)
+		}
+
+		if idx == txIndex {
+			break
+		}
 	}
 
 	return transition.StorageRangeAt(storageRangeResult, addr, keyStart, maxResult)
