@@ -1225,6 +1225,7 @@ func TestBlockHash(t *testing.T) {
 
 	v := s.pop()
 	assert.Equal(t, bigToHash(three), bigToHash(v.ToBig()))
+	mockHost.AssertExpectations(t)
 }
 
 func TestCoinBase(t *testing.T) {

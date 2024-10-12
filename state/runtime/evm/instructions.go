@@ -892,9 +892,16 @@ func opBlockHash(c *state) {
 		return
 	}
 
-	lastBlock := c.host.GetTxContext().Number
+	var lower uint64
 
-	if lastBlock-257 < num64 && num64 < lastBlock {
+	upper := c.host.GetTxContext().Number
+	if upper < 257 {
+		lower = 0
+	} else {
+		lower = upper - 256
+	}
+
+	if num64 >= lower && num64 < upper {
 		num.SetBytes(c.host.GetBlockHash(num64).Bytes())
 	} else {
 		num.SetUint64(0)
