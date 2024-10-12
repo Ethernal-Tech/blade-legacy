@@ -602,7 +602,8 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 	latestBlockGasLimit := currentHeader.GasLimit
 	baseFee := p.GetBaseFee() // base fee is calculated for the next block
 
-	if tx.Type() == types.AccessListTxType {
+	switch tx.Type() {
+	case types.AccessListTxType:
 		// Reject access list tx if berlin hardfork(eip-2930) is not enabled
 		if !forks.Berlin {
 			metrics.IncrCounter([]string{txPoolMetrics, "invalid_tx_type"}, 1)
@@ -610,10 +611,9 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 			return ErrInvalidTxType
 		}
 
-		// check if the given tx is not underpriced (same as Legacy approach)
+		// Check if the given tx is not underpriced (same as Legacy approach)
 		if tx.GetGasPrice(baseFee).Cmp(big.NewInt(0).SetUint64(p.priceLimit)) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
-
 			p.logger.Debug("access list tx is undepriced",
 				"gasPrice", tx.GetGasPrice(baseFee).String(),
 				"baseFee", baseFee,
@@ -621,7 +621,8 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 
 			return ErrUnderpriced
 		}
-	} else if tx.Type() == types.DynamicFeeTxType {
+
+	case types.DynamicFeeTxType:
 		// Reject dynamic fee tx if london hardfork is not enabled
 		if !forks.London {
 			metrics.IncrCounter([]string{txPoolMetrics, "tx_type"}, 1)
@@ -629,56 +630,50 @@ func (p *TxPool) validateTx(tx *types.Transaction) error {
 			return fmt.Errorf("%w: type %d rejected, london hardfork is not enabled", ErrTxTypeNotSupported, tx.Type())
 		}
 
-		// Check EIP-1559-related fields and make sure they are correct
+		// Check EIP-1559-related fields and ensure they are correct
 		if tx.GasFeeCap() == nil || tx.GasTipCap() == nil {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
-
 			p.logger.Debug("dynamic tx is undepriced because no fee cap or tip cap is set",
 				"baseFee", baseFee,
 				"priceLimit", p.priceLimit)
-
 			return ErrUnderpriced
 		}
 
 		if tx.GasFeeCap().BitLen() > 256 {
 			metrics.IncrCounter([]string{txPoolMetrics, "fee_cap_too_high_dynamic_tx"}, 1)
-
 			return ErrFeeCapVeryHigh
 		}
 
 		if tx.GasTipCap().BitLen() > 256 {
 			metrics.IncrCounter([]string{txPoolMetrics, "tip_too_high_dynamic_tx"}, 1)
-
 			return ErrTipVeryHigh
 		}
 
 		if tx.GasFeeCap().Cmp(tx.GasTipCap()) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "tip_above_fee_cap_dynamic_tx"}, 1)
-
 			return ErrTipAboveFeeCap
 		}
 
 		// Reject underpriced transactions
 		if tx.GasFeeCap().Cmp(new(big.Int).SetUint64(baseFee)) < 0 {
 			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
-
 			p.logger.Debug("dynamic tx is undepriced",
 				"gasFeeCap", tx.GasFeeCap().String(),
 				"baseFee", baseFee,
 				"priceLimit", p.priceLimit)
-
 			return ErrUnderpriced
 		}
-	} else if forks.London && tx.GasPrice().Cmp(new(big.Int).SetUint64(baseFee)) < 0 {
+
+	default:
 		// Legacy approach to check if the given tx is not underpriced when london hardfork is enabled
-		metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
-
-		p.logger.Debug("legacy tx is undepriced on london fork",
-			"gasPrice", tx.GasPrice().String(),
-			"baseFee", baseFee,
-			"priceLimit", p.priceLimit)
-
-		return ErrUnderpriced
+		if forks.London && tx.GasPrice().Cmp(new(big.Int).SetUint64(baseFee)) < 0 {
+			metrics.IncrCounter([]string{txPoolMetrics, "underpriced_tx"}, 1)
+			p.logger.Debug("legacy tx is undepriced on london fork",
+				"gasPrice", tx.GasPrice().String(),
+				"baseFee", baseFee,
+				"priceLimit", p.priceLimit)
+			return ErrUnderpriced
+		}
 	}
 
 	if tx.GetGasPrice(baseFee).Cmp(new(big.Int).SetUint64(p.priceLimit)) < 0 {

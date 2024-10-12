@@ -67,7 +67,7 @@ func (vs validatorSet) HasQuorum(blockNumber uint64, signers map[types.Address]s
 		}
 	}
 
-	quorumSize := getQuorumSize(blockNumber, vs.totalVotingPower)
+	quorumSize := getQuorumSize(vs.totalVotingPower)
 	hasQuorum := aggregateVotingPower.Cmp(quorumSize) >= 0
 
 	vs.logger.Debug("HasQuorum",
@@ -105,7 +105,7 @@ func (vs validatorSet) TotalVotingPower() big.Int {
 }
 
 // getQuorumSize calculates quorum size as 2/3 super-majority of provided total voting power
-func getQuorumSize(blockNumber uint64, totalVotingPower *big.Int) *big.Int {
+func getQuorumSize(totalVotingPower *big.Int) *big.Int {
 	quorum := new(big.Int)
 	quorum.Mul(totalVotingPower, big.NewInt(2))
 

@@ -16,9 +16,9 @@ type TxContext struct {
 	GasPrice     types.Hash
 	Origin       types.Address
 	Coinbase     types.Address
-	Number       int64
-	Timestamp    int64
-	GasLimit     int64
+	Number       uint64
+	Timestamp    uint64
+	GasLimit     uint64
 	ChainID      int64
 	Difficulty   types.Hash
 	Tracer       tracer.Tracer
@@ -73,7 +73,7 @@ type Host interface {
 	GetCode(addr types.Address) []byte
 	Selfdestruct(addr types.Address, beneficiary types.Address)
 	GetTxContext() TxContext
-	GetBlockHash(number int64) types.Hash
+	GetBlockHash(number uint64) types.Hash
 	EmitLog(addr types.Address, topics []types.Hash, data []byte)
 	Callx(*Contract, Host) *ExecutionResult
 	Empty(addr types.Address) bool

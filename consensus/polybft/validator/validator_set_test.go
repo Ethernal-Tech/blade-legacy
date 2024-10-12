@@ -47,7 +47,7 @@ func TestValidatorSet_getQuorumSize(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		quorumSize := getQuorumSize(1, big.NewInt(c.totalVotingPower))
+		quorumSize := getQuorumSize(big.NewInt(c.totalVotingPower))
 		require.Equal(t, c.expectedQuorumSize, quorumSize.Int64())
 	}
 }

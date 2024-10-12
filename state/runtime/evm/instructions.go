@@ -455,14 +455,15 @@ func opSStore(c *state) {
 
 	switch status {
 	case runtime.StorageUnchanged:
-		if c.config.Berlin {
+		switch {
+		case c.config.Berlin:
 			cost += WarmStorageReadCostEIP2929
-		} else if c.config.Istanbul {
+		case c.config.Istanbul:
 			// eip-2200
 			cost += 800
-		} else if legacyGasMetering {
+		case legacyGasMetering:
 			cost += 5000
-		} else {
+		default:
 			cost += 200
 		}
 
@@ -473,14 +474,15 @@ func opSStore(c *state) {
 		}
 
 	case runtime.StorageModifiedAgain:
-		if c.config.Berlin {
+		switch {
+		case c.config.Berlin:
 			cost += WarmStorageReadCostEIP2929
-		} else if c.config.Istanbul {
+		case c.config.Istanbul:
 			// eip-2200
 			cost += 800
-		} else if legacyGasMetering {
+		case legacyGasMetering:
 			cost += 5000
-		} else {
+		default:
 			cost += 200
 		}
 
@@ -645,11 +647,13 @@ func opExtCodeSize(c *state) {
 	addr, _ := c.popAddr()
 
 	var gas uint64
-	if c.config.Berlin {
+
+	switch {
+	case c.config.Berlin:
 		gas = c.calculateGasForEIP2929(addr)
-	} else if c.config.EIP150 {
+	case c.config.EIP150:
 		gas = 700
-	} else {
+	default:
 		gas = 20
 	}
 
@@ -686,11 +690,13 @@ func opExtCodeHash(c *state) {
 	address, _ := c.popAddr()
 
 	var gas uint64
-	if c.config.Berlin {
+
+	switch {
+	case c.config.Berlin:
 		gas = c.calculateGasForEIP2929(address)
-	} else if c.config.Istanbul {
+	case c.config.Istanbul:
 		gas = 700
-	} else {
+	default:
 		gas = 400
 	}
 
@@ -762,11 +768,13 @@ func opExtCodeCopy(c *state) {
 	}
 
 	var gas uint64
-	if c.config.Berlin {
+
+	switch {
+	case c.config.Berlin:
 		gas = c.calculateGasForEIP2929(address)
-	} else if c.config.EIP150 {
+	case c.config.EIP150:
 		gas = 700
-	} else {
+	default:
 		gas = 20
 	}
 
@@ -884,11 +892,10 @@ func opBlockHash(c *state) {
 		return
 	}
 
-	n := int64(num64)
 	lastBlock := c.host.GetTxContext().Number
 
-	if lastBlock-257 < n && n < lastBlock {
-		num.SetBytes(c.host.GetBlockHash(n).Bytes())
+	if lastBlock-257 < num64 && num64 < lastBlock {
+		num.SetBytes(c.host.GetBlockHash(num64).Bytes())
 	} else {
 		num.SetUint64(0)
 	}
@@ -900,12 +907,12 @@ func opCoinbase(c *state) {
 }
 
 func opTimestamp(c *state) {
-	v := new(uint256.Int).SetUint64(uint64(c.host.GetTxContext().Timestamp))
+	v := new(uint256.Int).SetUint64(c.host.GetTxContext().Timestamp)
 	c.push(*v)
 }
 
 func opNumber(c *state) {
-	v := new(uint256.Int).SetUint64((uint64)(c.host.GetTxContext().Number))
+	v := new(uint256.Int).SetUint64(c.host.GetTxContext().Number)
 	c.push(*v)
 }
 
@@ -915,7 +922,7 @@ func opDifficulty(c *state) {
 }
 
 func opGasLimit(c *state) {
-	v := new(uint256.Int).SetUint64((uint64)(c.host.GetTxContext().GasLimit))
+	v := new(uint256.Int).SetUint64(c.host.GetTxContext().GasLimit)
 	c.push(*v)
 }
 
@@ -1134,13 +1141,15 @@ func opCreate(op OpCode) instruction {
 		result := c.host.Callx(contract, c.host)
 
 		v := uint256.Int{0}
-		if op == CREATE && c.config.Homestead && errors.Is(result.Err, runtime.ErrCodeStoreOutOfGas) {
+
+		switch {
+		case op == CREATE && c.config.Homestead && errors.Is(result.Err, runtime.ErrCodeStoreOutOfGas):
 			v.SetUint64(0)
-		} else if op == CREATE && result.Failed() && !errors.Is(result.Err, runtime.ErrCodeStoreOutOfGas) {
+		case op == CREATE && result.Failed() && !errors.Is(result.Err, runtime.ErrCodeStoreOutOfGas):
 			v.SetUint64(0)
-		} else if op == CREATE2 && result.Failed() {
+		case op == CREATE2 && result.Failed():
 			v.SetUint64(0)
-		} else {
+		default:
 			v.SetBytes(contract.Address.Bytes())
 		}
 
@@ -1268,11 +1277,13 @@ func (c *state) buildCallContract(op OpCode) (*runtime.Contract, uint64, uint64,
 	}
 
 	var gasCost uint64
-	if c.config.Berlin {
+
+	switch {
+	case c.config.Berlin:
 		gasCost = c.calculateGasForEIP2929(addr)
-	} else if c.config.EIP150 {
+	case c.config.EIP150:
 		gasCost = 700
-	} else {
+	default:
 		gasCost = 40
 	}
 

@@ -91,9 +91,9 @@ func (e *env) ToEnv(t testing.TB) runtime.TxContext {
 		Coinbase:   stringToAddressT(t, e.Coinbase),
 		BaseFee:    baseFee,
 		Difficulty: stringToHashT(t, e.Difficulty),
-		GasLimit:   stringToInt64T(t, e.GasLimit),
-		Number:     stringToInt64T(t, e.Number),
-		Timestamp:  stringToInt64T(t, e.Timestamp),
+		GasLimit:   stringToUint64T(t, e.GasLimit),
+		Number:     stringToUint64T(t, e.Number),
+		Timestamp:  stringToUint64T(t, e.Timestamp),
 	}
 }
 
