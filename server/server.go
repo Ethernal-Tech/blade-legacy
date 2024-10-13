@@ -756,6 +756,47 @@ func (j *jsonRPCHub) DumpTree(block *types.Block, opts *state.DumpInfo) (*state.
 	return dump, nil
 }
 
+// GetModifiedAccounts returns all accounts that have changed between the
+// two blocks specified. A change is defined as a difference in nonce, balance,
+// code hash, or storage hash.
+func (j *jsonRPCHub) GetModifiedAccounts(startBlock, endBlock *types.Block) ([]types.Address, error) {
+	var (
+		startBlockAddressMap = make(map[types.Address]struct{})
+		changedAccounts      []types.Address
+	)
+
+	for _, block := range [2]*types.Block{startBlock, endBlock} {
+		parentHeader, ok := j.GetHeaderByHash(block.ParentHash())
+		if !ok {
+			return nil, fmt.Errorf("parent header for block %s not found", block.ParentHash().String())
+		}
+
+		txn, err := j.Executor.ProcessBlock(parentHeader.StateRoot, block, types.BytesToAddress(block.Header.Miner))
+		if err != nil {
+			return nil, err
+		}
+
+		objs, err := txn.Txn().Commit(false)
+		if err != nil {
+			return nil, err
+		}
+
+		if block == startBlock {
+			for _, obj := range objs {
+				startBlockAddressMap[obj.Address] = struct{}{}
+			}
+		} else {
+			for _, obj := range objs {
+				if _, exists := startBlockAddressMap[obj.Address]; !exists {
+					changedAccounts = append(changedAccounts, obj.Address)
+				}
+			}
+		}
+	}
+
+	return changedAccounts, nil
+}
+
 // GetIteratorDumpTree returns a set of accounts based on the given criteria and depends on the starting element.
 func (j *jsonRPCHub) GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error) {
 	parentHeader, ok := j.GetHeaderByHash(block.ParentHash())

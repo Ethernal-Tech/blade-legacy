@@ -28,6 +28,7 @@ type debugEndpointMockStore struct {
 	getIteratorDumpTreeFn func(*types.Block, *state.DumpInfo) (*state.IteratorDump, error)
 	dumpTreeFn            func(*types.Block, *state.DumpInfo) (*state.Dump, error)
 	getBlockByHashFn      func(types.Hash, bool) (*types.Block, bool)
+	getModifiedAccountsFn func(*types.Block, *types.Block) ([]types.Address, error)
 	getBlockByNumberFn    func(uint64, bool) (*types.Block, bool)
 	traceBlockFn          func(*types.Block, tracer.Tracer) ([]interface{}, error)
 	intermediateRootsFn   func(*types.Block, tracer.Tracer) ([]types.Hash, error)
@@ -71,6 +72,10 @@ func (s *debugEndpointMockStore) GetIteratorDumpTree(block *types.Block, opts *s
 
 func (s *debugEndpointMockStore) DumpTree(block *types.Block, opts *state.DumpInfo) (*state.Dump, error) {
 	return s.dumpTreeFn(block, opts)
+}
+
+func (s *debugEndpointMockStore) GetModifiedAccounts(startBlock, endBlock *types.Block) ([]types.Address, error) {
+	return s.getModifiedAccountsFn(startBlock, endBlock)
 }
 
 func (s *debugEndpointMockStore) GetBlockByHash(hash types.Hash, full bool) (*types.Block, bool) {
@@ -1688,6 +1693,191 @@ func TestIntermediateRoots(t *testing.T) {
 
 			endpoint := NewDebug(test.store, 100000)
 			res, err := endpoint.IntermediateRoots(test.blockHash, test.config)
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetModifiedAccountsByHash(t *testing.T) {
+	t.Parallel()
+
+	hash := testLatestBlock.Hash()
+	tests := []struct {
+		name           string
+		startblockHash types.Hash
+		endblockHash   *types.Hash
+		store          *debugEndpointMockStore
+		result         interface{}
+		returnErr      string
+		err            bool
+	}{
+		{
+			name:           "BlockByHashNotFound",
+			startblockHash: hash,
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					require.Equal(t, hash, hash)
+					require.True(t, full)
+
+					return nil, false
+				},
+			},
+
+			returnErr: "not found",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:           "ParentBlockByHashNotFound",
+			startblockHash: hash,
+			endblockHash:   nil,
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hashBlock types.Hash, full bool) (*types.Block, bool) {
+					if hashBlock == hash {
+						return testLatestBlock, true
+					}
+
+					return nil, false
+				},
+			},
+
+			returnErr: "parent block",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:           "GetModifiedAccountsByHashValid",
+			startblockHash: hash,
+			endblockHash:   &hash,
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+				getModifiedAccountsFn: func(start *types.Block, end *types.Block) ([]types.Address, error) {
+					require.Equal(t, start.Hash(), hash)
+					require.Equal(t, end.Hash(), hash)
+
+					return []types.Address{addr0, addr1}, nil
+				},
+			},
+
+			returnErr: "",
+			result:    []types.Address{addr0, addr1},
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+			res, err := endpoint.GetModifiedAccountsByHash(test.startblockHash, test.endblockHash)
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGetModifiedAccountsByNumber(t *testing.T) {
+	t.Parallel()
+
+	number := testBlock10.Number()
+	tests := []struct {
+		name             string
+		startblockNumber uint64
+		endblockNumber   *uint64
+		store            *debugEndpointMockStore
+		result           interface{}
+		returnErr        string
+		err              bool
+	}{
+		{
+			name:             "BlockByNumberNotFound",
+			startblockNumber: number,
+			store: &debugEndpointMockStore{
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					require.Equal(t, testBlock10.Number(), number)
+					require.True(t, full)
+
+					return nil, false
+				},
+			},
+
+			returnErr: "not found",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:             "ParentBlockByHashNotFound",
+			startblockNumber: number,
+			endblockNumber:   nil,
+			store: &debugEndpointMockStore{
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					require.Equal(t, testBlock10.Number(), number)
+					require.True(t, full)
+
+					return testBlock10, true
+				},
+				getBlockByHashFn: func(hashBlock types.Hash, full bool) (*types.Block, bool) {
+					return nil, false
+				},
+			},
+
+			returnErr: "parent block",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:             "GetModifiedAccountsByNumberValid",
+			startblockNumber: number,
+			endblockNumber:   &number,
+			store: &debugEndpointMockStore{
+				getBlockByNumberFn: func(number uint64, full bool) (*types.Block, bool) {
+					require.Equal(t, testBlock10.Number(), number)
+					require.True(t, full)
+
+					return testBlock10, true
+				},
+				getModifiedAccountsFn: func(start *types.Block, end *types.Block) ([]types.Address, error) {
+					require.Equal(t, start.Hash(), testBlock10.Hash())
+					require.Equal(t, end.Hash(), testBlock10.Hash())
+
+					return []types.Address{addr0, addr1}, nil
+				},
+			},
+
+			returnErr: "",
+			result:    []types.Address{addr0, addr1},
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+			res, err := endpoint.GetModifiedAccountsByNumber(test.startblockNumber, test.endblockNumber)
 			require.Equal(t, test.result, res)
 
 			if test.err {
