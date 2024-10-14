@@ -9,7 +9,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/wallet"
 	"github.com/0xPolygon/polygon-edge/secrets"
 	"github.com/0xPolygon/polygon-edge/secrets/helper"
-	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/spf13/cobra"
 )
 
@@ -252,7 +251,7 @@ func (ip *initParams) getResult(
 			return nil, err
 		}
 
-		res.Address = types.Address(account.Ecdsa.Address())
+		res.Address = account.Ecdsa.Address()
 		res.BLSPubkey = hex.EncodeToString(account.Bls.PublicKey().Marshal())
 
 		res.Generated = strings.Join(generated, ", ")

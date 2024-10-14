@@ -91,7 +91,7 @@ func (m *mockHostF) GetTxContext() runtime.TxContext {
 	return runtime.TxContext{}
 }
 
-func (m *mockHostF) GetBlockHash(number int64) types.Hash {
+func (m *mockHostF) GetBlockHash(number uint64) types.Hash {
 	return m.blockHash
 }
 

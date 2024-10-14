@@ -504,16 +504,19 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 
 	// Since lock is reduced grab original values into local variables in order to keep them
 	epoch := s.epoch
+
 	stateSyncEvents, err := s.state.StateSyncStore.getStateSyncEventsForCommitment(s.nextCommittedIndex,
 		s.nextCommittedIndex+s.config.maxCommitmentSize-1, dbTx)
 	if err != nil && !errors.Is(err, errNotEnoughStateSyncs) {
 		s.lock.RUnlock()
+
 		return fmt.Errorf("failed to get state sync events for commitment. Error: %w", err)
 	}
 
 	if len(stateSyncEvents) == 0 {
 		// there are no state sync events
 		s.lock.RUnlock()
+
 		return nil
 	}
 
@@ -521,6 +524,7 @@ func (s *stateSyncManager) buildCommitment(dbTx *bolt.Tx) error {
 		s.pendingCommitments[len(s.pendingCommitments)-1].StartID.Cmp(stateSyncEvents[len(stateSyncEvents)-1].ID) >= 0 {
 		// already built a commitment of this size which is pending to be submitted
 		s.lock.RUnlock()
+
 		return nil
 	}
 

@@ -26,6 +26,10 @@ var (
 	one = big.NewInt(1)
 )
 
+const (
+	defaultAccPassword = "testpassword"
+)
+
 func TestE2E_JsonRPC(t *testing.T) {
 	const epochSize = uint64(5)
 
@@ -375,14 +379,12 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_signTransaction", func(t *testing.T) {
-		accPassword := "testpassword"
-
 		keyRaw, err := preminedAcctOne.MarshallPrivateKey()
 		require.NoError(t, err)
 
 		hexKey := hex.EncodeToString(keyRaw)
 
-		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		accAddr, err := ethClient.ImportRawKey(hexKey, defaultAccPassword)
 		require.NoError(t, err)
 		require.Equal(t, preminedAcctOne.Address(), accAddr)
 
@@ -405,7 +407,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 			Type:     uint64(types.LegacyTxType),
 		}
 
-		isUnlocked, err := ethClient.Unlock(preminedAcctOne.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		isUnlocked, err := ethClient.Unlock(preminedAcctOne.Address(), defaultAccPassword, 90 /* seconds */) // unlock for 90 seconds
 		require.NoError(t, err)
 		require.True(t, isUnlocked)
 
@@ -429,14 +431,12 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_sendTransaction", func(t *testing.T) {
-		accPassword := "testpassword"
-
 		keyRaw, err := preminedAcctTwo.MarshallPrivateKey()
 		require.NoError(t, err)
 
 		hexKey := hex.EncodeToString(keyRaw)
 
-		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		accAddr, err := ethClient.ImportRawKey(hexKey, defaultAccPassword)
 		require.NoError(t, err)
 		require.Equal(t, preminedAcctTwo.Address(), accAddr)
 
@@ -458,7 +458,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 			types.WithValue(big.NewInt(1)),
 		))
 
-		isUnlocked, err := ethClient.Unlock(preminedAcctTwo.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		isUnlocked, err := ethClient.Unlock(preminedAcctTwo.Address(), defaultAccPassword, 90 /* seconds */) // unlock for 90 seconds
 		require.NoError(t, err)
 		require.True(t, isUnlocked)
 
@@ -468,8 +468,6 @@ func TestE2E_JsonRPC(t *testing.T) {
 	})
 
 	t.Run("eth_sign", func(t *testing.T) {
-		accPassword := "testpassword"
-
 		key, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
@@ -478,7 +476,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 
 		hexKey := hex.EncodeToString(keyRaw)
 
-		accAddr, err := ethClient.ImportRawKey(hexKey, accPassword)
+		accAddr, err := ethClient.ImportRawKey(hexKey, defaultAccPassword)
 		require.NoError(t, err)
 		require.Equal(t, key.Address(), accAddr)
 
@@ -500,7 +498,7 @@ func TestE2E_JsonRPC(t *testing.T) {
 				types.WithGasPrice(new(big.Int).SetUint64(gasPrice)),
 			))
 
-		isUnlocked, err := ethClient.Unlock(key.Address(), accPassword, 90 /* seconds */) // unlock for 90 seconds
+		isUnlocked, err := ethClient.Unlock(key.Address(), defaultAccPassword, 90 /* seconds */) // unlock for 90 seconds
 		require.NoError(t, err)
 		require.True(t, isUnlocked)
 

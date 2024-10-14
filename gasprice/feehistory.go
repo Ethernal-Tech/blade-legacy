@@ -88,7 +88,7 @@ func (g *GasHelper) FeeHistory(blockCount uint64, newestBlock uint64, rewardPerc
 
 	for i := oldestBlock; i <= newestBlock; i++ {
 		cacheKey := cacheKey{number: i, percentiles: string(percentileKey)}
-		//cache is hit, load from cache and continue to next block
+		// cache is hit, load from cache and continue to next block
 		if p, ok := g.historyCache.Get(cacheKey); ok {
 			processedFee, isOk := p.(*processedFees)
 			if !isOk {
@@ -111,12 +111,12 @@ func (g *GasHelper) FeeHistory(blockCount uint64, newestBlock uint64, rewardPerc
 		gasUsedRatio[i-oldestBlock] = float64(block.Header.GasUsed) / float64(block.Header.GasLimit)
 
 		if math.IsNaN(gasUsedRatio[i-oldestBlock]) {
-			//gasUsedRatio is NaN, set to 0
+			// gasUsedRatio is NaN, set to 0
 			gasUsedRatio[i-oldestBlock] = 0
 		}
 
 		if len(rewardPercentiles) == 0 {
-			//reward percentiles not requested, skip rest of this loop
+			// reward percentiles not requested, skip rest of this loop
 			continue
 		}
 
@@ -125,7 +125,7 @@ func (g *GasHelper) FeeHistory(blockCount uint64, newestBlock uint64, rewardPerc
 			for j := range reward[i-oldestBlock] {
 				reward[i-oldestBlock][j] = 0
 			}
-			//no transactions in block, set rewards to 0 and move to next block
+			// no transactions in block, set rewards to 0 and move to next block
 			continue
 		}
 

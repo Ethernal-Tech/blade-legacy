@@ -362,12 +362,9 @@ func (a *account) enqueue(tx *types.Transaction, replace bool) {
 
 	if !replace {
 		a.enqueued.push(tx)
-	} else {
-		// first -> try to replace in enqueued
-		if !replaceInQueue(a.enqueued.queue) {
-			// .. then try to replace in promoted
-			replaceInQueue(a.promoted.queue)
-		}
+	} else if !replaceInQueue(a.enqueued.queue) { // first -> try to replace in enqueued
+		// .. then try to replace in promoted
+		replaceInQueue(a.promoted.queue)
 	}
 }
 

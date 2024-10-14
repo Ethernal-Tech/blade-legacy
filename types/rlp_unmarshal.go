@@ -160,7 +160,7 @@ func (h *Header) unmarshalRLPFrom(_ *fastrlp.Parser, v *fastrlp.Value) error {
 		return err
 	}
 	// miner
-	if h.Miner, err = elems[2].GetBytes(h.Miner[:]); err != nil {
+	if h.Miner, err = elems[2].GetBytes(h.Miner); err != nil {
 		return err
 	}
 	// stateroot
@@ -285,7 +285,7 @@ func (r *Receipt) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
 	switch size := len(buf); size {
 	case HashLength:
 		// root
-		copy(r.Root[:], buf[:])
+		copy(r.Root[:], buf)
 	case 1:
 		// status
 		r.SetStatus(ReceiptStatus(buf[0]))

@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/holiman/uint256"
+	"github.com/stretchr/testify/require"
 )
 
 func BenchmarkOptimizedStack_Push(b *testing.B) {
@@ -79,6 +80,6 @@ func BenchmarkOptimizedStack_Swap(b *testing.B) {
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
-		stack.swap(50)
+		require.NoError(b, stack.swap(50))
 	}
 }

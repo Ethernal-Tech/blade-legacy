@@ -401,7 +401,7 @@ func (c *consensusRuntime) FSM() error {
 
 	blockBuilder, err := c.config.blockchain.NewBlockBuilder(
 		parent,
-		types.Address(c.config.Key.Address()),
+		c.config.Key.Address(),
 		c.config.txPool,
 		epoch.CurrentClientConfig.BlockTime.Duration,
 		c.logger,
@@ -460,7 +460,7 @@ func (c *consensusRuntime) FSM() error {
 		}
 	}
 
-	ff.distributeRewardsInput, err = c.calculateDistributeRewardsInput(isFirstBlockOfEpoch, isEndOfEpoch,
+	ff.distributeRewardsInput, err = c.calculateDistributeRewardsInput(isFirstBlockOfEpoch,
 		pendingBlockNumber, parent, epoch.Number)
 	if err != nil {
 		return fmt.Errorf("cannot calculate uptime info: %w", err)
@@ -587,12 +587,12 @@ func createCommitEpochInput(
 
 // calculateDistributeRewardsInput calculates distribute rewards input data
 func (c *consensusRuntime) calculateDistributeRewardsInput(
-	isFirstBlockOfEpoch, isEndOfEpoch bool,
+	isFirstBlockOfEpoch bool,
 	pendingBlockNumber uint64,
 	lastFinalizedBlock *types.Header,
 	epochID uint64,
 ) (*contractsapi.DistributeRewardForEpochManagerFn, error) {
-	if !isRewardDistributionBlock(c.config.Forks, isFirstBlockOfEpoch, isEndOfEpoch, pendingBlockNumber) {
+	if !isRewardDistributionBlock(isFirstBlockOfEpoch, pendingBlockNumber) {
 		// we don't have to distribute rewards at this block
 		return nil, nil
 	}
@@ -658,12 +658,10 @@ func (c *consensusRuntime) calculateDistributeRewardsInput(
 		}
 	}
 
-	lookbackSize := getLookbackSizeForRewardDistribution(c.config.Forks, pendingBlockNumber)
-
 	// calculate uptime for blocks from previous epoch that were not processed in previous uptime
 	// since we can not calculate uptime for the last block in epoch (because of parent signatures)
-	if blockHeader.Number > lookbackSize {
-		for i := uint64(0); i < lookbackSize; i++ {
+	if blockHeader.Number > rewardLookbackSize {
+		for i := uint64(0); i < rewardLookbackSize; i++ {
 			validators, err := c.config.polybftBackend.GetValidators(blockHeader.Number-2, nil)
 			if err != nil {
 				return nil, err
@@ -1016,6 +1014,7 @@ func (c *consensusRuntime) BuildCommitMessage(proposalHash []byte, view *proto.V
 // RoundStarts represents the round start callback
 func (c *consensusRuntime) RoundStarts(view *proto.View) error {
 	c.logger.Info("RoundStarts", "height", view.Height, "round", view.Round)
+
 	if view.Round > 0 {
 		c.config.txPool.ReinsertProposed()
 	} else {

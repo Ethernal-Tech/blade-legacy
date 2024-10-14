@@ -513,6 +513,7 @@ func generateBlock(t *testing.T, num uint64) *types.FullBlock {
 	}
 
 	b.Block.Header.ComputeHash()
+
 	return b
 }
 

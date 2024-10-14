@@ -78,7 +78,7 @@ func (h *Header) MarshalRLPWith(arena *fastrlp.Arena) *fastrlp.Value {
 
 	vv.Set(arena.NewCopyBytes(h.ParentHash.Bytes()))
 	vv.Set(arena.NewCopyBytes(h.Sha3Uncles.Bytes()))
-	vv.Set(arena.NewCopyBytes(h.Miner[:]))
+	vv.Set(arena.NewCopyBytes(h.Miner))
 	vv.Set(arena.NewCopyBytes(h.StateRoot.Bytes()))
 	vv.Set(arena.NewCopyBytes(h.TxRoot.Bytes()))
 	vv.Set(arena.NewCopyBytes(h.ReceiptsRoot.Bytes()))

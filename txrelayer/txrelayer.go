@@ -249,8 +249,8 @@ func (t *TxRelayerImpl) sendTransactionLocked(txn *types.Transaction, key crypto
 		txn.SetGas(gasLimit)
 	}
 
-	signer := crypto.NewLondonSigner(
-		chainID.Uint64())
+	signer := crypto.NewLondonSigner(chainID.Uint64())
+
 	signedTxn, err := signer.SignTxWithCallback(txn,
 		func(hash types.Hash) (sig []byte, err error) {
 			return key.Sign(hash.Bytes())
@@ -364,7 +364,6 @@ func (t *TxRelayerImpl) waitForReceipt(hash types.Hash) (*ethgo.Receipt, error) 
 
 // ConvertTxnToCallMsg converts txn instance to call message
 func ConvertTxnToCallMsg(txn *types.Transaction) *jsonrpc.CallMsg {
-
 	var (
 		gasPrice  *big.Int
 		gasFeeCap *big.Int

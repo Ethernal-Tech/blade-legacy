@@ -38,7 +38,7 @@ func TestE2E_GRPCRequestValidationTriggering(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "request validation failed: invalid PeersStatusRequest.Id: value does not match regex pattern")
 
-	//TxnPoolOperatorService
+	// TxnPoolOperatorService
 	// call AddTxn with invalid data
 	_, err = cluster.Servers[0].TxnPoolOperator().AddTxn(ctx, &txpoolProto.AddTxnReq{Raw: nil, From: "12"})
 	require.Error(t, err)

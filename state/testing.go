@@ -126,6 +126,7 @@ func testDeleteCommonStateRoot(t *testing.T, buildPreState buildPreState) {
 
 	snap, err := buildPreState(nil)
 	require.NoError(t, err)
+
 	txn := newTxn(snap)
 
 	txn.SetNonce(addr1, 1)

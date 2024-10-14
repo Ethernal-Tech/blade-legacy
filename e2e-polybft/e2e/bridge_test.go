@@ -57,8 +57,8 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		require.NoError(t, err)
 
 		receiverKeys[i] = hex.EncodeToString(rawKey)
-		receiversAddrs[i] = types.Address(key.Address())
-		receivers[i] = types.Address(key.Address()).String()
+		receiversAddrs[i] = key.Address()
+		receivers[i] = key.Address().String()
 		amounts[i] = fmt.Sprintf("%d", bridgeAmount)
 
 		t.Logf("Receiver#%d=%s\n", i+1, receivers[i])
@@ -123,8 +123,8 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 				rootERC20Token,
 				polybftCfg.Bridge.RootERC20PredicateAddr,
 				bridgeHelper.TestAccountPrivKey,
-				strings.Join(receivers[:], ","),
-				strings.Join(amounts[:], ","),
+				strings.Join(receivers, ","),
+				strings.Join(amounts, ","),
 				"",
 				cluster.Bridge.JSONRPCAddr(),
 				bridgeHelper.TestAccountPrivKey,
@@ -300,8 +300,8 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 		require.NoError(t, err)
 
 		receiverKeys[i] = hex.EncodeToString(rawKey)
-		receivers[i] = types.Address(key.Address()).String()
-		receiversAddrs[i] = types.Address(key.Address())
+		receivers[i] = key.Address().String()
+		receiversAddrs[i] = key.Address()
 		tokenIDs[i] = fmt.Sprintf("%d", i)
 
 		t.Logf("Receiver#%d=%s\n", i+1, receivers[i])
@@ -352,9 +352,9 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 			rootERC721Addr,
 			polybftCfg.Bridge.RootERC721PredicateAddr,
 			bridgeHelper.TestAccountPrivKey,
-			strings.Join(receivers[:], ","),
+			strings.Join(receivers, ","),
 			"",
-			strings.Join(tokenIDs[:], ","),
+			strings.Join(tokenIDs, ","),
 			cluster.Bridge.JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
@@ -472,8 +472,8 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 		require.NoError(t, err)
 
 		receiverKeys[i] = hex.EncodeToString(rawKey)
-		receivers[i] = types.Address(key.Address()).String()
-		receiversAddrs[i] = types.Address(key.Address())
+		receivers[i] = key.Address().String()
+		receiversAddrs[i] = key.Address()
 		amounts[i] = fmt.Sprintf("%d", amount)
 		tokenIDs[i] = fmt.Sprintf("%d", i+1)
 
@@ -526,9 +526,9 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 			rootERC1155Addr,
 			polybftCfg.Bridge.RootERC1155PredicateAddr,
 			bridgeHelper.TestAccountPrivKey,
-			strings.Join(receivers[:], ","),
-			strings.Join(amounts[:], ","),
-			strings.Join(tokenIDs[:], ","),
+			strings.Join(receivers, ","),
+			strings.Join(amounts, ","),
+			strings.Join(tokenIDs, ","),
 			cluster.Bridge.JSONRPCAddr(),
 			bridgeHelper.TestAccountPrivKey,
 			false),
@@ -674,7 +674,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 	admin, err := crypto.GenerateECDSAKey()
 	require.NoError(t, err)
 
-	adminAddr := types.Address(admin.Address())
+	adminAddr := admin.Address()
 
 	for i := uint64(0); i < transfersCount; i++ {
 		key, err := crypto.GenerateECDSAKey()
@@ -684,7 +684,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 		require.NoError(t, err)
 
 		depositorKeys[i] = hex.EncodeToString(rawKey)
-		depositors[i] = types.Address(key.Address())
+		depositors[i] = key.Address()
 		funds[i] = singleToken
 		amounts[i] = fmt.Sprintf("%d", amount)
 
@@ -886,7 +886,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			// deposit (without minting, as it was already done beforehand)
 			err = cluster.Bridge.Deposit(
 				common.ERC721,
-				types.Address(rootERC721Token),
+				rootERC721Token,
 				contracts.RootMintableERC721PredicateContract,
 				depositorKey,
 				depositors[i].String(),
@@ -924,9 +924,9 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 
 		// retrieve child token addresses on both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildMintableERC721Predicate.Abi, polybftCfg.Bridge.ChildMintableERC721PredicateAddr,
-			types.Address(rootERC721Token), rootchainTxRelayer)
+			rootERC721Token, rootchainTxRelayer)
 		l2ChildToken := getChildToken(t, contractsapi.RootMintableERC721Predicate.Abi, contracts.RootMintableERC721PredicateContract,
-			types.Address(rootERC721Token), childchainTxRelayer)
+			rootERC721Token, childchainTxRelayer)
 
 		t.Log("L1 child token", l1ChildToken)
 		t.Log("L2 child token", l2ChildToken)
@@ -966,7 +966,7 @@ func TestE2E_Bridge_ChildchainTokensTransfer(t *testing.T) {
 			allSuccessful = true
 			// check owners on the child chain
 			for i, receiver := range depositors {
-				owner := erc721OwnerOf(t, big.NewInt(int64(i)), types.Address(rootERC721Token), childchainTxRelayer)
+				owner := erc721OwnerOf(t, big.NewInt(int64(i)), rootERC721Token, childchainTxRelayer)
 				t.Log("Attempt:", it+1, " Owner:", owner, " Receiver:", receiver)
 
 				if receiver != owner {
@@ -1049,7 +1049,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 	withdrawAmounts := make([]string, transfersCount)
 
 	admin, _ := crypto.GenerateECDSAKey()
-	adminAddr := types.Address(admin.Address())
+	adminAddr := admin.Address()
 
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithNumBlockConfirmations(0),
@@ -1119,8 +1119,8 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 				rootERC20Token,
 				polybftCfg.Bridge.RootERC20PredicateAddr,
 				bridgeHelper.TestAccountPrivKey,
-				strings.Join(receivers[:], ","),
-				strings.Join(depositAmounts[:], ","),
+				strings.Join(receivers, ","),
+				strings.Join(depositAmounts, ","),
 				"",
 				cluster.Bridge.JSONRPCAddr(),
 				bridgeHelper.TestAccountPrivKey,
@@ -1161,8 +1161,8 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		err = cluster.Bridge.Withdraw(
 			common.ERC20,
 			hex.EncodeToString(rawKey),
-			strings.Join(receivers[:], ","),
-			strings.Join(withdrawAmounts[:], ","),
+			strings.Join(receivers, ","),
+			strings.Join(withdrawAmounts, ","),
 			"",
 			validatorSrv.JSONRPCAddr(),
 			contracts.ChildERC20PredicateContract,
@@ -1177,8 +1177,8 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		err = cluster.Bridge.Withdraw(
 			common.ERC20,
 			hex.EncodeToString(rawKey),
-			strings.Join(receivers[:], ","),
-			strings.Join(withdrawAmounts[:], ","),
+			strings.Join(receivers, ","),
+			strings.Join(withdrawAmounts, ","),
 			"",
 			validatorSrv.JSONRPCAddr(),
 			contracts.ChildERC20PredicateContract,
@@ -1193,8 +1193,8 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		err = cluster.Bridge.Withdraw(
 			common.ERC20,
 			hex.EncodeToString(rawKey),
-			strings.Join(receivers[:], ","),
-			strings.Join(withdrawAmounts[:], ","),
+			strings.Join(receivers, ","),
+			strings.Join(withdrawAmounts, ","),
 			"",
 			validatorSrv.JSONRPCAddr(),
 			contracts.ChildERC20PredicateContract,
@@ -1326,15 +1326,15 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		if isValidator {
 			require.True(t, balance.Cmp(childExpected) >= 0) // because of London fork
 		} else {
-			//this check is implemented because non-validators incur fees, potentially resulting in a balance lower than anticipated
+			// this check is implemented because non-validators incur fees, potentially resulting in a balance lower than anticipated
 			require.True(t, balance.Cmp(expectedValue.Sub(childExpected, offset)) >= 0)
 		}
 	}
 
 	t.Run("check the balances at the beginning", func(t *testing.T) {
 		// check the balances on root and child at the beginning to see if they are as expected
-		checkBalancesFn(types.Address(nonValidatorKey.Address()), bigZero, command.DefaultPremineBalance, false)
-		checkBalancesFn(types.Address(rewardWalletKey.Address()), bigZero, command.DefaultPremineBalance, true)
+		checkBalancesFn(nonValidatorKey.Address(), bigZero, command.DefaultPremineBalance, false)
+		checkBalancesFn(rewardWalletKey.Address(), bigZero, command.DefaultPremineBalance, true)
 
 		validatorsExpectedBalance := new(big.Int).Sub(command.DefaultPremineBalance, command.DefaultStake)
 
@@ -1424,7 +1424,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw, true)
-		checkBalancesFn(types.Address(nonValidatorKey.Address()), tokensToTransfer, nonValidatorBalanceAfterWithdraw, false)
+		checkBalancesFn(nonValidatorKey.Address(), tokensToTransfer, nonValidatorBalanceAfterWithdraw, false)
 	})
 
 	t.Run("do a deposit to some validator and non-validator address", func(t *testing.T) {

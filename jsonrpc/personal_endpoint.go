@@ -68,12 +68,12 @@ func (p *Personal) ImportRawKey(privKey string, password string) (types.Address,
 }
 
 func (p *Personal) UnlockAccount(addr types.Address, password string, duration argUint64) (bool, error) {
-	const max = 5 * time.Minute
+	const maxTimeout = 5 * time.Minute
 
 	var d time.Duration
 
-	if duration == 0 || time.Duration(duration)*time.Second > max {
-		d = max
+	if duration == 0 || time.Duration(duration)*time.Second > maxTimeout {
+		d = maxTimeout
 	} else {
 		d = time.Duration(duration) * time.Second
 	}

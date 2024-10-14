@@ -56,7 +56,7 @@ func (signer *EIP155Signer) Hash(tx *types.Transaction) types.Hash {
 		hashPreimage.Set(RLP.NewNull())
 	} else {
 		// RLP(nonce, gasPrice, gas, to, -, -, -, -, -)
-		hashPreimage.Set(RLP.NewCopyBytes((*(tx.To())).Bytes()))
+		hashPreimage.Set(RLP.NewCopyBytes(tx.To().Bytes()))
 	}
 
 	// RLP(nonce, gasPrice, gas, to, value, -, -, -, -)
@@ -111,7 +111,7 @@ func (signer *EIP155Signer) Sender(tx *types.Transaction) (types.Address, error)
 
 	// Reverse the V calculation to find the parity of the Y coordinate
 	// v = CHAIN_ID * 2 + 35 + {0, 1} -> {0, 1} = v - 35 - CHAIN_ID * 2
-	mulOperand := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+	mulOperand := big.NewInt(0).Mul(new(big.Int).SetUint64(signer.chainID), big.NewInt(2))
 	bigV.Sub(bigV, mulOperand)
 	bigV.Sub(bigV, big35)
 
@@ -142,21 +142,21 @@ func (signer *EIP155Signer) SignTx(tx *types.Transaction, privateKey *ecdsa.Priv
 	return tx, nil
 }
 
-func (e *EIP155Signer) SignTxWithCallback(tx *types.Transaction,
+func (signer *EIP155Signer) SignTxWithCallback(tx *types.Transaction,
 	signFn func(hash types.Hash) (sig []byte, err error)) (*types.Transaction, error) {
 	if tx.Type() != types.LegacyTxType && tx.Type() != types.StateTxType {
 		return nil, types.ErrTxTypeNotSupported
 	}
 
 	tx = tx.Copy()
-	h := e.Hash(tx)
+	h := signer.Hash(tx)
 
 	signature, err := signFn(h)
 	if err != nil {
 		return nil, err
 	}
 
-	tx.SplitToRawSignatureValues(signature, e.calculateV(signature[64]))
+	tx.SplitToRawSignatureValues(signature, signer.calculateV(signature[64]))
 
 	return tx, nil
 }
@@ -170,7 +170,7 @@ func (signer *EIP155Signer) calculateV(parity byte) []byte {
 	a.Add(a, big35)
 
 	// b = CHAIN_ID * 2
-	b := big.NewInt(0).Mul(big.NewInt(int64(signer.chainID)), big.NewInt(2))
+	b := big.NewInt(0).Mul(new(big.Int).SetUint64(signer.chainID), big.NewInt(2))
 
 	a.Add(a, b)
 

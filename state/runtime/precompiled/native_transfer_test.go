@@ -143,7 +143,7 @@ func (d dummyHost) GetTxContext() runtime.TxContext {
 	return runtime.TxContext{}
 }
 
-func (d dummyHost) GetBlockHash(number int64) types.Hash {
+func (d dummyHost) GetBlockHash(number uint64) types.Hash {
 	d.t.Fatalf("GetTxContext is not implemented")
 
 	return types.ZeroHash

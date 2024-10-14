@@ -227,11 +227,11 @@ func (e *Executor) BeginTxn(
 
 	txCtx := runtime.TxContext{
 		Coinbase:     coinbaseReceiver,
-		Timestamp:    int64(header.Timestamp),
-		Number:       int64(header.Number),
+		Timestamp:    header.Timestamp,
+		Number:       header.Number,
 		Difficulty:   types.BytesToHash(new(big.Int).SetUint64(header.Difficulty).Bytes()),
 		BaseFee:      new(big.Int).SetUint64(header.BaseFee),
-		GasLimit:     int64(header.GasLimit),
+		GasLimit:     header.GasLimit,
 		ChainID:      e.config.ChainID,
 		BurnContract: burnContract,
 	}
@@ -240,7 +240,7 @@ func (e *Executor) BeginTxn(
 	t.PostHook = e.PostHook
 	t.getHash = e.GetHash(header)
 	t.ctx = txCtx
-	t.gasPool = uint64(txCtx.GasLimit)
+	t.gasPool = txCtx.GasLimit
 
 	t.isL1OriginatedToken = e.IsL1OriginatedToken
 
@@ -1127,8 +1127,8 @@ func (t *Transition) GetTxContext() runtime.TxContext {
 	return t.ctx
 }
 
-func (t *Transition) GetBlockHash(number int64) (res types.Hash) {
-	return t.getHash(uint64(number))
+func (t *Transition) GetBlockHash(number uint64) (res types.Hash) {
+	return t.getHash(number)
 }
 
 func (t *Transition) EmitLog(addr types.Address, topics []types.Hash, data []byte) {

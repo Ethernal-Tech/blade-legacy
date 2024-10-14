@@ -23,16 +23,20 @@ func decodeStateTransaction(txData []byte) (contractsapi.StateTransactionInput, 
 		obj                 contractsapi.StateTransactionInput
 	)
 
-	if bytes.Equal(sig, commitBridgeTxFn.Sig()) {
+	switch {
+	case bytes.Equal(sig, commitBridgeTxFn.Sig()):
 		// bridge commitment
 		obj = &CommitmentMessageSigned{}
-	} else if bytes.Equal(sig, commitEpochFn.Sig()) {
+
+	case bytes.Equal(sig, commitEpochFn.Sig()):
 		// commit epoch
 		obj = &contractsapi.CommitEpochEpochManagerFn{}
-	} else if bytes.Equal(sig, distributeRewardsFn.Sig()) {
+
+	case bytes.Equal(sig, distributeRewardsFn.Sig()):
 		// distribute rewards
 		obj = &contractsapi.DistributeRewardForEpochManagerFn{}
-	} else {
+
+	default:
 		return nil, fmt.Errorf("unknown state transaction")
 	}
 

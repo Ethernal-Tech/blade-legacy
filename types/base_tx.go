@@ -80,7 +80,7 @@ func (tx *BaseTx) copy() *BaseTx {
 	}
 
 	inputCopy := make([]byte, len(tx.input()))
-	copy(inputCopy, tx.input()[:])
+	copy(inputCopy, tx.input())
 
 	cpy.setInput(inputCopy)
 

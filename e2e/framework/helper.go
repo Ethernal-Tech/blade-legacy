@@ -85,6 +85,7 @@ func MultiJoinSerial(t *testing.T, srvs []*TestServer) {
 		srv, dst := srvs[i], srvs[i+1]
 		dials = append(dials, srv, dst)
 	}
+
 	MultiJoin(t, dials...)
 }
 
@@ -424,6 +425,7 @@ func WaitForServersToSeal(servers []*TestServer, desiredHeight uint64) []error {
 			}
 		}(i)
 	}
+
 	wg.Wait()
 
 	return waitErrors
