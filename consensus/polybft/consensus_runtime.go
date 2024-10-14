@@ -47,20 +47,6 @@ var (
 	errNotAValidator = errors.New("node is not a validator")
 )
 
-// txPoolInterface is an abstraction of transaction pool
-type txPoolInterface interface {
-	Prepare()
-	Length() uint64
-	Peek() *types.Transaction
-	Pop(*types.Transaction)
-	Drop(*types.Transaction)
-	Demote(*types.Transaction)
-	SetSealing(bool)
-	ResetWithBlock(*types.Block)
-	ReinsertProposed()
-	ClearProposed()
-}
-
 // epochMetadata is the static info for epoch currently being processed
 type epochMetadata struct {
 	// Number is the number of the epoch

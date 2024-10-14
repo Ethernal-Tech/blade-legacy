@@ -2,8 +2,6 @@ package polybft
 
 import (
 	"fmt"
-	"math/big"
-	"math/rand"
 	"os"
 	"testing"
 	"time"
@@ -11,7 +9,6 @@ import (
 	ibftproto "github.com/0xPolygon/go-ibft/messages/proto"
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bridge"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
@@ -196,13 +193,13 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 	t.Parallel()
 
 	const (
-		epochSize       = uint64(10)
-		validatorsCount = 7
+		epochSize          = uint64(10)
+		validatorsCount    = 7
+		currentEpochNumber = uint64(1)
 	)
 
-	currentEpochNumber := getEpochNumber(t, epochSize, epochSize)
 	validatorSet := validator.NewTestValidators(t, validatorsCount).GetPublicIdentities()
-	header, headerMap := createTestBlocks(t, epochSize, epochSize, validatorSet)
+	header, headerMap := polytypes.CreateTestBlocks(t, epochSize, epochSize, validatorSet)
 	builtBlock := consensus.BuildBlock(consensus.BuildBlockParams{
 		Header: header,
 	})
@@ -500,11 +497,11 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	systemStateMock.On("GetNextCommittedIndex").Return(uint64(1)).Once()
 
 	blockchainMock := new(polychain.BlockchainMock)
-	blockchainMock.On("CurrentHeader").Return(&types.Header{Number: 1, ExtraData: createTestExtraForAccounts(t, 1, validators, nil)})
+	blockchainMock.On("CurrentHeader").Return(&types.Header{Number: 1, ExtraData: polytypes.CreateTestExtraForAccounts(t, 1, validators, nil)})
 	blockchainMock.On("GetStateProviderForBlock", mock.Anything).Return(new(systemstate.StateProviderMock)).Once()
 	blockchainMock.On("GetSystemState", mock.Anything, mock.Anything).Return(systemStateMock).Once()
-	blockchainMock.On("GetHeaderByNumber", uint64(0)).Return(&types.Header{Number: 0, ExtraData: createTestExtraForAccounts(t, 0, validators, nil)})
-	blockchainMock.On("GetHeaderByNumber", uint64(1)).Return(&types.Header{Number: 1, ExtraData: createTestExtraForAccounts(t, 1, validators, nil)})
+	blockchainMock.On("GetHeaderByNumber", uint64(0)).Return(&types.Header{Number: 0, ExtraData: polytypes.CreateTestExtraForAccounts(t, 0, validators, nil)})
+	blockchainMock.On("GetHeaderByNumber", uint64(1)).Return(&types.Header{Number: 1, ExtraData: polytypes.CreateTestExtraForAccounts(t, 1, validators, nil)})
 
 	polybftBackendMock := new(polytypes.PolybftBackendMock)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validators).Times(4)
@@ -600,7 +597,7 @@ func TestConsensusRuntime_calculateCommitEpochInput_SecondEpoch(t *testing.T) {
 		SprintSize: sprintSize,
 	}
 
-	lastBuiltBlock, headerMap := createTestBlocks(t, 20, epochSize, validators.GetPublicIdentities())
+	lastBuiltBlock, headerMap := polytypes.CreateTestBlocks(t, 20, epochSize, validators.GetPublicIdentities())
 
 	blockchainMock := new(polychain.BlockchainMock)
 	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
@@ -1082,94 +1079,6 @@ func TestConsensusRuntime_SequenceCancelled(t *testing.T) {
 	txPool.AssertExpectations(t)
 }
 
-func createTestBlocks(t *testing.T, numberOfBlocks, defaultEpochSize uint64,
-	validatorSet validator.AccountSet) (*types.Header, *polytesting.TestHeadersMap) {
-	t.Helper()
-
-	headerMap := &polytesting.TestHeadersMap{}
-	bitmaps := createTestBitmaps(t, validatorSet, numberOfBlocks)
-
-	extra := &polytypes.Extra{
-		BlockMetaData: &polytypes.BlockMetaData{EpochNumber: 0},
-	}
-
-	genesisBlock := &types.Header{
-		Number:    0,
-		ExtraData: extra.MarshalRLPTo(nil),
-	}
-	parentHash := types.BytesToHash(big.NewInt(0).Bytes())
-
-	headerMap.AddHeader(genesisBlock)
-
-	var hash types.Hash
-
-	var blockHeader *types.Header
-
-	for i := uint64(1); i <= numberOfBlocks; i++ {
-		big := big.NewInt(int64(i))
-		hash = types.BytesToHash(big.Bytes())
-
-		header := &types.Header{
-			Number:     i,
-			ParentHash: parentHash,
-			ExtraData:  createTestExtraForAccounts(t, getEpochNumber(t, i, defaultEpochSize), validatorSet, bitmaps[i]),
-			GasLimit:   types.StateTransactionGasLimit,
-		}
-
-		headerMap.AddHeader(header)
-
-		parentHash = hash
-		blockHeader = header
-	}
-
-	return blockHeader, headerMap
-}
-
-func createTestBitmaps(t *testing.T, validators validator.AccountSet, numberOfBlocks uint64) map[uint64]bitmap.Bitmap {
-	t.Helper()
-
-	bitmaps := make(map[uint64]bitmap.Bitmap, numberOfBlocks)
-
-	rand.Seed(time.Now().UTC().Unix())
-
-	for i := numberOfBlocks; i > 1; i-- {
-		bitmap := bitmap.Bitmap{}
-		j := 0
-
-		for j != 3 {
-			validator := validators[rand.Intn(validators.Len())]
-			index := uint64(validators.Index(validator.Address))
-
-			if !bitmap.IsSet(index) {
-				bitmap.Set(index)
-
-				j++
-			}
-		}
-
-		bitmaps[i] = bitmap
-	}
-
-	return bitmaps
-}
-
-func createTestExtraForAccounts(t *testing.T, epoch uint64, validators validator.AccountSet, b bitmap.Bitmap) []byte {
-	t.Helper()
-
-	dummySignature := [64]byte{}
-	extraData := polytypes.Extra{
-		Validators: &validator.ValidatorSetDelta{
-			Added:   validators,
-			Removed: bitmap.Bitmap{},
-		},
-		Parent:        &polytypes.Signature{Bitmap: b, AggregatedSignature: dummySignature[:]},
-		Committed:     &polytypes.Signature{Bitmap: b, AggregatedSignature: dummySignature[:]},
-		BlockMetaData: &polytypes.BlockMetaData{EpochNumber: epoch},
-	}
-
-	return extraData.MarshalRLPTo(nil)
-}
-
 var _ bridge.Topic = &mockTopic{}
 
 type mockTopic struct {
@@ -1184,18 +1093,4 @@ func (m *mockTopic) Publish(obj proto.Message) error {
 
 func (m *mockTopic) Subscribe(handler func(obj interface{}, from peer.ID)) error {
 	return nil
-}
-
-// getEpochNumber returns epoch number for given blockNumber and epochSize.
-// Epoch number is derived as a result of division of block number and epoch size.
-// Since epoch number is 1-based (0 block represents special case zero epoch),
-// we are incrementing result by one for non epoch-ending blocks.
-func getEpochNumber(t *testing.T, blockNumber, epochSize uint64) uint64 {
-	t.Helper()
-
-	if blockNumber%epochSize == 0 { // is end of period
-		return blockNumber / epochSize
-	}
-
-	return blockNumber/epochSize + 1
 }

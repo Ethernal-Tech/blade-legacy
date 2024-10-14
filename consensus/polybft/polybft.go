@@ -115,7 +115,7 @@ type Polybft struct {
 	logger hclog.Logger
 
 	// tx pool as interface
-	txPool txPoolInterface
+	txPool blockchain.TxPool
 }
 
 func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state.Transition) error {

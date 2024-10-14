@@ -45,3 +45,25 @@ type PostEpochRequest struct {
 	// Forks holds forks configuration
 	Forks *chain.Forks
 }
+
+// BlockInfo holds information about the block
+type BlockInfo struct {
+	// IsEndOfEpoch indicates if the block is the last block of the epoch
+	IsEndOfEpoch bool
+	// IsFirstBlockOfEpoch indicates if the block is the first block of the epoch
+	IsFirstBlockOfEpoch bool
+	// IsEndOfSprint indicates if the block is the last block of the sprint
+	IsEndOfSprint bool
+	// FirstBlockInEpoch is the number of the first block in the epoch
+	FirstBlockInEpoch uint64
+	// CurrentEpoch is the current epoch number
+	CurrentEpoch uint64
+	// EpochSize is the number of blocks in the epoch
+	EpochSize uint64
+	// ParentBlock is the parent block of the current block
+	ParentBlock *types.Header
+}
+
+func (b BlockInfo) CurrentBlock() uint64 {
+	return b.ParentBlock.Number + 1
+}
