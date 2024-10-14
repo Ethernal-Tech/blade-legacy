@@ -798,7 +798,7 @@ func (j *jsonRPCHub) StorageRangeAt(storageRangeResult *state.StorageRangeResult
 	}
 
 	for idx, tx := range block.Transactions {
-		// Execute transactions without tracer until reaching the target transaction
+		// Executes transactions until the target transaction is reached
 		if _, err := transition.Apply(tx); err != nil {
 			return fmt.Errorf("failed to apply transaction %d: %w", txIndex, err)
 		}

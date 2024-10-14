@@ -816,7 +816,7 @@ func (d *Debug) GetAccessibleState(from, to BlockNumber) (interface{}, error) {
 					}
 				}
 
-				return 0, fmt.Errorf("no accessible state found on the block %d", start)
+				return 0, fmt.Errorf("no accessible state found in the block %d", start)
 			}
 
 			delta := int64(1)

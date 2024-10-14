@@ -1521,7 +1521,7 @@ func TestGetAccessibleState(t *testing.T) {
 				},
 			},
 
-			returnErr: "no accessible state found on the block",
+			returnErr: "no accessible state found in the block",
 			result:    0,
 			err:       true,
 		},
