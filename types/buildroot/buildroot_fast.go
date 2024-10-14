@@ -7,14 +7,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/helper/keccak"
 )
 
-func min(i, j int) int {
-	if i < j {
-		return i
-	}
-
-	return j
-}
-
 var fastHasherPool sync.Pool
 
 func acquireFastHasher() *FastHasher {
@@ -291,7 +283,7 @@ func (f *FastHasher) marshalRlpSize(dst []byte, size uint64, short, long byte) [
 	buf := make([]byte, 8)
 	intSize := intsize(size)
 
-	binary.BigEndian.PutUint64(buf[:], size)
+	binary.BigEndian.PutUint64(buf, size)
 
 	dst = append(dst, long+byte(intSize))
 	dst = append(dst, buf[8-intSize:]...)

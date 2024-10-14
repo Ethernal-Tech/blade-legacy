@@ -24,7 +24,7 @@ jobs:
           go-version: ${{ vars.GOLANG_VERSION }}
           cache: false
       - name: Lint
-        uses: golangci/golangci-lint-action@v4.0.0
+        uses: golangci/golangci-lint-action@v6.1.1
         with:
           args: --timeout 10m --verbose
       - name: Lint Failed

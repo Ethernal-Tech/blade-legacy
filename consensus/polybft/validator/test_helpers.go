@@ -150,7 +150,7 @@ func NewTestValidator(tb testing.TB, alias string, votingPower uint64) *TestVali
 }
 
 func (v *TestValidator) Address() types.Address {
-	return types.Address(v.Account.Ecdsa.Address())
+	return v.Account.Ecdsa.Address()
 }
 
 func (v *TestValidator) Key() *wallet.Key {
@@ -169,7 +169,7 @@ func (v *TestValidator) ParamsValidator() *GenesisValidator {
 
 func (v *TestValidator) ValidatorMetadata() *ValidatorMetadata {
 	return &ValidatorMetadata{
-		Address:     types.Address(v.Account.Ecdsa.Address()),
+		Address:     v.Account.Ecdsa.Address(),
 		BlsKey:      v.Account.Bls.PublicKey(),
 		VotingPower: new(big.Int).SetUint64(v.VotingPower),
 	}

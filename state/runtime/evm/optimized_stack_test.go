@@ -110,7 +110,7 @@ func TestOptimizedStackSwap(t *testing.T) {
 	stack.push(*value2)
 
 	// Swap the top two elements
-	stack.swap(1)
+	require.NoError(t, stack.swap(1))
 
 	// Verify swap operation
 	require.Equal(t, stack[stack.size()-1], *value1)

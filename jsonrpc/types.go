@@ -407,7 +407,7 @@ func (b *argBytes) UnmarshalText(input []byte) error {
 	}
 
 	aux := make([]byte, len(hh))
-	copy(aux[:], hh[:])
+	copy(aux, hh)
 	*b = aux
 
 	return nil

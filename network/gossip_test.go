@@ -76,6 +76,7 @@ func TestSimpleGossip(t *testing.T) {
 	require.NoError(t, err, "Unable to wait for subscribers")
 
 	time.Sleep(100 * time.Millisecond)
+
 	err = publisherTopic.Publish(
 		&testproto.GenericMessage{
 			Message: sentMessage,

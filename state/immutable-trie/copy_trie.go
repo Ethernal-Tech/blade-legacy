@@ -22,7 +22,7 @@ func getCustomNode(hash []byte, storage Storage) (Node, []byte, error) {
 		return nil, nil, err
 	}
 
-	// NOTE. We dont need to make copies of the bytes because the nodes
+	// NOTE: We dont need to make copies of the bytes because the nodes
 	// take the reference from data itself which is a safe copy.
 	p := parserPool.Get()
 	defer parserPool.Put(p)
@@ -57,7 +57,7 @@ func copyTrieHash(nodeHash []byte, storage Storage, batchWriter Batch, agg []byt
 		return err
 	}
 
-	//copy whole bytes of nodes
+	// copy whole bytes of nodes
 	batchWriter.Put(nodeHash, data)
 
 	return copyTrieNode(node, storage, batchWriter, agg, isStorage)
@@ -84,7 +84,7 @@ func copyTrieNode(node Node, storage Storage, batchWriter Batch, agg []byte, isS
 		}
 
 	case *ValueNode:
-		//if node represens stored value, then we need to copy it
+		// if node represens stored value, then we need to copy it
 		if n.hash {
 			return copyTrieHash(n.buf, storage, batchWriter, agg, isStorage)
 		}

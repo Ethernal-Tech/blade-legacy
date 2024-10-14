@@ -514,10 +514,8 @@ func TestInsertHeaders(t *testing.T) {
 			if len(forks) != 0 {
 				if len(forks) != len(expectedForks) {
 					t.Fatalf("forks length dont match, expected %d but found %d", len(expectedForks), len(forks))
-				} else {
-					if !reflect.DeepEqual(forks, expectedForks) {
-						t.Fatal("forks dont match")
-					}
+				} else if !reflect.DeepEqual(forks, expectedForks) {
+					t.Fatal("forks dont match")
 				}
 			}
 
@@ -1709,10 +1707,7 @@ func blockWriter(tb testing.TB, numberOfBlocks uint64, blockTime, checkInterval 
 	err := common.CreateDirSafe(dbPath, 0755)
 	require.NoError(tb, err)
 
-	db, err := leveldb.NewLevelDBStorage(
-		filepath.Join(dbPath),
-		hclog.NewNullLogger(),
-	)
+	db, err := leveldb.NewLevelDBStorage(dbPath, hclog.NewNullLogger())
 	require.NoError(tb, err)
 
 	tb.Cleanup(func() {

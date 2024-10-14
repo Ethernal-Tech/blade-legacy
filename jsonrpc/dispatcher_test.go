@@ -470,19 +470,20 @@ func TestDispatcherBatchRequest(t *testing.T) {
 
 			assert.NoError(t, expectBatchJSONResult(res, &batchResp))
 
-			if c.name == "leading-whitespace" {
+			switch c.name {
+			case "leading-whitespace":
 				assert.Len(t, batchResp, 4)
 
 				for index, resp := range batchResp {
 					assert.Equal(t, c.batchResponse[index].Error, resp.Error)
 				}
-			} else if c.name == "valid-batch-req" {
+			case "valid-batch-req":
 				assert.Len(t, batchResp, 6)
 
 				for index, resp := range batchResp {
 					assert.Equal(t, c.batchResponse[index].Error, resp.Error)
 				}
-			} else if c.name == "no-limits" {
+			case "no-limits":
 				assert.Len(t, batchResp, 12)
 
 				for index, resp := range batchResp {

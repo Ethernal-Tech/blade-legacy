@@ -120,7 +120,7 @@ func GenerateGenesisAccountFromFile(scArtifact *contracts.Artifact, constructorA
 			return nil, fmt.Errorf("unable to encode constructor arguments, %w", err)
 		}
 
-		finalBytecode = append(scArtifact.Bytecode, constructor...)
+		finalBytecode = append(finalBytecode, constructor...)
 	}
 
 	return getPredeployAccount(predeployAddress, finalBytecode, chainID, deployer)

@@ -106,7 +106,7 @@ func TestCreate2(t *testing.T) {
 			}
 
 			salt := [32]byte{}
-			copy(salt[:], saltRaw[:])
+			copy(salt[:], saltRaw)
 
 			res := CreateAddress2(address, salt, initCode)
 

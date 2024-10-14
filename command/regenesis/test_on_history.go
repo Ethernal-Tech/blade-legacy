@@ -98,7 +98,7 @@ func HistoryTestCmd() *cobra.Command {
 			}
 
 			if lastStateRoot == header.StateRoot {
-				//state root is the same,as in previous block
+				// state root is the same,as in previous block
 				continue
 			}
 

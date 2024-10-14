@@ -93,10 +93,10 @@ func (h *Header) Copy() *Header {
 	}
 
 	newHeader.Miner = make([]byte, len(h.Miner))
-	copy(newHeader.Miner[:], h.Miner[:])
+	copy(newHeader.Miner, h.Miner)
 
 	newHeader.ExtraData = make([]byte, len(h.ExtraData))
-	copy(newHeader.ExtraData[:], h.ExtraData[:])
+	copy(newHeader.ExtraData, h.ExtraData)
 
 	return newHeader
 }

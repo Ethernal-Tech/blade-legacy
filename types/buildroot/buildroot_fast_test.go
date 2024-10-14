@@ -54,10 +54,10 @@ func TestFastHasher(t *testing.T) {
 	}
 }
 
-func randomInt(min, max uint64) uint64 {
-	randNum, _ := rand.Int(rand.Reader, big.NewInt(int64(max-min)))
+func randomInt(lowerBound, upperBound uint64) uint64 {
+	randNum, _ := rand.Int(rand.Reader, big.NewInt(int64(upperBound-lowerBound)))
 
-	return min + randNum.Uint64()
+	return lowerBound + randNum.Uint64()
 }
 
 func buildInput(n, m int) func(i int) []byte {

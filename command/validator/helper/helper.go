@@ -98,9 +98,7 @@ func GetValidatorInfo(validatorAddr types.Address, childRelayer txrelayer.TxRela
 		IsWhitelisted: innerMap["isWhitelisted"].(bool),
 	}
 
-	stakeOfFn := &contractsapi.StakeOfStakeManagerFn{
-		Validator: types.Address(validatorAddr),
-	}
+	stakeOfFn := &contractsapi.StakeOfStakeManagerFn{Validator: validatorAddr}
 
 	encode, err = stakeOfFn.EncodeAbi()
 	if err != nil {

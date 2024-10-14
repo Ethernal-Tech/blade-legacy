@@ -3805,9 +3805,9 @@ func TestGetCapacity(t *testing.T) {
 
 	assert.NoError(t, pool.addTx(local, tx))
 
-	read, max := pool.GetCapacity()
+	read, maxCapacity := pool.GetCapacity()
 	assert.Greater(t, read, uint64(0))
-	assert.Greater(t, max, uint64(0))
+	assert.Greater(t, maxCapacity, uint64(0))
 }
 
 func TestSetSealing(t *testing.T) {

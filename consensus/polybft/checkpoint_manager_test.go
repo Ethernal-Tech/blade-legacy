@@ -247,13 +247,8 @@ func TestCheckpointManager_getCurrentCheckpointID(t *testing.T) {
 				Return(c.checkpointID, c.returnError).
 				Once()
 
-			acc, err := wallet.GenerateAccount()
-			require.NoError(t, err)
-
 			checkpointMgr := &checkpointManager{
 				rootChainRelayer: txRelayerMock,
-				key:              acc.Ecdsa,
-				logger:           hclog.NewNullLogger(),
 			}
 
 			actualCheckpointID, err := getCurrentCheckpointBlock(checkpointMgr.rootChainRelayer,

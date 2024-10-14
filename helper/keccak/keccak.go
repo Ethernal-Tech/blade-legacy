@@ -56,7 +56,7 @@ func (k *Keccak) Read() []byte {
 // Sum implements the hash interface
 func (k *Keccak) Sum(dst []byte) []byte {
 	k.hash.Read(k.tmp) //nolint:errcheck
-	dst = append(dst, k.tmp[:]...)
+	dst = append(dst, k.tmp...)
 
 	return dst
 }
