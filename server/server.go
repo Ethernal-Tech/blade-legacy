@@ -722,6 +722,11 @@ func (j *jsonRPCHub) Get(key string) ([]byte, error) {
 	return data, nil
 }
 
+// Verbosity sets the log verbosity ceiling.
+func (j *jsonRPCHub) Verbosity(level int) (string, error) {
+	return j.Executor.Verbosity(level)
+}
+
 func (j *jsonRPCHub) GetCode(root types.Hash, addr types.Address) ([]byte, error) {
 	account, err := getAccountImpl(j.state, root, addr)
 	if err != nil {

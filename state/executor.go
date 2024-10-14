@@ -137,6 +137,17 @@ func (e *Executor) GetDumpTree(dump *Dump, parentHash types.Hash,
 	return next, nil
 }
 
+// Verbosity sets the log verbosity ceiling.
+func (e *Executor) Verbosity(level int) (string, error) {
+	if level < int(hclog.NoLevel) || level > int(hclog.Off) {
+		return hclog.Level(level).String(), fmt.Errorf("invalid log level: %d", level)
+	}
+
+	e.logger.SetLevel(hclog.Level(level))
+
+	return hclog.Level(level).String(), nil
+}
+
 // ProcessBlock already does all the handling of the whole process
 func (e *Executor) ProcessBlock(
 	parentRoot types.Hash,

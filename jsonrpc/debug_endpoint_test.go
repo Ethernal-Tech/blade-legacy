@@ -25,6 +25,7 @@ type debugEndpointMockStore struct {
 	getPendingTxFn        func(types.Hash) (*types.Transaction, bool)
 	hasFn                 func(types.Hash) bool
 	getFn                 func(string) ([]byte, error)
+	verbosityFn           func(int) (string, error)
 	getIteratorDumpTreeFn func(*types.Block, *state.DumpInfo) (*state.IteratorDump, error)
 	dumpTreeFn            func(*types.Block, *state.DumpInfo) (*state.Dump, error)
 	getBlockByHashFn      func(types.Hash, bool) (*types.Block, bool)
@@ -64,6 +65,10 @@ func (s *debugEndpointMockStore) Has(hash types.Hash) bool {
 
 func (s *debugEndpointMockStore) Get(key string) ([]byte, error) {
 	return s.getFn(key)
+}
+
+func (s *debugEndpointMockStore) Verbosity(level int) (string, error) {
+	return s.verbosityFn(level)
 }
 
 func (s *debugEndpointMockStore) GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error) {

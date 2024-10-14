@@ -63,6 +63,9 @@ type debugBlockchainStore interface {
 	// DB does not contains the key.
 	Get(key string) ([]byte, error)
 
+	// Verbosity sets the log verbosity ceiling.
+	Verbosity(level int) (string, error)
+
 	// GetIteratorDumpTree returns a set of accounts based on the given criteria and depends on the starting element.
 	GetIteratorDumpTree(block *types.Block, opts *state.DumpInfo) (*state.IteratorDump, error)
 
@@ -736,6 +739,17 @@ func (d *Debug) DumpBlock(blockNumber BlockNumber) (interface{}, error) {
 			}
 
 			return dump, nil
+		},
+	)
+}
+
+// Verbosity sets the log verbosity ceiling. The verbosity of individual packages
+// and source files can be raised using Vmodule.
+func (d *Debug) Verbosity(level int) (interface{}, error) {
+	return d.throttling.AttemptRequest(
+		context.Background(),
+		func() (interface{}, error) {
+			return d.store.Verbosity(level)
 		},
 	)
 }
