@@ -121,9 +121,11 @@ func NewBridge(runtime Runtime,
 		if err := bridgeManager.Start(runtimeConfig); err != nil {
 			return nil, fmt.Errorf("error starting bridge manager for chainID: %d, err: %w", externalChainID, err)
 		}
+
+		eventProvider.Subscribe(bridgeManager)
 	}
 
-	relayer, err := newBridgeEventRelayer(blockchain, runtimeConfig, logger)
+	relayer, err := newBridgeEventRelayer(blockchain, runtimeConfig, logger, store)
 	if err != nil {
 		return nil, err
 	}

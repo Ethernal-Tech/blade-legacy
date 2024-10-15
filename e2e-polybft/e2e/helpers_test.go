@@ -199,7 +199,7 @@ func getChildToken(t *testing.T, predicateABI *abi.ABI, predicateAddr types.Addr
 	rootToken types.Address, relayer txrelayer.TxRelayer) types.Address {
 	t.Helper()
 
-	rootToChildTokenFn, exists := predicateABI.Methods["rootTokenToChildToken"]
+	rootToChildTokenFn, exists := predicateABI.Methods["sourceTokenToDestinationToken"]
 	require.True(t, exists, "rootTokenToChildToken function is not found in the provided predicate ABI definition")
 
 	input, err := rootToChildTokenFn.Encode([]interface{}{rootToken})
@@ -209,4 +209,22 @@ func getChildToken(t *testing.T, predicateABI *abi.ABI, predicateAddr types.Addr
 	require.NoError(t, err)
 
 	return types.StringToAddress(childTokenRaw)
+}
+
+func isEventsProcessed(t *testing.T, gatewayAddr types.Address,
+	relayer txrelayer.TxRelayer, bridgeEventID uint64) bool {
+	t.Helper()
+
+	processedEventsFn := contractsapi.Gateway.Abi.Methods["processedEvents"]
+
+	input, err := processedEventsFn.Encode([]interface{}{new(big.Int).SetUint64(bridgeEventID)})
+	require.NoError(t, err)
+
+	isProcessedRaw, err := relayer.Call(types.ZeroAddress, gatewayAddr, input)
+	require.NoError(t, err)
+
+	isProcessedAsNumber, err := common.ParseUint64orHex(&isProcessedRaw)
+	require.NoError(t, err)
+
+	return isProcessedAsNumber == 1
 }

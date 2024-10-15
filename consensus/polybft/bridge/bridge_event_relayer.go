@@ -83,6 +83,7 @@ func newBridgeEventRelayer(
 	blockchain polychain.Blockchain,
 	runtimeConfig *config.Runtime,
 	logger hclog.Logger,
+	state *BridgeManagerStore,
 ) (BridgeEventRelayer, error) {
 	if !runtimeConfig.ConsensusConfig.IsRelayer {
 		return &dummyBridgeEventRelayer{}, nil
@@ -95,6 +96,8 @@ func newBridgeEventRelayer(
 		blockchain:      blockchain,
 		eventCh:         make(chan contractsapi.ABIEncoder, eventChBuffer),
 		quitCh:          make(chan struct{}),
+		bridgeConfig:    runtimeConfig.GenesisConfig.Bridge,
+		state:           state,
 	}
 
 	return relayer, nil
@@ -129,7 +132,7 @@ func (ber *bridgeEventRelayerImpl) sendSignedBridgeMessageBatch(event *contracts
 		txRelayer          = ber.internalTxRelayer
 		destinationChainID = event.DestinationChainID.Uint64()
 		sourceChainID      = event.SourceChainID.Uint64()
-		to                 = ber.bridgeConfig[destinationChainID].InternalGatewayAddr
+		to                 types.Address
 		exists             bool
 	)
 
@@ -140,6 +143,8 @@ func (ber *bridgeEventRelayerImpl) sendSignedBridgeMessageBatch(event *contracts
 		}
 
 		to = ber.bridgeConfig[destinationChainID].ExternalGatewayAddr
+	} else {
+		to = ber.bridgeConfig[sourceChainID].InternalGatewayAddr
 	}
 
 	events, err := ber.state.getBridgeMessageEventsForBridgeBatch(
@@ -418,6 +423,8 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 			return nil
 		}
 
+		ber.logger.Error("ERR", "EVENTS", newBatchEvent)
+
 		provider, err := ber.blockchain.GetStateProviderForBlock(header)
 		if err != nil {
 			return err
@@ -489,6 +496,6 @@ func createBridgeTxRelayer(rpcEndpoint string, logger hclog.Logger) (txrelayer.T
 	}
 
 	return txrelayer.NewTxRelayer(
-		txrelayer.WithIPAddress(rpcEndpoint), txrelayer.WithNoWaiting(),
+		txrelayer.WithIPAddress(rpcEndpoint),
 		txrelayer.WithWriter(logger.StandardWriter(&hclog.StandardLoggerOptions{})))
 }

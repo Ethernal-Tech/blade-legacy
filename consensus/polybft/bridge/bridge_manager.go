@@ -321,13 +321,6 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 		return err
 	}
 
-	if err := b.buildExternalBridgeBatch(nil); err != nil {
-		// we don't return an error here. If bridge message event is inserted in db,
-		// we will just try to build a batch on next block or next event arrival
-		b.logger.Error("could not build a batch on arrival of new bridge message event",
-			"err", err, "bridgeMessageID", event.ID)
-	}
-
 	return nil
 }
 
@@ -629,7 +622,8 @@ func (b *bridgeEventManager) GetLogFilters() map[types.Address][]types.Hash {
 	return map[types.Address][]types.Hash{
 		b.config.bridgeCfg.InternalGatewayAddr: {
 			types.Hash(bridgeMessageEventSig),
-			types.Hash(bridgeMessageResultEventSig)},
+			types.Hash(bridgeMessageResultEventSig),
+		},
 	}
 }
 
