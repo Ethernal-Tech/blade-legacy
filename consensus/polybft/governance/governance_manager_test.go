@@ -8,8 +8,8 @@ import (
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
-	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -33,7 +33,7 @@ func TestGovernanceManager_PostEpoch(t *testing.T) {
 	require.NoError(t, state.insertGovernanceEvent(1, epochRewardEvent, nil))
 
 	// no initial config was saved, so we expect an error
-	require.ErrorIs(t, governanceManager.PostEpoch(&polytypes.PostEpochRequest{
+	require.ErrorIs(t, governanceManager.PostEpoch(&oracle.PostEpochRequest{
 		NewEpochID:        2,
 		FirstBlockOfEpoch: 21,
 		Forks:             &chain.Forks{chain.Governance: chain.NewFork(0)},
@@ -49,7 +49,7 @@ func TestGovernanceManager_PostEpoch(t *testing.T) {
 	require.NoError(t, state.insertClientConfig(params, nil))
 
 	// PostEpoch will now update config with new epoch reward value
-	require.NoError(t, governanceManager.PostEpoch(&polytypes.PostEpochRequest{
+	require.NoError(t, governanceManager.PostEpoch(&oracle.PostEpochRequest{
 		NewEpochID:        2,
 		FirstBlockOfEpoch: 21,
 		Forks:             &chain.Forks{chain.Governance: chain.NewFork(0)},
@@ -74,7 +74,7 @@ func TestGovernanceManager_PostBlock(t *testing.T) {
 		t.Parallel()
 
 		// no governance events in receipts
-		req := &polytypes.PostBlockRequest{
+		req := &oracle.PostBlockRequest{
 			FullBlock: &types.FullBlock{Block: &types.Block{Header: &types.Header{Number: 5}},
 				Receipts: []*types.Receipt{},
 			},
@@ -109,7 +109,7 @@ func TestGovernanceManager_PostBlock(t *testing.T) {
 			newForkName  = "newFork"
 		)
 
-		req := &polytypes.PostBlockRequest{
+		req := &oracle.PostBlockRequest{
 			FullBlock: &types.FullBlock{Block: &types.Block{Header: &types.Header{Number: 5}}},
 			Epoch:     1,
 			Forks:     &chain.Forks{chain.Governance: chain.NewFork(0)},

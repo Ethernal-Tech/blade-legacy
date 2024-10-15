@@ -19,12 +19,11 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
-
-	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 )
 
 var bigZero = big.NewInt(0)
@@ -570,7 +569,7 @@ func (*mockBridgeManager) PostBlock() error {
 }
 
 // PostEpoch implements BridgeManager.
-func (mbm *mockBridgeManager) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (mbm *mockBridgeManager) PostEpoch(req *oracle.PostEpochRequest) error {
 	if err := mbm.state.insertEpoch(req.NewEpochID, req.DBTx, mbm.chainID); err != nil {
 		return err
 	}

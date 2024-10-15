@@ -62,9 +62,9 @@ var _ Bridge = (*DummyBridge)(nil)
 
 type DummyBridge struct{}
 
-func (d *DummyBridge) Close()                                          {}
-func (d *DummyBridge) PostBlock(req *polytypes.PostBlockRequest) error { return nil }
-func (d *DummyBridge) PostEpoch(req *polytypes.PostEpochRequest) error { return nil }
+func (d *DummyBridge) Close()                                       {}
+func (d *DummyBridge) PostBlock(req *oracle.PostBlockRequest) error { return nil }
+func (d *DummyBridge) PostEpoch(req *oracle.PostEpochRequest) error { return nil }
 func (d *DummyBridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error) {
 	return nil, nil
 }
@@ -147,7 +147,7 @@ func (b *bridge) Close() {
 
 // PostBlock is a function executed on every block finalization (either by consensus or syncer)
 // and calls PostBlock in each bridge manager
-func (b *bridge) PostBlock(req *polytypes.PostBlockRequest) error {
+func (b *bridge) PostBlock(req *oracle.PostBlockRequest) error {
 	for chainID, bridgeManager := range b.bridgeManagers {
 		if err := bridgeManager.PostBlock(); err != nil {
 			return fmt.Errorf("erorr bridge post block, chainID: %d, err: %w", chainID, err)
@@ -159,7 +159,7 @@ func (b *bridge) PostBlock(req *polytypes.PostBlockRequest) error {
 
 // PostEpoch is a function executed on epoch ending / start of new epoch
 // and calls PostEpoch in each bridge manager
-func (b *bridge) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (b *bridge) PostEpoch(req *oracle.PostEpochRequest) error {
 	if err := b.state.cleanEpochsFromDB(req.DBTx); err != nil {
 		// we just log this, as it is not critical
 		b.logger.Error("error cleaning epochs from db", "err", err)

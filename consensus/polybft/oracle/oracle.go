@@ -3,7 +3,6 @@ package oracle
 import (
 	"context"
 
-	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/types"
 	"golang.org/x/sync/errgroup"
@@ -40,9 +39,9 @@ type Oracle interface {
 	// Close closes the oracle
 	Close()
 	// PostBlock posts a block to the oracle
-	PostBlock(postBlockReq *polytypes.PostBlockRequest) error
+	PostBlock(postBlockReq *PostBlockRequest) error
 	// PostEpoch posts an epoch to the oracle
-	PostEpoch(postEpochReq *polytypes.PostEpochRequest) error
+	PostEpoch(postEpochReq *PostEpochRequest) error
 	// GetTransactions returns the system transactions
 	GetTransactions(blockInfo NewBlockInfo) ([]*types.Transaction, error)
 	// VerifyTransaction verifies system transactions
@@ -60,7 +59,7 @@ func (o Oracles) Close() {
 }
 
 // PostBlock posts a block to all oracles
-func (o Oracles) PostBlock(postBlockReq *polytypes.PostBlockRequest) error {
+func (o Oracles) PostBlock(postBlockReq *PostBlockRequest) error {
 	for _, oracle := range o {
 		if err := oracle.PostBlock(postBlockReq); err != nil {
 			return err
@@ -71,7 +70,7 @@ func (o Oracles) PostBlock(postBlockReq *polytypes.PostBlockRequest) error {
 }
 
 // PostEpoch posts an epoch to all oracles
-func (o Oracles) PostEpoch(postEpochReq *polytypes.PostEpochRequest) error {
+func (o Oracles) PostEpoch(postEpochReq *PostEpochRequest) error {
 	for _, oracle := range o {
 		if err := oracle.PostEpoch(postEpochReq); err != nil {
 			return err

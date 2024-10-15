@@ -7,6 +7,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/crypto"
@@ -71,7 +72,7 @@ func TestStakeManager_PostBlock(t *testing.T) {
 			1, // initial validator stake was 1
 		)), nil))
 
-		req := &polytypes.PostBlockRequest{
+		req := &oracle.PostBlockRequest{
 			FullBlock: &types.FullBlock{Block: &types.Block{Header: header}},
 			Epoch:     epoch,
 		}
@@ -127,7 +128,7 @@ func TestStakeManager_PostBlock(t *testing.T) {
 			250,
 		)), nil))
 
-		req := &polytypes.PostBlockRequest{
+		req := &oracle.PostBlockRequest{
 			FullBlock: &types.FullBlock{Block: &types.Block{Header: header}},
 			Epoch:     epoch,
 		}
@@ -194,7 +195,7 @@ func TestStakeManager_PostBlock(t *testing.T) {
 			)), nil))
 		}
 
-		req := &polytypes.PostBlockRequest{
+		req := &oracle.PostBlockRequest{
 			FullBlock: &types.FullBlock{Block: &types.Block{Header: header}},
 			Epoch:     epoch,
 		}

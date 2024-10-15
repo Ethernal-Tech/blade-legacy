@@ -47,9 +47,9 @@ type DummyGovernanceManager struct {
 	GetClientConfigFn func() (*chain.Params, error)
 }
 
-func (d *DummyGovernanceManager) Close()                                          {}
-func (d *DummyGovernanceManager) PostBlock(req *polytypes.PostBlockRequest) error { return nil }
-func (d *DummyGovernanceManager) PostEpoch(req *polytypes.PostEpochRequest) error { return nil }
+func (d *DummyGovernanceManager) Close()                                       {}
+func (d *DummyGovernanceManager) PostBlock(req *oracle.PostBlockRequest) error { return nil }
+func (d *DummyGovernanceManager) PostEpoch(req *oracle.PostEpochRequest) error { return nil }
 func (d *DummyGovernanceManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
 	return nil, nil
 }
@@ -157,7 +157,7 @@ func (g *governanceManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, tx
 func (g *governanceManager) Close() {}
 
 // PostEpoch notifies the governance manager that an epoch has changed
-func (g *governanceManager) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (g *governanceManager) PostEpoch(req *oracle.PostEpochRequest) error {
 	if !req.Forks.IsActive(chain.Governance, req.FirstBlockOfEpoch) {
 		// if governance fork is not enabled, do nothing
 		return nil
@@ -356,7 +356,7 @@ func (g *governanceManager) PostEpoch(req *polytypes.PostEpochRequest) error {
 
 // PostBlock notifies governance manager that a block was finalized
 // so that he can extract governance events and save them to bolt db
-func (g *governanceManager) PostBlock(req *polytypes.PostBlockRequest) error {
+func (g *governanceManager) PostBlock(req *oracle.PostBlockRequest) error {
 	if !req.Forks.IsActive(chain.Governance, req.FullBlock.Block.Number()) {
 		// if governance fork is not enabled, do nothing
 		return nil

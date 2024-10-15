@@ -10,7 +10,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
-	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/hashicorp/go-hclog"
@@ -123,7 +123,7 @@ func FuzzTestStakeManagerPostBlock(f *testing.F) {
 			data.StakeValue,
 		)), nil))
 
-		require.NoError(t, stakeManager.PostBlock(&polytypes.PostBlockRequest{
+		require.NoError(t, stakeManager.PostBlock(&oracle.PostBlockRequest{
 			FullBlock: &types.FullBlock{Block: &types.Block{Header: &types.Header{Number: data.BlockID}}},
 			Epoch:     data.EpochID,
 		}))

@@ -20,6 +20,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	polybftProto "github.com/0xPolygon/polygon-edge/consensus/polybft/proto"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
@@ -54,7 +55,7 @@ type BridgeManager interface {
 	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 	BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error)
 	PostBlock() error
-	PostEpoch(req *polytypes.PostEpochRequest) error
+	PostEpoch(req *oracle.PostEpochRequest) error
 	Close()
 }
 
@@ -69,7 +70,7 @@ func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchS
 	return nil, nil
 }
 func (d *dummyBridgeEventManager) PostBlock() error { return nil }
-func (d *dummyBridgeEventManager) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (d *dummyBridgeEventManager) PostEpoch(req *oracle.PostEpochRequest) error {
 	return nil
 }
 
@@ -437,7 +438,7 @@ func (b *bridgeEventManager) getAggSignatureForBridgeBatchMessage(blockNumber ui
 
 // PostEpoch notifies the bridge event manager that an epoch has changed,
 // so that it can discard any previous epoch bridge batch, and build a new one (since validator set changed)
-func (b *bridgeEventManager) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (b *bridgeEventManager) PostEpoch(req *oracle.PostEpochRequest) error {
 	if err := b.state.insertEpoch(req.NewEpochID, req.DBTx, b.externalChainID); err != nil {
 		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w",
 			b.externalChainID, err)

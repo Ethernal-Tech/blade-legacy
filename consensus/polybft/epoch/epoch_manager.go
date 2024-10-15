@@ -52,12 +52,12 @@ func NewEpochManager(backend polytypes.Polybft, blockchain blockchain.Blockchain
 }
 
 // PostBlock is a function that posts a block to the oracle.
-func (e *EpochManager) PostBlock(postBlockReq *polytypes.PostBlockRequest) error {
+func (e *EpochManager) PostBlock(postBlockReq *oracle.PostBlockRequest) error {
 	return nil
 }
 
 // PostEpoch is a function that posts an epoch to the oracle.
-func (e *EpochManager) PostEpoch(postEpochReq *polytypes.PostEpochRequest) error {
+func (e *EpochManager) PostEpoch(postEpochReq *oracle.PostEpochRequest) error {
 	return nil
 }
 

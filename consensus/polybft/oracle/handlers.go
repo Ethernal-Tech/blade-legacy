@@ -1,4 +1,4 @@
-package types
+package oracle
 
 import (
 	"github.com/0xPolygon/polygon-edge/chain"

@@ -316,7 +316,7 @@ func (c *consensusRuntime) OnBlockInserted(fullBlock *types.FullBlock) {
 		return
 	}
 
-	postBlock := &polytypes.PostBlockRequest{
+	postBlock := &oracle.PostBlockRequest{
 		FullBlock:           fullBlock,
 		Epoch:               epoch.Number,
 		IsEpochEndingBlock:  isEndOfEpoch,
@@ -482,7 +482,7 @@ func (c *consensusRuntime) restartEpoch(header *types.Header, dbTx *bolt.Tx) (*e
 		"firstBlockInEpoch", firstBlockInEpoch,
 	)
 
-	reqObj := &polytypes.PostEpochRequest{
+	reqObj := &oracle.PostEpochRequest{
 		SystemState:       systemState,
 		NewEpochID:        epochNumber,
 		FirstBlockOfEpoch: firstBlockInEpoch,

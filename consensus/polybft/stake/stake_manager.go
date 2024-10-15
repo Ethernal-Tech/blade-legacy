@@ -45,8 +45,8 @@ var _ StakeManager = (*DummyStakeManager)(nil)
 // used only for unit testing
 type DummyStakeManager struct{}
 
-func (d *DummyStakeManager) PostBlock(req *polytypes.PostBlockRequest) error { return nil }
-func (d *DummyStakeManager) PostEpoch(req *polytypes.PostEpochRequest) error { return nil }
+func (d *DummyStakeManager) PostBlock(req *oracle.PostBlockRequest) error { return nil }
+func (d *DummyStakeManager) PostEpoch(req *oracle.PostEpochRequest) error { return nil }
 func (d *DummyStakeManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
 	return nil, nil
 }
@@ -139,14 +139,14 @@ func (s *stakeManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*
 }
 
 // PostEpoch posts new epoch to the oracle
-func (s *stakeManager) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (s *stakeManager) PostEpoch(req *oracle.PostEpochRequest) error {
 	return nil
 }
 
 // PostBlock is called on every insert of finalized block (either from consensus or syncer)
 // It will update the fullValidatorSet in db to the current block number
 // Note that EventSubscriber - AddLog will get all the transfer events that happened in block
-func (s *stakeManager) PostBlock(req *polytypes.PostBlockRequest) error {
+func (s *stakeManager) PostBlock(req *oracle.PostBlockRequest) error {
 	fullValidatorSet, err := s.getOrInitValidatorSet(req.DBTx)
 	if err != nil {
 		return err

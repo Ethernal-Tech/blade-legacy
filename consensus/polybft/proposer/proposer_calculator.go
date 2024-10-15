@@ -245,12 +245,12 @@ func (pc *ProposerCalculator) GetSnapshot() (*ProposerSnapshot, bool) {
 
 // PostBlock is called on every insert of finalized block (either from consensus or syncer)
 // It will update priorities and save the updated snapshot to db
-func (pc *ProposerCalculator) PostBlock(req *polytypes.PostBlockRequest) error {
+func (pc *ProposerCalculator) PostBlock(req *oracle.PostBlockRequest) error {
 	return pc.update(req.FullBlock.Block.Number(), req.DBTx)
 }
 
 // PostEpoch is called on every insert of finalized epoch (either from consensus or syncer)
-func (pc *ProposerCalculator) PostEpoch(req *polytypes.PostEpochRequest) error {
+func (pc *ProposerCalculator) PostEpoch(req *oracle.PostEpochRequest) error {
 	return nil
 }
 
