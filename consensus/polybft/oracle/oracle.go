@@ -49,14 +49,17 @@ type Oracle interface {
 	VerifyTransactions(blockInfo NewBlockInfo, txs []*types.Transaction) error
 }
 
+// Oracles is a collection of oracles
 type Oracles []Oracle
 
+// Close closes all oracles
 func (o Oracles) Close() {
 	for _, oracle := range o {
 		oracle.Close()
 	}
 }
 
+// PostBlock posts a block to all oracles
 func (o Oracles) PostBlock(postBlockReq *polytypes.PostBlockRequest) error {
 	for _, oracle := range o {
 		if err := oracle.PostBlock(postBlockReq); err != nil {
@@ -67,6 +70,7 @@ func (o Oracles) PostBlock(postBlockReq *polytypes.PostBlockRequest) error {
 	return nil
 }
 
+// PostEpoch posts an epoch to all oracles
 func (o Oracles) PostEpoch(postEpochReq *polytypes.PostEpochRequest) error {
 	for _, oracle := range o {
 		if err := oracle.PostEpoch(postEpochReq); err != nil {
@@ -77,6 +81,7 @@ func (o Oracles) PostEpoch(postEpochReq *polytypes.PostEpochRequest) error {
 	return nil
 }
 
+// GetTransactions returns all system transactions from all oracles
 func (o Oracles) GetTransactions(blockInfo NewBlockInfo) ([]*types.Transaction, error) {
 	var allTxs []*types.Transaction
 
@@ -92,11 +97,13 @@ func (o Oracles) GetTransactions(blockInfo NewBlockInfo) ([]*types.Transaction, 
 	return allTxs, nil
 }
 
+// VerifyTransactions verifies all system transactions from all oracles
 func (o Oracles) VerifyTransactions(blockInfo NewBlockInfo, txs []*types.Transaction) error {
 	g, _ := errgroup.WithContext(context.Background())
 
 	for _, oracle := range o {
 		oracle := oracle
+
 		g.Go(func() error {
 			return oracle.VerifyTransactions(blockInfo, txs)
 		})
