@@ -766,7 +766,7 @@ func (j *jsonRPCHub) DumpTree(block *types.Block, opts *state.DumpInfo) (*state.
 // code hash, or storage hash.
 func (j *jsonRPCHub) GetModifiedAccounts(startBlock, endBlock *types.Block) ([]types.Address, error) {
 	var (
-		startBlockAddressMap = make(map[types.Address]struct{})
+		startBlockAddressMap = make(map[types.Address]*state.Object)
 		changedAccounts      []types.Address
 	)
 
@@ -788,12 +788,15 @@ func (j *jsonRPCHub) GetModifiedAccounts(startBlock, endBlock *types.Block) ([]t
 
 		if block == startBlock {
 			for _, obj := range objs {
-				startBlockAddressMap[obj.Address] = struct{}{}
+				startBlockAddressMap[obj.Address] = obj
 			}
 		} else {
 			for _, obj := range objs {
-				if _, exists := startBlockAddressMap[obj.Address]; !exists {
-					changedAccounts = append(changedAccounts, obj.Address)
+				if startObj, exists := startBlockAddressMap[obj.Address]; exists {
+					if obj.Nonce != startObj.Nonce || obj.Balance.Cmp(startObj.Balance) != 0 ||
+						obj.CodeHash != startObj.CodeHash || obj.Root != startObj.Root {
+						changedAccounts = append(changedAccounts, obj.Address)
+					}
 				}
 			}
 		}
