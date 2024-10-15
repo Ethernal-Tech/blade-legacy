@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
@@ -24,8 +24,14 @@ import (
 )
 
 var (
-	errBridgeBatchTxExists           = errors.New("only one bridge batch tx is allowed per block")
-	errBridgeBatchTxInNonSprintBlock = errors.New("bridge batch tx is not allowed in non-sprint block")
+	errBridgeBatchTxExists             = errors.New("only one bridge batch tx is allowed per block")
+	errBridgeBatchTxInNonSprintBlock   = errors.New("bridge batch tx is not allowed in non-sprint block")
+	errCommitValidatorSetExists        = errors.New("only one commit validator set tx is allowed per block")
+	errCommitValidatorSetTxNotExpected = errors.New("commit validator set tx is not expected " +
+		"in non epoch ending block")
+	errCommitValidatorSetTxInvalid      = errors.New("commit validator set tx is invalid")
+	errCommitValidatorSetTxDoesNotExist = errors.New("commit validator set tx is not found in the epoch ending block " +
+		"even though new validator set delta is not empty")
 )
 
 // Topic is an interface for p2p message gossiping
@@ -43,17 +49,12 @@ type bridge struct {
 	internalChainID uint64
 	relayer         BridgeEventRelayer
 	logger          hclog.Logger
-
-	lock       sync.RWMutex
-	validators validator.ValidatorSet
 }
 
 // Bridge is an interface that defines functions that a bridge must implement
 type Bridge interface {
-	polytypes.Oracle
+	oracle.Oracle
 	Close()
-	PostBlock(req *polytypes.PostBlockRequest) error
-	PostEpoch(req *polytypes.PostEpochRequest) error
 	BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error)
 }
 
@@ -67,11 +68,10 @@ func (d *DummyBridge) PostEpoch(req *polytypes.PostEpochRequest) error { return 
 func (d *DummyBridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error) {
 	return nil, nil
 }
-func (d *DummyBridge) InsertEpoch(epoch uint64, tx *bolt.Tx) error { return nil }
-func (d *DummyBridge) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.Transaction, error) {
+func (d *DummyBridge) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
 	return nil, nil
 }
-func (d *DummyBridge) VerifyTransactions(blockInfo polytypes.BlockInfo, txs []*types.Transaction) error {
+func (d *DummyBridge) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
 	return nil
 }
 
@@ -175,11 +175,6 @@ func (b *bridge) PostEpoch(req *polytypes.PostEpochRequest) error {
 		}
 	}
 
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	b.validators = req.ValidatorSet
-
 	return nil
 }
 
@@ -200,8 +195,17 @@ func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, e
 }
 
 // GetTransactions returns the system transactions associated with the given block.
-func (b *bridge) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.Transaction, error) {
+func (b *bridge) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
 	var txs []*types.Transaction
+
+	if blockInfo.IsEndOfEpoch && blockInfo.ValidatorSetDelta != nil && !blockInfo.ValidatorSetDelta.IsEmpty() {
+		tx, err := createCommitValidatorSetTxn(blockInfo)
+		if err != nil {
+			return nil, fmt.Errorf("error while creating commit validator set tx, err: %w", err)
+		}
+
+		txs = append(txs, tx)
+	}
 
 	if blockInfo.IsEndOfSprint {
 		for chainID, bridgeManager := range b.bridgeManagers {
@@ -223,16 +227,13 @@ func (b *bridge) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.Transa
 }
 
 // VerifyTransactions verifies the system transactions associated with the given block.
-func (b *bridge) VerifyTransactions(blockInfo polytypes.BlockInfo, txs []*types.Transaction) error {
+func (b *bridge) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
 	var (
-		bridgeBatchTxExists bool
-		commitBatchFn       = new(contractsapi.CommitBatchBridgeStorageFn)
-		validators          validator.ValidatorSet
+		bridgeBatchTxExists      bool
+		commitValidatorSetExists bool
+		commitBatchFn            = new(contractsapi.CommitBatchBridgeStorageFn)
+		commitValidatorSetFn     = new(contractsapi.CommitValidatorSetBridgeStorageFn)
 	)
-
-	b.lock.RLock()
-	validators = b.validators
-	b.lock.RUnlock()
 
 	for _, tx := range txs {
 		if tx.Type() != types.StateTxType {
@@ -263,10 +264,35 @@ func (b *bridge) VerifyTransactions(blockInfo polytypes.BlockInfo, txs []*types.
 				return fmt.Errorf("error decoding bridge batch tx: %w", err)
 			}
 
-			if err := verifyBridgeBatchTx(blockInfo.CurrentBlock(), tx.Hash(),
-				bridgeBatchFn, validators); err != nil {
+			if err := VerifyBridgeBatchTx(blockInfo.CurrentBlock(), tx.Hash(),
+				bridgeBatchFn, blockInfo.CurrentEpochValidatorSet); err != nil {
 				return err
 			}
+		} else if bytes.Equal(sig, commitBatchFn.Sig()) {
+			if commitValidatorSetExists {
+				// if we already validated commit validator set tx,
+				// that means someone added more than one commit validator set tx to block,
+				// which is invalid
+				return errCommitValidatorSetExists
+			}
+
+			commitValidatorSetExists = true
+
+			if err := commitValidatorSetFn.DecodeAbi(txData); err != nil {
+				return fmt.Errorf("error decoding commit validator set tx: %w", err)
+			}
+
+			if err := verifyCommitValidatorSetTx(blockInfo, commitValidatorSetFn); err != nil {
+				return fmt.Errorf("error while verifying commit validator set transaction. error: %w", err)
+			}
+		}
+	}
+
+	if blockInfo.IsEndOfEpoch && blockInfo.ValidatorSetDelta != nil && !blockInfo.ValidatorSetDelta.IsEmpty() {
+		if !commitValidatorSetExists {
+			// this is a check if commit epoch transaction is not in the list of transactions at all
+			// but it should be
+			return errCommitValidatorSetTxDoesNotExist
 		}
 	}
 
@@ -283,8 +309,8 @@ func createBridgeBatchTx(signedBridgeBatch *BridgeBatchSigned) (*types.Transacti
 	return helpers.CreateStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
 }
 
-// verifyBridgeBatchTx validates bridge batch transaction
-func verifyBridgeBatchTx(blockNumber uint64, txHash types.Hash,
+// VerifyBridgeBatchTx validates bridge batch transaction
+func VerifyBridgeBatchTx(blockNumber uint64, txHash types.Hash,
 	signedBridgeBatch *BridgeBatchSigned,
 	validators validator.ValidatorSet) error {
 	signers, err := validators.Accounts().GetFilteredValidators(signedBridgeBatch.AggSignature.Bitmap)
@@ -309,6 +335,87 @@ func verifyBridgeBatchTx(blockNumber uint64, txHash types.Hash,
 	verified := signature.VerifyAggregated(signers.GetBlsKeys(), batchHash.Bytes(), signer.DomainBridge)
 	if !verified {
 		return fmt.Errorf("invalid signature for state tx (%s)", txHash)
+	}
+
+	return nil
+}
+
+// createCommitValidatorSetTxn creates a system transaction that updates the validator set
+// on BridgeStorage contract
+func createCommitValidatorSetTxn(bi oracle.NewBlockInfo) (*types.Transaction, error) {
+	parentExtra, err := polytypes.GetIbftExtra(bi.ParentBlock.ExtraData)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get parent extra data: %w", err)
+	}
+
+	validators, err := bi.CurrentEpochValidatorSet.Accounts().ApplyDelta(bi.ValidatorSetDelta)
+	if err != nil {
+		return nil, fmt.Errorf("failed to apply validator set delta: %w", err)
+	}
+
+	signature, err := bls.UnmarshalSignature(parentExtra.Committed.AggregatedSignature)
+	if err != nil {
+		return nil, err
+	}
+
+	signatureBig, err := signature.ToBigInt()
+	if err != nil {
+		return nil, err
+	}
+
+	input := &contractsapi.CommitValidatorSetBridgeStorageFn{
+		NewValidatorSet: validators.ToABIBinding(),
+		Signature:       signatureBig,
+		Bitmap:          parentExtra.Committed.Bitmap,
+	}
+
+	inputData, err := input.EncodeAbi()
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode input data for BridgeStorage validator set update: %w", err)
+	}
+
+	return helpers.CreateStateTransactionWithData(contracts.BridgeStorageContract, inputData), nil
+}
+
+// verifyCommitValidatorSetTx verifies commit validator set state transaction
+func verifyCommitValidatorSetTx(bi oracle.NewBlockInfo,
+	commitValidatorSetTx *contractsapi.CommitValidatorSetBridgeStorageFn) error {
+	if !bi.IsEndOfEpoch {
+		return errCommitValidatorSetTxNotExpected
+	}
+
+	if bi.ValidatorSetDelta == nil || bi.ValidatorSetDelta.IsEmpty() {
+		return errCommitValidatorSetTxInvalid
+	}
+
+	expectedValidators, err := bi.CurrentEpochValidatorSet.Accounts().ApplyDelta(bi.ValidatorSetDelta)
+	if err != nil {
+		return err
+	}
+
+	txValidators := commitValidatorSetTx.GetValidatorsAsMap()
+
+	for _, expectedValidator := range expectedValidators {
+		txValidator, exists := txValidators[expectedValidator.Address]
+		if !exists {
+			return fmt.Errorf("validator %s is missing in the commit validator set transaction",
+				expectedValidator.Address.String())
+		}
+
+		if expectedValidator.VotingPower.Cmp(txValidator.VotingPower) != 0 {
+			return fmt.Errorf("voting power mismatch for validator %s. Expected %s, but got %s",
+				expectedValidator.Address.String(), expectedValidator.VotingPower.String(), txValidator.VotingPower.String())
+		}
+
+		expectedValidatorBlsKey := expectedValidator.BlsKey.ToBigInt()
+		txValidatorBlsKey := txValidator.BlsKey
+
+		for i := range expectedValidatorBlsKey {
+			if expectedValidatorBlsKey[i].Cmp(txValidatorBlsKey[i]) != 0 {
+				return fmt.Errorf("BLS key mismatch for validator %s at index %d. Expected %s, but got %s",
+					expectedValidator.Address.String(), i, expectedValidatorBlsKey[i].String(), txValidatorBlsKey[i].String())
+			}
+		}
 	}
 
 	return nil

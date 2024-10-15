@@ -22,11 +22,3 @@ type Polybft interface {
 	// SetBlockTime updates the block time
 	SetBlockTime(blockTime time.Duration)
 }
-
-// Oracle represents a feature that can provide and verify system transactions
-type Oracle interface {
-	// GetTransactions returns the system transactions
-	GetTransactions(blockInfo BlockInfo) ([]*types.Transaction, error)
-	// VerifyTransaction verifies system transactions
-	VerifyTransactions(blockInfo BlockInfo, txs []*types.Transaction) error
-}

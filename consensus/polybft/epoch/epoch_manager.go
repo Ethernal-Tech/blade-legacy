@@ -10,14 +10,16 @@ import (
 	"github.com/0xPolygon/polygon-edge/chain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/governance"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/forkmanager"
 	"github.com/0xPolygon/polygon-edge/types"
 )
+
+const rewardLookbackSize = uint64(1)
 
 var (
 	errCommitEpochTxDoesNotExist   = errors.New("commit epoch transaction is not found in the epoch ending block")
@@ -32,27 +34,38 @@ var (
 		"allowed in the given block")
 )
 
-var _ polytypes.Oracle = (*EpochManager)(nil)
+var _ oracle.Oracle = (*EpochManager)(nil)
 
 // EpochManager is a struct that implements Oracle interface and provides
 // system (state) transactions regarding closing epochs and distributing rewards.
 type EpochManager struct {
 	backend    polytypes.Polybft
 	blockchain blockchain.Blockchain
-	forks      *chain.Forks
 }
 
 // NewEpochManager creates a new instance of EpochManager.
-func NewEpochManager(forks *chain.Forks, backend polytypes.Polybft, blockchain blockchain.Blockchain) *EpochManager {
+func NewEpochManager(backend polytypes.Polybft, blockchain blockchain.Blockchain) *EpochManager {
 	return &EpochManager{
-		forks:      forks,
 		backend:    backend,
 		blockchain: blockchain,
 	}
 }
 
+// PostBlock is a function that posts a block to the oracle.
+func (e *EpochManager) PostBlock(postBlockReq *polytypes.PostBlockRequest) error {
+	return nil
+}
+
+// PostEpoch is a function that posts an epoch to the oracle.
+func (e *EpochManager) PostEpoch(postEpochReq *polytypes.PostEpochRequest) error {
+	return nil
+}
+
+// Close is a function that closes the oracle.
+func (e *EpochManager) Close() {}
+
 // GetTransactions returns the system transactions associated with the given block.
-func (e *EpochManager) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.Transaction, error) {
+func (e *EpochManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
 	var txs []*types.Transaction
 
 	if blockInfo.IsEndOfEpoch {
@@ -64,8 +77,7 @@ func (e *EpochManager) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.
 		txs = append(txs, commitEpochTxn)
 	}
 
-	if governance.IsRewardDistributionBlock(e.forks, blockInfo.IsFirstBlockOfEpoch,
-		blockInfo.IsEndOfEpoch, blockInfo.CurrentBlock()) {
+	if isRewardDistributionBlock(blockInfo.IsFirstBlockOfEpoch, blockInfo.CurrentBlock()) {
 		distributeRewardsTxn, err := e.createDistributeRewardsTx(blockInfo)
 		if err != nil {
 			return nil, fmt.Errorf("cannot create distribute rewards transaction: %w", err)
@@ -78,7 +90,7 @@ func (e *EpochManager) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.
 }
 
 // VerifyTransactions verifies the system transactions associated with the given block.
-func (e *EpochManager) VerifyTransactions(blockInfo polytypes.BlockInfo, txs []*types.Transaction) error {
+func (e *EpochManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
 	var (
 		commitEpochFn             contractsapi.CommitEpochEpochManagerFn
 		distributeRewardsFn       contractsapi.DistributeRewardForEpochManagerFn
@@ -135,8 +147,7 @@ func (e *EpochManager) VerifyTransactions(blockInfo polytypes.BlockInfo, txs []*
 		}
 	}
 
-	if governance.IsRewardDistributionBlock(e.forks, blockInfo.IsFirstBlockOfEpoch,
-		blockInfo.IsEndOfEpoch, blockInfo.ParentBlock.Number+1) {
+	if isRewardDistributionBlock(blockInfo.IsFirstBlockOfEpoch, blockInfo.CurrentBlock()) {
 		if !distributeRewardsTxExists {
 			// this is a check if distribute rewards transaction is not in the list of transactions at all
 			// but it should be
@@ -148,7 +159,7 @@ func (e *EpochManager) VerifyTransactions(blockInfo polytypes.BlockInfo, txs []*
 }
 
 // verifyCommitEpochTx creates commit epoch transaction and compares its hash with the one extracted from the block.
-func (e *EpochManager) verifyCommitEpochTx(blockInfo polytypes.BlockInfo,
+func (e *EpochManager) verifyCommitEpochTx(blockInfo oracle.NewBlockInfo,
 	commitEpochTxFromProposer *types.Transaction) error {
 	if blockInfo.IsEndOfEpoch {
 		localCommitEpochTx, err := createCommitEpochTx(blockInfo)
@@ -171,7 +182,7 @@ func (e *EpochManager) verifyCommitEpochTx(blockInfo polytypes.BlockInfo,
 }
 
 // createDistributeRewardsTx calculates distribute rewards input data and creates a state transaction
-func (e *EpochManager) createDistributeRewardsTx(bi polytypes.BlockInfo,
+func (e *EpochManager) createDistributeRewardsTx(bi oracle.NewBlockInfo,
 ) (*types.Transaction, error) {
 	var (
 		// epoch size is the number of blocks that really happened
@@ -236,12 +247,10 @@ func (e *EpochManager) createDistributeRewardsTx(bi polytypes.BlockInfo,
 		}
 	}
 
-	lookbackSize := governance.GetLookbackSizeForRewardDistribution(e.forks, pendingBlockNumber)
-
 	// calculate uptime for blocks from previous epoch that were not processed in previous uptime
 	// since we can not calculate uptime for the last block in epoch (because of parent signatures)
-	if blockHeader.Number > lookbackSize {
-		for i := uint64(0); i < lookbackSize; i++ {
+	if blockHeader.Number > rewardLookbackSize {
+		for i := uint64(0); i < rewardLookbackSize; i++ {
 			validators, err := e.backend.GetValidators(blockHeader.Number-2, nil)
 			if err != nil {
 				return nil, err
@@ -294,10 +303,10 @@ func (e *EpochManager) createDistributeRewardsTx(bi polytypes.BlockInfo,
 
 // verifyDistributeRewardsTx creates distribute rewards transaction
 // and compares its hash with the one extracted from the block.
-func (e *EpochManager) verifyDistributeRewardsTx(bi polytypes.BlockInfo,
+func (e *EpochManager) verifyDistributeRewardsTx(bi oracle.NewBlockInfo,
 	distributeRewardsTxnFromProposer *types.Transaction) error {
 	// we don't have distribute rewards tx if we just started the chain
-	if governance.IsRewardDistributionBlock(e.forks, bi.IsFirstBlockOfEpoch, bi.IsEndOfEpoch, bi.CurrentBlock()) {
+	if isRewardDistributionBlock(bi.IsFirstBlockOfEpoch, bi.CurrentBlock()) {
 		localDistributeRewardsTx, err := e.createDistributeRewardsTx(bi)
 		if err != nil {
 			return err
@@ -319,7 +328,7 @@ func (e *EpochManager) verifyDistributeRewardsTx(bi polytypes.BlockInfo,
 
 // createCommitEpochTx create a StateTransaction, which invokes ValidatorSet smart contract
 // and sends all the necessary metadata to it.
-func createCommitEpochTx(blockInfo polytypes.BlockInfo) (*types.Transaction, error) {
+func createCommitEpochTx(blockInfo oracle.NewBlockInfo) (*types.Transaction, error) {
 	commitEpochFn := &contractsapi.CommitEpochEpochManagerFn{
 		ID: new(big.Int).SetUint64(blockInfo.CurrentEpoch),
 		Epoch: &contractsapi.Epoch{
@@ -336,4 +345,10 @@ func createCommitEpochTx(blockInfo polytypes.BlockInfo) (*types.Transaction, err
 	}
 
 	return helpers.CreateStateTransactionWithData(contracts.EpochManagerContract, input), nil
+}
+
+// isRewardDistributionBlock indicates if reward distribution transaction
+// should happen in given block
+func isRewardDistributionBlock(isFirstBlockOfEpoch bool, pendingBlockNumber uint64) bool {
+	return isFirstBlockOfEpoch && pendingBlockNumber > 1
 }

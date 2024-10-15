@@ -8,6 +8,7 @@ import (
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -157,6 +158,8 @@ func (pcs *ProposerSnapshot) toMap() map[types.Address]*PrioritizedValidator {
 	return validatorMap
 }
 
+var _ oracle.Oracle = (*ProposerCalculator)(nil)
+
 type ProposerCalculator struct {
 	// current snapshot
 	snapshot *ProposerSnapshot
@@ -245,6 +248,24 @@ func (pc *ProposerCalculator) GetSnapshot() (*ProposerSnapshot, bool) {
 func (pc *ProposerCalculator) PostBlock(req *polytypes.PostBlockRequest) error {
 	return pc.update(req.FullBlock.Block.Number(), req.DBTx)
 }
+
+// PostEpoch is called on every insert of finalized epoch (either from consensus or syncer)
+func (pc *ProposerCalculator) PostEpoch(req *polytypes.PostEpochRequest) error {
+	return nil
+}
+
+// GetTransactions returns the system transactions
+func (pc *ProposerCalculator) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
+	return nil, nil
+}
+
+// VerifyTransactions verifies system transactions
+func (pc *ProposerCalculator) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
+	return nil
+}
+
+// Close closes the oracle
+func (pc *ProposerCalculator) Close() {}
 
 func (pc *ProposerCalculator) update(blockNumber uint64, dbTx *bolt.Tx) error {
 	pc.logger.Debug("Update proposers snapshot started", "target block", blockNumber)

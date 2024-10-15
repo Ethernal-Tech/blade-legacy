@@ -7,6 +7,7 @@ import (
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/helpers"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
@@ -27,13 +28,13 @@ func TestGetTransactions(t *testing.T) {
 
 	tests := []struct {
 		name                         string
-		blockInfo                    polytypes.BlockInfo
+		blockInfo                    oracle.NewBlockInfo
 		setupMocks                   func(*polytypes.PolybftBackendMock, *polychain.BlockchainMock) *types.Header
 		expectedNumberOfTransactions int
 	}{
 		{
 			name: "Not end of epoch or start of epoch",
-			blockInfo: polytypes.BlockInfo{
+			blockInfo: oracle.NewBlockInfo{
 				IsEndOfEpoch:        false,
 				IsFirstBlockOfEpoch: false,
 				EpochSize:           10,
@@ -43,7 +44,7 @@ func TestGetTransactions(t *testing.T) {
 		},
 		{
 			name: "End of epoch",
-			blockInfo: polytypes.BlockInfo{
+			blockInfo: oracle.NewBlockInfo{
 				IsEndOfEpoch:        true,
 				IsFirstBlockOfEpoch: false,
 				EpochSize:           10,
@@ -53,7 +54,7 @@ func TestGetTransactions(t *testing.T) {
 		},
 		{
 			name: "First block of epoch",
-			blockInfo: polytypes.BlockInfo{
+			blockInfo: oracle.NewBlockInfo{
 				IsEndOfEpoch:        false,
 				IsFirstBlockOfEpoch: true,
 				EpochSize:           10,
@@ -91,7 +92,7 @@ func TestGetTransactions(t *testing.T) {
 				tt.blockInfo.ParentBlock = lastBuiltBlock
 			}
 
-			epochManager := NewEpochManager(chain.AllForksEnabled, polybftMock, blockchainMock)
+			epochManager := NewEpochManager(polybftMock, blockchainMock)
 
 			transactions, err := epochManager.GetTransactions(tt.blockInfo)
 			require.NoError(t, err)
@@ -110,7 +111,7 @@ func TestVerifyTransactions(t *testing.T) {
 	t.Run("Valid commit epoch transaction", func(t *testing.T) {
 		t.Parallel()
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch: true,
 			ParentBlock:  &types.Header{Number: 9},
 			EpochSize:    10,
@@ -119,7 +120,7 @@ func TestVerifyTransactions(t *testing.T) {
 		testTxn, err := createCommitEpochTx(blockInfo)
 		require.NoError(t, err)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
 		require.NoError(t, epochManager.VerifyTransactions(blockInfo, []*types.Transaction{testTxn}))
 	})
@@ -127,13 +128,13 @@ func TestVerifyTransactions(t *testing.T) {
 	t.Run("Invalid commit epoch transaction", func(t *testing.T) {
 		t.Parallel()
 
-		correctBlockInfo := polytypes.BlockInfo{
+		correctBlockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch: true,
 			ParentBlock:  &types.Header{Number: 9},
 			EpochSize:    10,
 		}
 
-		incorrectBlockInfo := polytypes.BlockInfo{
+		incorrectBlockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch: true,
 			ParentBlock:  &types.Header{Number: 9},
 			EpochSize:    9,
@@ -142,7 +143,7 @@ func TestVerifyTransactions(t *testing.T) {
 		testTxn, err := createCommitEpochTx(incorrectBlockInfo)
 		require.NoError(t, err)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
 		require.ErrorContains(t, epochManager.VerifyTransactions(correctBlockInfo, []*types.Transaction{testTxn}),
 			"invalid commit epoch transaction")
@@ -151,7 +152,7 @@ func TestVerifyTransactions(t *testing.T) {
 	t.Run("Duplicate commit epoch transaction", func(t *testing.T) {
 		t.Parallel()
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch: true,
 			ParentBlock:  &types.Header{Number: 19},
 			EpochSize:    10,
@@ -160,7 +161,7 @@ func TestVerifyTransactions(t *testing.T) {
 		testTxn, err := createCommitEpochTx(blockInfo)
 		require.NoError(t, err)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
 		require.ErrorIs(t, epochManager.VerifyTransactions(blockInfo, []*types.Transaction{testTxn, testTxn}),
 			errCommitEpochTxSingleExpected)
@@ -169,7 +170,7 @@ func TestVerifyTransactions(t *testing.T) {
 	t.Run("Commit epoch transaction unexpected", func(t *testing.T) {
 		t.Parallel()
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch: true,
 			ParentBlock:  &types.Header{Number: 29},
 			EpochSize:    10,
@@ -178,22 +179,22 @@ func TestVerifyTransactions(t *testing.T) {
 		testTxn, err := createCommitEpochTx(blockInfo)
 		require.NoError(t, err)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
-		require.ErrorIs(t, epochManager.VerifyTransactions(polytypes.BlockInfo{IsEndOfEpoch: false},
+		require.ErrorIs(t, epochManager.VerifyTransactions(oracle.NewBlockInfo{IsEndOfEpoch: false},
 			[]*types.Transaction{testTxn}), errCommitEpochTxNotExpected)
 	})
 
 	t.Run("No commit epoch transaction when expected", func(t *testing.T) {
 		t.Parallel()
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch: true,
 			ParentBlock:  &types.Header{Number: 29},
 			EpochSize:    10,
 		}
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
 		require.ErrorIs(t, epochManager.VerifyTransactions(blockInfo, []*types.Transaction{}), errCommitEpochTxDoesNotExist)
 	})
@@ -203,7 +204,7 @@ func TestVerifyTransactions(t *testing.T) {
 
 		lastBuiltBlock, headerMap := polytypes.CreateTestBlocks(t, 20, 10, validators.GetPublicIdentities())
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch:        false,
 			ParentBlock:         lastBuiltBlock,
 			EpochSize:           10,
@@ -218,7 +219,7 @@ func TestVerifyTransactions(t *testing.T) {
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
 		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(20)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, polybftMock, blockchainMock)
+		epochManager := NewEpochManager(polybftMock, blockchainMock)
 
 		testTxn, err := epochManager.createDistributeRewardsTx(blockInfo)
 		require.NoError(t, err)
@@ -234,7 +235,7 @@ func TestVerifyTransactions(t *testing.T) {
 
 		lastBuiltBlock, headerMap := polytypes.CreateTestBlocks(t, 30, 10, validators.GetPublicIdentities())
 
-		correctBlockInfo := polytypes.BlockInfo{
+		correctBlockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch:        false,
 			ParentBlock:         lastBuiltBlock,
 			EpochSize:           10,
@@ -243,7 +244,7 @@ func TestVerifyTransactions(t *testing.T) {
 			CurrentEpoch:        4,
 		}
 
-		incorrectBlockInfo := polytypes.BlockInfo{
+		incorrectBlockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch:        false,
 			ParentBlock:         lastBuiltBlock,
 			EpochSize:           9,
@@ -258,7 +259,7 @@ func TestVerifyTransactions(t *testing.T) {
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
 		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(20)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, polybftMock, blockchainMock)
+		epochManager := NewEpochManager(polybftMock, blockchainMock)
 
 		testTxn, err := epochManager.createDistributeRewardsTx(incorrectBlockInfo)
 		require.NoError(t, err)
@@ -275,7 +276,7 @@ func TestVerifyTransactions(t *testing.T) {
 
 		lastBuiltBlock, headerMap := polytypes.CreateTestBlocks(t, 40, 20, validators.GetPublicIdentities())
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch:        false,
 			ParentBlock:         lastBuiltBlock,
 			EpochSize:           20,
@@ -290,7 +291,7 @@ func TestVerifyTransactions(t *testing.T) {
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
 		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(40)
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, polybftMock, blockchainMock)
+		epochManager := NewEpochManager(polybftMock, blockchainMock)
 
 		testTxn, err := epochManager.createDistributeRewardsTx(blockInfo)
 		require.NoError(t, err)
@@ -305,7 +306,7 @@ func TestVerifyTransactions(t *testing.T) {
 	t.Run("No distribute rewards transaction when expected", func(t *testing.T) {
 		t.Parallel()
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsEndOfEpoch:        false,
 			ParentBlock:         &types.Header{Number: 50},
 			EpochSize:           10,
@@ -314,7 +315,7 @@ func TestVerifyTransactions(t *testing.T) {
 			CurrentEpoch:        6,
 		}
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
 		require.ErrorIs(t, epochManager.VerifyTransactions(blockInfo, []*types.Transaction{}),
 			errDistributeRewardsTxDoesNotExist)
@@ -323,7 +324,7 @@ func TestVerifyTransactions(t *testing.T) {
 	t.Run("Distribute rewards transaction unexpected", func(t *testing.T) {
 		t.Parallel()
 
-		blockInfo := polytypes.BlockInfo{
+		blockInfo := oracle.NewBlockInfo{
 			IsFirstBlockOfEpoch: false,
 			ParentBlock:         &types.Header{Number: 39},
 		}
@@ -331,7 +332,7 @@ func TestVerifyTransactions(t *testing.T) {
 		testTxn := helpers.CreateStateTransactionWithData(contracts.EpochManagerContract,
 			new(contractsapi.DistributeRewardForEpochManagerFn).Sig())
 
-		epochManager := NewEpochManager(chain.AllForksEnabled, nil, nil)
+		epochManager := NewEpochManager(nil, nil)
 
 		require.ErrorIs(t, epochManager.VerifyTransactions(blockInfo, []*types.Transaction{testTxn}),
 			errDistributeRewardsTxNotExpected)

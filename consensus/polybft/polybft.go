@@ -762,7 +762,7 @@ func (p *Polybft) PreCommitState(block *types.Block, _ *state.Transition) error 
 
 			bridgeBatchTxExists = true
 
-			if err := verifyBridgeBatchTx(
+			if err := bridge.VerifyBridgeBatchTx(
 				block.Number(),
 				tx.Hash(),
 				signedBridgeBatch,

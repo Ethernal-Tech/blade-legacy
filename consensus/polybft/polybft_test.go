@@ -11,7 +11,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/bridge"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
@@ -227,10 +226,8 @@ func TestPolybft_Close(t *testing.T) {
 	polybft := Polybft{
 		closeCh: make(chan struct{}),
 		syncer:  syncer,
-		runtime: &consensusRuntime{
-			bridge: &bridge.DummyBridge{},
-		},
-		state: state.NewTestState(t),
+		runtime: &consensusRuntime{},
+		state:   state.NewTestState(t),
 	}
 
 	assert.NoError(t, polybft.Close())

@@ -172,27 +172,3 @@ func createTestCommitEpochInput(t *testing.T, epochID uint64,
 
 	return commitEpoch
 }
-
-func createTestDistributeRewardsInput(t *testing.T, epochID uint64,
-	validatorSet validator.AccountSet, epochSize uint64) *contractsapi.DistributeRewardForEpochManagerFn {
-	t.Helper()
-
-	if validatorSet == nil {
-		validatorSet = validator.NewTestValidators(t, 5).GetPublicIdentities()
-	}
-
-	uptime := make([]*contractsapi.Uptime, len(validatorSet))
-
-	for i, v := range validatorSet {
-		uptime[i] = &contractsapi.Uptime{
-			Validator:    v.Address,
-			SignedBlocks: new(big.Int).SetUint64(epochSize),
-		}
-	}
-
-	return &contractsapi.DistributeRewardForEpochManagerFn{
-		EpochID:   new(big.Int).SetUint64(epochID),
-		Uptime:    uptime,
-		EpochSize: new(big.Int).SetUint64(epochSize),
-	}
-}

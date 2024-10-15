@@ -9,6 +9,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/bitmap"
 	polychain "github.com/0xPolygon/polygon-edge/consensus/polybft/blockchain"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -33,7 +34,7 @@ var (
 // and updating validator set based on changed stake
 type StakeManager interface {
 	state.EventSubscriber
-	PostBlock(req *polytypes.PostBlockRequest) error
+	oracle.Oracle
 	UpdateValidatorSet(epoch uint64, maxValidatorSetSize uint64,
 		currentValidatorSet validator.AccountSet) (*validator.ValidatorSetDelta, error)
 }
@@ -45,6 +46,14 @@ var _ StakeManager = (*DummyStakeManager)(nil)
 type DummyStakeManager struct{}
 
 func (d *DummyStakeManager) PostBlock(req *polytypes.PostBlockRequest) error { return nil }
+func (d *DummyStakeManager) PostEpoch(req *polytypes.PostEpochRequest) error { return nil }
+func (d *DummyStakeManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
+	return nil, nil
+}
+func (d *DummyStakeManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
+	return nil
+}
+func (d *DummyStakeManager) Close() {}
 
 func (d *DummyStakeManager) UpdateValidatorSet(epoch uint64, maxValidatorSetSize uint64,
 	currentValidatorSet validator.AccountSet) (*validator.ValidatorSetDelta, error) {
@@ -114,6 +123,24 @@ func newStakeManager(logger hclog.Logger,
 		"last updated", validatorSet.UpdatedAtBlockNumber)
 
 	return sm, nil
+}
+
+// Close closes the oracle
+func (s *stakeManager) Close() {}
+
+// GetTransactions returns the system transactions
+func (s *stakeManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
+	return nil, nil
+}
+
+// VerifyTransactions verifies system transactions
+func (s *stakeManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
+	return nil
+}
+
+// PostEpoch posts new epoch to the oracle
+func (s *stakeManager) PostEpoch(req *polytypes.PostEpochRequest) error {
+	return nil
 }
 
 // PostBlock is called on every insert of finalized block (either from consensus or syncer)
