@@ -54,6 +54,7 @@ func NewEpochManager(forks *chain.Forks, backend polytypes.Polybft, blockchain b
 // GetTransactions returns the system transactions associated with the given block.
 func (e *EpochManager) GetTransactions(blockInfo polytypes.BlockInfo) ([]*types.Transaction, error) {
 	var txs []*types.Transaction
+
 	if blockInfo.IsEndOfEpoch {
 		commitEpochTxn, err := createCommitEpochTx(blockInfo)
 		if err != nil {
