@@ -151,6 +151,7 @@ func newConsensusRuntime(log hcf.Logger, config *config.Runtime,
 		txPool:             txPool,
 	}
 
+	runtime.oracles = append(runtime.oracles, proposerCalculator)
 	runtime.oracles = append(runtime.oracles, epoch.NewEpochManager(backend, blockchain))
 
 	bridge, err := bridge.NewBridge(
