@@ -187,7 +187,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 			require.NoError(t, err)
 		}
 
-		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers {
 				if !isEventsProcessed(t, polybftCfg.Bridge[1337].ExternalGatewayAddr, externalChainTxRelayer, uint64(i+1)) {
 					return false
@@ -205,7 +205,6 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 	})
 
 	t.Run("multiple deposit batches per epoch", func(t *testing.T) {
-		t.Skip()
 		const (
 			depositsSubset = 1
 		)
@@ -765,6 +764,17 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 			require.NoError(t, err)
 		}
 
+		// first exit event is mapping child token on a rootchain
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := uint64(1); i <= transfersCount+1; i++ {
+				if !isEventsProcessed(t, polybftCfg.Bridge[1337].ExternalGatewayAddr, externalChainTxRelayer, i) {
+					return false
+				}
+			}
+
+			return true
+		}))
+
 		// retrieve child mintable token address from both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC20Predicate.Abi, bridgeCfg.ExternalMintableERC20PredicateAddr,
 			rootToken, externalChainTxRelayer)
@@ -879,6 +889,17 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 				true)
 			require.NoError(t, err)
 		}
+
+		// first exit event is mapping child token on a rootchain
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := uint64(1); i <= transfersCount+1; i++ {
+				if !isEventsProcessed(t, polybftCfg.Bridge[1337].ExternalGatewayAddr, externalChainTxRelayer, i) {
+					return false
+				}
+			}
+
+			return true
+		}))
 
 		// retrieve child token addresses on both chains and make sure they are the same
 		l1ChildToken := getChildToken(t, contractsapi.ChildERC721Predicate.Abi, bridgeCfg.ExternalMintableERC721PredicateAddr,

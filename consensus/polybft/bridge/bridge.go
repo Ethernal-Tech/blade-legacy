@@ -152,7 +152,7 @@ func (b *bridge) Close() {
 // and calls PostBlock in each bridge manager
 func (b *bridge) PostBlock(req *oracle.PostBlockRequest) error {
 	for chainID, bridgeManager := range b.bridgeManagers {
-		if err := bridgeManager.PostBlock(); err != nil {
+		if err := bridgeManager.PostBlock(req); err != nil {
 			return fmt.Errorf("erorr bridge post block, chainID: %d, err: %w", chainID, err)
 		}
 	}

@@ -217,7 +217,7 @@ func isEventsProcessed(t *testing.T, gatewayAddr types.Address,
 
 	processedEventsFn := contractsapi.Gateway.Abi.Methods["processedEvents"]
 
-	input, err := processedEventsFn.Encode([]interface{}{new(big.Int).SetUint64(bridgeEventID)})
+	input, err := processedEventsFn.Encode([]interface{}{bridgeEventID})
 	require.NoError(t, err)
 
 	isProcessedRaw, err := relayer.Call(types.ZeroAddress, gatewayAddr, input)
