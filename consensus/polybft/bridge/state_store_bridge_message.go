@@ -115,8 +115,8 @@ func newBridgeManagerStore(db *bolt.DB, dbTx *bolt.Tx, chainIDs []uint64) (*Brid
 }
 
 // insertBridgeMessageEvent inserts a new bridge message event to state event bucket in db
-func (bms *BridgeManagerStore) insertBridgeMessageEvent(event *contractsapi.BridgeMsgEvent) error {
-	return bms.db.Update(func(tx *bolt.Tx) error {
+func (bms *BridgeManagerStore) insertBridgeMessageEvent(event *contractsapi.BridgeMsgEvent, dbTx *bolt.Tx) error {
+	insertFn := func(tx *bolt.Tx) error {
 		raw, err := json.Marshal(event)
 		if err != nil {
 			return err
@@ -125,13 +125,21 @@ func (bms *BridgeManagerStore) insertBridgeMessageEvent(event *contractsapi.Brid
 		bucket := tx.Bucket(bridgeMessageEventsBucket).Bucket(common.EncodeUint64ToBytes(event.SourceChainID.Uint64()))
 
 		return bucket.Put(common.EncodeUint64ToBytes(event.ID.Uint64()), raw)
-	})
+	}
+
+	if dbTx == nil {
+		return bms.db.Update(func(tx *bolt.Tx) error {
+			return insertFn(tx)
+		})
+	}
+
+	return insertFn(dbTx)
 }
 
 // removeBridgeEvents removes bridge events and their proofs from the buckets in db
 func (bms *BridgeManagerStore) removeBridgeEvents(
-	bridgeMessageResult contractsapi.BridgeMessageResultEvent) error {
-	return bms.db.Update(func(tx *bolt.Tx) error {
+	bridgeMessageResult contractsapi.BridgeMessageResultEvent, dbTx *bolt.Tx) error {
+	insertFn := func(tx *bolt.Tx) error {
 		eventsBucket := tx.Bucket(bridgeMessageEventsBucket).
 			Bucket(common.EncodeUint64ToBytes(bridgeMessageResult.SourceChainID.Uint64()))
 
@@ -143,7 +151,15 @@ func (bms *BridgeManagerStore) removeBridgeEvents(
 		}
 
 		return nil
-	})
+	}
+
+	if dbTx == nil {
+		return bms.db.Update(func(tx *bolt.Tx) error {
+			return insertFn(tx)
+		})
+	}
+
+	return insertFn(dbTx)
 }
 
 // list iterates through all events in events bucket in db, un-marshals them, and returns as array

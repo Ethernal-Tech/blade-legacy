@@ -315,7 +315,7 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 		return err
 	}
 
-	if err := b.state.insertBridgeMessageEvent(event); err != nil {
+	if err := b.state.insertBridgeMessageEvent(event, nil); err != nil {
 		b.logger.Error("could not save bridge message event to boltDb", "err", err)
 
 		return err
@@ -644,24 +644,33 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 		}
 
 		if bridgeMessageResultEvent.Status {
-			return b.state.removeBridgeEvents(bridgeMessageResultEvent)
+			return b.state.removeBridgeEvents(bridgeMessageResultEvent, dbTx)
 		}
 
 		return nil
 	case bridgeMessageEventSig:
-		var bridgeMsgEvent contractsapi.BridgeMsgEvent
+		event := &contractsapi.BridgeMsgEvent{}
 
-		doesMatch, err := bridgeMsgEvent.ParseLog(log)
-		if err != nil {
-			return err
-		}
-
-		if !doesMatch || b.externalChainID != bridgeMsgEvent.DestinationChainID.Uint64() {
+		doesMatch, err := event.ParseLog(log)
+		if !doesMatch || b.externalChainID != event.DestinationChainID.Uint64() {
 			return nil
 		}
 
-		return b.state.insertBridgeMessageEvent(&bridgeMsgEvent)
+		if err != nil {
+			b.logger.Error("could not decode bridge message event", "err", err)
+
+			return err
+		}
+
+		if err := b.state.insertBridgeMessageEvent(event, dbTx); err != nil {
+			b.logger.Error("could not save bridge message event to boltDb", "err", err)
+
+			return err
+		}
+
+		return nil
 	default:
+		b.logger.Error("unknown bridge event")
 		return errUnknownBridgeEvent
 	}
 }

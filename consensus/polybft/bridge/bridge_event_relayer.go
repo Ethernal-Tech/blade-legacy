@@ -462,7 +462,7 @@ func (ber *bridgeEventRelayerImpl) AddLog(chainID *big.Int, eventLog *ethgo.Log)
 		}
 
 		if bridgeMessageResultEvent.Status {
-			if err := ber.state.removeBridgeEvents(bridgeMessageResultEvent); err != nil {
+			if err := ber.state.removeBridgeEvents(bridgeMessageResultEvent, nil); err != nil {
 				return err
 			}
 		} else {

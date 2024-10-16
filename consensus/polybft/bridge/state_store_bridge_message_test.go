@@ -26,7 +26,7 @@ func TestState_InsertEvent(t *testing.T) {
 		DestinationChainID: bigZero,
 	}
 
-	err := state.insertBridgeMessageEvent(event1)
+	err := state.insertBridgeMessageEvent(event1, nil)
 	assert.NoError(t, err)
 
 	events, err := state.list()
@@ -67,7 +67,7 @@ func TestState_getBridgeEventsForBridgeBatch_NotEnoughEvents(t *testing.T) {
 			Data:               []byte{1, 2},
 			SourceChainID:      big.NewInt(1),
 			DestinationChainID: bigZero,
-		}))
+		}, nil))
 	}
 
 	_, err := state.getBridgeMessageEventsForBridgeBatch(0, maxNumberOfBatchEvents-1, nil, 0, 0)
@@ -85,7 +85,7 @@ func TestState_getBridgeEventsForBridgeBatch(t *testing.T) {
 			Data:               []byte{1, 2},
 			SourceChainID:      big.NewInt(1),
 			DestinationChainID: bigZero,
-		}))
+		}, nil))
 	}
 
 	t.Run("Return all - forced. Enough events", func(t *testing.T) {

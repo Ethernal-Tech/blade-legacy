@@ -102,7 +102,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		// add 5 bridge messages starting in index 0, it will generate one smaller batch
 		for i := 0; i < 5; i++ {
-			require.NoError(t, s.state.insertBridgeMessageEvent(bridgeMessages10[i]))
+			require.NoError(t, s.state.insertBridgeMessageEvent(bridgeMessages10[i], nil))
 		}
 
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
@@ -113,7 +113,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		// add the next 5 bridge messages, at that point, so that it generates a larger batch
 		for i := 5; i < 10; i++ {
-			require.NoError(t, s.state.insertBridgeMessageEvent(bridgeMessages10[i]))
+			require.NoError(t, s.state.insertBridgeMessageEvent(bridgeMessages10[i], nil))
 		}
 
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
@@ -135,7 +135,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		// add 5 bridge messages starting in index 0, they will be saved to db
 		for i := 0; i < 5; i++ {
-			require.NoError(t, s.state.insertBridgeMessageEvent(bridgeMessages10[i]))
+			require.NoError(t, s.state.insertBridgeMessageEvent(bridgeMessages10[i], nil))
 		}
 
 		// I am not a validator so no batches should be built
@@ -341,7 +341,7 @@ func TestBridgeEventManager_RemoveProcessedEventsAndProofs(t *testing.T) {
 	bridgeMessageEvents := generateBridgeMessageEvents(t, bridgeMessageEventsCount, 0)
 
 	for _, event := range bridgeMessageEvents {
-		require.NoError(t, s.state.insertBridgeMessageEvent(event))
+		require.NoError(t, s.state.insertBridgeMessageEvent(event, nil))
 	}
 
 	bridgeMessageEventsBefore, err := s.state.list()
