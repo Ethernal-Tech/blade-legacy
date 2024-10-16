@@ -282,7 +282,7 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 
 	// failed to verify signatures (quorum not reached)
 	polyBackendMock = NewPolybftMock(t)
-	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities())
+	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil)
 
 	noQuorumSignature := createSignature(t, validators.GetPrivateIdentities("0", "1"), types.BytesToHash([]byte("FooBar")), signer.DomainBridge)
 	extra = &Extra{Committed: noQuorumSignature, BlockMetaData: blockMeta}
@@ -337,7 +337,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 
 	// incorrect hash is signed
 	polyBackendMock = NewPolybftMock(t)
-	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities())
+	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil)
 
 	parent := &types.Header{Number: headerNum - 1, Hash: types.BytesToHash(polytesting.GenerateRandomBytes(t))}
 	parentBlockMeta := &BlockMetaData{EpochNumber: 3, BlockRound: 5}

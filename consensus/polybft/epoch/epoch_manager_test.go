@@ -67,7 +67,7 @@ func TestGetTransactions(t *testing.T) {
 				lastBuiltBlock, headerMap := polytypes.CreateTestBlocks(t, 20, 10, validators.GetPublicIdentities())
 
 				blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
-				polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(10)
+				polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Times(10)
 
 				return lastBuiltBlock
 			},
@@ -103,6 +103,7 @@ func TestGetTransactions(t *testing.T) {
 		})
 	}
 }
+
 func TestVerifyTransactions(t *testing.T) {
 	t.Parallel()
 
@@ -217,7 +218,7 @@ func TestVerifyTransactions(t *testing.T) {
 		blockchainMock := new(polychain.BlockchainMock)
 
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
-		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(20)
+		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Times(20)
 
 		epochManager := NewEpochManager(polybftMock, blockchainMock)
 
@@ -257,7 +258,7 @@ func TestVerifyTransactions(t *testing.T) {
 		blockchainMock := new(polychain.BlockchainMock)
 
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
-		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(20)
+		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Times(20)
 
 		epochManager := NewEpochManager(polybftMock, blockchainMock)
 
@@ -289,7 +290,7 @@ func TestVerifyTransactions(t *testing.T) {
 		blockchainMock := new(polychain.BlockchainMock)
 
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
-		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities()).Times(40)
+		polybftMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Times(40)
 
 		epochManager := NewEpochManager(polybftMock, blockchainMock)
 

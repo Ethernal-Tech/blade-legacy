@@ -214,13 +214,12 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 	blockchainMock.On("GetSystemState", mock.Anything, mock.Anything).Return(systemStateMock)
 
 	polybftBackendMock := polytypes.NewPolybftMock(t)
-	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validatorSet).Times(3)
+	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validatorSet, nil).Once()
 	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
 	txPoolMock := new(polychain.TxPoolMock)
 	txPoolMock.On("ResetWithBlock", mock.Anything).Once()
 
-	snapshot := proposer.NewProposerSnapshot(epochSize-1, validatorSet)
 	polybftCfg := &config.PolyBFT{EpochSize: epochSize}
 	config := &config.Runtime{
 		GenesisConfig: &config.PolyBFT{
@@ -232,18 +231,13 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 
 	require.NoError(t, st.InsertLastProcessedEventsBlock(builtBlock.Number()-1, nil))
 
-	proposerCalculator, err := proposer.NewProposerCalculatorFromSnapshot(snapshot, config, st,
-		polybftBackendMock, blockchainMock, hclog.NewNullLogger())
-	require.NoError(t, err)
-
 	runtime := &consensusRuntime{
-		proposerCalculator: proposerCalculator,
-		logger:             hclog.NewNullLogger(),
-		state:              st,
-		config:             config,
-		blockchain:         blockchainMock,
-		backend:            polybftBackendMock,
-		txPool:             txPoolMock,
+		logger:     hclog.NewNullLogger(),
+		state:      st,
+		config:     config,
+		blockchain: blockchainMock,
+		backend:    polybftBackendMock,
+		txPool:     txPoolMock,
 		epoch: &epochMetadata{
 			Number:              currentEpochNumber,
 			FirstBlockInEpoch:   header.Number - epochSize + 1,
@@ -283,20 +277,12 @@ func TestConsensusRuntime_OnBlockInserted_MiddleOfEpoch(t *testing.T) {
 	blockchainMock := new(polychain.BlockchainMock)
 	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(builtBlock.Header, true).Once()
 
-	polybftBackendMock := polytypes.NewPolybftMock(t)
-	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-
 	txPoolMock := new(polychain.TxPoolMock)
 	txPoolMock.On("ResetWithHeaders", mock.Anything).Once()
 
-	snapshot := proposer.NewProposerSnapshot(blockNumber, []*validator.ValidatorMetadata{})
 	config := &config.Runtime{
 		GenesisConfig: &config.PolyBFT{EpochSize: epochSize},
 	}
-
-	proposerCalculator, err := proposer.NewProposerCalculatorFromSnapshot(snapshot, config, state.NewTestState(t),
-		polybftBackendMock, blockchainMock, hclog.NewNullLogger())
-	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
 		lastBuiltBlock: header,
@@ -307,8 +293,7 @@ func TestConsensusRuntime_OnBlockInserted_MiddleOfEpoch(t *testing.T) {
 			Number:            epoch,
 			FirstBlockInEpoch: firstBlockInEpoch,
 		},
-		logger:             hclog.NewNullLogger(),
-		proposerCalculator: proposerCalculator,
+		logger: hclog.NewNullLogger(),
 	}
 	runtime.OnBlockInserted(&types.FullBlock{Block: builtBlock})
 
@@ -438,7 +423,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	blockchainMock.On("GetHeaderByNumber", uint64(1)).Return(&types.Header{Number: 1, ExtraData: polytypes.CreateTestExtraForAccounts(t, 1, validators, nil)})
 
 	polybftBackendMock := polytypes.NewPolybftMock(t)
-	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validators).Times(4)
+	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validators, nil).Times(4)
 	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
 	tmpDir := t.TempDir()
