@@ -405,6 +405,8 @@ func TestVerifyTransactions(t *testing.T) {
 
 func createAndSignExtra(t *testing.T, numOfValidators, numOfNewValidators int,
 	epoch uint64) (*polytypes.Extra, *validator.TestValidators, *contractsapi.CommitValidatorSetBridgeStorageFn) {
+	t.Helper()
+
 	proposalHash := types.BytesToHash([]byte("test"))
 	signature, validators := createValidatorsAndSignHash(t, numOfValidators+numOfValidators, proposalHash)
 
@@ -438,6 +440,8 @@ func createAndSignExtra(t *testing.T, numOfValidators, numOfNewValidators int,
 func createAndSignBridgeBatch(t *testing.T, numOfValidators int,
 	epoch, startID, endID, destinationChainID, sourceChainID uint64,
 ) (*BridgeBatchSigned, *polytypes.Signature, *validator.TestValidators) {
+	t.Helper()
+
 	pendingBridgeBatch := &PendingBridgeBatch{
 		BridgeBatch: &contractsapi.BridgeBatch{
 			RootHash:           types.StringToHash("0x123"),
