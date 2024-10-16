@@ -255,7 +255,7 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 
 	validators := validator.NewTestValidators(t, 6)
 
-	polyBackendMock := new(PolybftBackendMock)
+	polyBackendMock := NewPolybftMock(t)
 	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(nil, errors.New("validators not found"))
 
 	// missing Committed field
@@ -281,7 +281,7 @@ func TestExtra_ValidateFinalizedData_UnhappyPath(t *testing.T) {
 		fmt.Sprintf("failed to validate header for block %d. could not retrieve block validators:validators not found", headerNum))
 
 	// failed to verify signatures (quorum not reached)
-	polyBackendMock = new(PolybftBackendMock)
+	polyBackendMock = NewPolybftMock(t)
 	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities())
 
 	noQuorumSignature := createSignature(t, validators.GetPrivateIdentities("0", "1"), types.BytesToHash([]byte("FooBar")), signer.DomainBridge)
@@ -311,7 +311,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 		headerNum = 23
 	)
 
-	polyBackendMock := new(PolybftBackendMock)
+	polyBackendMock := NewPolybftMock(t)
 	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(nil, errors.New("no validators"))
 
 	// validation is skipped for blocks 0 and 1
@@ -336,7 +336,7 @@ func TestExtra_ValidateParentSignatures(t *testing.T) {
 		fmt.Sprintf("failed to validate header for block %d. could not retrieve parent validators: no validators", headerNum))
 
 	// incorrect hash is signed
-	polyBackendMock = new(PolybftBackendMock)
+	polyBackendMock = NewPolybftMock(t)
 	polyBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities())
 
 	parent := &types.Header{Number: headerNum - 1, Hash: types.BytesToHash(polytesting.GenerateRandomBytes(t))}

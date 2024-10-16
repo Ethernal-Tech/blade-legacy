@@ -30,7 +30,7 @@ var (
 	errCommitValidatorSetTxNotExpected = errors.New("commit validator set tx is not expected " +
 		"in non epoch ending block")
 	errCommitValidatorSetTxInvalid      = errors.New("commit validator set tx is invalid")
-	errCommitValidatorSetTxDoesNotExist = errors.New("commit validator set tx is not found in the epoch ending block " +
+	errCommitValidatorSetTxDoesNotExist = errors.New("commit validator set tx is not found in the block " +
 		"even though new validator set delta is not empty")
 )
 
@@ -198,13 +198,15 @@ func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, e
 func (b *bridge) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
 	var txs []*types.Transaction
 
-	if blockInfo.IsEndOfEpoch && blockInfo.ValidatorSetDelta != nil && !blockInfo.ValidatorSetDelta.IsEmpty() {
+	if blockInfo.IsFirstBlockOfEpoch && blockInfo.ParentBlock.Number > 1 {
 		tx, err := createCommitValidatorSetTxn(blockInfo)
 		if err != nil {
 			return nil, fmt.Errorf("error while creating commit validator set tx, err: %w", err)
 		}
 
-		txs = append(txs, tx)
+		if tx != nil {
+			txs = append(txs, tx)
+		}
 	}
 
 	if blockInfo.IsEndOfSprint {
@@ -212,6 +214,10 @@ func (b *bridge) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transa
 			bridgeBatch, err := bridgeManager.BridgeBatch(blockInfo.CurrentBlock())
 			if err != nil {
 				return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
+			}
+
+			if bridgeBatch == nil {
+				continue
 			}
 
 			tx, err := createBridgeBatchTx(bridgeBatch)
@@ -268,7 +274,7 @@ func (b *bridge) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.
 				bridgeBatchFn, blockInfo.CurrentEpochValidatorSet); err != nil {
 				return err
 			}
-		} else if bytes.Equal(sig, commitBatchFn.Sig()) {
+		} else if bytes.Equal(sig, commitValidatorSetFn.Sig()) {
 			if commitValidatorSetExists {
 				// if we already validated commit validator set tx,
 				// that means someone added more than one commit validator set tx to block,
@@ -288,9 +294,14 @@ func (b *bridge) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.
 		}
 	}
 
-	if blockInfo.IsEndOfEpoch && blockInfo.ValidatorSetDelta != nil && !blockInfo.ValidatorSetDelta.IsEmpty() {
-		if !commitValidatorSetExists {
-			// this is a check if commit epoch transaction is not in the list of transactions at all
+	if blockInfo.IsFirstBlockOfEpoch {
+		hasValidatorChanges, err := doesParentBlockHasValidatorChanges(blockInfo.ParentBlock)
+		if err != nil {
+			return err
+		}
+
+		if hasValidatorChanges && !commitValidatorSetExists {
+			// this is a check if commit validator set transaction is not in the list of transactions at all
 			// but it should be
 			return errCommitValidatorSetTxDoesNotExist
 		}
@@ -348,9 +359,9 @@ func createCommitValidatorSetTxn(bi oracle.NewBlockInfo) (*types.Transaction, er
 		return nil, fmt.Errorf("failed to get parent extra data: %w", err)
 	}
 
-	validators, err := bi.CurrentEpochValidatorSet.Accounts().ApplyDelta(bi.ValidatorSetDelta)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply validator set delta: %w", err)
+	if parentExtra.Validators == nil || parentExtra.Validators.IsEmpty() {
+		// if there was no change in the validator set we don't need to update it
+		return nil, nil
 	}
 
 	signature, err := bls.UnmarshalSignature(parentExtra.Committed.AggregatedSignature)
@@ -364,7 +375,7 @@ func createCommitValidatorSetTxn(bi oracle.NewBlockInfo) (*types.Transaction, er
 	}
 
 	input := &contractsapi.CommitValidatorSetBridgeStorageFn{
-		NewValidatorSet: validators.ToABIBinding(),
+		NewValidatorSet: bi.CurrentEpochValidatorSet.Accounts().ToABIBinding(),
 		Signature:       signatureBig,
 		Bitmap:          parentExtra.Committed.Bitmap,
 	}
@@ -380,19 +391,22 @@ func createCommitValidatorSetTxn(bi oracle.NewBlockInfo) (*types.Transaction, er
 // verifyCommitValidatorSetTx verifies commit validator set state transaction
 func verifyCommitValidatorSetTx(bi oracle.NewBlockInfo,
 	commitValidatorSetTx *contractsapi.CommitValidatorSetBridgeStorageFn) error {
-	if !bi.IsEndOfEpoch {
+	if !bi.IsFirstBlockOfEpoch {
 		return errCommitValidatorSetTxNotExpected
 	}
 
-	if bi.ValidatorSetDelta == nil || bi.ValidatorSetDelta.IsEmpty() {
-		return errCommitValidatorSetTxInvalid
-	}
-
-	expectedValidators, err := bi.CurrentEpochValidatorSet.Accounts().ApplyDelta(bi.ValidatorSetDelta)
+	hasValidatorChanges, err := doesParentBlockHasValidatorChanges(bi.ParentBlock)
 	if err != nil {
 		return err
 	}
 
+	if !hasValidatorChanges {
+		// if there was no change in the validator set, but we have commit validator set tx
+		// then this case is invalid and we return an error
+		return errCommitValidatorSetTxInvalid
+	}
+
+	expectedValidators := bi.CurrentEpochValidatorSet.Accounts()
 	txValidators := commitValidatorSetTx.GetValidatorsAsMap()
 
 	for _, expectedValidator := range expectedValidators {
@@ -419,4 +433,13 @@ func verifyCommitValidatorSetTx(bi oracle.NewBlockInfo,
 	}
 
 	return nil
+}
+
+func doesParentBlockHasValidatorChanges(parentBlock *types.Header) (bool, error) {
+	extra, err := polytypes.GetIbftExtra(parentBlock.ExtraData)
+	if err != nil {
+		return false, fmt.Errorf("failed to get parent extra data: %w", err)
+	}
+
+	return (extra.Validators != nil && !extra.Validators.IsEmpty()), nil
 }

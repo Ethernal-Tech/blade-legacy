@@ -424,7 +424,7 @@ func TestStakeManager_UpdateOnInit(t *testing.T) {
 	accountSet := validators.GetPublicIdentities(allAliases...)
 	stakeStore := newTestState(t)
 
-	polyBackendMock := new(polytypes.PolybftBackendMock)
+	polyBackendMock := polytypes.NewPolybftMock(t)
 	polyBackendMock.On("GetValidatorsWithTx", uint64(0), []*types.Header(nil), mock.Anything).Return(accountSet, nil).Once()
 
 	_, err := newStakeManager(

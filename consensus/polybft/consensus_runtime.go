@@ -422,7 +422,7 @@ func (c *consensusRuntime) FSM() error {
 		CurrentEpoch:             epoch.Number,
 		EpochSize:                epoch.CurrentClientConfig.EpochSize,
 		CurrentEpochValidatorSet: valSet,
-		ValidatorSetDelta:        newValidatorsDelta,
+		NewValidatorSetDelta:     newValidatorsDelta,
 	}
 
 	c.logger.Info(

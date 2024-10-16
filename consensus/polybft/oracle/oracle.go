@@ -26,8 +26,8 @@ type NewBlockInfo struct {
 	ParentBlock *types.Header
 	// CurrentEpochValidatorSet is the validator set for the current epoch
 	CurrentEpochValidatorSet validator.ValidatorSet
-	// ValidatorSetDelta carries the changes in the validator set
-	ValidatorSetDelta *validator.ValidatorSetDelta
+	// NewValidatorSetDelta carries the changes in the validator set
+	NewValidatorSetDelta *validator.ValidatorSetDelta
 }
 
 func (b NewBlockInfo) CurrentBlock() uint64 {

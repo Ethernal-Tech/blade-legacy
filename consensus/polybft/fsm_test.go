@@ -190,7 +190,7 @@ func TestFSM_BuildProposal_EpochEndingBlock_ValidatorsDeltaExists(t *testing.T) 
 	fsm := &fsm{
 		blockInfo: oracle.NewBlockInfo{
 			ParentBlock:              parent,
-			ValidatorSetDelta:        newDelta,
+			NewValidatorSetDelta:     newDelta,
 			CurrentEpochValidatorSet: validatorSet,
 			IsEndOfEpoch:             true,
 		},
@@ -399,7 +399,7 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 	}
 	parent.ComputeHash()
 
-	polybftBackendMock := new(polytypes.PolybftBackendMock)
+	polybftBackendMock := polytypes.NewPolybftMock(t)
 	polybftBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Once()
 
 	extra := createTestExtraObject(validators.GetPublicIdentities(), validator.AccountSet{}, 4, signaturesCount, signaturesCount)
@@ -442,7 +442,7 @@ func TestFSM_Validate_EpochEndingBlock_MismatchInDeltas(t *testing.T) {
 		blockInfo: oracle.NewBlockInfo{
 			ParentBlock:              parent,
 			CurrentEpochValidatorSet: validators.ToValidatorSet(),
-			ValidatorSetDelta:        newValidatorDelta,
+			NewValidatorSetDelta:     newValidatorDelta,
 			IsEndOfEpoch:             true,
 		},
 		blockchain:     blockchainMock,
@@ -477,7 +477,7 @@ func TestFSM_Validate_EpochEndingBlock_UpdatingValidatorSetInNonEpochEndingBlock
 	}
 	parent.ComputeHash()
 
-	polybftBackendMock := new(polytypes.PolybftBackendMock)
+	polybftBackendMock := polytypes.NewPolybftMock(t)
 	polybftBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validators.GetPublicIdentities(), nil).Once()
 
 	// a new validator is added to delta which proposers block does not have
@@ -892,7 +892,7 @@ func TestFSM_Validate_FailToVerifySignatures(t *testing.T) {
 	}
 	parent.ComputeHash()
 
-	polybftBackendMock := new(polytypes.PolybftBackendMock)
+	polybftBackendMock := polytypes.NewPolybftMock(t)
 	polybftBackendMock.On("GetValidators", mock.Anything, mock.Anything).Return(validatorsMetadata, nil).Once()
 
 	validatorSet := validator.NewValidatorSet(validatorsMetadata, hclog.NewNullLogger())

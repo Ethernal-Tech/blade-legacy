@@ -29,7 +29,7 @@ func TestGetTransactions(t *testing.T) {
 	tests := []struct {
 		name                         string
 		blockInfo                    oracle.NewBlockInfo
-		setupMocks                   func(*polytypes.PolybftBackendMock, *polychain.BlockchainMock) *types.Header
+		setupMocks                   func(*polytypes.PolybftMock, *polychain.BlockchainMock) *types.Header
 		expectedNumberOfTransactions int
 	}{
 		{
@@ -61,7 +61,7 @@ func TestGetTransactions(t *testing.T) {
 				CurrentEpoch:        3,
 				FirstBlockInEpoch:   21,
 			},
-			setupMocks: func(polybftMock *polytypes.PolybftBackendMock, blockchainMock *polychain.BlockchainMock) *types.Header {
+			setupMocks: func(polybftMock *polytypes.PolybftMock, blockchainMock *polychain.BlockchainMock) *types.Header {
 				validators := validator.NewTestValidatorsWithAliases(t, []string{"A", "B", "C", "D", "E"})
 
 				lastBuiltBlock, headerMap := polytypes.CreateTestBlocks(t, 20, 10, validators.GetPublicIdentities())
@@ -80,7 +80,7 @@ func TestGetTransactions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			polybftMock := new(polytypes.PolybftBackendMock)
+			polybftMock := polytypes.NewPolybftMock(t)
 			blockchainMock := new(polychain.BlockchainMock)
 
 			var lastBuiltBlock *types.Header
@@ -213,7 +213,7 @@ func TestVerifyTransactions(t *testing.T) {
 			CurrentEpoch:        3,
 		}
 
-		polybftMock := new(polytypes.PolybftBackendMock)
+		polybftMock := polytypes.NewPolybftMock(t)
 		blockchainMock := new(polychain.BlockchainMock)
 
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
@@ -253,7 +253,7 @@ func TestVerifyTransactions(t *testing.T) {
 			CurrentEpoch:        3, // this will make it fail
 		}
 
-		polybftMock := new(polytypes.PolybftBackendMock)
+		polybftMock := polytypes.NewPolybftMock(t)
 		blockchainMock := new(polychain.BlockchainMock)
 
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)
@@ -285,7 +285,7 @@ func TestVerifyTransactions(t *testing.T) {
 			CurrentEpoch:        3,
 		}
 
-		polybftMock := new(polytypes.PolybftBackendMock)
+		polybftMock := polytypes.NewPolybftMock(t)
 		blockchainMock := new(polychain.BlockchainMock)
 
 		blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(headerMap.GetHeader)

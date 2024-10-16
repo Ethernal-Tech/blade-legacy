@@ -91,7 +91,7 @@ func (f *fsm) BuildProposal(currentRound uint64) ([]byte, error) {
 	}
 
 	if f.blockInfo.IsEndOfEpoch {
-		extra.Validators = f.blockInfo.ValidatorSetDelta
+		extra.Validators = f.blockInfo.NewValidatorSetDelta
 	}
 
 	txs, err := f.oracles.GetTransactions(f.blockInfo)
@@ -232,7 +232,7 @@ func (f *fsm) Validate(proposal []byte) error {
 			return errValidatorDeltaNilInEpochEndingBlock
 		}
 
-		if !extra.Validators.Equals(f.blockInfo.ValidatorSetDelta) {
+		if !extra.Validators.Equals(f.blockInfo.NewValidatorSetDelta) {
 			return errValidatorSetDeltaMismatch
 		}
 	} else if extra.Validators != nil {

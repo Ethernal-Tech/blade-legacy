@@ -213,7 +213,7 @@ func TestConsensusRuntime_OnBlockInserted_EndOfEpoch(t *testing.T) {
 	blockchainMock.On("GetStateProviderForBlock", mock.Anything).Return(new(systemstate.StateProviderMock)).Once()
 	blockchainMock.On("GetSystemState", mock.Anything, mock.Anything).Return(systemStateMock)
 
-	polybftBackendMock := new(polytypes.PolybftBackendMock)
+	polybftBackendMock := polytypes.NewPolybftMock(t)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validatorSet).Times(3)
 	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
@@ -283,7 +283,7 @@ func TestConsensusRuntime_OnBlockInserted_MiddleOfEpoch(t *testing.T) {
 	blockchainMock := new(polychain.BlockchainMock)
 	blockchainMock.On("GetHeaderByNumber", mock.Anything).Return(builtBlock.Header, true).Once()
 
-	polybftBackendMock := new(polytypes.PolybftBackendMock)
+	polybftBackendMock := polytypes.NewPolybftMock(t)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 
 	txPoolMock := new(polychain.TxPoolMock)
@@ -329,7 +329,7 @@ func TestConsensusRuntime_FSM_NotInValidatorSet(t *testing.T) {
 	}
 
 	proposerCalculator, err := proposer.NewProposerCalculatorFromSnapshot(snapshot, config, state.NewTestState(t),
-		new(polytypes.PolybftBackendMock), new(polychain.BlockchainMock), hclog.NewNullLogger())
+		polytypes.NewPolybftMock(t), new(polychain.BlockchainMock), hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
@@ -372,7 +372,7 @@ func TestConsensusRuntime_FSM_NotEndOfEpoch_NotEndOfSprint(t *testing.T) {
 	}
 
 	proposerCalculator, err := proposer.NewProposerCalculatorFromSnapshot(snapshot, config, state.NewTestState(t),
-		new(polytypes.PolybftBackendMock), blockchainMock, hclog.NewNullLogger())
+		polytypes.NewPolybftMock(t), blockchainMock, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
@@ -437,7 +437,7 @@ func Test_NewConsensusRuntime(t *testing.T) {
 	blockchainMock.On("GetHeaderByNumber", uint64(0)).Return(&types.Header{Number: 0, ExtraData: polytypes.CreateTestExtraForAccounts(t, 0, validators, nil)})
 	blockchainMock.On("GetHeaderByNumber", uint64(1)).Return(&types.Header{Number: 1, ExtraData: polytypes.CreateTestExtraForAccounts(t, 1, validators, nil)})
 
-	polybftBackendMock := new(polytypes.PolybftBackendMock)
+	polybftBackendMock := polytypes.NewPolybftMock(t)
 	polybftBackendMock.On("GetValidatorsWithTx", mock.Anything, mock.Anything, mock.Anything).Return(validators).Times(4)
 	polybftBackendMock.On("SetBlockTime", mock.Anything).Once()
 
@@ -484,7 +484,7 @@ func TestConsensusRuntime_restartEpoch_SameEpochNumberAsTheLastOne(t *testing.T)
 	config := &config.Runtime{}
 
 	proposerCalculator, err := proposer.NewProposerCalculatorFromSnapshot(snapshot, config, state.NewTestState(t),
-		new(polytypes.PolybftBackendMock), blockchainMock, hclog.NewNullLogger())
+		polytypes.NewPolybftMock(t), blockchainMock, hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{
@@ -751,7 +751,7 @@ func TestConsensusRuntime_BuildProposal_InvalidParent(t *testing.T) {
 	snapshot := proposer.NewProposerSnapshot(1, nil)
 
 	proposerCalculator, err := proposer.NewProposerCalculatorFromSnapshot(snapshot, config, state.NewTestState(t),
-		new(polytypes.PolybftBackendMock), new(polychain.BlockchainMock), hclog.NewNullLogger())
+		polytypes.NewPolybftMock(t), new(polychain.BlockchainMock), hclog.NewNullLogger())
 	require.NoError(t, err)
 
 	runtime := &consensusRuntime{

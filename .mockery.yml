@@ -1,0 +1,20 @@
+with-expecter: true
+dir: "mocks"
+filename: "{{.InterfaceName | lower }}.mock.generated.go"
+mockname: "{{.InterfaceName}}Mock"
+outpkg: "mocks"
+packages:
+  github.com/0xPolygon/polygon-edge/consensus/polybft/types:
+    config:
+    interfaces:
+      Polybft:
+        config:
+          inpackage: true
+          dir: "consensus/polybft/types"
+  github.com/0xPolygon/polygon-edge/consensus/polybft/bridge:
+    config:
+    interfaces:
+      BridgeManager:
+        config:
+          inpackage: true
+          dir: "consensus/polybft/bridge"
