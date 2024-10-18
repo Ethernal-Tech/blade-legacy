@@ -53,7 +53,8 @@ type bridge struct {
 
 // Bridge is an interface that defines functions that a bridge must implement
 type Bridge interface {
-	oracle.Oracle
+	oracle.ReadOnlyOracle
+	oracle.TxnOracle
 	Close()
 	BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error)
 }

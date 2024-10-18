@@ -158,7 +158,7 @@ func (pcs *ProposerSnapshot) toMap() map[types.Address]*PrioritizedValidator {
 	return validatorMap
 }
 
-var _ oracle.Oracle = (*ProposerCalculator)(nil)
+var _ oracle.ReadOnlyOracle = (*ProposerCalculator)(nil)
 
 type ProposerCalculator struct {
 	// current snapshot
@@ -251,16 +251,6 @@ func (pc *ProposerCalculator) PostBlock(req *oracle.PostBlockRequest) error {
 
 // PostEpoch is called on every insert of finalized epoch (either from consensus or syncer)
 func (pc *ProposerCalculator) PostEpoch(req *oracle.PostEpochRequest) error {
-	return nil
-}
-
-// GetTransactions returns the system transactions
-func (pc *ProposerCalculator) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
-	return nil, nil
-}
-
-// VerifyTransactions verifies system transactions
-func (pc *ProposerCalculator) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
 	return nil
 }
 

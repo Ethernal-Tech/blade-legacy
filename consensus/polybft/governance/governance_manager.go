@@ -35,7 +35,7 @@ var (
 // and updating client configuration based on executed governance proposals
 type GovernanceManager interface {
 	state.EventSubscriber
-	oracle.Oracle
+	oracle.ReadOnlyOracle
 	GetClientConfig(dbTx *bolt.Tx) (*chain.Params, error)
 }
 
@@ -50,12 +50,6 @@ type DummyGovernanceManager struct {
 func (d *DummyGovernanceManager) Close()                                       {}
 func (d *DummyGovernanceManager) PostBlock(req *oracle.PostBlockRequest) error { return nil }
 func (d *DummyGovernanceManager) PostEpoch(req *oracle.PostEpochRequest) error { return nil }
-func (d *DummyGovernanceManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
-	return nil, nil
-}
-func (d *DummyGovernanceManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
-	return nil
-}
 func (d *DummyGovernanceManager) GetClientConfig(dbTx *bolt.Tx) (*chain.Params, error) {
 	if d.GetClientConfigFn != nil {
 		return d.GetClientConfigFn()
@@ -141,16 +135,6 @@ func NewGovernanceManager(genesisParams *chain.Params,
 // GetClientConfig returns latest client configuration from boltdb
 func (g *governanceManager) GetClientConfig(dbTx *bolt.Tx) (*chain.Params, error) {
 	return g.state.getClientConfig(dbTx)
-}
-
-// GetTransactions returns system transactions
-func (g *governanceManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
-	return nil, nil
-}
-
-// VerifyTransactions verifies system transactions
-func (g *governanceManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
-	return nil
 }
 
 // Close closes the governance manager

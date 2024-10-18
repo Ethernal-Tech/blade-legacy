@@ -34,7 +34,7 @@ var (
 // and updating validator set based on changed stake
 type StakeManager interface {
 	state.EventSubscriber
-	oracle.Oracle
+	oracle.ReadOnlyOracle
 	UpdateValidatorSet(epoch uint64, maxValidatorSetSize uint64,
 		currentValidatorSet validator.AccountSet) (*validator.ValidatorSetDelta, error)
 }
@@ -127,16 +127,6 @@ func newStakeManager(logger hclog.Logger,
 
 // Close closes the oracle
 func (s *stakeManager) Close() {}
-
-// GetTransactions returns the system transactions
-func (s *stakeManager) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transaction, error) {
-	return nil, nil
-}
-
-// VerifyTransactions verifies system transactions
-func (s *stakeManager) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.Transaction) error {
-	return nil
-}
 
 // PostEpoch posts new epoch to the oracle
 func (s *stakeManager) PostEpoch(req *oracle.PostEpochRequest) error {

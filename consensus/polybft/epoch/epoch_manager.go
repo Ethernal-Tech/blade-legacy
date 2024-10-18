@@ -34,7 +34,7 @@ var (
 		"allowed in the given block")
 )
 
-var _ oracle.Oracle = (*EpochManager)(nil)
+var _ oracle.TxnOracle = (*EpochManager)(nil)
 
 // EpochManager is a struct that implements Oracle interface and provides
 // system (state) transactions regarding closing epochs and distributing rewards.
@@ -49,16 +49,6 @@ func NewEpochManager(backend polytypes.Polybft, blockchain blockchain.Blockchain
 		backend:    backend,
 		blockchain: blockchain,
 	}
-}
-
-// PostBlock is a function that posts a block to the oracle.
-func (e *EpochManager) PostBlock(postBlockReq *oracle.PostBlockRequest) error {
-	return nil
-}
-
-// PostEpoch is a function that posts an epoch to the oracle.
-func (e *EpochManager) PostEpoch(postEpochReq *oracle.PostEpochRequest) error {
-	return nil
 }
 
 // Close is a function that closes the oracle.

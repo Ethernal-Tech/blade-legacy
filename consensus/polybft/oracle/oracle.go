@@ -34,14 +34,24 @@ func (b NewBlockInfo) CurrentBlock() uint64 {
 	return b.ParentBlock.Number + 1
 }
 
-// Oracle represents a feature that can provide and verify system transactions
+// Oracle represents a common interface for all oracle types
 type Oracle interface {
 	// Close closes the oracle
 	Close()
+}
+
+// ReadOnlyOracle is an oracle that only reads data from blocks
+type ReadOnlyOracle interface {
+	Oracle
 	// PostBlock posts a block to the oracle
 	PostBlock(postBlockReq *PostBlockRequest) error
 	// PostEpoch posts an epoch to the oracle
 	PostEpoch(postEpochReq *PostEpochRequest) error
+}
+
+// TxnOracle is an oracle that can provide and verify system transactions
+type TxnOracle interface {
+	Oracle
 	// GetTransactions returns the system transactions
 	GetTransactions(blockInfo NewBlockInfo) ([]*types.Transaction, error)
 	// VerifyTransaction verifies system transactions
@@ -61,7 +71,12 @@ func (o Oracles) Close() {
 // PostBlock posts a block to all oracles
 func (o Oracles) PostBlock(postBlockReq *PostBlockRequest) error {
 	for _, oracle := range o {
-		if err := oracle.PostBlock(postBlockReq); err != nil {
+		ro, ok := oracle.(ReadOnlyOracle)
+		if !ok {
+			continue
+		}
+
+		if err := ro.PostBlock(postBlockReq); err != nil {
 			return err
 		}
 	}
@@ -72,7 +87,12 @@ func (o Oracles) PostBlock(postBlockReq *PostBlockRequest) error {
 // PostEpoch posts an epoch to all oracles
 func (o Oracles) PostEpoch(postEpochReq *PostEpochRequest) error {
 	for _, oracle := range o {
-		if err := oracle.PostEpoch(postEpochReq); err != nil {
+		ro, ok := oracle.(ReadOnlyOracle)
+		if !ok {
+			continue
+		}
+
+		if err := ro.PostEpoch(postEpochReq); err != nil {
 			return err
 		}
 	}
@@ -85,7 +105,12 @@ func (o Oracles) GetTransactions(blockInfo NewBlockInfo) ([]*types.Transaction, 
 	var allTxs []*types.Transaction
 
 	for _, oracle := range o {
-		oracleTxs, err := oracle.GetTransactions(blockInfo)
+		to, ok := oracle.(TxnOracle)
+		if !ok {
+			continue
+		}
+
+		oracleTxs, err := to.GetTransactions(blockInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -101,16 +126,15 @@ func (o Oracles) VerifyTransactions(blockInfo NewBlockInfo, txs []*types.Transac
 	g, _ := errgroup.WithContext(context.Background())
 
 	for _, oracle := range o {
-		oracle := oracle
+		to, ok := oracle.(TxnOracle)
+		if !ok {
+			continue
+		}
 
 		g.Go(func() error {
-			return oracle.VerifyTransactions(blockInfo, txs)
+			return to.VerifyTransactions(blockInfo, txs)
 		})
 	}
 
-	if err := g.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return g.Wait()
 }
