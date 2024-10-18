@@ -189,7 +189,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers {
-				if !isEventsProcessed(t, polybftCfg.Bridge[1337].ExternalGatewayAddr, externalChainTxRelayer, uint64(i+1)) {
+				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, uint64(i+1)) {
 					return false
 				}
 			}
@@ -252,7 +252,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers[:depositsSubset] {
 				t.Log("Number of transfers")
-				if !isEventsProcessed(t, polybftCfg.Bridge[1337].InternalGatewayAddr, internalChainTxRelayer, uint64(transfersCount+1+1+i)) {
+				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].InternalGatewayAddr, internalChainTxRelayer, uint64(transfersCount+1+1+i)) {
 					return false
 				}
 			}
@@ -280,7 +280,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers[depositsSubset:] {
-				if !isEventsProcessed(t, polybftCfg.Bridge[1337].InternalGatewayAddr, internalChainTxRelayer, uint64(1+transfersCount+1+i+1)) {
+				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].InternalGatewayAddr, internalChainTxRelayer, uint64(1+transfersCount+1+i+1)) {
 					return false
 				}
 			}
@@ -1174,6 +1174,16 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, externalChainTxRelayer)
 			oldBalances[types.StringToAddress(receiver)] = balance
 		}
+
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for i := uint64(1); i <= uint64(transfersCount); i++ {
+				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, i) {
+					return false
+				}
+			}
+
+			return true
+		}))
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		for _, receiver := range receivers {

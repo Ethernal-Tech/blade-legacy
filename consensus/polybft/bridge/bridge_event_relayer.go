@@ -423,8 +423,6 @@ func (ber *bridgeEventRelayerImpl) ProcessLog(header *types.Header, log *ethgo.L
 			return nil
 		}
 
-		ber.logger.Error("ERR", "EVENTS", newBatchEvent)
-
 		provider, err := ber.blockchain.GetStateProviderForBlock(header)
 		if err != nil {
 			return err

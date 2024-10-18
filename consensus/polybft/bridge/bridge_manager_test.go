@@ -79,7 +79,7 @@ func newTestBridgeManager(t *testing.T, key *validator.TestValidator, runtime Ru
 			topic:             topic,
 			key:               key.Key(),
 			maxNumberOfEvents: maxNumberOfBatchEvents,
-		}, runtime, 1, 0)
+		}, runtime, 1, 0, nil)
 
 	return s
 }
