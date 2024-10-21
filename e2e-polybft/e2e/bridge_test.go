@@ -935,6 +935,10 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 		t.Log("L2 child token", l2ChildToken)
 		require.Equal(t, l1ChildToken, l2ChildToken)
 
+		blockNumber, err := childEthEndpoint.BlockNumber()
+
+		cluster.WaitForBlock(blockNumber+epochSize, 2*time.Minute)
+
 		// check owner on the external chain
 		for i := uint64(0); i < transfersCount; i++ {
 			owner := erc721OwnerOf(t, new(big.Int).SetUint64(i), l1ChildToken, externalChainTxRelayer)
