@@ -1114,6 +1114,13 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 		t.Log("Deposits were successfully processed")
 
+		oldBalances := map[types.Address]*big.Int{}
+
+		for _, receiver := range receivers {
+			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, externalChainTxRelayer)
+			oldBalances[types.StringToAddress(receiver)] = balance
+		}
+
 		// WITHDRAW ERC20 TOKENS
 		rawKey, err := senderAccount.Ecdsa.MarshallPrivateKey()
 		require.NoError(t, err)
@@ -1171,13 +1178,6 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockMetaData.EpochNumber)
-
-		oldBalances := map[types.Address]*big.Int{}
-
-		for _, receiver := range receivers {
-			balance := erc20BalanceOf(t, types.StringToAddress(receiver), rootERC20Token, externalChainTxRelayer)
-			oldBalances[types.StringToAddress(receiver)] = balance
-		}
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 			for i := uint64(1); i <= uint64(transfersCount); i++ {
