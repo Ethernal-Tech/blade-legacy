@@ -105,7 +105,7 @@ func GetCommand() *cobra.Command {
 	cmd.Flags().BoolVar(
 		&params.isBootstrap,
 		isBootstrapFlag,
-		true,
+		false,
 		"indicates if bridge deploy command is run during bootstraping of the Blade chain. "+
 			"If it is run on a live Blade chain, the command will deploy and initialize internal predicates, "+
 			"otherwise it will pre-allocate the internal predicates addresses in the genesis configuration.",
