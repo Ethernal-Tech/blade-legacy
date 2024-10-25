@@ -299,7 +299,7 @@ func (b *bridge) VerifyTransactions(blockInfo oracle.NewBlockInfo, txs []*types.
 		}
 	}
 
-	if blockInfo.IsFirstBlockOfEpoch {
+	if blockInfo.IsFirstBlockOfEpoch && blockInfo.ParentBlock.Number > 0 {
 		hasValidatorChanges, err := doesParentBlockHasValidatorChanges(blockInfo.ParentBlock)
 		if err != nil {
 			return err

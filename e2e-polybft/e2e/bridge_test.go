@@ -1204,6 +1204,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		epochSize             = uint64(10)
 		numberOfAttempts      = uint64(4)
 		numBlockConfirmations = uint64(2)
+		bridgeEvents          = uint64(2)
 		tokensToTransfer      = ethgo.Gwei(10)
 		tenMilionTokens       = ethgo.Ether(10000000)
 		bigZero               = big.NewInt(0)
@@ -1370,6 +1371,16 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 		require.NoError(t, err)
 
 		t.Logf("Latest block number: %d, epoch number: %d\n", currentBlock.Number(), currentExtra.BlockMetaData.EpochNumber)
+
+		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
+			for bridgeEventID := uint64(1); bridgeEventID <= bridgeEvents; bridgeEventID++ {
+				if !isEventsProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, bridgeEventID) {
+					return false
+				}
+			}
+
+			return true
+		}))
 
 		// assert that receiver's balances on RootERC20 smart contract are expected
 		checkBalancesFn(validatorAcc.Address(), tokensToTransfer, validatorBalanceAfterWithdraw, true)
