@@ -33,6 +33,7 @@ type debugEndpointMockStore struct {
 	getBlockByNumberFn    func(uint64, bool) (*types.Block, bool)
 	traceBlockFn          func(*types.Block, tracer.Tracer) ([]interface{}, error)
 	intermediateRootsFn   func(*types.Block, tracer.Tracer) ([]types.Hash, error)
+	storageRangeAtFn      func(*state.StorageRangeResult, *types.Block, *types.Address, []byte, int, int) error
 	traceTxnFn            func(*types.Block, types.Hash, tracer.Tracer) (interface{}, error)
 	traceCallFn           func(*types.Transaction, *types.Header, tracer.Tracer) (interface{}, error)
 	getNonceFn            func(types.Address) uint64
@@ -97,6 +98,10 @@ func (s *debugEndpointMockStore) TraceBlock(block *types.Block, tracer tracer.Tr
 
 func (s *debugEndpointMockStore) IntermediateRoots(block *types.Block, tracer tracer.Tracer) ([]types.Hash, error) {
 	return s.intermediateRootsFn(block, tracer)
+}
+
+func (s *debugEndpointMockStore) StorageRangeAt(storageRangeResult *state.StorageRangeResult, block *types.Block, addr *types.Address, keyStart []byte, txIndex, maxResult int) error {
+	return s.storageRangeAtFn(storageRangeResult, block, addr, keyStart, txIndex, maxResult)
 }
 
 func (s *debugEndpointMockStore) TraceTxn(block *types.Block, targetTx types.Hash, tracer tracer.Tracer) (interface{}, error) {
@@ -1526,7 +1531,7 @@ func TestGetAccessibleState(t *testing.T) {
 				},
 			},
 
-			returnErr: "'from' and 'to' block numbers must be different",
+			returnErr: "no accessible state found in the block",
 			result:    0,
 			err:       true,
 		},
@@ -1698,6 +1703,95 @@ func TestIntermediateRoots(t *testing.T) {
 
 			endpoint := NewDebug(test.store, 100000)
 			res, err := endpoint.IntermediateRoots(test.blockHash, test.config)
+			require.Equal(t, test.result, res)
+
+			if test.err {
+				require.ErrorContains(t, err, test.returnErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestStorageRangeAt(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name               string
+		blockHash          types.Hash
+		storageRangeResult state.StorageRangeResult
+		store              *debugEndpointMockStore
+		result             interface{}
+		returnErr          string
+		err                bool
+	}{
+		{
+			name:      "BlockByHashNotFound",
+			blockHash: testLatestBlock.Hash(),
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					require.Equal(t, testLatestBlock.Hash(), hash)
+					require.True(t, full)
+
+					return nil, false
+				},
+			},
+
+			returnErr: "not found",
+			result:    nil,
+			err:       true,
+		},
+
+		{
+			name:               "storageRangeAtNotValid",
+			blockHash:          testLatestBlock.Hash(),
+			storageRangeResult: state.StorageRangeResult{},
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+				storageRangeAtFn: func(srr *state.StorageRangeResult, block *types.Block, address *types.Address, start []byte, txIndex, maxCount int) error {
+					require.Equal(t, block.Hash(), testLatestBlock.Hash())
+
+					return fmt.Errorf("storageRangeAt not valid")
+				},
+			},
+
+			returnErr: "storageRangeAt not valid",
+			result:    state.StorageRangeResult{},
+			err:       true,
+		},
+
+		{
+			name:               "resultsValid",
+			blockHash:          testLatestBlock.Hash(),
+			storageRangeResult: state.StorageRangeResult{},
+			store: &debugEndpointMockStore{
+				getBlockByHashFn: func(hash types.Hash, full bool) (*types.Block, bool) {
+					return testLatestBlock, true
+				},
+				storageRangeAtFn: func(srr *state.StorageRangeResult, block *types.Block, address *types.Address, start []byte, txIndex, maxCount int) error {
+					require.Equal(t, block.Hash(), testLatestBlock.Hash())
+
+					return nil
+				},
+			},
+
+			returnErr: "",
+			result:    state.StorageRangeResult{},
+			err:       false,
+		},
+	}
+
+	for _, test := range tests {
+		test := test
+
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+
+			endpoint := NewDebug(test.store, 100000)
+			res, err := endpoint.StorageRangeAt(test.blockHash, 0, addr0, []byte{}, 10)
 			require.Equal(t, test.result, res)
 
 			if test.err {

@@ -36,11 +36,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	const (
 		transfersCount        = 5
 		numBlockConfirmations = 2
-		// make epoch size long enough, so that all exit events are processed within the same epoch
-		epochSize            = 40
-		sprintSize           = uint64(5)
-		numberOfAttempts     = 7
-		stateSyncedLogsCount = 2 // map token and deposit
+		sprintSize            = uint64(5)
 	)
 
 	var (
@@ -71,7 +67,6 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 	cluster := framework.NewTestCluster(t, 5,
 		framework.WithTestRewardToken(),
 		framework.WithNumBlockConfirmations(numBlockConfirmations),
-		framework.WithEpochSize(epochSize),
 		framework.WithBridge(),
 		framework.WithSecretsCallback(func(addrs []types.Address, tcc *framework.TestClusterConfig) {
 			for i := 0; i < len(addrs); i++ {
@@ -159,8 +154,6 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 		}
 
 		t.Log("Deposits were successfully processed")
-
-		require.NoError(t, cluster.WaitForBlock(uint64(epochSize), 2*time.Minute))
 
 		// WITHDRAW ERC20 TOKENS
 		// send withdraw transaction
@@ -265,7 +258,7 @@ func TestE2E_Bridge_RootchainTokensTransfers(t *testing.T) {
 
 		finalBlockNum := midBlockNumber + 5*sprintSize
 		// wait for a few more sprints
-		require.NoError(t, cluster.WaitForBlock(midBlockNumber+5*sprintSize, 3*time.Minute))
+		require.NoError(t, cluster.WaitForBlock(finalBlockNum, 2*time.Minute))
 
 		// check that we submitted the minimal commitment to smart contract
 		commitmentIDRaw, err = txRelayer.Call(types.ZeroAddress, contracts.StateReceiverContract, lastCommittedIDInput)

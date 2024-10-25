@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
+	"github.com/0xPolygon/polygon-edge/state"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/Ethernal-Tech/ethgo"
 	"github.com/Ethernal-Tech/ethgo/jsonrpc"
@@ -314,4 +315,28 @@ func (e *EthClient) Sign(addr types.Address, data []byte) (string, error) {
 	}
 
 	return res, nil
+}
+
+// GetAccessibleState returns the first number where the node has accessible state on disk.
+func (e *EthClient) GetAccessibleState(from, to BlockNumber) (uint64, error) {
+	var out uint64
+
+	if err := e.client.Call("debug_getAccessibleState", &out, from.String(), to.String()); err != nil {
+		return 0, err
+	}
+
+	return out, nil
+}
+
+// StorageRangeAt returns the storage at the given block height and transaction index.
+func (e *EthClient) StorageRangeAt(blockHash types.Hash, txIndex int, contractAddress types.Address,
+	keyStart []byte, maxResult int) (state.StorageRangeResult, error) {
+	var out state.StorageRangeResult
+
+	if err := e.client.Call("debug_storageRangeAt", &out, blockHash, txIndex, contractAddress,
+		keyStart, maxResult); err != nil {
+		return state.StorageRangeResult{}, err
+	}
+
+	return out, nil
 }
