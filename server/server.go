@@ -792,9 +792,7 @@ func (j *jsonRPCHub) GetModifiedAccounts(startBlock, endBlock *types.Block) ([]t
 			}
 		} else {
 			for _, obj := range objs {
-				if startObj, exists := startBlockAddressMap[obj.Address]; !exists ||
-					(obj.Nonce != startObj.Nonce || obj.Balance.Cmp(startObj.Balance) != 0 ||
-						obj.CodeHash != startObj.CodeHash || obj.Root != startObj.Root) {
+				if startObj, exists := startBlockAddressMap[obj.Address]; !exists || !obj.Equals(startObj) {
 					changedAccounts = append(changedAccounts, obj.Address)
 				}
 			}

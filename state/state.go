@@ -232,9 +232,58 @@ type Object struct {
 	Storage []*StorageObject
 }
 
+func (o *Object) Equals(other *Object) bool {
+	// Compare Address, CodeHash, Root, Nonce, Deleted, and DirtyCode directly.
+	if o.Address != other.Address ||
+		o.CodeHash != other.CodeHash ||
+		o.Root != other.Root ||
+		o.Nonce != other.Nonce ||
+		o.Deleted != other.Deleted ||
+		o.DirtyCode != other.DirtyCode {
+		return false
+	}
+
+	// Compare Balance.
+	if o.Balance.Cmp(other.Balance) != 0 {
+		return false
+	}
+
+	// Compare Code slices.
+	if !bytes.Equal(o.Code, other.Code) {
+		return false
+	}
+
+	// Compare Storage slices by length first.
+	if len(o.Storage) != len(other.Storage) {
+		return false
+	}
+
+	for i, storageObj := range o.Storage {
+		if !(storageObj.Equals(other.Storage[i])) {
+			return false
+		}
+	}
+
+	return true
+}
+
 // StorageObject is an entry in the storage
 type StorageObject struct {
 	Deleted bool
 	Key     []byte
 	Val     []byte
+}
+
+func (s *StorageObject) Equals(other *StorageObject) bool {
+	// Compare Deleted field directly
+	if s.Deleted != other.Deleted {
+		return false
+	}
+
+	// Compare Key and Val byte slices using bytes.Equal
+	if !bytes.Equal(s.Key, other.Key) || !bytes.Equal(s.Val, other.Val) {
+		return false
+	}
+
+	return true
 }
