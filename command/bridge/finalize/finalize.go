@@ -12,9 +12,11 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
+	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
+	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/helper/hex"
 	"github.com/0xPolygon/polygon-edge/jsonrpc"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
@@ -207,6 +209,14 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to save chain configuration bridge data: %w", err)
 	}
 
+	for bridgeChainID := range consensusConfig.Bridge {
+		// initialize Gateway contract since it needs to have a valid VotingPowers of validators
+		if err := initializeGateway(outputter, txRelayer,
+			consensusConfig, bridgeChainID, ownerKey); err != nil {
+			return fmt.Errorf("could not initialize CheckpointManager with finalized genesis validator set: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -273,4 +283,79 @@ func decodeGenesisAccounts(genesisSetRaw string) (map[types.Address]*contractsap
 	}
 
 	return genesisAccounts, nil
+}
+
+// validatorSetToABISlice converts given validators to generic map
+// which is used for ABI encoding validator set being sent to the rootchain contract
+func validatorSetToABISlice(o command.OutputFormatter,
+	validators []*validator.GenesisValidator) ([]*contractsapi.Validator, error) {
+	accSet := make(validator.AccountSet, len(validators))
+
+	if _, err := o.Write([]byte("[VALIDATORS - GATEWAY] \n")); err != nil {
+		return nil, err
+	}
+
+	for i, val := range validators {
+		if _, err := o.Write([]byte(fmt.Sprintf("%v\n", val))); err != nil {
+			return nil, err
+		}
+
+		blsKey, err := val.UnmarshalBLSPublicKey()
+		if err != nil {
+			return nil, err
+		}
+
+		accSet[i] = &validator.ValidatorMetadata{
+			Address:     val.Address,
+			BlsKey:      blsKey,
+			VotingPower: new(big.Int).Set(val.Stake),
+		}
+	}
+
+	hash, err := accSet.Hash()
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := o.Write([]byte(
+		fmt.Sprintf("[VALIDATORS - GATEWAY] Validators hash: %s\n", hash))); err != nil {
+		return nil, err
+	}
+
+	return accSet.ToABIBinding(), nil
+}
+
+// initializeGateway initializes Gateway contract on external chain
+// based on finalized stake (voting power) of genesis validators on external
+func initializeGateway(outputter command.OutputFormatter,
+	txRelayer txrelayer.TxRelayer,
+	consensusConfig config.PolyBFT, chainID uint64,
+	deployerKey crypto.Key) error {
+	validatorSet, err := validatorSetToABISlice(outputter, consensusConfig.InitialValidatorSet)
+	if err != nil {
+		return fmt.Errorf("failed to convert validators to map: %w", err)
+	}
+
+	initParams := &contractsapi.InitializeGatewayFn{
+		NewBls:     consensusConfig.Bridge[chainID].BLSAddress,
+		NewBn256G2: consensusConfig.Bridge[chainID].BN256G2Address,
+		Validators: validatorSet,
+	}
+
+	input, err := initParams.EncodeAbi()
+	if err != nil {
+		return fmt.Errorf("failed to encode initialization params for Gateway.initialize. error: %w", err)
+	}
+
+	if _, err := bridgeHelper.SendTransaction(txRelayer, consensusConfig.Bridge[chainID].ExternalGatewayAddr,
+		input, "Gateway", deployerKey); err != nil {
+		return err
+	}
+
+	outputter.WriteCommandResult(
+		&bridgeHelper.MessageResult{
+			Message: fmt.Sprintf("Gateway contract is initialized"),
+		})
+
+	return nil
 }
