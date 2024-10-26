@@ -251,7 +251,6 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers[:depositsSubset] {
-				t.Log("Number of transfers")
 				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].InternalGatewayAddr, internalChainTxRelayer, uint64(transfersCount+1+1+i)) {
 					return false
 				}
@@ -936,8 +935,9 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 		require.Equal(t, l1ChildToken, l2ChildToken)
 
 		blockNumber, err := childEthEndpoint.BlockNumber()
+		require.NoError(t, err)
 
-		cluster.WaitForBlock(blockNumber+epochSize, 2*time.Minute)
+		require.NoError(t, cluster.WaitForBlock(blockNumber+epochSize, 2*time.Minute))
 
 		// check owner on the external chain
 		for i := uint64(0); i < transfersCount; i++ {

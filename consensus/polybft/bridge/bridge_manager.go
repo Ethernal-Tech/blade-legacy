@@ -324,13 +324,6 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 		return err
 	}
 
-	if err := b.buildExternalBridgeBatch(nil); err != nil {
-		// we don't return an error here. If bridge message event is inserted in db,
-		// we will just try to build a batch on next block or next event arrival
-		b.logger.Error("could not build a batch on arrival of new bridge message event",
-			"err", err, "bridgeMessageID", event.ID)
-	}
-
 	return nil
 }
 
@@ -344,8 +337,10 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 	// we start from the end, since last pending batch is the largest one
 	for i := len(b.pendingBridgeBatches) - 1; i >= 0; i-- {
 		pendingBatch := b.pendingBridgeBatches[i]
-		if (pendingBatch.StartID.Uint64() == b.nextEventIDInternal && pendingBatch.SourceChainID.Uint64() == b.internalChainID) ||
-			(pendingBatch.StartID.Uint64() == b.nextEventIDExternal && pendingBatch.SourceChainID.Uint64() == b.externalChainID) {
+		if (pendingBatch.StartID.Uint64() == b.nextEventIDInternal &&
+			pendingBatch.SourceChainID.Uint64() == b.internalChainID) ||
+			(pendingBatch.StartID.Uint64() == b.nextEventIDExternal &&
+				pendingBatch.SourceChainID.Uint64() == b.externalChainID) {
 
 			aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, pendingBatch)
 
@@ -493,8 +488,14 @@ func (b *bridgeEventManager) PostBlock(req *oracle.PostBlockRequest) error {
 		systemState := b.blockchain.GetSystemState(provider)
 
 		b.nextEventIDInternal, err = systemState.GetNextCommittedIndex(b.externalChainID, systemstate.Internal)
+		if err != nil {
+			return err
+		}
 
 		b.nextEventIDExternal, err = systemState.GetNextCommittedIndex(b.externalChainID, systemstate.External)
+		if err != nil {
+			return err
+		}
 	}
 
 	if err := b.buildInternalBridgeBatch(req.DBTx); err != nil {
@@ -694,13 +695,10 @@ func (b *bridgeEventManager) ProcessLog(header *types.Header, log *ethgo.Log, db
 			return err
 		}
 
-		b.logger.Error("ERR", "WE GET EVENT IN PROCESS LOG", event)
-
-		b.buildInternalBridgeBatch(dbTx)
-
 		return nil
 	default:
 		b.logger.Error("unknown bridge event")
+
 		return errUnknownBridgeEvent
 	}
 }

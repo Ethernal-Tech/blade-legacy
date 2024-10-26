@@ -798,7 +798,7 @@ func initProxies(transition *state.Transition, chainCfg *chain.Chain, polybftCfg
 	if polybftCfg.IsBridgeEnabled() {
 		// init proxies for each bridge as well (but only for bridges deployed on bootstrap)
 		for _, bridgeCfg := range polybftCfg.Bridge {
-			// if the first address implementaiton exists in pre-alloc map, all of them do
+			// if the first address implementation exists in pre-alloc map, all of them do
 			if _, exists := chainCfg.Genesis.Alloc[bridgeCfg.InternalGatewayAddr.IncrementBy(1)]; !exists {
 				continue
 			}
@@ -807,9 +807,9 @@ func initProxies(transition *state.Transition, chainCfg *chain.Chain, polybftCfg
 			proxyAddrMapping[bridgeCfg.InternalERC20PredicateAddr] = bridgeCfg.InternalERC20PredicateAddr.IncrementBy(1)
 			proxyAddrMapping[bridgeCfg.InternalERC721PredicateAddr] = bridgeCfg.InternalERC721PredicateAddr.IncrementBy(1)
 			proxyAddrMapping[bridgeCfg.InternalERC1155PredicateAddr] = bridgeCfg.InternalERC1155PredicateAddr.IncrementBy(1)
-			proxyAddrMapping[bridgeCfg.InternalMintableERC20PredicateAddr] = bridgeCfg.InternalMintableERC20PredicateAddr.IncrementBy(1)
-			proxyAddrMapping[bridgeCfg.InternalMintableERC721PredicateAddr] = bridgeCfg.InternalMintableERC721PredicateAddr.IncrementBy(1)
-			proxyAddrMapping[bridgeCfg.InternalMintableERC1155PredicateAddr] = bridgeCfg.InternalMintableERC1155PredicateAddr.IncrementBy(1)
+			proxyAddrMapping[bridgeCfg.InternalMintableERC20PredicateAddr] = bridgeCfg.InternalMintableERC20PredicateAddr.IncrementBy(1)     //nolint:lll
+			proxyAddrMapping[bridgeCfg.InternalMintableERC721PredicateAddr] = bridgeCfg.InternalMintableERC721PredicateAddr.IncrementBy(1)   //nolint:lll
+			proxyAddrMapping[bridgeCfg.InternalMintableERC1155PredicateAddr] = bridgeCfg.InternalMintableERC1155PredicateAddr.IncrementBy(1) //nolint:lll
 		}
 	}
 

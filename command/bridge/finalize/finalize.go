@@ -12,7 +12,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/command/genesis"
 	"github.com/0xPolygon/polygon-edge/command/helper"
 	polybftsecrets "github.com/0xPolygon/polygon-edge/command/secrets/init"
-	"github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
@@ -329,7 +328,7 @@ func validatorSetToABISlice(o command.OutputFormatter,
 // based on finalized stake (voting power) of genesis validators on external
 func initializeGateway(outputter command.OutputFormatter,
 	txRelayer txrelayer.TxRelayer,
-	consensusConfig config.PolyBFT, chainID uint64,
+	consensusConfig polycfg.PolyBFT, chainID uint64,
 	deployerKey crypto.Key) error {
 	validatorSet, err := validatorSetToABISlice(outputter, consensusConfig.InitialValidatorSet)
 	if err != nil {

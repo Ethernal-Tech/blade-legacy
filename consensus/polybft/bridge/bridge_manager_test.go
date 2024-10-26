@@ -81,6 +81,9 @@ func newTestBridgeManager(t *testing.T, key *validator.TestValidator, runtime Ru
 			maxNumberOfEvents: maxNumberOfBatchEvents,
 		}, runtime, 1, 0, nil)
 
+	s.nextEventIDExternal = 1
+	s.nextEventIDInternal = 1
+
 	return s
 }
 
