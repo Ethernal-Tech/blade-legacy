@@ -341,9 +341,7 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 			pendingBatch.SourceChainID.Uint64() == b.internalChainID) ||
 			(pendingBatch.StartID.Uint64() == b.nextEventIDExternal &&
 				pendingBatch.SourceChainID.Uint64() == b.externalChainID) {
-
 			aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, pendingBatch)
-
 			if err != nil {
 				if errors.Is(err, errQuorumNotReached) {
 					// a valid case, batch has no quorum, we should not return an error
