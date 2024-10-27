@@ -60,7 +60,7 @@ func generateBridgeMessageEvents(t *testing.T, eventsCount int, startIdx uint64)
 			Receiver:           types.StringToAddress(fmt.Sprintf("0x4%d", i)),
 			Data:               polytesting.GenerateRandomBytes(t),
 			SourceChainID:      big.NewInt(1),
-			DestinationChainID: big.NewInt(0),
+			DestinationChainID: big.NewInt(2),
 		}
 	}
 
