@@ -334,6 +334,7 @@ func (b *bridgeEventManager) BridgeBatch(blockNumber uint64, chainType systemsta
 	defer b.lock.RUnlock()
 
 	var pendingBridgeBatches []*PendingBridgeBatch
+
 	var largestBridgeBatch *BridgeBatchSigned
 
 	if chainType == systemstate.External {
