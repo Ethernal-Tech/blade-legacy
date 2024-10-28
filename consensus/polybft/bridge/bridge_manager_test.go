@@ -382,6 +382,11 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 
 		s := newTestBridgeManager(t, vals.GetValidator("0"), &mockRuntime{isActiveValidator: true})
 
+		postBlockRequiest := &oracle.PostBlockRequest{
+			FullBlock: &types.FullBlock{
+				Block: &types.Block{
+					Header: &types.Header{Number: 0}}}}
+
 		bridgeMsg := &contractsapi.BridgeMsgEvent{ID: bigZero, SourceChainID: big.NewInt(1), DestinationChainID: bigZero}
 		bridgeMsgData, err := bridgeMsg.Encode()
 		require.NoError(t, err)
@@ -416,6 +421,8 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog))
 
+		require.NoError(t, s.PostBlock(postBlockRequiest))
+
 		bridgeEvents, err = s.state.getBridgeMessageEventsForBridgeBatch(1, 1, nil, 1, 2)
 		require.NoError(t, err)
 		require.Len(t, bridgeEvents, 1)
@@ -428,6 +435,8 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		goodLog2.Topics[1] = ethgo.BytesToHash([]byte{0x2}) // bridgeMsg event index 1
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog2))
 
+		require.NoError(t, s.PostBlock(postBlockRequiest))
+
 		require.Len(t, s.pendingBridgeBatchesExternal, 2)
 		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[1].BridgeBatch.StartID.Uint64())
 		require.Equal(t, uint64(2), s.pendingBridgeBatchesExternal[1].BridgeBatch.EndID.Uint64())
@@ -437,9 +446,13 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		goodLog3.Topics[1] = ethgo.BytesToHash([]byte{0x3}) // bridgeMsg event index 2
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog3))
 
+		require.NoError(t, s.PostBlock(postBlockRequiest))
+
 		goodLog4 := goodLog.Copy()
 		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x4}) // bridgeMsg event index 3
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog4))
+
+		require.NoError(t, s.PostBlock(postBlockRequiest))
 
 		require.Len(t, s.pendingBridgeBatchesExternal, 4)
 		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[3].BridgeBatch.StartID.Uint64())
