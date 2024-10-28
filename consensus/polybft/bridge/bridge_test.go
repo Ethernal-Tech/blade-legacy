@@ -14,6 +14,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
 	"github.com/0xPolygon/polygon-edge/types"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -107,7 +108,7 @@ func TestGetTransactions(t *testing.T) {
 			},
 			setupMocks: func(bridge *bridge, blockInfo *oracle.NewBlockInfo) {
 				bridgeManagerMock := NewBridgeManagerMock(t)
-				bridgeManagerMock.On("BridgeBatch", blockInfo.CurrentBlock()).Return(nil, nil)
+				bridgeManagerMock.On("BridgeBatch", blockInfo.CurrentBlock(), mock.Anything).Return(nil, nil)
 
 				bridge.bridgeManagers = map[uint64]BridgeManager{
 					1: bridgeManagerMock,
@@ -128,7 +129,7 @@ func TestGetTransactions(t *testing.T) {
 				signature, _ := createValidatorsAndSignHash(t, 5, types.StringToHash("0x123"))
 
 				bridgeManagerMock := NewBridgeManagerMock(t)
-				bridgeManagerMock.On("BridgeBatch", blockInfo.CurrentBlock()).Return(&BridgeBatchSigned{
+				bridgeManagerMock.On("BridgeBatch", blockInfo.CurrentBlock(), mock.Anything).Return(&BridgeBatchSigned{
 					BridgeBatch: &contractsapi.BridgeBatch{
 						RootHash:           types.StringToHash("0x123"),
 						StartID:            big.NewInt(1),
@@ -143,7 +144,7 @@ func TestGetTransactions(t *testing.T) {
 					1: bridgeManagerMock,
 				}
 			},
-			expectedNumberOfTransactions: 1,
+			expectedNumberOfTransactions: 2,
 		},
 	}
 
