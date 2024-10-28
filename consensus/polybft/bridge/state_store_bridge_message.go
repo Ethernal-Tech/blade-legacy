@@ -128,9 +128,7 @@ func (bms *BridgeManagerStore) insertBridgeMessageEvent(event *contractsapi.Brid
 	}
 
 	if dbTx == nil {
-		return bms.db.Update(func(tx *bolt.Tx) error {
-			return insertFn(tx)
-		})
+		return bms.db.Update(insertFn)
 	}
 
 	return insertFn(dbTx)

@@ -211,7 +211,7 @@ func getChildToken(t *testing.T, predicateABI *abi.ABI, predicateAddr types.Addr
 	return types.StringToAddress(childTokenRaw)
 }
 
-func isEventsProcessed(t *testing.T, gatewayAddr types.Address,
+func isEventProcessed(t *testing.T, gatewayAddr types.Address,
 	relayer txrelayer.TxRelayer, bridgeEventID uint64) bool {
 	t.Helper()
 

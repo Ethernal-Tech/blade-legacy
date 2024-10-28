@@ -21,7 +21,6 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
-	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -282,7 +281,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	s.validatorSet = vals.ToValidatorSet()
 
 	// batch is empty
-	batch, err := s.BridgeBatch(1, systemstate.External)
+	batch, err := s.BridgeBatch(1)
 	require.NoError(t, err)
 	require.Nil(t, batch)
 
@@ -319,7 +318,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	batch, err = s.BridgeBatch(0, systemstate.External)
+	batch, err = s.BridgeBatch(0)
 	require.NoError(t, err) // there is no error if quorum is not met, since its a valid case
 	require.Nil(t, batch)
 
@@ -340,7 +339,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	batch, err = s.BridgeBatch(1, systemstate.External)
+	batch, err = s.BridgeBatch(1)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
 }
@@ -616,6 +615,6 @@ func (*mockBridgeManager) Start(runtimeCfg *config.Runtime) error {
 func (mbm *mockBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
-func (mbm *mockBridgeManager) BridgeBatch(pendingBlockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
+func (mbm *mockBridgeManager) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error) {
 	return nil, nil
 }

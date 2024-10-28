@@ -208,10 +208,10 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("failed to save chain configuration bridge data: %w", err)
 	}
 
-	for bridgeChainID := range consensusConfig.Bridge {
+	for _, bridgeCfg := range consensusConfig.Bridge {
 		// initialize Gateway contract since it needs to have a valid VotingPowers of validators
 		if err := initializeGateway(outputter, txRelayer,
-			consensusConfig, bridgeChainID, ownerKey); err != nil {
+			bridgeCfg, ownerKey, consensusConfig.InitialValidatorSet); err != nil {
 			return fmt.Errorf("could not initialize CheckpointManager with finalized genesis validator set: %w", err)
 		}
 	}
@@ -328,16 +328,16 @@ func validatorSetToABISlice(o command.OutputFormatter,
 // based on finalized stake (voting power) of genesis validators on external
 func initializeGateway(outputter command.OutputFormatter,
 	txRelayer txrelayer.TxRelayer,
-	consensusConfig polycfg.PolyBFT, chainID uint64,
-	deployerKey crypto.Key) error {
-	validatorSet, err := validatorSetToABISlice(outputter, consensusConfig.InitialValidatorSet)
+	bridgeCfg *polycfg.Bridge,
+	deployerKey crypto.Key, validators []*validator.GenesisValidator) error {
+	validatorSet, err := validatorSetToABISlice(outputter, validators)
 	if err != nil {
 		return fmt.Errorf("failed to convert validators to map: %w", err)
 	}
 
 	initParams := &contractsapi.InitializeGatewayFn{
-		NewBls:     consensusConfig.Bridge[chainID].BLSAddress,
-		NewBn256G2: consensusConfig.Bridge[chainID].BN256G2Address,
+		NewBls:     bridgeCfg.BLSAddress,
+		NewBn256G2: bridgeCfg.BN256G2Address,
 		Validators: validatorSet,
 	}
 
@@ -346,7 +346,7 @@ func initializeGateway(outputter command.OutputFormatter,
 		return fmt.Errorf("failed to encode initialization params for Gateway.initialize. error: %w", err)
 	}
 
-	if _, err := bridgeHelper.SendTransaction(txRelayer, consensusConfig.Bridge[chainID].ExternalGatewayAddr,
+	if _, err := bridgeHelper.SendTransaction(txRelayer, bridgeCfg.ExternalGatewayAddr,
 		input, "Gateway", deployerKey); err != nil {
 		return err
 	}

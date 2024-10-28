@@ -38,11 +38,12 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 		transfersCount        = 5
 		numBlockConfirmations = 2
 		// make epoch size long enough, so that all exit events are processed within the same epoch
-		epochSize            = 40
-		sprintSize           = uint64(5)
-		numberOfAttempts     = 7
-		stateSyncedLogsCount = 2 // map token and deposit
-		numberOfBridges      = 1
+		epochSize             = 40
+		sprintSize            = uint64(5)
+		numberOfAttempts      = 7
+		stateSyncedLogsCount  = 2 // map token and deposit
+		numberOfBridges       = 1
+		numberOfMapTokenEvent = 1
 	)
 
 	var (
@@ -189,7 +190,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers {
-				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, uint64(i+1)) {
+				if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, uint64(i+1)) {
 					return false
 				}
 			}
@@ -251,7 +252,11 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers[:depositsSubset] {
-				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].InternalGatewayAddr, internalChainTxRelayer, uint64(transfersCount+1+1+i)) {
+				if !isEventProcessed(t,
+					bridgeCfg.InternalGatewayAddr,
+					internalChainTxRelayer,
+					// this sum represent minimal value for event id based on earlier events
+					uint64(numberOfMapTokenEvent+transfersCount+depositsSubset+i)) {
 					return false
 				}
 			}
@@ -279,7 +284,11 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 			for i := range receivers[depositsSubset:] {
-				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].InternalGatewayAddr, internalChainTxRelayer, uint64(1+transfersCount+1+i+1)) {
+				if !isEventProcessed(t,
+					bridgeCfg.InternalGatewayAddr,
+					internalChainTxRelayer,
+					// this sum represent minimal value for event id based on earlier events
+					uint64(numberOfMapTokenEvent+transfersCount+2*depositsSubset+i)) {
 					return false
 				}
 			}
@@ -457,7 +466,7 @@ func TestE2E_Bridge_ERC721Transfer(t *testing.T) {
 
 	require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 		for i := 1; i <= transfersCount; i++ {
-			if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, uint64(i)) {
+			if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, uint64(i)) {
 				return false
 			}
 		}
@@ -647,7 +656,7 @@ func TestE2E_Bridge_ERC1155Transfer(t *testing.T) {
 
 	require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 		for i := 1; i <= transfersCount; i++ {
-			if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, uint64(i)) {
+			if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, uint64(i)) {
 				return false
 			}
 		}
@@ -790,7 +799,7 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 		// first exit event is mapping child token on a rootchain
 		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 			for i := uint64(1); i <= transfersCount+1; i++ {
-				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, i) {
+				if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, i) {
 					return false
 				}
 			}
@@ -916,7 +925,7 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 		// first exit event is mapping child token on a rootchain
 		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 			for i := uint64(1); i <= transfersCount+1; i++ {
-				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, i) {
+				if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, i) {
 					return false
 				}
 			}
@@ -955,7 +964,7 @@ func TestE2E_Bridge_InternalChainTokensTransfer(t *testing.T) {
 				"",
 				fmt.Sprintf("%d", i),
 				cluster.Bridges[bridgeOne].JSONRPCAddr(),
-				polybftCfg.Bridge[chainID.Uint64()].ExternalMintableERC721PredicateAddr,
+				bridgeCfg.ExternalMintableERC721PredicateAddr,
 				l1ChildToken,
 				true)
 			require.NoError(t, err)
@@ -1181,7 +1190,7 @@ func TestE2E_Bridge_Transfers_AccessLists(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 			for i := uint64(1); i <= uint64(transfersCount); i++ {
-				if !isEventsProcessed(t, polybftCfg.Bridge[chainID.Uint64()].ExternalGatewayAddr, externalChainTxRelayer, i) {
+				if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, i) {
 					return false
 				}
 			}
@@ -1374,7 +1383,7 @@ func TestE2E_Bridge_NonMintableERC20Token_WithPremine(t *testing.T) {
 
 		require.NoError(t, cluster.WaitUntil(time.Minute*3, time.Second*2, func() bool {
 			for bridgeEventID := uint64(1); bridgeEventID <= bridgeEvents; bridgeEventID++ {
-				if !isEventsProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, bridgeEventID) {
+				if !isEventProcessed(t, bridgeCfg.ExternalGatewayAddr, externalChainTxRelayer, bridgeEventID) {
 					return false
 				}
 			}

@@ -76,10 +76,10 @@ func initExternalContracts(bridgeCfg *polycfg.Bridge,
 			key crypto.Key,
 			destinationChainID int64) error {
 			if !consensusCfg.NativeTokenConfig.IsMintable {
-				// we can not initialize checkpoint manager at this moment if native token is not mintable
+				// we can not initialize Gateway contract at this moment if native token is not mintable
 				// we will do that on finalize command when validators do premine and stake on BladeManager
-				// this is done like this because checkpoint manager needs to have correct
-				// voting powers in order to correctly validate checkpoints
+				// this is done like this because Gateway needs to have correct
+				// voting powers in order to correctly validate batches
 				return nil
 			}
 

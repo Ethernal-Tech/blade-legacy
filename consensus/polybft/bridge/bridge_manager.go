@@ -54,7 +54,7 @@ type BridgeManager interface {
 	state.EventSubscriber
 	Start(runtimeCfg *config.Runtime) error
 	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
-	BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error)
+	BridgeBatch(blockNumber uint64) ([]*BridgeBatchSigned, error)
 	PostBlock(req *oracle.PostBlockRequest) error
 	PostEpoch(req *oracle.PostEpochRequest) error
 	Close()
@@ -67,10 +67,7 @@ type dummyBridgeEventManager struct{}
 
 func (d *dummyBridgeEventManager) Start(runtimeCfg *config.Runtime) error             { return nil }
 func (d *dummyBridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
-func (d *dummyBridgeEventManager) BridgeBatch(
-	blockNumber uint64,
-	chainType systemstate.ChainType,
-) (*BridgeBatchSigned, error) {
+func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64) ([]*BridgeBatchSigned, error) {
 	return nil, nil
 }
 func (d *dummyBridgeEventManager) PostBlock(req *oracle.PostBlockRequest) error { return nil }
@@ -332,56 +329,68 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 }
 
 // BridgeBatch returns a batch to be submitted if there is a pending batch with quorum
-func (b *bridgeEventManager) BridgeBatch(
-	blockNumber uint64,
-	chainType systemstate.ChainType,
-) (*BridgeBatchSigned, error) {
+func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) ([]*BridgeBatchSigned, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
-	var pendingBridgeBatches []*PendingBridgeBatch
+	getLargestPendingBatchFn := func(pendingBatches []*PendingBridgeBatch) (*BridgeBatchSigned, error) {
+		var largestBridgeBatch *BridgeBatchSigned
 
-	var largestBridgeBatch *BridgeBatchSigned
+		// we start from the end, since last pending batch is the largest one
+		for i := len(pendingBatches) - 1; i >= 0; i-- {
+			pendingBatch := pendingBatches[i]
+			if (pendingBatch.StartID.Uint64() == b.nextEventIDInternal &&
+				pendingBatch.SourceChainID.Uint64() == b.internalChainID) ||
+				(pendingBatch.StartID.Uint64() == b.nextEventIDExternal &&
+					pendingBatch.SourceChainID.Uint64() == b.externalChainID) {
+				aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, pendingBatch)
+				if err != nil {
+					if errors.Is(err, errQuorumNotReached) {
+						// a valid case, batch has no quorum, we should not return an error
+						if pendingBatch.BridgeBatch.EndID.Uint64()-pendingBatch.BridgeBatch.StartID.Uint64() > 0 {
+							b.logger.Debug("can not submit a batch, quorum not reached",
+								"from", pendingBatch.BridgeBatch.StartID.Uint64(),
+								"to", pendingBatch.BridgeBatch.EndID.Uint64())
+						}
 
-	if chainType == systemstate.External {
-		pendingBridgeBatches = b.pendingBridgeBatchesExternal
-	} else if chainType == systemstate.Internal {
-		pendingBridgeBatches = b.pendingBridgeBatchesInternal
-	}
-
-	// we start from the end, since last pending batch is the largest one
-	for i := len(pendingBridgeBatches) - 1; i >= 0; i-- {
-		pendingBatch := pendingBridgeBatches[i]
-		if (pendingBatch.StartID.Uint64() == b.nextEventIDInternal &&
-			pendingBatch.SourceChainID.Uint64() == b.internalChainID) ||
-			(pendingBatch.StartID.Uint64() == b.nextEventIDExternal &&
-				pendingBatch.SourceChainID.Uint64() == b.externalChainID) {
-			aggregatedSignature, err := b.getAggSignatureForBridgeBatchMessage(blockNumber, pendingBatch)
-			if err != nil {
-				if errors.Is(err, errQuorumNotReached) {
-					// a valid case, batch has no quorum, we should not return an error
-					if pendingBatch.BridgeBatch.EndID.Uint64()-pendingBatch.BridgeBatch.StartID.Uint64() > 0 {
-						b.logger.Debug("can not submit a batch, quorum not reached",
-							"from", pendingBatch.BridgeBatch.StartID.Uint64(),
-							"to", pendingBatch.BridgeBatch.EndID.Uint64())
+						continue
 					}
 
-					continue
+					return nil, err
 				}
 
-				return nil, err
-			}
+				largestBridgeBatch = &BridgeBatchSigned{
+					BridgeBatch:  pendingBatch.BridgeBatch,
+					AggSignature: aggregatedSignature,
+				}
 
-			largestBridgeBatch = &BridgeBatchSigned{
-				BridgeBatch:  pendingBatch.BridgeBatch,
-				AggSignature: aggregatedSignature,
+				break
 			}
-
-			break
 		}
+
+		return largestBridgeBatch, nil
 	}
 
-	return largestBridgeBatch, nil
+	largestExternalBatch, err := getLargestPendingBatchFn(b.pendingBridgeBatchesExternal)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get largest pending external batch: %w", err)
+	}
+
+	largestInternalBatch, err := getLargestPendingBatchFn(b.pendingBridgeBatchesInternal)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get largest pending internal batch: %w", err)
+	}
+
+	var signedBridgeBatches []*BridgeBatchSigned
+	if largestExternalBatch != nil {
+		signedBridgeBatches = append(signedBridgeBatches, largestExternalBatch)
+	}
+
+	if largestInternalBatch != nil {
+		signedBridgeBatches = append(signedBridgeBatches, largestInternalBatch)
+	}
+
+	return signedBridgeBatches, nil
 }
 
 // getAggSignatureForBridgeBatchMessage checks if pending batch has quorum,

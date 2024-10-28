@@ -129,7 +129,7 @@ func TestGetTransactions(t *testing.T) {
 				signature, _ := createValidatorsAndSignHash(t, 5, types.StringToHash("0x123"))
 
 				bridgeManagerMock := NewBridgeManagerMock(t)
-				bridgeManagerMock.On("BridgeBatch", blockInfo.CurrentBlock(), mock.Anything).Return(&BridgeBatchSigned{
+				bridgeManagerMock.On("BridgeBatch", blockInfo.CurrentBlock()).Return([]*BridgeBatchSigned{{
 					BridgeBatch: &contractsapi.BridgeBatch{
 						RootHash:           types.StringToHash("0x123"),
 						StartID:            big.NewInt(1),
@@ -138,13 +138,13 @@ func TestGetTransactions(t *testing.T) {
 						DestinationChainID: big.NewInt(2),
 					},
 					AggSignature: *signature,
-				}, nil)
+				}}, nil)
 
 				bridge.bridgeManagers = map[uint64]BridgeManager{
 					1: bridgeManagerMock,
 				}
 			},
-			expectedNumberOfTransactions: 2,
+			expectedNumberOfTransactions: 1,
 		},
 	}
 
