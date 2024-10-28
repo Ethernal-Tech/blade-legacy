@@ -14,6 +14,8 @@ import (
 
 	oracle "github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
+
 	types "github.com/0xPolygon/polygon-edge/types"
 )
 
@@ -77,9 +79,9 @@ func (_c *BridgeManagerMock_AddLog_Call) RunAndReturn(run func(*big.Int, *ethgo.
 	return _c
 }
 
-// BridgeBatch provides a mock function with given fields: blockNumber
-func (_m *BridgeManagerMock) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
-	ret := _m.Called(blockNumber)
+// BridgeBatch provides a mock function with given fields: blockNumber, chainType
+func (_m *BridgeManagerMock) BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
+	ret := _m.Called(blockNumber, chainType)
 
 	if len(ret) == 0 {
 		panic("no return value specified for BridgeBatch")
@@ -87,19 +89,19 @@ func (_m *BridgeManagerMock) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned
 
 	var r0 *BridgeBatchSigned
 	var r1 error
-	if rf, ok := ret.Get(0).(func(uint64) (*BridgeBatchSigned, error)); ok {
-		return rf(blockNumber)
+	if rf, ok := ret.Get(0).(func(uint64, systemstate.ChainType) (*BridgeBatchSigned, error)); ok {
+		return rf(blockNumber, chainType)
 	}
-	if rf, ok := ret.Get(0).(func(uint64) *BridgeBatchSigned); ok {
-		r0 = rf(blockNumber)
+	if rf, ok := ret.Get(0).(func(uint64, systemstate.ChainType) *BridgeBatchSigned); ok {
+		r0 = rf(blockNumber, chainType)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*BridgeBatchSigned)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(uint64) error); ok {
-		r1 = rf(blockNumber)
+	if rf, ok := ret.Get(1).(func(uint64, systemstate.ChainType) error); ok {
+		r1 = rf(blockNumber, chainType)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -114,13 +116,14 @@ type BridgeManagerMock_BridgeBatch_Call struct {
 
 // BridgeBatch is a helper method to define mock.On call
 //   - blockNumber uint64
-func (_e *BridgeManagerMock_Expecter) BridgeBatch(blockNumber interface{}) *BridgeManagerMock_BridgeBatch_Call {
-	return &BridgeManagerMock_BridgeBatch_Call{Call: _e.mock.On("BridgeBatch", blockNumber)}
+//   - chainType systemstate.ChainType
+func (_e *BridgeManagerMock_Expecter) BridgeBatch(blockNumber interface{}, chainType interface{}) *BridgeManagerMock_BridgeBatch_Call {
+	return &BridgeManagerMock_BridgeBatch_Call{Call: _e.mock.On("BridgeBatch", blockNumber, chainType)}
 }
 
-func (_c *BridgeManagerMock_BridgeBatch_Call) Run(run func(blockNumber uint64)) *BridgeManagerMock_BridgeBatch_Call {
+func (_c *BridgeManagerMock_BridgeBatch_Call) Run(run func(blockNumber uint64, chainType systemstate.ChainType)) *BridgeManagerMock_BridgeBatch_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(uint64))
+		run(args[0].(uint64), args[1].(systemstate.ChainType))
 	})
 	return _c
 }
@@ -130,7 +133,7 @@ func (_c *BridgeManagerMock_BridgeBatch_Call) Return(_a0 *BridgeBatchSigned, _a1
 	return _c
 }
 
-func (_c *BridgeManagerMock_BridgeBatch_Call) RunAndReturn(run func(uint64) (*BridgeBatchSigned, error)) *BridgeManagerMock_BridgeBatch_Call {
+func (_c *BridgeManagerMock_BridgeBatch_Call) RunAndReturn(run func(uint64, systemstate.ChainType) (*BridgeBatchSigned, error)) *BridgeManagerMock_BridgeBatch_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/state"
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
 	polytypes "github.com/0xPolygon/polygon-edge/consensus/polybft/types"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/contracts"
@@ -185,14 +186,16 @@ func (b *bridge) PostEpoch(req *oracle.PostEpochRequest) error {
 func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, error) {
 	bridgeBatches := make([]*BridgeBatchSigned, 0)
 
-	for chainID, bridgeManager := range b.bridgeManagers {
-		bridgeBatch, err := bridgeManager.BridgeBatch(pendingBlockNumber)
-		if err != nil {
-			return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
-		}
+	for i := 0; i <= 1; i++ {
+		for chainID, bridgeManager := range b.bridgeManagers {
+			bridgeBatch, err := bridgeManager.BridgeBatch(pendingBlockNumber, systemstate.ChainType(i))
+			if err != nil {
+				return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
+			}
 
-		if bridgeBatch != nil {
-			bridgeBatches = append(bridgeBatches, bridgeBatch)
+			if bridgeBatch != nil {
+				bridgeBatches = append(bridgeBatches, bridgeBatch)
+			}
 		}
 	}
 
@@ -215,22 +218,24 @@ func (b *bridge) GetTransactions(blockInfo oracle.NewBlockInfo) ([]*types.Transa
 	}
 
 	if blockInfo.IsEndOfSprint {
-		for chainID, bridgeManager := range b.bridgeManagers {
-			bridgeBatch, err := bridgeManager.BridgeBatch(blockInfo.CurrentBlock())
-			if err != nil {
-				return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
-			}
+		for i := 0; i <= 1; i++ {
+			for chainID, bridgeManager := range b.bridgeManagers {
+				bridgeBatch, err := bridgeManager.BridgeBatch(blockInfo.CurrentBlock(), systemstate.ChainType(i))
+				if err != nil {
+					return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
+				}
 
-			if bridgeBatch == nil {
-				continue
-			}
+				if bridgeBatch == nil {
+					continue
+				}
 
-			tx, err := createBridgeBatchTx(bridgeBatch)
-			if err != nil {
-				return nil, fmt.Errorf("error while creating bridge batch tx for chainID: %d, err: %w", chainID, err)
-			}
+				tx, err := createBridgeBatchTx(bridgeBatch)
+				if err != nil {
+					return nil, fmt.Errorf("error while creating bridge batch tx for chainID: %d, err: %w", chainID, err)
+				}
 
-			txs = append(txs, tx)
+				txs = append(txs, tx)
+			}
 		}
 	}
 

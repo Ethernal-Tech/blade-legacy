@@ -21,6 +21,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/oracle"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/signer"
+	systemstate "github.com/0xPolygon/polygon-edge/consensus/polybft/system_state"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/validator"
 	"github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/types"
@@ -99,7 +100,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		// there are no bridge messages
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
-		require.Nil(t, s.pendingBridgeBatches)
+		require.Nil(t, s.pendingBridgeBatchesExternal)
 
 		bridgeMessages10 := generateBridgeMessageEvents(t, 10, 1)
 
@@ -109,10 +110,10 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 		}
 
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
-		require.Len(t, s.pendingBridgeBatches, 1)
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[0].BridgeBatch.StartID.Uint64())
-		require.Equal(t, uint64(5), s.pendingBridgeBatches[0].BridgeBatch.EndID.Uint64())
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[0].Epoch)
+		require.Len(t, s.pendingBridgeBatchesExternal, 1)
+		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[0].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(5), s.pendingBridgeBatchesExternal[0].BridgeBatch.EndID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatchesExternal[0].Epoch)
 
 		// add the next 5 bridge messages, at that point, so that it generates a larger batch
 		for i := 5; i < 10; i++ {
@@ -120,10 +121,10 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 		}
 
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
-		require.Len(t, s.pendingBridgeBatches, 2)
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[1].BridgeBatch.StartID.Uint64())
-		require.Equal(t, uint64(10), s.pendingBridgeBatches[1].BridgeBatch.EndID.Uint64())
-		require.Equal(t, uint64(0), s.pendingBridgeBatches[1].Epoch)
+		require.Len(t, s.pendingBridgeBatchesExternal, 2)
+		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[1].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(10), s.pendingBridgeBatchesExternal[1].BridgeBatch.EndID.Uint64())
+		require.Equal(t, uint64(0), s.pendingBridgeBatchesExternal[1].Epoch)
 
 		// the message was sent
 		require.NotNil(t, s.config.topic.(*mockTopic).consume())
@@ -143,7 +144,7 @@ func TestBridgeEventManager_PostEpoch_BuildBridgeBatch(t *testing.T) {
 
 		// I am not a validator so no batches should be built
 		require.NoError(t, s.buildExternalBridgeBatch(nil))
-		require.Len(t, s.pendingBridgeBatches, 0)
+		require.Len(t, s.pendingBridgeBatchesExternal, 0)
 	})
 }
 
@@ -281,11 +282,11 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	s.validatorSet = vals.ToValidatorSet()
 
 	// batch is empty
-	batch, err := s.BridgeBatch(1)
+	batch, err := s.BridgeBatch(1, systemstate.External)
 	require.NoError(t, err)
 	require.Nil(t, batch)
 
-	s.pendingBridgeBatches = []*PendingBridgeBatch{
+	s.pendingBridgeBatchesExternal = []*PendingBridgeBatch{
 		{
 			BridgeBatch: &contractsapi.BridgeBatch{
 				StartID:            big.NewInt(1),
@@ -296,7 +297,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 		},
 	}
 
-	hash, err := s.pendingBridgeBatches[0].Hash()
+	hash, err := s.pendingBridgeBatchesExternal[0].Hash()
 	require.NoError(t, err)
 
 	msg := newMockMsg().WithHash(hash.Bytes())
@@ -318,7 +319,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	batch, err = s.BridgeBatch(0)
+	batch, err = s.BridgeBatch(0, systemstate.External)
 	require.NoError(t, err) // there is no error if quorum is not met, since its a valid case
 	require.Nil(t, batch)
 
@@ -339,7 +340,7 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	require.NoError(t, s.saveVote(signedMsg1))
 	require.NoError(t, s.saveVote(signedMsg2))
 
-	batch, err = s.BridgeBatch(1)
+	batch, err = s.BridgeBatch(1, systemstate.External)
 	require.NoError(t, err)
 	require.NotNil(t, batch)
 }
@@ -418,18 +419,18 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		bridgeEvents, err = s.state.getBridgeMessageEventsForBridgeBatch(1, 1, nil, 1, 2)
 		require.NoError(t, err)
 		require.Len(t, bridgeEvents, 1)
-		require.Len(t, s.pendingBridgeBatches, 1)
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[0].BridgeBatch.StartID.Uint64())
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[0].BridgeBatch.EndID.Uint64())
+		require.Len(t, s.pendingBridgeBatchesExternal, 1)
+		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[0].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[0].BridgeBatch.EndID.Uint64())
 
 		// add one more log to have a minimum batch
 		goodLog2 := goodLog.Copy()
 		goodLog2.Topics[1] = ethgo.BytesToHash([]byte{0x2}) // bridgeMsg event index 1
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog2))
 
-		require.Len(t, s.pendingBridgeBatches, 2)
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[1].BridgeBatch.StartID.Uint64())
-		require.Equal(t, uint64(2), s.pendingBridgeBatches[1].BridgeBatch.EndID.Uint64())
+		require.Len(t, s.pendingBridgeBatchesExternal, 2)
+		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[1].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(2), s.pendingBridgeBatchesExternal[1].BridgeBatch.EndID.Uint64())
 
 		// add two more logs to have larger batch
 		goodLog3 := goodLog.Copy()
@@ -440,9 +441,9 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		goodLog4.Topics[1] = ethgo.BytesToHash([]byte{0x4}) // bridgeMsg event index 3
 		require.NoError(t, s.AddLog(big.NewInt(1), goodLog4))
 
-		require.Len(t, s.pendingBridgeBatches, 4)
-		require.Equal(t, uint64(1), s.pendingBridgeBatches[3].BridgeBatch.StartID.Uint64())
-		require.Equal(t, uint64(4), s.pendingBridgeBatches[3].BridgeBatch.EndID.Uint64())
+		require.Len(t, s.pendingBridgeBatchesExternal, 4)
+		require.Equal(t, uint64(1), s.pendingBridgeBatchesExternal[3].BridgeBatch.StartID.Uint64())
+		require.Equal(t, uint64(4), s.pendingBridgeBatchesExternal[3].BridgeBatch.EndID.Uint64())
 	})
 
 	t.Run("Node is not a validator", func(t *testing.T) {
@@ -473,7 +474,7 @@ func TestBridgeEventManager_AddLog_BuildBridgeBatches(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, bridgeMessages, 1)
 		require.Equal(t, uint64(0), bridgeMessages[0].ID.Uint64())
-		require.Len(t, s.pendingBridgeBatches, 0)
+		require.Len(t, s.pendingBridgeBatchesExternal, 0)
 	})
 }
 
@@ -602,6 +603,6 @@ func (*mockBridgeManager) Start(runtimeCfg *config.Runtime) error {
 func (mbm *mockBridgeManager) BuildExitEventRoot(epoch uint64) (types.Hash, error) {
 	return types.ZeroHash, nil
 }
-func (mbm *mockBridgeManager) BridgeBatch(pendingBlockNumber uint64) (*BridgeBatchSigned, error) {
+func (mbm *mockBridgeManager) BridgeBatch(pendingBlockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
 	return nil, nil
 }

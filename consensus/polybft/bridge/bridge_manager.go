@@ -54,7 +54,7 @@ type BridgeManager interface {
 	state.EventSubscriber
 	Start(runtimeCfg *config.Runtime) error
 	AddLog(chainID *big.Int, eventLog *ethgo.Log) error
-	BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error)
+	BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error)
 	PostBlock(req *oracle.PostBlockRequest) error
 	PostEpoch(req *oracle.PostEpochRequest) error
 	Close()
@@ -67,7 +67,7 @@ type dummyBridgeEventManager struct{}
 
 func (d *dummyBridgeEventManager) Start(runtimeCfg *config.Runtime) error             { return nil }
 func (d *dummyBridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
-func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
+func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
 func (d *dummyBridgeEventManager) PostBlock(req *oracle.PostBlockRequest) error { return nil }
@@ -104,15 +104,16 @@ type bridgeEventManager struct {
 	config *bridgeEventManagerConfig
 
 	// per epoch fields
-	lock                 sync.RWMutex
-	pendingBridgeBatches []*PendingBridgeBatch
-	validatorSet         validator.ValidatorSet
-	epoch                uint64
-	nextEventIDExternal  uint64
-	nextEventIDInternal  uint64
-	externalChainID      uint64
-	internalChainID      uint64
-	blockchain           polychain.Blockchain
+	lock                         sync.RWMutex
+	pendingBridgeBatchesExternal []*PendingBridgeBatch
+	pendingBridgeBatchesInternal []*PendingBridgeBatch
+	validatorSet                 validator.ValidatorSet
+	epoch                        uint64
+	nextEventIDExternal          uint64
+	nextEventIDInternal          uint64
+	externalChainID              uint64
+	internalChainID              uint64
+	blockchain                   polychain.Blockchain
 
 	runtime Runtime
 	tracker *tracker.EventTracker
@@ -324,26 +325,26 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 		return err
 	}
 
-	if err := b.buildExternalBridgeBatch(nil); err != nil {
-		// we don't return an error here. If bridge message event is inserted in db,
-		// we will just try to build a batch on next block or next event arrival
-		b.logger.Error("could not build a batch on arrival of new bridge message event",
-			"err", err, "bridgeMessageID", event.ID)
-	}
-
 	return nil
 }
 
 // BridgeBatch returns a batch to be submitted if there is a pending batch with quorum
-func (b *bridgeEventManager) BridgeBatch(blockNumber uint64) (*BridgeBatchSigned, error) {
+func (b *bridgeEventManager) BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
+	var pendingBridgeBatches []*PendingBridgeBatch
 	var largestBridgeBatch *BridgeBatchSigned
 
+	if chainType == systemstate.External {
+		pendingBridgeBatches = b.pendingBridgeBatchesExternal
+	} else if chainType == systemstate.Internal {
+		pendingBridgeBatches = b.pendingBridgeBatchesInternal
+	}
+
 	// we start from the end, since last pending batch is the largest one
-	for i := len(b.pendingBridgeBatches) - 1; i >= 0; i-- {
-		pendingBatch := b.pendingBridgeBatches[i]
+	for i := len(pendingBridgeBatches) - 1; i >= 0; i-- {
+		pendingBatch := pendingBridgeBatches[i]
 		if (pendingBatch.StartID.Uint64() == b.nextEventIDInternal &&
 			pendingBatch.SourceChainID.Uint64() == b.internalChainID) ||
 			(pendingBatch.StartID.Uint64() == b.nextEventIDExternal &&
@@ -451,35 +452,20 @@ func (b *bridgeEventManager) PostEpoch(req *oracle.PostEpochRequest) error {
 			b.externalChainID, err)
 	}
 
+	if err := b.state.insertEpoch(req.NewEpochID, req.DBTx, b.internalChainID); err != nil {
+		return fmt.Errorf("an error occurred while inserting new epoch in db, chainID: %d. Reason: %w",
+			b.internalChainID, err)
+	}
+
 	b.lock.Lock()
+	defer b.lock.Unlock()
 
-	var err error
-
-	b.pendingBridgeBatches = nil
+	b.pendingBridgeBatchesExternal = nil
+	b.pendingBridgeBatchesInternal = nil
 	b.validatorSet = req.ValidatorSet
 	b.epoch = req.NewEpochID
 
-	b.nextEventIDExternal, err = req.SystemState.GetNextCommittedIndex(b.externalChainID, systemstate.External)
-	if err != nil {
-		b.lock.Unlock()
-
-		return err
-	}
-
-	b.nextEventIDInternal, err = req.SystemState.GetNextCommittedIndex(b.externalChainID, systemstate.Internal)
-	if err != nil {
-		b.lock.Unlock()
-
-		return err
-	}
-
-	b.lock.Unlock()
-
-	if err := b.buildInternalBridgeBatch(req.DBTx); err != nil {
-		return err
-	}
-
-	return b.buildExternalBridgeBatch(req.DBTx)
+	return nil
 }
 
 // PostBlock creates batch from internal events.
@@ -510,6 +496,13 @@ func (b *bridgeEventManager) PostBlock(req *oracle.PostBlockRequest) error {
 			"err", err)
 	}
 
+	if err := b.buildExternalBridgeBatch(req.DBTx); err != nil {
+		// we don't return an error here. If bridge message event is inserted in db,
+		// we will just try to build a batch on next block or next event arrival
+		b.logger.Error("could not build a external chain originated batch on PostBlock",
+			"err", err)
+	}
+
 	return nil
 }
 
@@ -532,7 +525,15 @@ func (b *bridgeEventManager) buildBridgeBatch(
 		return nil
 	}
 
+	var pendingBridgeBatches []*PendingBridgeBatch
+
 	b.lock.RLock()
+
+	if sourceChainID == b.externalChainID {
+		pendingBridgeBatches = b.pendingBridgeBatchesExternal
+	} else if sourceChainID == b.internalChainID {
+		pendingBridgeBatches = b.pendingBridgeBatchesInternal
+	}
 
 	// Since lock is reduced grab original values into local variables in order to keep them
 	epoch := b.epoch
@@ -555,8 +556,8 @@ func (b *bridgeEventManager) buildBridgeBatch(
 		return nil
 	}
 
-	if len(b.pendingBridgeBatches) > 0 &&
-		b.pendingBridgeBatches[len(b.pendingBridgeBatches)-1].
+	if len(pendingBridgeBatches) > 0 &&
+		pendingBridgeBatches[len(pendingBridgeBatches)-1].
 			BridgeBatch.EndID.
 			Cmp(bridgeMessageEvents[len(bridgeMessageEvents)-1].ID) >= 0 {
 		// already built a bridge batch of this size which is pending to be submitted
@@ -624,7 +625,13 @@ func (b *bridgeEventManager) buildBridgeBatch(
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	b.pendingBridgeBatches = append(b.pendingBridgeBatches, pendingBridgeBatch)
+	pendingBridgeBatches = append(pendingBridgeBatches, pendingBridgeBatch)
+
+	if sourceChainID == b.externalChainID {
+		b.pendingBridgeBatchesExternal = pendingBridgeBatches
+	} else if sourceChainID == b.internalChainID {
+		b.pendingBridgeBatchesInternal = pendingBridgeBatches
+	}
 
 	return nil
 }
