@@ -67,7 +67,10 @@ type dummyBridgeEventManager struct{}
 
 func (d *dummyBridgeEventManager) Start(runtimeCfg *config.Runtime) error             { return nil }
 func (d *dummyBridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error { return nil }
-func (d *dummyBridgeEventManager) BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
+func (d *dummyBridgeEventManager) BridgeBatch(
+	blockNumber uint64,
+	chainType systemstate.ChainType,
+) (*BridgeBatchSigned, error) {
 	return nil, nil
 }
 func (d *dummyBridgeEventManager) PostBlock(req *oracle.PostBlockRequest) error { return nil }
@@ -329,7 +332,10 @@ func (b *bridgeEventManager) AddLog(chainID *big.Int, eventLog *ethgo.Log) error
 }
 
 // BridgeBatch returns a batch to be submitted if there is a pending batch with quorum
-func (b *bridgeEventManager) BridgeBatch(blockNumber uint64, chainType systemstate.ChainType) (*BridgeBatchSigned, error) {
+func (b *bridgeEventManager) BridgeBatch(
+	blockNumber uint64,
+	chainType systemstate.ChainType,
+) (*BridgeBatchSigned, error) {
 	b.lock.RLock()
 	defer b.lock.RUnlock()
 
