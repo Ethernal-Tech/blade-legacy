@@ -191,9 +191,7 @@ func (b *bridge) BridgeBatch(pendingBlockNumber uint64) ([]*BridgeBatchSigned, e
 			return nil, fmt.Errorf("error while getting signed batches for chainID: %d, err: %w", chainID, err)
 		}
 
-		if len(signedBridgeBatches) > 0 {
-			bridgeBatches = append(bridgeBatches, signedBridgeBatches...)
-		}
+		bridgeBatches = append(bridgeBatches, signedBridgeBatches...)
 	}
 
 	return bridgeBatches, nil
