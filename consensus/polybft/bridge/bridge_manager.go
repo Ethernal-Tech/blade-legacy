@@ -508,14 +508,14 @@ func (b *bridgeEventManager) PostBlock(req *oracle.PostBlockRequest) error {
 	if err := b.buildInternalBridgeBatch(req.DBTx); err != nil {
 		// we don't return an error here. If bridge message event is inserted in db,
 		// we will just try to build a batch on next block or next event arrival
-		b.logger.Error("could not build a blade originated batch on PostBlock",
+		b.logger.Error("could not build an internal chain originated batch on PostBlock",
 			"err", err)
 	}
 
 	if err := b.buildExternalBridgeBatch(req.DBTx); err != nil {
 		// we don't return an error here. If bridge message event is inserted in db,
 		// we will just try to build a batch on next block or next event arrival
-		b.logger.Error("could not build a external chain originated batch on PostBlock",
+		b.logger.Error("could not build an external chain originated batch on PostBlock",
 			"err", err)
 	}
 

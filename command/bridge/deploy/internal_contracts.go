@@ -355,11 +355,11 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 
 		lastAddress = proxyAddress
 
-		if err := writeInternalContractPreallocate(o, proxyName, proxyAddress, types.Address{}); err != nil {
+		if err := writeInternalContractPreallocate(o, proxyName, proxyAddress); err != nil {
 			return err
 		}
 
-		if err := writeInternalContractPreallocate(o, contract.name, implAddress, proxyAddress); err != nil {
+		if err := writeInternalContractPreallocate(o, contract.name, implAddress); err != nil {
 			return err
 		}
 	}
@@ -373,9 +373,9 @@ func preAllocateInternalPredicates(o command.OutputFormatter, internalContracts 
 
 // writeInternalContractPreallocate writes the internal contract preallocation output
 func writeInternalContractPreallocate(o command.OutputFormatter, contractName string,
-	implAddr types.Address, proxyAddr types.Address) error {
+	addr types.Address) error {
 	if _, err := o.Write([]byte(fmt.Sprintf("[BRIDGE - DEPLOY] Preallocated %s on address: %s\n",
-		contractName, implAddr.String()))); err != nil {
+		contractName, addr.String()))); err != nil {
 		return err
 	}
 

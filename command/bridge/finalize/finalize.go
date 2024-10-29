@@ -212,7 +212,7 @@ func runCommand(cmd *cobra.Command, _ []string) error {
 		// initialize Gateway contract since it needs to have a valid VotingPowers of validators
 		if err := initializeGateway(outputter, txRelayer,
 			bridgeCfg, ownerKey, consensusConfig.InitialValidatorSet); err != nil {
-			return fmt.Errorf("could not initialize CheckpointManager with finalized genesis validator set: %w", err)
+			return fmt.Errorf("could not initialize Gateway with finalized genesis validator set: %w", err)
 		}
 	}
 

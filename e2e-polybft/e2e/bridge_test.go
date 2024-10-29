@@ -264,7 +264,7 @@ func TestE2E_Bridge_ExternalChainTokensTransfers(t *testing.T) {
 			return true
 		}))
 
-		// send some more transactions to the bridge to build another commitment in epoch
+		// send some more transactions to the bridge to build another batch in epoch
 		require.NoError(t, cluster.Bridges[bridgeOne].Deposit(
 			common.ERC20,
 			rootERC20Token,

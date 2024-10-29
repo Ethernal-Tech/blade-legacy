@@ -211,42 +211,42 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 						return err
 					}
 
-					// initialize ChildERC20PredicateAccessList SC
+					// initialize InternalERC20PredicateAccessList SC
 					if err = initERC20ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
 						"InternalERC20Predicate"); err != nil {
 						return err
 					}
 
-					// initialize ChildERC721PredicateAccessList SC
+					// initialize InternalERC721PredicateAccessList SC
 					if err = initERC721ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
 						"InternalERC721Predicate"); err != nil {
 						return err
 					}
 
-					// initialize ChildERC1155PredicateAccessList SC
+					// initialize InternalERC1155PredicateAccessList SC
 					if err = initERC1155ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
 						"InternalERC1155Predicate"); err != nil {
 						return err
 					}
 
-					// initialize RootMintableERC20PredicateAccessList SC
+					// initialize InternalMintableERC20PredicateAccessList SC
 					if err = initERC20ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
 						"InternalERC20MintablePredicate"); err != nil {
 						return err
 					}
 
-					// initialize RootMintableERC721PredicateAccessList SC
+					// initialize InternalMintableERC721PredicateAccessList SC
 					if err = initERC721ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
 						"InternalERC721MintablePredicate"); err != nil {
 						return err
 					}
 
-					// initialize RootMintableERC1155PredicateAccessList SC
+					// initialize InternalMintableERC1155PredicateAccessList SC
 					if err = initERC1155ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
 						"InternalERC1155MintablePredicate"); err != nil {
@@ -262,37 +262,37 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 						return err
 					}
 
-					// initialize ChildERC20Predicate SC
+					// initialize InternalERC20Predicate SC
 					if err = initERC20PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						false, destChainIDBig, "InternalERC20Predicate"); err != nil {
 						return err
 					}
 
-					// initialize ChildERC721Predicate SC
+					// initialize InternalERC721Predicate SC
 					if err = initERC721PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						false, destChainIDBig, "InternalERC721Predicate"); err != nil {
 						return err
 					}
 
-					// initialize ChildERC1155Predicate SC
+					// initialize InternalERC1155Predicate SC
 					if err = initERC1155PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						false, destChainIDBig, "InternalERC1155Predicate"); err != nil {
 						return err
 					}
 
-					// initialize RootMintableERC20Predicate SC
+					// initialize InternalMintableERC20Predicate SC
 					if err = initERC20PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						true, destChainIDBig, "InternalERC20MintablePredicate"); err != nil {
 						return err
 					}
 
-					// initialize RootMintableERC721Predicate SC
+					// initialize InternalMintableERC721Predicate SC
 					if err = initERC721PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						true, destChainIDBig, "InternalERC721MintablePredicate"); err != nil {
 						return err
 					}
 
-					// initialize RootMintableERC1155Predicate SC
+					// initialize InternalMintableERC1155Predicate SC
 					if err = initERC1155PredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						true, destChainIDBig, "InternalERC1155MintablePredicate"); err != nil {
 						return err
