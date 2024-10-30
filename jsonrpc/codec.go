@@ -10,11 +10,17 @@ import (
 )
 
 func init() {
-	pendingBN := PendingBlockNumber
-	PendingBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &pendingBN}
+	safeBN := SafeBlockNumber
+	SafeBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &safeBN}
+
+	finalizedBN := FinalizedBlockNumber
+	FinalizedBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &finalizedBN}
 
 	latestBN := LatestBlockNumber
 	LatestBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &latestBN}
+
+	pendingBN := PendingBlockNumber
+	PendingBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &pendingBN}
 
 	earliestBN := EarliestBlockNumber
 	EarliestBlockNumberOrHash = BlockNumberOrHash{BlockNumber: &earliestBN}
@@ -127,21 +133,27 @@ func (e *ObjectError) MarshalJSON() ([]byte, error) {
 }
 
 const (
-	pending  = "pending"
-	latest   = "latest"
-	earliest = "earliest"
+	safe      = "safe"
+	finalized = "finalized"
+	latest    = "latest"
+	pending   = "pending"
+	earliest  = "earliest"
 )
 
 const (
-	PendingBlockNumber  = BlockNumber(-3)
-	LatestBlockNumber   = BlockNumber(-2)
-	EarliestBlockNumber = BlockNumber(-1)
+	SafeBlockNumber      = BlockNumber(-4)
+	FinalizedBlockNumber = BlockNumber(-3)
+	LatestBlockNumber    = BlockNumber(-2)
+	PendingBlockNumber   = BlockNumber(-1)
+	EarliestBlockNumber  = BlockNumber(0)
 )
 
 var (
-	PendingBlockNumberOrHash  BlockNumberOrHash
-	LatestBlockNumberOrHash   BlockNumberOrHash
-	EarliestBlockNumberOrHash BlockNumberOrHash
+	SafeBlockNumberOrHash      BlockNumberOrHash
+	FinalizedBlockNumberOrHash BlockNumberOrHash
+	LatestBlockNumberOrHash    BlockNumberOrHash
+	PendingBlockNumberOrHash   BlockNumberOrHash
+	EarliestBlockNumberOrHash  BlockNumberOrHash
 )
 
 type BlockNumber int64
@@ -149,10 +161,14 @@ type BlockNumber int64
 // String returns the string representation of the block number
 func (b BlockNumber) String() string {
 	switch b {
-	case PendingBlockNumber:
-		return pending
+	case SafeBlockNumber:
+		return safe
+	case FinalizedBlockNumber:
+		return finalized
 	case LatestBlockNumber:
 		return latest
+	case PendingBlockNumber:
+		return pending
 	case EarliestBlockNumber:
 		return earliest
 	}
@@ -231,10 +247,14 @@ func stringToBlockNumber(str string) (BlockNumber, error) {
 
 	str = strings.Trim(str, "\"")
 	switch str {
-	case pending:
-		return PendingBlockNumber, nil
+	case safe:
+		return SafeBlockNumber, nil
+	case finalized:
+		return FinalizedBlockNumber, nil
 	case latest:
 		return LatestBlockNumber, nil
+	case pending:
+		return PendingBlockNumber, nil
 	case earliest:
 		return EarliestBlockNumber, nil
 	}
@@ -269,11 +289,11 @@ func (b *BlockNumber) UnmarshalJSON(buffer []byte) error {
 }
 
 // NewRPCErrorResponse is used to create a custom error response
-func NewRPCErrorResponse(id interface{}, errCode int, err string, data []byte, jsonrpcver string) Response {
-	errObject := &ObjectError{errCode, err, data}
+func NewRPCErrorResponse(id interface{}, errCode int, err string, data []byte, jsonRPCVersion string) Response {
+	errObject := &ObjectError{Code: errCode, Message: err, Data: data}
 
 	response := &ErrorResponse{
-		JSONRPC: jsonrpcver,
+		JSONRPC: jsonRPCVersion,
 		ID:      id,
 		Error:   errObject,
 	}
@@ -282,13 +302,13 @@ func NewRPCErrorResponse(id interface{}, errCode int, err string, data []byte, j
 }
 
 // NewRPCResponse returns Success/Error response object
-func NewRPCResponse(id interface{}, jsonrpcver string, reply []byte, err Error) Response {
+func NewRPCResponse(id interface{}, jsonRPCVersion string, reply []byte, err Error) Response {
 	var response Response
 	switch err.(type) {
 	case nil:
-		response = &SuccessResponse{JSONRPC: jsonrpcver, ID: id, Result: reply}
+		response = &SuccessResponse{JSONRPC: jsonRPCVersion, ID: id, Result: reply}
 	default:
-		response = NewRPCErrorResponse(id, err.ErrorCode(), err.Error(), reply, jsonrpcver)
+		response = NewRPCErrorResponse(id, err.ErrorCode(), err.Error(), reply, jsonRPCVersion)
 	}
 
 	return response

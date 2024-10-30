@@ -128,6 +128,32 @@ func TestGetNumericBlockNumber(t *testing.T) {
 			err:      nil,
 		},
 		{
+			name: "should return the latest block's number for finalized block",
+			num:  FinalizedBlockNumber,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return &types.Header{
+						Number: 10,
+					}
+				},
+			},
+			expected: 10,
+			err:      nil,
+		},
+		{
+			name: "should return the latest block's number for safe block",
+			num:  SafeBlockNumber,
+			store: &debugEndpointMockStore{
+				headerFn: func() *types.Header {
+					return &types.Header{
+						Number: 20,
+					}
+				},
+			},
+			expected: 20,
+			err:      nil,
+		},
+		{
 			name: "should return error if the latest block's number is not found",
 			num:  LatestBlockNumber,
 			store: &debugEndpointMockStore{

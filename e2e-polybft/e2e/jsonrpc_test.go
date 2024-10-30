@@ -95,6 +95,18 @@ func TestE2E_JsonRPC(t *testing.T) {
 		// since we asked for the full block, and epoch ending block has a transaction
 		require.Equal(t, 1, len(blockByHash.Transactions))
 
+		// get safe block (act as the latest, because of the instant finality)
+		safeBlock, err := ethClient.GetBlockByNumber(jsonrpc.SafeBlockNumber, false)
+		require.NoError(t, err)
+		require.NotNil(t, safeBlock)
+		require.GreaterOrEqual(t, safeBlock.Number(), epochSize)
+
+		// get finalized block (act as the latest, because of the instant finality)
+		finalizedBlock, err := ethClient.GetBlockByNumber(jsonrpc.FinalizedBlockNumber, false)
+		require.NoError(t, err)
+		require.NotNil(t, finalizedBlock)
+		require.GreaterOrEqual(t, finalizedBlock.Number(), epochSize)
+
 		// get latest block
 		latestBlock, err := ethClient.GetBlockByNumber(jsonrpc.LatestBlockNumber, false)
 		require.NoError(t, err)

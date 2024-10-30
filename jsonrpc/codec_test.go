@@ -15,6 +15,8 @@ func TestBlockNumberOrHash_UnmarshalJSON(t *testing.T) {
 	assert.NoError(t, err)
 
 	blockNumberZero := BlockNumber(0x0)
+	blockNumberSafe := SafeBlockNumber
+	blockNumberFinalized := FinalizedBlockNumber
 	blockNumberLatest := LatestBlockNumber
 	blockNumberPending := PendingBlockNumber
 
@@ -50,6 +52,22 @@ func TestBlockNumberOrHash_UnmarshalJSON(t *testing.T) {
 			`{"blockNumber": ""}`,
 			true,
 			BlockNumberOrHash{},
+		},
+		{
+			"should unmarshal safe block number properly",
+			`"safe"`,
+			false,
+			BlockNumberOrHash{
+				BlockNumber: &blockNumberSafe,
+			},
+		},
+		{
+			"should unmarshal finalized block number properly",
+			`"finalized"`,
+			false,
+			BlockNumberOrHash{
+				BlockNumber: &blockNumberFinalized,
+			},
 		},
 		{
 			"should unmarshal latest block number properly",
