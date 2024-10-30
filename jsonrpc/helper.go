@@ -84,9 +84,9 @@ func GetBlockHeader(number BlockNumber, store headerGetter) (*types.Header, erro
 		fallthrough
 	case FinalizedBlockNumber:
 		fallthrough
-	case PendingBlockNumber:
-		fallthrough
 	case LatestBlockNumber:
+		fallthrough
+	case PendingBlockNumber:
 		return store.Header(), nil
 
 	case EarliestBlockNumber:
