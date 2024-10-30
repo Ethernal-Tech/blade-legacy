@@ -214,42 +214,42 @@ func GenesisPostHookFactory(cfg *chain.Chain, engineName string) func(txn *state
 					// initialize InternalERC20PredicateAccessList SC
 					if err = initERC20ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
-						"InternalERC20Predicate"); err != nil {
+						"InternalERC20PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize InternalERC721PredicateAccessList SC
 					if err = initERC721ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
-						"InternalERC721Predicate"); err != nil {
+						"InternalERC721PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize InternalERC1155PredicateAccessList SC
 					if err = initERC1155ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, false, chainIDBig,
-						"InternalERC1155Predicate"); err != nil {
+						"InternalERC1155PredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize InternalMintableERC20PredicateAccessList SC
 					if err = initERC20ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
-						"InternalERC20MintablePredicate"); err != nil {
+						"InternalERC20MintablePredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize InternalMintableERC721PredicateAccessList SC
 					if err = initERC721ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
-						"InternalERC721MintablePredicate"); err != nil {
+						"InternalERC721MintablePredicateAccessList"); err != nil {
 						return err
 					}
 
 					// initialize InternalMintableERC1155PredicateAccessList SC
 					if err = initERC1155ACLPredicateContract(transition, chainBridgeCfg, cfg.Genesis.Alloc,
 						owner, useBridgeAllowList, useBridgeBlockList, true, chainIDBig,
-						"InternalERC1155MintablePredicate"); err != nil {
+						"InternalERC1155MintablePredicateAccessList"); err != nil {
 						return err
 					}
 				}
