@@ -26,6 +26,8 @@ func TestEncoding_SignedTypes(t *testing.T) {
 			DestinationChainID: big.NewInt(3),
 			Signature:          [2]*big.Int{big.NewInt(300), big.NewInt(200)},
 			Bitmap:             []byte("smth"),
+			Threshold:          big.NewInt(1),
+			IsRollback:         false,
 		},
 	}
 
