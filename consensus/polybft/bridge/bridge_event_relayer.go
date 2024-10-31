@@ -167,9 +167,8 @@ func (ber *bridgeEventRelayerImpl) sendSignedBridgeMessageBatch(event *contracts
 	}
 
 	input, err := (&contractsapi.ReceiveBatchGatewayFn{
-		Batch:     messages,
-		Signature: event.Signature,
-		Bitmap:    event.Bitmap,
+		BatchMessages:     messages,
+		SignedBridgeBatch: event,
 	}).EncodeAbi()
 	if err != nil {
 		return err

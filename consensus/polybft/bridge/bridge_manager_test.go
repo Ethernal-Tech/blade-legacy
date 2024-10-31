@@ -288,6 +288,8 @@ func TestBridgeEventManager_BuildBridgeBatch(t *testing.T) {
 	s.pendingBridgeBatchesExternal = []*PendingBridgeBatch{
 		{
 			BridgeBatch: &contractsapi.BridgeBatch{
+				Threshold:          bigZero,
+				IsRollback:         false,
 				StartID:            big.NewInt(1),
 				EndID:              big.NewInt(2),
 				SourceChainID:      big.NewInt(1),

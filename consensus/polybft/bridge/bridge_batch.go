@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/0xPolygon/polygon-edge/bls"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -44,6 +45,8 @@ func NewPendingBridgeBatch(epoch uint64,
 
 	return &PendingBridgeBatch{
 		BridgeBatch: &contractsapi.BridgeBatch{
+			Threshold:          big.NewInt(0),
+			IsRollback:         false,
 			RootHash:           types.Hash(tree.Hash()),
 			StartID:            messages[0].ID,
 			EndID:              messages[len(messages)-1].ID,
@@ -102,6 +105,8 @@ func (bbs *BridgeBatchSigned) EncodeAbi() ([]byte, error) {
 
 	commit := &contractsapi.CommitBatchBridgeStorageFn{
 		Batch: &contractsapi.SignedBridgeMessageBatch{
+			Threshold:          bbs.Threshold,
+			IsRollback:         bbs.IsRollback,
 			RootHash:           bbs.BridgeBatch.RootHash,
 			StartID:            bbs.BridgeBatch.StartID,
 			EndID:              bbs.BridgeBatch.EndID,
@@ -147,6 +152,8 @@ func (bbs *BridgeBatchSigned) DecodeAbi(txData []byte) error {
 
 	*bbs = BridgeBatchSigned{
 		BridgeBatch: &contractsapi.BridgeBatch{
+			Threshold:          commit.Batch.Threshold,
+			IsRollback:         commit.Batch.IsRollback,
 			RootHash:           commit.Batch.RootHash,
 			StartID:            commit.Batch.StartID,
 			EndID:              commit.Batch.EndID,

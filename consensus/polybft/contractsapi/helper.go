@@ -38,7 +38,7 @@ var (
 	GetCheckpointBlockABIResponse = abi.MustNewType("tuple(bool isFound, uint256 checkpointBlock)")
 
 	BridgeBatchABIType = abi.MustNewType(
-		"tuple(bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId)")
+		"tuple(uint256 threshold,bool isRollback,bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId)")
 
 	SignedValidatorABIType = abi.MustNewType(
 		"tuple(tuple(address _address,uint256[4] blsKey,uint256 votingPower)[] newValidatorSet," +
@@ -51,6 +51,8 @@ var (
 )
 
 type BridgeBatch struct {
+	Threshold          *big.Int   `abi:"threshold"`
+	IsRollback         bool       `abi:"isRollback"`
 	RootHash           types.Hash `abi:"rootHash"`
 	StartID            *big.Int   `abi:"startId"`
 	EndID              *big.Int   `abi:"endId"`
