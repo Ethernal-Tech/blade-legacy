@@ -1917,8 +1917,6 @@ func (i *InitializeBridgeStorageFn) DecodeAbi(buf []byte) error {
 }
 
 type SignedBridgeMessageBatch struct {
-	Threshold          *big.Int    `abi:"threshold"`
-	IsRollback         bool        `abi:"isRollback"`
 	RootHash           types.Hash  `abi:"rootHash"`
 	StartID            *big.Int    `abi:"startId"`
 	EndID              *big.Int    `abi:"endId"`
@@ -1926,9 +1924,11 @@ type SignedBridgeMessageBatch struct {
 	DestinationChainID *big.Int    `abi:"destinationChainId"`
 	Signature          [2]*big.Int `abi:"signature"`
 	Bitmap             []byte      `abi:"bitmap"`
+	Threshold          *big.Int    `abi:"threshold"`
+	IsRollback         bool        `abi:"isRollback"`
 }
 
-var SignedBridgeMessageBatchABIType = abi.MustNewType("tuple(uint256 threshold,bool isRollback,bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId,uint256[2] signature,bytes bitmap)")
+var SignedBridgeMessageBatchABIType = abi.MustNewType("tuple(bytes32 rootHash,uint256 startId,uint256 endId,uint256 sourceChainId,uint256 destinationChainId,uint256[2] signature,bytes bitmap,uint256 threshold,bool isRollback)")
 
 func (s *SignedBridgeMessageBatch) EncodeAbi() ([]byte, error) {
 	return SignedBridgeMessageBatchABIType.Encode(s)

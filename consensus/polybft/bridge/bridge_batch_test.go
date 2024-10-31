@@ -82,6 +82,7 @@ func newTestBridgeBatchSigned(t *testing.T, sourceChainID, destinationChainID ui
 
 	return &BridgeBatchSigned{
 		BridgeBatch: &contractsapi.BridgeBatch{
+			Threshold:          bigZero,
 			StartID:            big.NewInt(1),
 			EndID:              big.NewInt(2),
 			SourceChainID:      new(big.Int).SetUint64(sourceChainID),
