@@ -101,6 +101,8 @@ func TestSystemState_GetBridgeBatchByNumber(t *testing.T) {
     			uint256 destinationChainId;
     			uint256[2] signature;
     			bytes bitmap;
+				uint256 threshold;
+				bool isRollback
 			}
 
 			mapping(uint256 => SignedBridgeMessageBatch) public batches;
