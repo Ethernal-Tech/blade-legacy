@@ -52,6 +52,8 @@ func TestEncoding_Struct(t *testing.T) {
 		SourceChainID:      big.NewInt(1),
 		DestinationChainID: big.NewInt(0),
 		Signature:          [2]*big.Int{big.NewInt(1), big.NewInt(2)},
+		Threshold:          big.NewInt(0),
+		IsRollback:         false,
 	}
 
 	encoding, err := bridgeBatch.EncodeAbi()
