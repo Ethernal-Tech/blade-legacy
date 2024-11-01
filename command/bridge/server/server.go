@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -98,15 +97,15 @@ func runCommand(cmd *cobra.Command, _ []string) {
 	closeCh := make(chan struct{})
 
 	// Check if the client is already running
-	if cid, err := helper.GetBridgeChainID(); !errors.Is(err, helper.ErrExternalChainNotFound) {
-		if err != nil {
-			outputter.SetError(err)
-		} else if cid != "" {
-			outputter.SetError(fmt.Errorf("external chain already running: %s", cid))
-		}
+	// if cid, err := helper.GetBridgeChainID(); !errors.Is(err, helper.ErrExternalChainNotFound) {
+	// 	if err != nil {
+	// 		outputter.SetError(err)
+	// 	} else if cid != "" {
+	// 		outputter.SetError(fmt.Errorf("external chain already running: %s", cid))
+	// 	}
 
-		return
-	}
+	// 	return
+	// }
 
 	// Start the client
 	if err := runExternalChain(ctx, outputter, closeCh); err != nil {

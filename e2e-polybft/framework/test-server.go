@@ -63,6 +63,14 @@ type TestServer struct {
 	node          *node
 }
 
+func (t *TestServer) GetAddrStr() string {
+	return t.address.String()
+}
+
+func (t *TestServer) GetAddr() types.Address {
+	return t.address
+}
+
 func (t *TestServer) GrpcAddr() string {
 	return fmt.Sprintf("%s:%d", hostIP, t.config.GRPCPort)
 }
