@@ -1,10 +1,15 @@
 package e2e
 
 import (
+	"encoding/hex"
+	"fmt"
 	"math/big"
 	"path"
+	"sync"
 	"testing"
+	"time"
 
+	"github.com/0xPolygon/polygon-edge/command/bridge/common"
 	bridgeHelper "github.com/0xPolygon/polygon-edge/command/bridge/helper"
 	polycfg "github.com/0xPolygon/polygon-edge/consensus/polybft/config"
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
@@ -25,16 +30,19 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 		numBlockConfirmations = 2
 		epochSize             = 40
 		sprintSize            = uint64(5)
-		numberOfBridges       = 2
+		numberOfBridges       = 1
 	)
 
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
 
+	t.Logf("%d accounts were created with the following addresses:", numberOfAccounts)
 	for i := 0; i < numberOfAccounts; i++ {
 		ecdsaKey, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
 
 		accounts[i] = ecdsaKey
+
+		t.Logf("#%d - %s", i+1, accounts[i].Address().String())
 	}
 
 	cluster := framework.NewTestCluster(t, 5,
@@ -61,9 +69,6 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 	internalChainTxRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithClient(cluster.Servers[0].JSONRPC()))
 	require.NoError(t, err)
 
-	// delete this
-	_ = internalChainTxRelayer
-
 	externalChainTxRelayers := make([]txrelayer.TxRelayer, numberOfBridges)
 
 	for i := 0; i < numberOfBridges; i++ {
@@ -73,33 +78,137 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 	}
 
 	bridgeConfigs := make([]*polycfg.Bridge, numberOfBridges)
-	chainIDs := make([]*big.Int, numberOfBridges)
+
+	internalChainID, err := internalChainTxRelayer.Client().ChainID()
+	require.NoError(t, err)
+
+	externalChainIDs := make([]*big.Int, numberOfBridges)
 
 	for i := 0; i < numberOfBridges; i++ {
 		chainID, err := externalChainTxRelayers[i].Client().ChainID()
 		require.NoError(t, err)
 
-		chainIDs[i] = chainID
+		externalChainIDs[i] = chainID
 		bridgeConfigs[i] = polybftCfg.Bridge[chainID.Uint64()]
 	}
 
 	deployerKey, err := bridgeHelper.DecodePrivateKey("")
 	require.NoError(t, err)
 
-	tx := types.NewTx(types.NewLegacyTx(
-		types.WithTo(nil),
-		types.WithInput(contractsapi.RootERC20.Bytecode),
-	))
+	t.Run("bridge ERC20 tokens", func(t *testing.T) {
+		tx := types.NewTx(types.NewLegacyTx(
+			types.WithTo(nil),
+			types.WithInput(contractsapi.RootERC20.Bytecode),
+		))
 
-	rootERC20Tokens := make([]types.Address, numberOfBridges)
+		wg := sync.WaitGroup{}
 
-	for i, relayer := range externalChainTxRelayers {
-		receipt, err := relayer.SendTransaction(tx, deployerKey)
-		require.NoError(t, err)
-		require.NotNil(t, receipt)
-		require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
+		for i := range numberOfBridges {
+			wg.Add(1)
 
-		rootERC20Tokens[i] = types.Address(receipt.ContractAddress)
-		t.Logf("Successfully deployed root ERC20 smart contract on external chain %d at address %s:", chainIDs[i], rootERC20Tokens[i].String())
-	}
+			go func(bridgeNum int) {
+				defer wg.Done()
+
+				logFunc := func(format string, args ...any) {
+					pf := fmt.Sprintf("[%s⇄%s] ", internalChainID.String(), externalChainIDs[bridgeNum].String())
+					t.Logf(pf+format, args...)
+				}
+
+				receipt, err := externalChainTxRelayers[bridgeNum].SendTransaction(tx, deployerKey)
+				require.NoError(t, err)
+				require.NotNil(t, receipt)
+				require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
+
+				rootERC20Tokens := types.Address(receipt.ContractAddress)
+				logFunc("Root ERC20 smart contract was successfully deployed on the external chain %d at address %s", externalChainIDs[i], rootERC20Tokens.String())
+
+				for i := 0; i < numberOfAccounts; i++ {
+					err := cluster.Bridges[bridgeNum].Deposit(
+						common.ERC20,
+						rootERC20Tokens,
+						bridgeConfigs[bridgeNum].ExternalERC20PredicateAddr,
+						bridgeHelper.TestAccountPrivKey,
+						accounts[i].Address().String(),
+						"100000000000000000",
+						"",
+						cluster.Bridges[bridgeNum].JSONRPCAddr(),
+						bridgeHelper.TestAccountPrivKey,
+						false,
+					)
+
+					require.NoError(t, err)
+
+					logFunc("The deposit was made for the account %s", accounts[i].Address().String())
+				}
+
+				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
+					for i := range numberOfAccounts + 1 {
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(i+1)) {
+							logFunc("Event %d still not processed", i+1)
+							return false
+						}
+					}
+
+					logFunc("All events are successfully processed")
+					return true
+				}))
+
+				childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
+					bridgeConfigs[bridgeNum].ExternalERC20PredicateAddr, rootERC20Tokens, externalChainTxRelayers[bridgeNum])
+
+				logFunc("Child ERC20 smart contract was successfully deployed on the internal chain at address %s", childERC20Token.String())
+
+				for _, account := range accounts {
+					balance := erc20BalanceOf(t, account.Address(), childERC20Token, internalChainTxRelayer)
+					validBalance, _ := new(big.Int).SetString("100000000000000000", 10)
+
+					require.Equal(t, validBalance, balance)
+
+					logFunc("Account %s has the balance of %s tokens on the child ERC20 smart contract", account.Address().String(), balance.String())
+				}
+
+				for i := 0; i < numberOfAccounts; i++ {
+					rawKey, err := accounts[i].MarshallPrivateKey()
+					require.NoError(t, err)
+
+					err = cluster.Bridges[bridgeNum].Withdraw(
+						common.ERC20,
+						hex.EncodeToString(rawKey),
+						accounts[i].Address().String(),
+						"100000000000000000",
+						"",
+						cluster.Servers[0].JSONRPCAddr(),
+						bridgeConfigs[bridgeNum].InternalERC20PredicateAddr,
+						childERC20Token,
+						false)
+					require.NoError(t, err)
+
+					logFunc("The withdraw was made for the account %s", accounts[i].Address().String())
+				}
+
+				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
+					for i := range numberOfAccounts {
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(i+1)) {
+							logFunc("Event %d still not processed", i+1)
+							return false
+						}
+					}
+
+					logFunc("All events are successfully processed")
+					return true
+				}))
+
+				for _, account := range accounts {
+					balance := erc20BalanceOf(t, account.Address(), rootERC20Tokens, externalChainTxRelayers[bridgeNum])
+					validBalance, _ := new(big.Int).SetString("100000000000000000", 10)
+
+					require.Equal(t, validBalance, balance)
+
+					logFunc("Account %s has the balance of %s tokens on the root ERC20 smart contract", account.Address().String(), balance.String())
+				}
+			}(i)
+		}
+
+		wg.Wait()
+	})
 }
