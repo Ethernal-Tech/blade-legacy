@@ -119,13 +119,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 				require.NotNil(t, receipt)
 				require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
 
-				rootERC20Tokens := types.Address(receipt.ContractAddress)
-				logFunc("Root ERC20 smart contract was successfully deployed on the external chain %d at address %s", externalChainIDs[i], rootERC20Tokens.String())
+				rootERC20Token := types.Address(receipt.ContractAddress)
+				logFunc("Root ERC20 smart contract was successfully deployed on the external chain %d at address %s", externalChainIDs[i], rootERC20Token.String())
 
 				for i := 0; i < numberOfAccounts; i++ {
 					err := cluster.Bridges[bridgeNum].Deposit(
 						common.ERC20,
-						rootERC20Tokens,
+						rootERC20Token,
 						bridgeConfigs[bridgeNum].ExternalERC20PredicateAddr,
 						bridgeHelper.TestAccountPrivKey,
 						accounts[i].Address().String(),
@@ -154,7 +154,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 				}))
 
 				childERC20Token := getChildToken(t, contractsapi.RootERC20Predicate.Abi,
-					bridgeConfigs[bridgeNum].ExternalERC20PredicateAddr, rootERC20Tokens, externalChainTxRelayers[bridgeNum])
+					bridgeConfigs[bridgeNum].ExternalERC20PredicateAddr, rootERC20Token, externalChainTxRelayers[bridgeNum])
 
 				logFunc("Child ERC20 smart contract was successfully deployed on the internal chain at address %s", childERC20Token.String())
 
@@ -199,12 +199,125 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 				}))
 
 				for _, account := range accounts {
-					balance := erc20BalanceOf(t, account.Address(), rootERC20Tokens, externalChainTxRelayers[bridgeNum])
+					balance := erc20BalanceOf(t, account.Address(), rootERC20Token, externalChainTxRelayers[bridgeNum])
 					validBalance, _ := new(big.Int).SetString("100000000000000000", 10)
 
 					require.Equal(t, validBalance, balance)
 
 					logFunc("Account %s has the balance of %s tokens on the root ERC20 smart contract", account.Address().String(), balance.String())
+				}
+			}(i)
+		}
+
+		wg.Wait()
+	})
+
+	t.Run("bridge ERC721 tokens", func(t *testing.T) {
+		tx := types.NewTx(types.NewLegacyTx(
+			types.WithTo(nil),
+			types.WithInput(contractsapi.RootERC721.Bytecode),
+		))
+
+		wg := sync.WaitGroup{}
+
+		for i := range numberOfBridges {
+			wg.Add(1)
+
+			go func(bridgeNum int) {
+				defer wg.Done()
+
+				logFunc := func(format string, args ...any) {
+					pf := fmt.Sprintf("[%s⇄%s] ", internalChainID.String(), externalChainIDs[bridgeNum].String())
+					t.Logf(pf+format, args...)
+				}
+
+				receipt, err := externalChainTxRelayers[bridgeNum].SendTransaction(tx, deployerKey)
+				require.NoError(t, err)
+				require.NotNil(t, receipt)
+				require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
+
+				rootERC721Token := types.Address(receipt.ContractAddress)
+				logFunc("Root ERC721 smart contract was successfully deployed on the external chain %d at address %s", externalChainIDs[i], rootERC721Token.String())
+
+				for i := 0; i < numberOfAccounts; i++ {
+					err := cluster.Bridges[bridgeNum].Deposit(
+						common.ERC721,
+						rootERC721Token,
+						bridgeConfigs[bridgeNum].ExternalERC721PredicateAddr,
+						bridgeHelper.TestAccountPrivKey,
+						accounts[i].Address().String(),
+						"",
+						fmt.Sprintf("%d", i),
+						cluster.Bridges[bridgeNum].JSONRPCAddr(),
+						bridgeHelper.TestAccountPrivKey,
+						false,
+					)
+
+					require.NoError(t, err)
+
+					logFunc("The deposit was made for the account %s", accounts[i].Address().String())
+				}
+
+				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
+					for i := range numberOfAccounts + 1 {
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(numberOfAccounts+i+2)) {
+							logFunc("Event %d still not processed", numberOfAccounts+i+2)
+							return false
+						}
+					}
+
+					logFunc("All events are successfully processed")
+					return true
+				}))
+
+				childERC721Token := getChildToken(t, contractsapi.RootERC721Predicate.Abi,
+					bridgeConfigs[bridgeNum].ExternalERC721PredicateAddr, rootERC721Token, externalChainTxRelayers[bridgeNum])
+
+				logFunc("Child ERC721 smart contract was successfully deployed on the internal chain at address %s", childERC721Token.String())
+
+				for i, account := range accounts {
+					owner := erc721OwnerOf(t, big.NewInt(int64(i)), childERC721Token, internalChainTxRelayer)
+					require.Equal(t, account.Address(), owner)
+
+					logFunc("Account %s is the owner of ERC721 token with ID %d on the internal chain", account.Address().String(), i)
+				}
+
+				for i := 0; i < numberOfAccounts; i++ {
+					rawKey, err := accounts[i].MarshallPrivateKey()
+					require.NoError(t, err)
+
+					err = cluster.Bridges[bridgeNum].Withdraw(
+						common.ERC721,
+						hex.EncodeToString(rawKey),
+						accounts[i].Address().String(),
+						"",
+						fmt.Sprintf("%d", i),
+						cluster.Servers[0].JSONRPCAddr(),
+						bridgeConfigs[bridgeNum].InternalERC721PredicateAddr,
+						childERC721Token,
+						false)
+					require.NoError(t, err)
+
+					logFunc("The withdraw was made for the account %s", accounts[i].Address().String())
+				}
+
+				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
+					for i := range numberOfAccounts {
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(numberOfAccounts+i+1)) {
+							logFunc("Event %d still not processed", numberOfAccounts+i+1)
+							return false
+						}
+					}
+
+					logFunc("All events are successfully processed")
+					return true
+				}))
+
+				for i, account := range accounts {
+					owner := erc721OwnerOf(t, big.NewInt(int64(i)), rootERC721Token, externalChainTxRelayers[bridgeNum])
+					require.Equal(t, account.Address(), owner)
+
+					logFunc("Account %s is the owner of ERC721 token with ID %d on the external chain", account.Address().String(), i)
 				}
 			}(i)
 		}
