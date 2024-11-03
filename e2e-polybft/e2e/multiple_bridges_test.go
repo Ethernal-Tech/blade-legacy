@@ -15,6 +15,7 @@ import (
 	"github.com/0xPolygon/polygon-edge/consensus/polybft/contractsapi"
 	"github.com/0xPolygon/polygon-edge/crypto"
 	"github.com/0xPolygon/polygon-edge/e2e-polybft/framework"
+	helperCommon "github.com/0xPolygon/polygon-edge/helper/common"
 	"github.com/0xPolygon/polygon-edge/txrelayer"
 	"github.com/0xPolygon/polygon-edge/types"
 	"github.com/stretchr/testify/require"
@@ -24,7 +25,7 @@ const (
 	chainConfigFile = "genesis.json"
 )
 
-func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T) {
+func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 	const (
 		numberOfAccounts      = 5
 		numBlockConfirmations = 2
@@ -318,6 +319,149 @@ func TestE2E_Multiple_Bridges_ExternalToInternalERC20TokenTransfer(t *testing.T)
 					require.Equal(t, account.Address(), owner)
 
 					logFunc("Account %s is the owner of ERC721 token with ID %d on the external chain", account.Address().String(), i)
+				}
+			}(i)
+		}
+
+		wg.Wait()
+	})
+
+	t.Run("bridge ERC1155 tokens", func(t *testing.T) {
+		tx := types.NewTx(types.NewLegacyTx(
+			types.WithTo(nil),
+			types.WithInput(contractsapi.RootERC1155.Bytecode),
+		))
+
+		wg := sync.WaitGroup{}
+
+		for i := range numberOfBridges {
+			wg.Add(1)
+
+			go func(bridgeNum int) {
+				defer wg.Done()
+
+				logFunc := func(format string, args ...any) {
+					pf := fmt.Sprintf("[%s⇄%s] ", internalChainID.String(), externalChainIDs[bridgeNum].String())
+					t.Logf(pf+format, args...)
+				}
+
+				receipt, err := externalChainTxRelayers[bridgeNum].SendTransaction(tx, deployerKey)
+				require.NoError(t, err)
+				require.NotNil(t, receipt)
+				require.Equal(t, uint64(types.ReceiptSuccess), receipt.Status)
+
+				rootERC1155Token := types.Address(receipt.ContractAddress)
+				logFunc("Root ERC1155 smart contract was successfully deployed on the external chain %d at address %s", externalChainIDs[i], rootERC1155Token.String())
+
+				for i := 0; i < numberOfAccounts; i++ {
+					err := cluster.Bridges[bridgeNum].Deposit(
+						common.ERC1155,
+						rootERC1155Token,
+						bridgeConfigs[bridgeNum].ExternalERC1155PredicateAddr,
+						bridgeHelper.TestAccountPrivKey,
+						accounts[i].Address().String(),
+						"500000000000000000",
+						fmt.Sprintf("%d", i),
+						cluster.Bridges[bridgeNum].JSONRPCAddr(),
+						bridgeHelper.TestAccountPrivKey,
+						false,
+					)
+
+					require.NoError(t, err)
+
+					logFunc("The deposit was made for the account %s", accounts[i].Address().String())
+				}
+
+				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
+					for i := range numberOfAccounts + 1 {
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(numberOfAccounts*2+i+3)) {
+							logFunc("Event %d still not processed", numberOfAccounts*2+i+2)
+							return false
+						}
+					}
+
+					logFunc("All events are successfully processed")
+					return true
+				}))
+
+				childERC1155Token := getChildToken(t, contractsapi.RootERC1155Predicate.Abi,
+					bridgeConfigs[bridgeNum].ExternalERC1155PredicateAddr, rootERC1155Token, externalChainTxRelayers[bridgeNum])
+
+				logFunc("Child ERC1155 smart contract was successfully deployed on the internal chain at address %s", childERC1155Token.String())
+
+				for i, account := range accounts {
+					balanceOfFn := &contractsapi.BalanceOfChildERC1155Fn{
+						Account: account.Address(),
+						ID:      big.NewInt(int64(i)),
+					}
+
+					balanceInput, err := balanceOfFn.EncodeAbi()
+					require.NoError(t, err)
+
+					balanceRaw, err := internalChainTxRelayer.Call(types.ZeroAddress, childERC1155Token, balanceInput)
+					require.NoError(t, err)
+
+					balance, err := helperCommon.ParseUint256orHex(&balanceRaw)
+					require.NoError(t, err)
+
+					validBalance, _ := new(big.Int).SetString("500000000000000000", 10)
+
+					require.Equal(t, validBalance, balance)
+
+					logFunc("Account %s has the balance of %s tokens on the child ERC1155 smart contract", account.Address().String(), balance.String())
+				}
+
+				for i := 0; i < numberOfAccounts; i++ {
+					rawKey, err := accounts[i].MarshallPrivateKey()
+					require.NoError(t, err)
+
+					err = cluster.Bridges[bridgeNum].Withdraw(
+						common.ERC1155,
+						hex.EncodeToString(rawKey),
+						accounts[i].Address().String(),
+						"500000000000000000",
+						fmt.Sprintf("%d", i),
+						cluster.Servers[0].JSONRPCAddr(),
+						bridgeConfigs[bridgeNum].InternalERC1155PredicateAddr,
+						childERC1155Token,
+						false)
+					require.NoError(t, err)
+
+					logFunc("The withdraw was made for the account %s", accounts[i].Address().String())
+				}
+
+				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
+					for i := range numberOfAccounts {
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(numberOfAccounts*2+i+1)) {
+							logFunc("Event %d still not processed", numberOfAccounts*2+i+1)
+							return false
+						}
+					}
+
+					logFunc("All events are successfully processed")
+					return true
+				}))
+
+				for i, account := range accounts {
+					balanceOfFn := &contractsapi.BalanceOfChildERC1155Fn{
+						Account: account.Address(),
+						ID:      big.NewInt(int64(i)),
+					}
+
+					balanceInput, err := balanceOfFn.EncodeAbi()
+					require.NoError(t, err)
+
+					balanceRaw, err := externalChainTxRelayers[bridgeNum].Call(types.ZeroAddress, rootERC1155Token, balanceInput)
+					require.NoError(t, err)
+
+					balance, err := helperCommon.ParseUint256orHex(&balanceRaw)
+					require.NoError(t, err)
+
+					validBalance, _ := new(big.Int).SetString("500000000000000000", 10)
+
+					require.Equal(t, validBalance, balance)
+
+					logFunc("Account %s has the balance of %s tokens on the root ERC1155 smart contract", account.Address().String(), balance.String())
 				}
 			}(i)
 		}
