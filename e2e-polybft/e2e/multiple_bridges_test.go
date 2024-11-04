@@ -34,6 +34,26 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 		numberOfBridges       = 1
 	)
 
+	// Since the success of the test is partially based on sequential checks of successfully processed events, the
+	// following constants represent the starting points for these checks. In other words, the events starting point
+	// (ESP) is the ID of the first event in the sequence. Starting points are defined for each of the ERC standards,
+	// as well as for internal and external chains. The values can be adjusted so a specific sub-test can be excluded
+	// with ease. If all tests are run in sequence, the values should be as follows:
+	//  - erc20ExternalESP   = 1
+	//  - erc20InternalESP   = 1
+	//  - erc721ExternalESP  = numberOfAccounts + 1
+	//  - erc721InternalESP  = numberOfAccounts + 2
+	//  - erc1155ExternalESP = numberOfAccounts * 2 + 1
+	//  - erc1155InternalESP = numberOfAccounts * 2 + 3
+	const (
+		erc20ExternalESP   = 1
+		erc20InternalESP   = 1
+		erc721ExternalESP  = numberOfAccounts + 1
+		erc721InternalESP  = numberOfAccounts + 2
+		erc1155ExternalESP = numberOfAccounts*2 + 1
+		erc1155InternalESP = numberOfAccounts*2 + 3
+	)
+
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
 
 	t.Logf("%d accounts were created with the following addresses:", numberOfAccounts)
@@ -144,8 +164,8 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts + 1 {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(i+1)) {
-							logFunc("Event %d still not processed", i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc20InternalESP+i)) {
+							logFunc("Event %d still not processed", erc20InternalESP+i)
 							return false
 						}
 					}
@@ -189,8 +209,8 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(i+1)) {
-							logFunc("Event %d still not processed", i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc20ExternalESP+i)) {
+							logFunc("Event %d still not processed", erc20ExternalESP+i)
 							return false
 						}
 					}
@@ -261,8 +281,8 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts + 1 {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(numberOfAccounts+i+2)) {
-							logFunc("Event %d still not processed", numberOfAccounts+i+2)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc721InternalESP+i)) {
+							logFunc("Event %d still not processed", erc721InternalESP+i)
 							return false
 						}
 					}
@@ -304,8 +324,8 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(numberOfAccounts+i+1)) {
-							logFunc("Event %d still not processed", numberOfAccounts+i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc721ExternalESP+i)) {
+							logFunc("Event %d still not processed", erc721ExternalESP+i)
 							return false
 						}
 					}
@@ -374,8 +394,8 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts + 1 {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(numberOfAccounts*2+i+3)) {
-							logFunc("Event %d still not processed", numberOfAccounts*2+i+2)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc1155InternalESP+i)) {
+							logFunc("Event %d still not processed", erc1155InternalESP+i)
 							return false
 						}
 					}
@@ -432,8 +452,8 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(numberOfAccounts*2+i+1)) {
-							logFunc("Event %d still not processed", numberOfAccounts*2+i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc1155ExternalESP+i)) {
+							logFunc("Event %d still not processed", erc1155ExternalESP+i)
 							return false
 						}
 					}
@@ -477,6 +497,26 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 		epochSize             = 40
 		sprintSize            = uint64(5)
 		numberOfBridges       = 1
+	)
+
+	// Since the success of the test is partially based on sequential checks of successfully processed events, the
+	// following constants represent the starting points for these checks. In other words, the events starting point
+	// (ESP) is the ID of the first event in the sequence. Starting points are defined for each of the ERC standards,
+	// as well as for internal and external chains. The values can be adjusted so a specific sub-test can be excluded
+	// with ease. If all tests are run in sequence, the values should be as follows:
+	//  - erc20ExternalESP   = 1
+	//  - erc20InternalESP   = 1
+	//  - erc721ExternalESP  = numberOfAccounts + 2
+	//  - erc721InternalESP  = numberOfAccounts + 1
+	//  - erc1155ExternalESP = numberOfAccounts * 2 + 3
+	//  - erc1155InternalESP = numberOfAccounts * 2 + 1
+	const (
+		erc20ExternalESP   = 1
+		erc20InternalESP   = 1
+		erc721ExternalESP  = numberOfAccounts + 2
+		erc721InternalESP  = numberOfAccounts + 1
+		erc1155ExternalESP = numberOfAccounts*2 + 3
+		erc1155InternalESP = numberOfAccounts*2 + 1
 	)
 
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
@@ -543,10 +583,6 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 		bridgeConfigs[i] = polybftCfg.Bridge[chainID.Uint64()]
 	}
 
-	// balance, err := internalChainTxRelayer.Client().GetBalance(deployerKey.Address(), jsonrpc.LatestBlockNumberOrHash)
-	// require.NoError(t, err)
-	// t.Logf("BALANCE: %s", balance.String())
-
 	t.Run("bridge ERC20 tokens", func(t *testing.T) {
 		tx := types.NewTx(types.NewLegacyTx(
 			types.WithTo(nil),
@@ -595,8 +631,8 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts + 1 {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(i+1)) {
-							logFunc("Event %d still not processed", i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc20ExternalESP+i)) {
+							logFunc("Event %d still not processed", erc20ExternalESP+i)
 							return false
 						}
 					}
@@ -640,8 +676,8 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(i+1)) {
-							logFunc("Event %d still not processed", i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc20InternalESP+i)) {
+							logFunc("Event %d still not processed", erc20InternalESP+i)
 							return false
 						}
 					}
@@ -712,8 +748,8 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts + 1 {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(numberOfAccounts+i+2)) {
-							logFunc("Event %d still not processed", numberOfAccounts+i+2)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc721ExternalESP+i)) {
+							logFunc("Event %d still not processed", erc721ExternalESP+i)
 							return false
 						}
 					}
@@ -755,8 +791,8 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(numberOfAccounts+i+1)) {
-							logFunc("Event %d still not processed", numberOfAccounts+i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc721InternalESP+i)) {
+							logFunc("Event %d still not processed", erc721InternalESP+i)
 							return false
 						}
 					}
@@ -825,8 +861,8 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts + 1 {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(numberOfAccounts*2+i+3)) {
-							logFunc("Event %d still not processed", numberOfAccounts*2+i+2)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc1155ExternalESP+i)) {
+							logFunc("Event %d still not processed", erc1155ExternalESP+i)
 							return false
 						}
 					}
@@ -883,8 +919,8 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 
 				require.NoError(t, cluster.WaitUntil(time.Minute*2, time.Second*2, func() bool {
 					for i := range numberOfAccounts {
-						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(numberOfAccounts*2+i+1)) {
-							logFunc("Event %d still not processed", numberOfAccounts*2+i+1)
+						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc1155InternalESP+i)) {
+							logFunc("Event %d still not processed", erc1155InternalESP+i)
 							return false
 						}
 					}
