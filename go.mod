@@ -63,8 +63,6 @@ require (
 	pgregory.net/rapid v1.1.0
 )
 
-require github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
-
 require (
 	cloud.google.com/go/auth v0.9.9 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.4 // indirect
@@ -108,6 +106,7 @@ require (
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
+	github.com/eapache/queue/v2 v2.0.0-20230407133247-75960ed334e4 // indirect
 	github.com/ebitengine/purego v0.6.0-alpha.5 // indirect
 	github.com/elastic/gosigar v0.14.3 // indirect
 	github.com/fatih/color v1.16.0 // indirect
