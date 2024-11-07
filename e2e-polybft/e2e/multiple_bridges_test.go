@@ -76,6 +76,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
 
 	t.Logf("%d accounts were created with the following addresses:", numberOfAccounts)
+
 	for i := 0; i < numberOfAccounts; i++ {
 		ecdsaKey, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
@@ -120,6 +121,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 	for i := 0; i < numberOfBridges; i++ {
 		txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[i].JSONRPCAddr()))
 		require.NoError(t, err)
+
 		externalChainTxRelayers[i] = txRelayer
 	}
 
@@ -200,11 +202,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts + 1 {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc20InternalESP+i)) {
 							logFunc("Event %d still not processed", erc20InternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -250,11 +254,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc20ExternalESP+i)) {
 							logFunc("Event %d still not processed", erc20ExternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -331,11 +337,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts + 1 {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc721InternalESP+i)) {
 							logFunc("Event %d still not processed", erc721InternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -378,11 +386,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc721ExternalESP+i)) {
 							logFunc("Event %d still not processed", erc721ExternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -456,11 +466,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts + 1 {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc1155InternalESP+i)) {
 							logFunc("Event %d still not processed", erc1155InternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -519,11 +531,13 @@ func TestE2E_Multiple_Bridges_ExternalToInternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc1155ExternalESP+i)) {
 							logFunc("Event %d still not processed", erc1155ExternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -605,6 +619,7 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
 
 	t.Logf("%d accounts were created with the following addresses:", numberOfAccounts)
+
 	for i := 0; i < numberOfAccounts; i++ {
 		ecdsaKey, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
@@ -656,6 +671,7 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 	for i := 0; i < numberOfBridges; i++ {
 		txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[i].JSONRPCAddr()))
 		require.NoError(t, err)
+
 		externalChainTxRelayers[i] = txRelayer
 	}
 
@@ -731,11 +747,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts + 1 {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc20ExternalESP+i)) {
 							logFunc("Event %d still not processed", erc20ExternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -781,11 +799,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc20InternalESP+i)) {
 							logFunc("Event %d still not processed", erc20InternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -862,11 +882,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts + 1 {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc721ExternalESP+i)) {
 							logFunc("Event %d still not processed", erc721ExternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -909,11 +931,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc721InternalESP+i)) {
 							logFunc("Event %d still not processed", erc721InternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -987,11 +1011,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts + 1 {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(erc1155ExternalESP+i)) {
 							logFunc("Event %d still not processed", erc1155ExternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -1050,11 +1076,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalTokenTransfer(t *testing.T) {
 					for i := range numberOfAccounts {
 						if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(erc1155InternalESP+i)) {
 							logFunc("Event %d still not processed", erc1155InternalESP+i)
+
 							return false
 						}
 					}
 
 					logFunc("All events are successfully processed")
+
 					return true
 				}))
 
@@ -1116,6 +1144,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalNativeTokenTransfer(t *testing.T
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
 
 	t.Logf("%d accounts were created with the following addresses:", numberOfAccounts)
+
 	for i := 0; i < numberOfAccounts; i++ {
 		ecdsaKey, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
@@ -1154,6 +1183,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalNativeTokenTransfer(t *testing.T
 	for i := 0; i < numberOfBridges; i++ {
 		txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[i].JSONRPCAddr()))
 		require.NoError(t, err)
+
 		externalChainTxRelayers[i] = txRelayer
 	}
 
@@ -1194,6 +1224,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalNativeTokenTransfer(t *testing.T
 			balances := make([]*big.Int, numberOfAccounts)
 
 			logFunc("Balances of accounts on internal chain before deposit:")
+
 			for i := 0; i < numberOfAccounts; i++ {
 				balance, err := internalChainTxRelayer.Client().GetBalance(accounts[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 				require.NoError(t, err)
@@ -1228,16 +1259,19 @@ func TestE2E_Multiple_Bridges_ExternalToInternalNativeTokenTransfer(t *testing.T
 				for i := range numberOfAccounts {
 					if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(i+1)) {
 						logFunc("Event %d still not processed", i+1)
+
 						return false
 					}
 				}
 
 				logFunc("All events are successfully processed")
+
 				return true
 			}))
 
-			// Verifying that each account has a balance of the native token equal to the transferred (bridged) amount (0.1 ETH).
 			logFunc("Balances of accounts on internal chain after deposit:")
+
+			// Verifying that each account has a balance of the native token equal to the transferred (bridged) amount (0.1 ETH).
 			for i := 0; i < numberOfAccounts; i++ {
 				balance, err := internalChainTxRelayer.Client().GetBalance(accounts[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 				require.NoError(t, err)
@@ -1271,16 +1305,19 @@ func TestE2E_Multiple_Bridges_ExternalToInternalNativeTokenTransfer(t *testing.T
 				for i := range numberOfAccounts {
 					if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(i+1)) {
 						logFunc("Event %d still not processed", i+1)
+
 						return false
 					}
 				}
 
 				logFunc("All events are successfully processed")
+
 				return true
 			}))
 
-			// Verifying that each account has a balance of native tokens on the internal chain equal to the balance before bridging.
 			logFunc("Balances of accounts on internal chain after withdraw:")
+
+			// Verifying that each account has a balance of native tokens on the internal chain equal to the balance before bridging.
 			for i := 0; i < numberOfAccounts; i++ {
 				balance, err := internalChainTxRelayer.Client().GetBalance(accounts[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 				require.NoError(t, err)
@@ -1290,6 +1327,7 @@ func TestE2E_Multiple_Bridges_ExternalToInternalNativeTokenTransfer(t *testing.T
 			}
 		}(i)
 	}
+
 	wg.Wait()
 }
 
@@ -1322,6 +1360,7 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 	accounts := make([]*crypto.ECDSAKey, numberOfAccounts)
 
 	t.Logf("%d accounts were created with the following addresses:", numberOfAccounts)
+
 	for i := 0; i < numberOfAccounts; i++ {
 		ecdsaKey, err := crypto.GenerateECDSAKey()
 		require.NoError(t, err)
@@ -1367,6 +1406,7 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 	for i := 0; i < numberOfBridges; i++ {
 		txRelayer, err := txrelayer.NewTxRelayer(txrelayer.WithIPAddress(cluster.Bridges[i].JSONRPCAddr()))
 		require.NoError(t, err)
+
 		externalChainTxRelayers[i] = txRelayer
 	}
 
@@ -1407,6 +1447,7 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 			balances := make([]*big.Int, numberOfAccounts)
 
 			logFunc("Balances of accounts on internal chain before deposit:")
+
 			for i := 0; i < numberOfAccounts; i++ {
 				balance, err := internalChainTxRelayer.Client().GetBalance(accounts[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 				require.NoError(t, err)
@@ -1439,6 +1480,7 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 			}
 
 			logFunc("Balances of accounts on internal chain after deposit:")
+
 			for i := 0; i < numberOfAccounts; i++ {
 				balance, err := internalChainTxRelayer.Client().GetBalance(accounts[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 				require.NoError(t, err)
@@ -1453,11 +1495,13 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 				for i := range numberOfAccounts + 1 {
 					if !isEventProcessed(t, bridgeConfigs[bridgeNum].ExternalGatewayAddr, externalChainTxRelayers[bridgeNum], uint64(i+1)) {
 						logFunc("Event %d still not processed", i+1)
+
 						return false
 					}
 				}
 
 				logFunc("All events are successfully processed")
+
 				return true
 			}))
 
@@ -1503,16 +1547,19 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 				for i := range numberOfAccounts {
 					if !isEventProcessed(t, bridgeConfigs[bridgeNum].InternalGatewayAddr, internalChainTxRelayer, uint64(i+1)) {
 						logFunc("Event %d still not processed", i+1)
+
 						return false
 					}
 				}
 
 				logFunc("All events are successfully processed")
+
 				return true
 			}))
 
-			// Verifying that each account has a balance of native tokens on the internal chain equal to the balance before bridging.
 			logFunc("Balances of accounts on internal chain after withdraw:")
+
+			// Verifying that each account has a balance of native tokens on the internal chain equal to the balance before bridging.
 			for i := 0; i < numberOfAccounts; i++ {
 				balance, err := internalChainTxRelayer.Client().GetBalance(accounts[i].Address(), jsonrpc.LatestBlockNumberOrHash)
 				require.NoError(t, err)
@@ -1522,5 +1569,6 @@ func TestE2E_Multiple_Bridges_InternalToExternalNativeTokenTransfer(t *testing.T
 			}
 		}(i)
 	}
+
 	wg.Wait()
 }
