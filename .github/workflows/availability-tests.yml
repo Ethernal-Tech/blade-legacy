@@ -1,0 +1,143 @@
+---
+name: Availability Tests
+on:
+  workflow_dispatch:
+    inputs:
+      rpc_url:
+        description: JSON-RPC URL
+        required: true
+        type: string
+      fund_amount:
+        description: Amount to fund
+        required: true
+        type: string
+        default: 5ether
+      london:
+        description: Is London fork active?
+        required: true
+        type: boolean
+        default: true
+  workflow_call:
+    inputs:
+      rpc_url:
+        description: JSON-RPC URL
+        required: true
+        type: string
+      fund_amount:
+        description: Amount to fund
+        required: true
+        type: string
+      london:
+        description: Is London fork active?
+        required: true
+        type: boolean
+    outputs:
+      fund_status:
+        value: ${{ jobs.availability_test.outputs.fund_status }}
+      check_deployed_smart_contract_status:
+        value: ${{ jobs.availability_test.outputs.check_deployed_smart_contract_status }}
+      method_call_status:
+        value: ${{ jobs.availability_test.outputs.method_call_status }}
+      method_get_status:
+        value: ${{ jobs.availability_test.outputs.method_call_status }}
+      produce_blocks:
+        value: ${{ jobs.availability_test.outputs.produce_blocks }}
+    secrets:
+      FAUCET_PRIVATE_KEY:
+        required: true
+      ACCOUNT_PRIVATE_KEY:
+        required: true
+      ACCOUNT_PUBLIC_ADDRESS:
+        required: true
+      
+jobs:
+  availability_test:
+    name: Availability Test
+    runs-on: ubuntu-latest
+    outputs:
+      fund_status: ${{ steps.fund.outputs.status }}
+      check_deployed_smart_contract_status: ${{ steps.check_deployed_smart_contract.outputs.status }}
+      method_call_status: ${{ steps.method_call.outputs.status }}
+      method_get_status: ${{ steps.method_get.outputs.status }}
+      produce_blocks: ${{ steps.latest_block_number.outputs.produce_blocks }}
+    steps:
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly-f625d0fa7c51e65b4bf1e8f7931cd1c6e2e285e9
+      - name: Init
+        run: forge init . --no-git
+      - name: Create Simple Smart Contract
+        run: |
+          cat <<EOF > src/SimpleContract.sol
+          // SPDX-License-Identifier: MIT
+
+          pragma solidity ^0.8.2;
+
+          contract SimpleContract {
+              uint256 number;
+
+              function set(uint256 num) public {
+                  number = num;
+              }
+
+              function get() public view returns (uint256) {
+                  return number;
+              }
+          }
+          EOF
+      - name: Compile
+        run: forge compile
+      - name: Fund account
+        id: fund
+        run: |
+          current_balance=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getBalance ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} latest | sed 's/"//g')
+          current_balance_converted=$(echo "`cast to-dec $current_balance`/1000000000000000000" | bc -l)
+          fund=$(cast send --rpc-url ${{ inputs.rpc_url }} --private-key ${{ secrets.FAUCET_PRIVATE_KEY }} --value ${{ inputs.fund_amount }} ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
+          if [ $(echo "$fund" | grep -c "transactionHash") -eq 1 ]; then
+            new_balance=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getBalance ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} latest | sed 's/"//g')
+            new_balance_converted=$(echo "`cast to-dec $new_balance`/1000000000000000000" | bc -l)
+            if [ $current_balance_converted != $new_balance_converted ]; then
+              echo "status=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+      - name: Deploy Smart Contract to the network
+        id: deploy_smart_contract
+        if: steps.fund.outputs.status
+        run: |
+          output=$(forge create SimpleContract --rpc-url ${{ inputs.rpc_url }} --private-key ${{ secrets.ACCOUNT_PRIVATE_KEY }} `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
+          address=$(echo "$output" | awk -F "Deployed to: | Transaction hash:" '{print $2}')
+          echo "hash=$(jq -Rn --arg value $address '$value')" >> $GITHUB_OUTPUT
+      - name: Check if Smart Contract deployed successfully
+        id: check_deployed_smart_contract
+        if: steps.fund.outputs.status
+        run: |
+          bytecode=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getCode ${{ steps.deploy_smart_contract.outputs.hash }} latest | sed 's/"//g')
+          if [ $bytecode != "0x" ] && [ $bytecode != "" ]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Call set() method from Smart Contract
+        id: method_call
+        if: steps.check_deployed_smart_contract.outputs.status
+        run: |
+          output=$(cast send --rpc-url ${{ inputs.rpc_url }} --private-key ${{ secrets.ACCOUNT_PRIVATE_KEY }} ${{ steps.deploy_smart_contract.outputs.hash }} "function set(uint256)" 100 `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
+          if [ $(echo "$output" | grep -c "transactionHash") -eq 1 ]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Call get() method from Smart Contract
+        id: method_get
+        if: steps.check_deployed_smart_contract.outputs.status && steps.method_call.outputs.status
+        run: |
+          output=$(cast call --rpc-url ${{ inputs.rpc_url }} ${{ steps.deploy_smart_contract.outputs.hash }} "function get()" `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
+          if [ $(cast to-dec `echo $output`) -eq 100 ]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Get latest block number
+        id: latest_block_number
+        run: |
+          current_block_number=$(cast to-dec `cast rpc --rpc-url ${{ inputs.rpc_url }} eth_blockNumber | sed 's/"//g'`)
+          sleep 15
+          latest_block_number=$(cast to-dec `cast rpc --rpc-url ${{ inputs.rpc_url }} eth_blockNumber | sed 's/"//g'`)
+          if [ $current_block_number != $latest_block_number ]; then
+            echo "produce_blocks=true" >> $GITHUB_OUTPUT
+          fi
