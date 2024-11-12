@@ -72,7 +72,7 @@ jobs:
                   "elements": [
                     {
                       "type": "mrkdwn",
-                      "text": "Where the tests are run: *${{ inputs.environment }}*"
+                      "text": "Environment: *${{ inputs.environment }}*"
                     }
                   ]
                 },

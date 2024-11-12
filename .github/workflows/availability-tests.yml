@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: Where the tests are run
+        description: The environment to run against
         required: true
         type: string
       rpc_url:
@@ -28,7 +28,7 @@ on:
   workflow_call:
     inputs:
       environment:
-        description: Where the tests are run
+        description: The environment to run against
         required: true
         type: string
       rpc_url:
