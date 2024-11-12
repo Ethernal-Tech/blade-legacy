@@ -83,8 +83,8 @@ on: # yamllint disable-line rule:truthy
         description: Queued Transactions Count
         type: string
         required: true
-      results_url:
-        description: Results URL
+      results_artifact_id:
+        description: Results Artifact ID
         type: string
         required: true
     secrets:
@@ -134,10 +134,10 @@ jobs:
                       "type": "button",
                       "text": {
                         "type": "plain_text",
-                        "text": "${{ inputs.results_url != '' && 'Results' || 'No Results' }}"
+                        "text": "${{ inputs.results_artifact_id != '' && 'Results' || 'No Results' }}"
                       },
-                      "style": "${{ inputs.results_url != '' && env.succeed_bnt || env.failed_bnt }}",
-                      "url": "${{ inputs.results_url }}"
+                      "style": "${{ inputs.results_artifact_id != '' && env.succeed_bnt || env.failed_bnt }}",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ inputs.results_artifact_id }}"
                     }
                   ]
                 },

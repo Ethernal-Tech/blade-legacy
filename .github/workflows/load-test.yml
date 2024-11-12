@@ -123,9 +123,9 @@ on: # yamllint disable-line rule:truthy
       txpool_queued:
         description: Queued Transactions Count
         value: ${{ jobs.txpool_status.outputs.txpool_queued }}
-      results_url:
-        description: Results URL
-        value: ${{ jobs.load_test.outputs.results_url }}
+      results_artifact_id:
+        description: Results Artifact ID
+        value: ${{ jobs.load_test.outputs.results_artifact_id }}
     secrets:
       AWS_ROLE_ARN:
         required: true
@@ -214,7 +214,7 @@ jobs:
       avg_gas_per_tx: ${{ steps.load_test_results.outputs.avg_gas_per_tx }}
       avg_gas_utilization: ${{ steps.load_test_results.outputs.avg_gas_utilization }}
       max_gas_utilization: ${{ steps.load_test_results.outputs.max_gas_utilization }}
-      results_url: ${{ steps.artifact-upload.outputs.artifact-url }}
+      results_artifact_id: ${{ steps.artifact-upload.outputs.artifact-id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4.1.1
