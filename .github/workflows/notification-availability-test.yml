@@ -6,6 +6,9 @@ on: # yamllint disable-line rule:truthy
       environment:
         type: string
         required: true
+      availability_test_status:
+        type: string
+        required: true
       produce_blocks:
         type: string
         required: true
@@ -59,7 +62,7 @@ jobs:
                         "type": "plain_text",
                         "text": "Workflow Run"
                       },
-                      "style": "${{ inputs.fund_status == 'true' && inputs.check_deployed_smart_contract_status == 'true' && inputs.method_set_status == 'true' && inputs.method_get_status == 'true' && inputs.produce_blocks == 'true' && env.succeed_bnt || env.failed_bnt }}",
+                      "style": "${{ inputs.availability_test_status == 'true' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
                     }
                   ]

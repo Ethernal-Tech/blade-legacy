@@ -180,6 +180,7 @@ jobs:
     if: ((success() || failure()) && inputs.notification)
     with:
       environment: ${{ inputs.environment }}
+      availability_test_status: ${{ needs.availability_test.outputs.availability_test_status }}
       produce_blocks: ${{ needs.availability_test.outputs.produce_blocks }}
       fund_status: ${{ needs.availability_test.outputs.fund_status }}
       check_deployed_smart_contract_status: ${{ needs.availability_test.outputs.check_deployed_smart_contract_status }}
