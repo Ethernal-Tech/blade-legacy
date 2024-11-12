@@ -93,6 +93,9 @@ on: # yamllint disable-line rule:truthy
       blade_healthcheck_output:
         description: Blade Healthcheck output
         value: ${{ jobs.deploy_network.outputs.blade_healthcheck_output }}
+      rpc_url:
+        description: RPC URL
+        value: ${{ jobs.check_network.outputs.rpc_url || jobs.deploy_network.outputs.rpc_url }}
     secrets:
       AWS_ROLE_ARN:
         required: true

@@ -83,6 +83,10 @@ on: # yamllint disable-line rule:truthy
         description: Queued Transactions Count
         type: string
         required: true
+      results_url:
+        description: Results URL
+        type: string
+        required: true
     secrets:
       SLACK_WEBHOOK_URL:
         required: true
@@ -125,6 +129,15 @@ jobs:
                       },
                       "style": "${{ inputs.txpool_pending == '0' && inputs.txpool_queued == '0' && env.succeed_bnt || env.failed_bnt }}",
                       "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    },
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "${{ inputs.results_url != '' && 'Results' || 'No Results' }}"
+                      },
+                      "style": "${{ inputs.results_url != '' && env.succeed_bnt || env.failed_bnt }}",
+                      "url": "${{ inputs.results_url }}"
                     }
                   ]
                 },

@@ -1,0 +1,105 @@
+---
+name: Notification - Availability Tests
+on: # yamllint disable-line rule:truthy
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      produce_blocks:
+        type: string
+        required: true
+      fund_status:
+        type: string
+        required: true
+      check_deployed_smart_contract_status:
+        type: string
+        required: true
+      method_set_status:
+        type: string
+        required: true
+      method_get_status:
+        type: string
+        required: true
+    secrets:
+      SLACK_WEBHOOK_URL:
+        required: true
+
+jobs:
+  notification:
+    name: Notification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack
+        uses: slackapi/slack-github-action@v1.25.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+          succeed_bnt: 'primary'
+          failed_bnt: 'danger'
+          succeed_job: ':green:'
+          failed_job: ':red:'
+        with:
+          payload: |
+            {
+              "blocks": [
+                {
+                  "type": "header",
+                  "text": {
+                    "type": "plain_text",
+                    "text": "Availability Tests"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "Workflow Run"
+                      },
+                      "style": "${{ inputs.fund_status == 'true' && inputs.check_deployed_smart_contract_status == 'true' && inputs.method_set_status == 'true' && inputs.method_get_status == 'true' && inputs.produce_blocks == 'true' && env.succeed_bnt || env.failed_bnt }}",
+                      "url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+                    }
+                  ]
+                },
+                {
+                  "type": "context",
+                  "elements": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "Where the tests are run: *${{ inputs.environment }}*"
+                    }
+                  ]
+                },
+                {
+                  "type": "divider"
+                },
+                {
+                  "type": "section",
+                  "fields": [
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.produce_blocks == 'true' && env.succeed_job || env.failed_job }} *Produce Blocks*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.fund_status == 'true' && env.succeed_job || env.failed_job }} *Fund Account*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.check_deployed_smart_contract_status == 'true' && env.succeed_job || env.failed_job }} *Deploy Smart Contract*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.method_set_status == 'true' && env.succeed_job || env.failed_job }} *Method set()*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.method_get_status == 'true' && env.succeed_job || env.failed_job }} *Method get()*"
+                    }
+                  ]
+                }
+              ]
+            }

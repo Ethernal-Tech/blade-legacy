@@ -3,45 +3,63 @@ name: Availability Tests
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: Where the tests are run
+        required: true
+        type: string
       rpc_url:
         description: JSON-RPC URL
         required: true
         type: string
       fund_amount:
-        description: Amount to fund
+        description: Amount in Ether to fund
         required: true
         type: string
-        default: 5ether
+        default: "5"
       london:
         description: Is London fork active?
         required: true
         type: boolean
         default: true
+      notification:
+        description: Notification
+        type: boolean
+        default: true
   workflow_call:
     inputs:
+      environment:
+        description: Where the tests are run
+        required: true
+        type: string
       rpc_url:
         description: JSON-RPC URL
         required: true
         type: string
       fund_amount:
-        description: Amount to fund
+        description: Amount in Ether to fund
         required: true
         type: string
       london:
         description: Is London fork active?
         required: true
         type: boolean
+      notification:
+        description: Notification
+        type: boolean
+        required: true
     outputs:
+      availability_test_status:
+       value: ${{ jobs.availability_test.outputs.availability_test_status }}
+      produce_blocks:
+        value: ${{ jobs.availability_test.outputs.produce_blocks }}
       fund_status:
         value: ${{ jobs.availability_test.outputs.fund_status }}
       check_deployed_smart_contract_status:
         value: ${{ jobs.availability_test.outputs.check_deployed_smart_contract_status }}
-      method_call_status:
-        value: ${{ jobs.availability_test.outputs.method_call_status }}
+      method_set_status:
+        value: ${{ jobs.availability_test.outputs.method_set_status }}
       method_get_status:
-        value: ${{ jobs.availability_test.outputs.method_call_status }}
-      produce_blocks:
-        value: ${{ jobs.availability_test.outputs.produce_blocks }}
+        value: ${{ jobs.availability_test.outputs.method_get_status }}
     secrets:
       FAUCET_PRIVATE_KEY:
         required: true
@@ -49,23 +67,48 @@ on:
         required: true
       ACCOUNT_PUBLIC_ADDRESS:
         required: true
+      SLACK_WEBHOOK_URL:
+        required: true
       
 jobs:
   availability_test:
     name: Availability Test
     runs-on: ubuntu-latest
     outputs:
+      availability_test_status: ${{ steps.final_status.outputs.status }}
+      produce_blocks: ${{ steps.latest_block_number.outputs.produce_blocks }}
       fund_status: ${{ steps.fund.outputs.status }}
       check_deployed_smart_contract_status: ${{ steps.check_deployed_smart_contract.outputs.status }}
-      method_call_status: ${{ steps.method_call.outputs.status }}
+      method_set_status: ${{ steps.method_set.outputs.status }}
       method_get_status: ${{ steps.method_get.outputs.status }}
-      produce_blocks: ${{ steps.latest_block_number.outputs.produce_blocks }}
     steps:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly-f625d0fa7c51e65b4bf1e8f7931cd1c6e2e285e9
-      - name: Init
+      - name: Get latest block number
+        id: latest_block_number
+        run: |
+          current_block_number=$(cast to-dec `cast rpc --rpc-url ${{ inputs.rpc_url }} eth_blockNumber | sed 's/"//g'`)
+          sleep 15
+          latest_block_number=$(cast to-dec `cast rpc --rpc-url ${{ inputs.rpc_url }} eth_blockNumber | sed 's/"//g'`)
+          if [ $current_block_number != $latest_block_number ]; then
+            echo "produce_blocks=true" >> $GITHUB_OUTPUT
+          fi
+      - name: Fund account
+        id: fund
+        run: |
+          current_balance=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getBalance ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} latest | sed 's/"//g')
+          current_balance_converted=$(echo "`cast to-dec $current_balance`/1000000000000000000" | bc -l)
+          fund=$(cast send --rpc-url ${{ inputs.rpc_url }} --private-key ${{ secrets.FAUCET_PRIVATE_KEY }} --value ${{ inputs.fund_amount }}ether ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
+          if [ $(echo "$fund" | grep -c "transactionHash") -eq 1 ]; then
+            new_balance=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getBalance ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} latest | sed 's/"//g')
+            new_balance_converted=$(echo "`cast to-dec $new_balance`/1000000000000000000" | bc -l)
+            if [ $current_balance_converted != $new_balance_converted ]; then
+              echo "status=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+      - name: Forge Init
         run: forge init . --no-git
       - name: Create Simple Smart Contract
         run: |
@@ -86,21 +129,8 @@ jobs:
               }
           }
           EOF
-      - name: Compile
+      - name: Forge Compile
         run: forge compile
-      - name: Fund account
-        id: fund
-        run: |
-          current_balance=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getBalance ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} latest | sed 's/"//g')
-          current_balance_converted=$(echo "`cast to-dec $current_balance`/1000000000000000000" | bc -l)
-          fund=$(cast send --rpc-url ${{ inputs.rpc_url }} --private-key ${{ secrets.FAUCET_PRIVATE_KEY }} --value ${{ inputs.fund_amount }} ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
-          if [ $(echo "$fund" | grep -c "transactionHash") -eq 1 ]; then
-            new_balance=$(cast rpc --rpc-url ${{ inputs.rpc_url }} eth_getBalance ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }} latest | sed 's/"//g')
-            new_balance_converted=$(echo "`cast to-dec $new_balance`/1000000000000000000" | bc -l)
-            if [ $current_balance_converted != $new_balance_converted ]; then
-              echo "status=true" >> $GITHUB_OUTPUT
-            fi
-          fi
       - name: Deploy Smart Contract to the network
         id: deploy_smart_contract
         if: steps.fund.outputs.status
@@ -117,7 +147,7 @@ jobs:
             echo "status=true" >> $GITHUB_OUTPUT
           fi
       - name: Call set() method from Smart Contract
-        id: method_call
+        id: method_set
         if: steps.check_deployed_smart_contract.outputs.status
         run: |
           output=$(cast send --rpc-url ${{ inputs.rpc_url }} --private-key ${{ secrets.ACCOUNT_PRIVATE_KEY }} ${{ steps.deploy_smart_contract.outputs.hash }} "function set(uint256)" 100 `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
@@ -126,18 +156,34 @@ jobs:
           fi
       - name: Call get() method from Smart Contract
         id: method_get
-        if: steps.check_deployed_smart_contract.outputs.status && steps.method_call.outputs.status
+        if: steps.check_deployed_smart_contract.outputs.status && steps.method_set.outputs.status
         run: |
           output=$(cast call --rpc-url ${{ inputs.rpc_url }} ${{ steps.deploy_smart_contract.outputs.hash }} "function get()" `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
           if [ $(cast to-dec `echo $output`) -eq 100 ]; then
             echo "status=true" >> $GITHUB_OUTPUT
           fi
-      - name: Get latest block number
-        id: latest_block_number
+      - name: Final status
+        id: final_status
         run: |
-          current_block_number=$(cast to-dec `cast rpc --rpc-url ${{ inputs.rpc_url }} eth_blockNumber | sed 's/"//g'`)
-          sleep 15
-          latest_block_number=$(cast to-dec `cast rpc --rpc-url ${{ inputs.rpc_url }} eth_blockNumber | sed 's/"//g'`)
-          if [ $current_block_number != $latest_block_number ]; then
-            echo "produce_blocks=true" >> $GITHUB_OUTPUT
+          if [ ${{ steps.latest_block_number.outputs.produce_blocks }} = "true" ] && 
+          [ ${{ steps.fund.outputs.status }} = "true" ] && 
+          [ ${{ steps.check_deployed_smart_contract.outputs.status }} = "true" ] && 
+          [ ${{ steps.method_set.outputs.status }} = "true" ] && 
+          [ ${{ steps.method_get.outputs.status }} = "true" ]; then
+            echo "status=true" >> $GITHUB_OUTPUT
           fi
+
+  notification:
+    name: Availability Test Notification
+    needs: availability_test
+    uses: ./.github/workflows/notification-availability-test.yml
+    if: ((success() || failure()) && inputs.notification)
+    with:
+      environment: ${{ inputs.environment }}
+      produce_blocks: ${{ needs.availability_test.outputs.produce_blocks }}
+      fund_status: ${{ needs.availability_test.outputs.fund_status }}
+      check_deployed_smart_contract_status: ${{ needs.availability_test.outputs.check_deployed_smart_contract_status }}
+      method_set_status: ${{ needs.availability_test.outputs.method_set_status }}
+      method_get_status: ${{ needs.availability_test.outputs.method_get_status }}
+    secrets:
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

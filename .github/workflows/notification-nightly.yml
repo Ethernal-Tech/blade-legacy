@@ -71,6 +71,10 @@ on: # yamllint disable-line rule:truthy
         description: Benchmark Tests output
         type: string
         required: true
+      availability_test_status:
+        description: Availability Tests status
+        type: string
+        required: true
       sanity_check_tests_output:
         description: Sanity Check Tests output
         type: string
@@ -340,6 +344,10 @@ jobs:
                     {
                       "type": "mrkdwn",
                       "text": "${{ inputs.benchmark_test_output == '' && env.succeed_job || env.failed_job }} *Benchmark Tests*"
+                    },
+                    {
+                      "type": "mrkdwn",
+                      "text": "${{ inputs.availability_test_status == 'true' && env.succeed_job || env.failed_job }} *Availability Tests*"
                     }
                   ]
                 },
