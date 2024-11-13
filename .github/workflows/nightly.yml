@@ -49,7 +49,6 @@ jobs:
     secrets:
       FAUCET_PRIVATE_KEY: ${{ secrets.FAUCET_PRIVATE_KEY }}
       ACCOUNT_PRIVATE_KEY: ${{ secrets.ACCOUNT_PRIVATE_KEY }}
-      ACCOUNT_PUBLIC_ADDRESS: ${{ secrets.ACCOUNT_PUBLIC_ADDRESS }}
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   sanity_check_tests:
     name: Sanity Check Tests
