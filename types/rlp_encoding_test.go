@@ -201,6 +201,7 @@ func TestRLPMarshall_And_Unmarshall_TypedTransaction(t *testing.T) {
 		}),
 	}
 
+	// Transaction
 	for _, originalTx := range originalTxs {
 		t.Run(originalTx.Type().String(), func(t *testing.T) {
 			originalTx.ComputeHash()
@@ -215,6 +216,26 @@ func TestRLPMarshall_And_Unmarshall_TypedTransaction(t *testing.T) {
 			unmarshalledTx.ComputeHash()
 			assert.Equal(t, originalTx.Type(), unmarshalledTx.Type())
 			assert.Equal(t, originalTx.Hash(), unmarshalledTx.Hash())
+		})
+	}
+
+	// Transactions
+	for _, originalTx := range originalTxs {
+		t.Run(originalTx.Type().String()+"s", func(t *testing.T) {
+			originalTx.ComputeHash()
+
+			txs := Transactions([]*Transaction{originalTx})
+			txsRLP := txs.MarshalRLPTo(nil)
+
+			unmarshalledTxs := &Transactions{}
+			assert.NoError(t, unmarshalledTxs.UnmarshalRLP(txsRLP))
+
+			for _, unmarshalledTx := range *unmarshalledTxs {
+				unmarshalledTx.ComputeHash()
+
+				assert.Equal(t, originalTx.Type(), unmarshalledTx.Type())
+				assert.Equal(t, originalTx.Hash(), unmarshalledTx.Hash())
+			}
 		})
 	}
 }

@@ -384,6 +384,7 @@ func NewServer(config *Config) (*Server, error) {
 				MaxSlots:           m.config.MaxSlots,
 				PriceLimit:         m.config.PriceLimit,
 				MaxAccountEnqueued: m.config.MaxAccountEnqueued,
+				TxGossipBatchSize:  m.config.TxGossipBatchSize,
 				ChainID:            big.NewInt(m.config.Chain.Params.ChainID),
 				PeerID:             m.network.AddrInfo().ID,
 			},
@@ -393,6 +394,7 @@ func NewServer(config *Config) (*Server, error) {
 		}
 
 		m.txpool.SetSigner(signer)
+		m.executor.GetPendingTxHook = m.txpool.GetPendingTx
 	}
 
 	{
@@ -1145,11 +1147,6 @@ func (s *Server) Close() {
 		s.logger.Error("failed to close blockchain", "err", err.Error())
 	}
 
-	// Close the networking layer
-	if err := s.network.Close(); err != nil {
-		s.logger.Error("failed to close networking", "err", err.Error())
-	}
-
 	// Close the consensus layer
 	if err := s.consensus.Close(); err != nil {
 		s.logger.Error("failed to close consensus", "err", err.Error())
@@ -1168,6 +1165,11 @@ func (s *Server) Close() {
 
 	// Close the txpool's main loop
 	s.txpool.Close()
+
+	// Close the networking layer
+	if err := s.network.Close(); err != nil {
+		s.logger.Error("failed to close networking", "err", err.Error())
+	}
 
 	// Close DataDog profiler
 	s.closeDataDogProfiler()

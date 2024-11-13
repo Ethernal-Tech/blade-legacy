@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -100,6 +101,7 @@ type Config struct {
 	PriceLimit         uint64
 	MaxSlots           uint64
 	MaxAccountEnqueued uint64
+	TxGossipBatchSize  uint64
 	ChainID            *big.Int
 	PeerID             peer.ID
 }
@@ -189,7 +191,18 @@ type TxPool struct {
 
 	// localPeerID is the peer ID of the local node that is running the txpool
 	localPeerID peer.ID
+
+	// maximum number of transactions in gossip message
+	txGossipBatchSize int
+
+	// channel for gossip batching
+	gossipCh chan *types.Transaction
+
+	// WG for batch flushing
+	gossipWG sync.WaitGroup
 }
+
+const batchersNum = 1
 
 // NewTxPool returns a new pool for processing incoming transactions.
 func NewTxPool(
@@ -201,21 +214,23 @@ func NewTxPool(
 	config *Config,
 ) (*TxPool, error) {
 	pool := &TxPool{
-		logger:      logger.Named("txpool"),
-		forks:       forks,
-		store:       store,
-		executables: newPricesQueue(0, nil),
-		accounts:    accountsMap{maxEnqueuedLimit: config.MaxAccountEnqueued},
-		index:       lookupMap{all: make(map[types.Hash]*types.Transaction)},
-		gauge:       slotGauge{height: 0, max: config.MaxSlots},
-		priceLimit:  config.PriceLimit,
-		chainID:     config.ChainID,
-		localPeerID: config.PeerID,
+		logger:            logger.Named("txpool"),
+		forks:             forks,
+		store:             store,
+		executables:       newPricesQueue(0, nil),
+		accounts:          accountsMap{maxEnqueuedLimit: config.MaxAccountEnqueued},
+		index:             lookupMap{all: make(map[types.Hash]*types.Transaction)},
+		gauge:             slotGauge{height: 0, max: config.MaxSlots},
+		priceLimit:        config.PriceLimit,
+		chainID:           config.ChainID,
+		localPeerID:       config.PeerID,
+		txGossipBatchSize: int(config.TxGossipBatchSize),
 
 		//	main loop channels
 		promoteReqCh: make(chan promoteRequest),
 		pruneCh:      make(chan struct{}),
 		shutdownCh:   make(chan struct{}),
+		gossipCh:     make(chan *types.Transaction, 4*batchersNum*config.TxGossipBatchSize),
 	}
 
 	// Attach the event manager
@@ -247,12 +262,82 @@ func (p *TxPool) updatePending(i int64) {
 	metrics.SetGauge([]string{txPoolMetrics, "pending_transactions"}, float32(newPending))
 }
 
+func (p *TxPool) startGossipBatchers() {
+	for i := 0; i < batchersNum; i++ {
+		p.gossipWG.Add(1)
+
+		go p.gossipBatcher()
+	}
+}
+
+func (p *TxPool) stopGossipBatchers() {
+	close(p.gossipCh)
+	p.gossipWG.Wait()
+}
+
+func (p *TxPool) gossipBatcher() {
+	defer p.gossipWG.Done()
+
+	batch := make([]*types.Transaction, 0, p.txGossipBatchSize)
+
+	tickerPeriod := time.Hour * 24 // reduce empty looping when no batching
+	if p.txGossipBatchSize > 1 {
+		tickerPeriod = time.Millisecond * 500
+	}
+
+	ticker := time.NewTicker(tickerPeriod)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			if len(batch) > 0 {
+				p.publish(&batch)
+				batch = batch[:0]
+			}
+		case tx, chOpen := <-p.gossipCh:
+			if chOpen {
+				batch = append(batch, tx)
+				if len(batch) >= p.txGossipBatchSize {
+					p.publish(&batch)
+					batch = batch[:0]
+				}
+			} else {
+				// flush when closing
+				if len(batch) > 0 {
+					p.publish(&batch)
+				}
+
+				return
+			}
+		}
+	}
+}
+
+func (p *TxPool) publish(batch *[]*types.Transaction) {
+	txs := types.Transactions(*batch)
+	tx := &proto.Txn{
+		Raw: &any.Any{
+			Value: txs.MarshalRLPTo(nil),
+		},
+	}
+
+	if err := p.topic.Publish(tx); err != nil {
+		p.logger.Error("failed to topic tx", "err", err)
+	}
+
+	clear(*batch)
+}
+
 // Start runs the pool's main loop in the background.
 // On each request received, the appropriate handler
 // is invoked in a separate goroutine.
 func (p *TxPool) Start() {
 	// set default value of txpool pending transactions gauge
 	p.updatePending(0)
+
+	// start gossip batchers
+	p.startGossipBatchers()
 
 	//	run the handler for high gauge level pruning
 	go func() {
@@ -287,6 +372,7 @@ func (p *TxPool) Start() {
 func (p *TxPool) Close() {
 	p.eventManager.Close()
 	close(p.shutdownCh)
+	p.stopGossipBatchers() // wait for gossip flush
 }
 
 // SetSigner sets the signer the pool will use
@@ -312,15 +398,7 @@ func (p *TxPool) AddTx(tx *types.Transaction) error {
 	// broadcast the transaction only if a topic
 	// subscription is present
 	if p.topic != nil {
-		tx := &proto.Txn{
-			Raw: &any.Any{
-				Value: tx.MarshalRLP(),
-			},
-		}
-
-		if err := p.topic.Publish(tx); err != nil {
-			p.logger.Error("failed to topic tx", "err", err)
-		}
+		p.gossipCh <- tx
 	}
 
 	return nil
@@ -975,26 +1053,28 @@ func (p *TxPool) addGossipTx(obj interface{}, peerID peer.ID) {
 		return
 	}
 
-	tx := &types.Transaction{}
+	txs := &types.Transactions{}
 
-	// decode tx
-	if err := tx.UnmarshalRLP(raw.Raw.Value); err != nil {
+	// decode txs
+	if err := txs.UnmarshalRLP(raw.Raw.Value); err != nil {
 		p.logger.Error("failed to decode broadcast tx", "err", err)
 
 		return
 	}
 
-	// add tx
-	if err := p.addTx(gossip, tx); err != nil {
-		if errors.Is(err, ErrAlreadyKnown) {
-			if p.logger.IsDebug() {
-				p.logger.Debug("rejecting known tx (gossip)", "hash", tx.Hash().String())
+	// add txs
+	for _, tx := range *txs {
+		if err := p.addTx(gossip, tx); err != nil {
+			if errors.Is(err, ErrAlreadyKnown) {
+				if p.logger.IsDebug() {
+					p.logger.Debug("rejecting known tx (gossip)", "hash", tx.Hash().String())
+				}
+
+				return
 			}
 
-			return
+			p.logger.Error("failed to add broadcast tx", "err", err, "hash", tx.Hash().String())
 		}
-
-		p.logger.Error("failed to add broadcast tx", "err", err, "hash", tx.Hash().String())
 	}
 }
 

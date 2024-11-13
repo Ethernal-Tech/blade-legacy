@@ -193,6 +193,13 @@ func setFlags(cmd *cobra.Command) {
 		"maximum number of enqueued transactions per account",
 	)
 
+	cmd.Flags().Uint64Var(
+		&params.rawConfig.TxPool.TxGossipBatchSize,
+		txGossipBatchSizeFlag,
+		defaultConfig.TxPool.TxGossipBatchSize,
+		"maximum number of transactions in gossip message",
+	)
+
 	cmd.Flags().StringArrayVar(
 		&params.rawConfig.CorsAllowedOrigins,
 		corsOriginFlag,

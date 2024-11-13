@@ -358,6 +358,24 @@ func (l *Log) unmarshalRLPFrom(_ *fastrlp.Parser, v *fastrlp.Value) error {
 	return nil
 }
 
+func (t *Transactions) UnmarshalRLP(input []byte) error {
+	return UnmarshalRlp(t.unmarshalRLPFrom, input)
+}
+
+func (t *Transactions) unmarshalRLPFrom(p *fastrlp.Parser, v *fastrlp.Value) error {
+	return unmarshalRLPFrom(p, v, func(txType TxType, p *fastrlp.Parser, v *fastrlp.Value) error {
+		obj := NewTxWithType(txType)
+
+		if err := obj.UnmarshalRLPFrom(p, v); err != nil {
+			return err
+		}
+
+		*t = append(*t, obj)
+
+		return nil
+	})
+}
+
 // UnmarshalRLP unmarshals transaction from byte slice
 // Caution: Hash calculation should be done from the outside!
 func (t *Transaction) UnmarshalRLP(input []byte) error {

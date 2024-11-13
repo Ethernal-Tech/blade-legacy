@@ -66,6 +66,8 @@ type Transaction struct {
 	size atomic.Pointer[uint64]
 }
 
+type Transactions []*Transaction
+
 // NewTx creates a new transaction.
 func NewTx(inner TxData) *Transaction {
 	t := new(Transaction)
