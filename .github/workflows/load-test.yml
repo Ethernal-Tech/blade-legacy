@@ -288,7 +288,7 @@ jobs:
       max_gas_utilization: ${{ needs.load_test.outputs.max_gas_utilization }}
       txpool_pending: ${{ needs.txpool_status.outputs.txpool_pending }}
       txpool_queued: ${{ needs.txpool_status.outputs.txpool_queued }}
-      results_url: ${{ needs.load_test.outputs.results_url }}
+      results_artifact_id: ${{ needs.load_test.outputs.results_artifact_id }}
     secrets:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
   destroy_load_test_runner:
