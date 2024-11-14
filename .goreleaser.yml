@@ -88,9 +88,6 @@ archives:
       - LICENSE
       - README.md
 
-snapshot:
-  name_template: "{{ .Tag }}.next"
-
 dockers:
   - image_templates:
       - DOCKERHUB_ORGANIZATION/{{ .ProjectName }}:{{ .Version }}-amd64
