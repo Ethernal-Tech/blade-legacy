@@ -1,5 +1,7 @@
 project_name: blade
 
+version: 2
+
 release:
   disable: false
   draft: true
