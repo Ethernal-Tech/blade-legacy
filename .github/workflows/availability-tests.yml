@@ -61,7 +61,7 @@ on:
       method_get_status:
         value: ${{ jobs.availability_test.outputs.method_get_status }}
     secrets:
-      FAUCET_PRIVATE_KEY:
+      PREMINED_PRIVATE_KEY:
         required: true
       ACCOUNT_PRIVATE_KEY:
         required: true
@@ -106,7 +106,7 @@ jobs:
           public_address=$(cast wallet address --private-key ${{ secrets.ACCOUNT_PRIVATE_KEY }})
           current_balance=$(cast rpc --rpc-url $rpc_url eth_getBalance $public_address latest | sed 's/"//g')
           current_balance_converted=$(echo "`cast to-dec $current_balance`/1000000000000000000" | bc -l)
-          fund=$(cast send --rpc-url $rpc_url --private-key ${{ secrets.FAUCET_PRIVATE_KEY }} --value ${{ inputs.fund_amount }}ether $public_address `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
+          fund=$(cast send --rpc-url $rpc_url --private-key ${{ secrets.PREMINED_PRIVATE_KEY }} --value ${{ inputs.fund_amount }}ether $public_address `[[ ${{ inputs.london }} == false ]] && echo --legacy`)
           if [ $(echo "$fund" | grep -c "transactionHash") -eq 1 ]; then
             new_balance=$(cast rpc --rpc-url $rpc_url eth_getBalance $public_address latest | sed 's/"//g')
             new_balance_converted=$(echo "`cast to-dec $new_balance`/1000000000000000000" | bc -l)
