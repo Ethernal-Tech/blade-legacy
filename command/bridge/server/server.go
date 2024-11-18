@@ -1,6 +1,8 @@
 package server
 
 import (
+	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,8 +17,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	dockerImg "github.com/docker/docker/api/types/image"
 	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/docker/go-connections/nat"
@@ -28,7 +30,7 @@ import (
 )
 
 const (
-	gethConsoleImage = "ghcr.io/0xpolygon/go-ethereum-console:latest"
+	gethConsoleImage = "stefanethernal/go-ethereum-console:v0.0.2"
 	gethImage        = "ethereum/client-go:v1.9.25"
 
 	defaultHostIP = "127.0.0.1"
@@ -164,14 +166,22 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 		image = gethImage
 	}
 
-	// try to pull the image
-	reader, err := dockerClient.ImagePull(ctx, image, dockerImg.PullOptions{})
+	dockerfile := fmt.Sprintf("FROM %s\nEXPOSE %d\n", image, params.port)
+	buildContext, err := createBuildContext(dockerfile)
 	if err != nil {
 		return err
 	}
-	defer reader.Close()
 
-	if _, err = io.Copy(outputter, reader); err != nil {
+	imageName := fmt.Sprintf("geth-external-chain-%d", params.chainID)
+	build, err := dockerClient.ImageBuild(ctx, buildContext, types.ImageBuildOptions{
+		Tags: []string{imageName},
+	})
+	if err != nil {
+		return err
+	}
+	defer build.Body.Close()
+
+	if _, err = io.Copy(outputter, build.Body); err != nil {
 		return fmt.Errorf("cannot copy: %w", err)
 	}
 
@@ -208,7 +218,7 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 	args = append(args, "--authrpc.port", strconv.FormatUint(authPort, 10))
 
 	config := &container.Config{
-		Image: image,
+		Image: imageName,
 		Cmd:   args,
 		Labels: map[string]string{
 			"edge-type": "external-chain",
@@ -269,6 +279,50 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 	}()
 
 	return nil
+}
+
+// createBuildContext creates a tar archive with the Dockerfile content, which is used as the build context for the image, after that it removes temporary directory
+func createBuildContext(dockerfileContent string) (io.Reader, error) {
+	tmpDir := "./temp-build-context"
+	err := os.MkdirAll(tmpDir, 0755)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	dockerfilePath := fmt.Sprintf("%s/Dockerfile", tmpDir)
+	err = os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write Dockerfile: %v", err)
+	}
+
+	// Create the tar archive in memory
+	var buf bytes.Buffer
+	tarWriter := tar.NewWriter(&buf)
+
+	// Add the Dockerfile to the tar archive
+	fileInfo := &tar.Header{
+		Name: "Dockerfile",
+		Mode: 0600,
+		Size: int64(len(dockerfileContent)),
+	}
+
+	err = tarWriter.WriteHeader(fileInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write tar header: %v", err)
+	}
+
+	_, err = tarWriter.Write([]byte(dockerfileContent))
+	if err != nil {
+		return nil, fmt.Errorf("failed to write Dockerfile content: %v", err)
+	}
+
+	err = tarWriter.Close()
+	if err != nil {
+		return nil, fmt.Errorf("failed to close tar writer: %v", err)
+	}
+
+	return &buf, nil
 }
 
 func gatherLogs(ctx context.Context, outputter command.OutputFormatter) error {
