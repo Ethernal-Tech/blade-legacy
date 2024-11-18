@@ -179,6 +179,7 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 	if err != nil {
 		return err
 	}
+
 	defer build.Body.Close()
 
 	if _, err = io.Copy(outputter, build.Body); err != nil {
@@ -281,19 +282,19 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 	return nil
 }
 
-// createBuildContext creates a tar archive with the Dockerfile content, which is used as the build context for the image, after that it removes temporary directory
+// createBuildContext creates a tar archive with the Dockerfile content, which is used as the build context for the image,
+// after that it removes temporary directory
 func createBuildContext(dockerfileContent string) (io.Reader, error) {
 	tmpDir := "./temp-build-context"
-	err := os.MkdirAll(tmpDir, 0755)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temporary directory: %v", err)
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		return nil, fmt.Errorf("failed to create temporary directory: %w", err)
 	}
+
 	defer os.RemoveAll(tmpDir)
 
 	dockerfilePath := fmt.Sprintf("%s/Dockerfile", tmpDir)
-	err = os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0644)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write Dockerfile: %v", err)
+	if err := os.WriteFile(dockerfilePath, []byte(dockerfileContent), 0600); err != nil {
+		return nil, fmt.Errorf("failed to write Dockerfile: %w", err)
 	}
 
 	// Create the tar archive in memory
@@ -307,19 +308,16 @@ func createBuildContext(dockerfileContent string) (io.Reader, error) {
 		Size: int64(len(dockerfileContent)),
 	}
 
-	err = tarWriter.WriteHeader(fileInfo)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write tar header: %v", err)
+	if err := tarWriter.WriteHeader(fileInfo); err != nil {
+		return nil, fmt.Errorf("failed to write tar header: %w", err)
 	}
 
-	_, err = tarWriter.Write([]byte(dockerfileContent))
-	if err != nil {
-		return nil, fmt.Errorf("failed to write Dockerfile content: %v", err)
+	if _, err := tarWriter.Write([]byte(dockerfileContent)); err != nil {
+		return nil, fmt.Errorf("failed to write Dockerfile content: %w", err)
 	}
 
-	err = tarWriter.Close()
-	if err != nil {
-		return nil, fmt.Errorf("failed to close tar writer: %v", err)
+	if err := tarWriter.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close tar writer: %w", err)
 	}
 
 	return &buf, nil
