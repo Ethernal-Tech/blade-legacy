@@ -30,7 +30,7 @@ import (
 )
 
 const (
-	gethConsoleImage = "stefanethernal/go-ethereum-console:v0.0.2"
+	gethConsoleImage = "0xethernal/go-ethereum-console:v0.0.1"
 	gethImage        = "ethereum/client-go:v1.9.25"
 
 	defaultHostIP = "127.0.0.1"
@@ -166,13 +166,14 @@ func runExternalChain(ctx context.Context, outputter command.OutputFormatter, cl
 		image = gethImage
 	}
 
+	imageName := fmt.Sprintf("geth-external-chain-%d", params.chainID)
 	dockerfile := fmt.Sprintf("FROM %s\nEXPOSE %d\n", image, params.port)
+
 	buildContext, err := createBuildContext(dockerfile)
 	if err != nil {
 		return err
 	}
 
-	imageName := fmt.Sprintf("geth-external-chain-%d", params.chainID)
 	build, err := dockerClient.ImageBuild(ctx, buildContext, types.ImageBuildOptions{
 		Tags: []string{imageName},
 	})
