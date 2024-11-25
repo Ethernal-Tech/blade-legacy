@@ -106,6 +106,10 @@ type Body struct {
 	Uncles       []*Header
 }
 
+type SimpleBlock struct {
+	Header *Header
+}
+
 type FullBlock struct {
 	Block    *Block
 	Receipts []*Receipt

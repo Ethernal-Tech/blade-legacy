@@ -800,7 +800,7 @@ func (c *consensusRuntime) IsValidProposalHash(proposal *proto.Proposal, hash []
 		return false
 	}
 
-	block := types.Block{}
+	block := types.SimpleBlock{}
 	if err := block.UnmarshalRLP(proposal.RawProposal); err != nil {
 		c.logger.Error("unable to unmarshal proposal", "error", err)
 
@@ -809,14 +809,14 @@ func (c *consensusRuntime) IsValidProposalHash(proposal *proto.Proposal, hash []
 
 	extra, err := GetIbftExtra(block.Header.ExtraData)
 	if err != nil {
-		c.logger.Error("failed to retrieve extra", "block number", block.Number(), "error", err)
+		c.logger.Error("failed to retrieve extra", "block number", block.Header.Number, "error", err)
 
 		return false
 	}
 
-	proposalHash, err := extra.Checkpoint.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
+	proposalHash, err := extra.Checkpoint.Hash(c.config.blockchain.GetChainID(), block.Header.Number, block.Header.Hash)
 	if err != nil {
-		c.logger.Error("failed to calculate proposal hash", "block number", block.Number(), "error", err)
+		c.logger.Error("failed to calculate proposal hash", "block number", block.Header.Number, "error", err)
 
 		return false
 	}
@@ -906,7 +906,7 @@ func (c *consensusRuntime) BuildPrePrepareMessage(
 		return nil
 	}
 
-	block := types.Block{}
+	block := types.SimpleBlock{}
 	if err := block.UnmarshalRLP(rawProposal); err != nil {
 		c.logger.Error(fmt.Sprintf("cannot unmarshal RLP: %s", err))
 
@@ -915,14 +915,14 @@ func (c *consensusRuntime) BuildPrePrepareMessage(
 
 	extra, err := GetIbftExtra(block.Header.ExtraData)
 	if err != nil {
-		c.logger.Error("failed to retrieve extra for block %d: %w", block.Number(), err)
+		c.logger.Error("failed to retrieve extra for block %d: %w", block.Header.Number, err)
 
 		return nil
 	}
 
-	proposalHash, err := extra.Checkpoint.Hash(c.config.blockchain.GetChainID(), block.Number(), block.Hash())
+	proposalHash, err := extra.Checkpoint.Hash(c.config.blockchain.GetChainID(), block.Header.Number, block.Header.Hash)
 	if err != nil {
-		c.logger.Error("failed to calculate proposal hash", "block number", block.Number(), "error", err)
+		c.logger.Error("failed to calculate proposal hash", "block number", block.Header.Number, "error", err)
 
 		return nil
 	}
