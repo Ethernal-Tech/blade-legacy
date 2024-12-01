@@ -12,7 +12,7 @@ require (
 	github.com/alibabacloud-go/oos-20190601/v4 v4.2.2
 	github.com/alibabacloud-go/tea v1.2.2
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.7
-	github.com/aliyun/credentials-go v1.4.0
+	github.com/aliyun/credentials-go v1.4.3
 	github.com/aws/aws-sdk-go v1.55.5
 	github.com/btcsuite/btcd/btcec/v2 v2.3.4
 	github.com/docker/docker v27.3.1+incompatible
