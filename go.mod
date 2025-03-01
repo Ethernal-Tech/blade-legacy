@@ -60,7 +60,7 @@ require (
 	gopkg.in/DataDog/dd-trace-go.v1 v1.69.1
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/yaml.v3 v3.0.1
-	pgregory.net/rapid v1.1.0
+	pgregory.net/rapid v1.2.0
 )
 
 require (
