@@ -1,6 +1,7 @@
 module github.com/0xPolygon/polygon-edge
 
 go 1.22.8
+toolchain go1.24.1
 
 require (
 	cloud.google.com/go/secretmanager v1.14.2
@@ -56,7 +57,7 @@ require (
 	golang.org/x/tools v0.26.0
 	google.golang.org/genproto v0.0.0-20241015192408-796eee8c2d53
 	google.golang.org/grpc v1.67.1
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/DataDog/dd-trace-go.v1 v1.69.1
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce
 	gopkg.in/yaml.v3 v3.0.1
