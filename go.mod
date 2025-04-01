@@ -1,6 +1,7 @@
 module github.com/0xPolygon/polygon-edge
 
 go 1.22.8
+toolchain go1.24.1
 
 require (
 	cloud.google.com/go/secretmanager v1.14.2
@@ -52,7 +53,7 @@ require (
 	github.com/valyala/fastjson v1.6.4
 	go.etcd.io/bbolt v1.3.11
 	golang.org/x/crypto v0.28.0
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.12.0
 	golang.org/x/tools v0.26.0
 	google.golang.org/genproto v0.0.0-20241015192408-796eee8c2d53
 	google.golang.org/grpc v1.67.1
